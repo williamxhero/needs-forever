@@ -1,0 +1,55 @@
+{
+  "current_spec": 21,
+  "ticket": 26,
+  "mechanism": "Loaded installed implement-spec-to-done and implement-spec SKILL.md files; executed independent merger stage",
+  "integrated_at": "2026-10-31T17:49:48.9951789Z",
+  "branch": "spec/21-s2-redo",
+  "before": "3c198f45a48e072a816a2aa4f8f6f2dfac9617a2",
+  "commit": "c0af5367b736081f361b7ea8caa6efcb829f4ac1",
+  "merge": "git merge --ff-only ticket/26-redo",
+  "ancestry": "PASS",
+  "build": {
+    "exit_code": 0,
+    "command": "npm run build"
+  },
+  "verification": {
+    "mode": "simulated",
+    "tests": 38,
+    "passed": 38,
+    "failed": 0,
+    "report": "runs/ticket26-exit/merger/report.json",
+    "judge_cases": 14,
+    "exit_code": 0,
+    "s1_regression": 24,
+    "command": "node scripts/run-s2-judge-exit.mjs runs/ticket26-exit/merger"
+  },
+  "diff_check": "PASS: git diff --check de23e6a..HEAD",
+  "source_worktree_clean": true,
+  "integration_worktree_clean": true,
+  "samples": {
+    "files": 33,
+    "unexplained_mismatches": 0,
+    "normalization": "Documented trailing-whitespace removal from bounded snapshot summary; JSON artifacts byte-identical",
+    "normalized_markdown_summaries": 1,
+    "directories": 6,
+    "byte_identical": 32
+  },
+  "protocol": {
+    "normalization": "Only .js import suffixes",
+    "files": 114,
+    "source": "C:\\Users\\will\\AppData\\Local\\Temp\\needs-forever-protocol-01660",
+    "mismatches": 0,
+    "new_types": "ThreadArchiveParams/Response, TurnInterruptParams/Response"
+  },
+  "preserved_runs": {
+    "files": 1220,
+    "bytes": 7804606,
+    "path": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\new-workflow\\evidence\\ticket26-raw\\ticket26"
+  },
+  "limitations": [
+    "Production AppServerJudge exercised through simulated app-server; no live AI acceptance",
+    "Ticket27 verifier and Ticket28 request handling/live S2 acceptance pending",
+    "S3 retries/reconnect/history reconciliation not implemented by this ticket"
+  ],
+  "no_main_push_cleanup_or_issue_close": true
+}
