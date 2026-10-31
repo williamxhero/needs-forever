@@ -1,0 +1,10 @@
+codex_version=codex-cli 0.166.0
+worker_thread_id=01a19336-1d40-7191-916f-65b0898ab13b
+worker_turn_id=01a19336-1e4c-7270-9b7d-3c4afd74d24b
+judge_thread_id=01a19336-e55b-7fd1-b472-bf51681b90e5
+judge_turn_id=01a19336-e5ef-7381-b52b-e4caa18689cc
+real worker: stage 1 route exit 23, marker and stage1.json verified
+real judge terminal: WAIT_EXTERNAL with next_message="A1 is evidenced, but A2 and A3 remain incomplete..."
+strict result: Only CONTINUE can include next_message.
+state: RECOVERING; no DONE/WAIT_EXTERNAL claim accepted
+verdict: T01-T05 not_run_to_completion; live invalid-result evidence preserved
