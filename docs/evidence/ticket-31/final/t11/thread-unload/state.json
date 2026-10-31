@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "task_id": "ticket31-t11-thread-unload",
+  "task_version": 1,
+  "task": {
+    "schema_version": 1,
+    "task_id": "ticket31-t11-thread-unload",
+    "workspace": "D:\\WILL\\TOOLS\\needs-forever\\docs\\evidence\\ticket-31\\final\\t11-thread-unload-10\\workspace",
+    "goal": "Write native-thread-unload.txt with the exact text native-thread-unload-ok, then stop.",
+    "acceptance": [
+      {
+        "id": "A1",
+        "text": "native-thread-unload.txt contains native-thread-unload-ok."
+      }
+    ],
+    "authorization": "Use only this local workspace. No network, credentials, or external side effects. All listed work is authorized.",
+    "limits": {
+      "max_worker_turns": null,
+      "max_minutes": null
+    },
+    "verify": {
+      "argv": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "D:\\WILL\\TOOLS\\needs-forever\\docs\\evidence\\ticket-31\\final\\t11-thread-unload-10\\workspace\\verify-native-thread-unload.mjs"
+      ],
+      "timeout_seconds": 20,
+      "protected_files": [
+        "verify-native-thread-unload.mjs"
+      ]
+    }
+  },
+  "worker_thread_id": "01a19432-c38e-7d73-9bb8-323562aa24a1",
+  "status": "DONE",
+  "phase": "IDLE",
+  "active_worker_turn_id": null,
+  "reviewing_turn_id": null,
+  "handled_turn_ids": [
+    "01a19432-c53a-71f2-b782-ffecf76a119d"
+  ],
+  "pending_action": null,
+  "retry": {
+    "kind": null,
+    "attempt": 0,
+    "next_at": null
+  },
+  "last_decision": {
+    "action": "DONE",
+    "evidence_ids": [
+      "E3",
+      "E4"
+    ],
+    "external": null,
+    "next_message": "",
+    "reason": "The requested file was written with the exact required text, and the verifier completed successfully."
+  },
+  "worker_turn_count": 1,
+  "elapsed_active_seconds": 65.61599999999983,
+  "updated_at": "2026-10-31T23:03:01.742Z",
+  "codex_version": "codex-cli 0.166.0",
+  "mode": "live",
+  "protected_baseline": [
+    {
+      "path": "D:\\WILL\\TOOLS\\needs-forever\\docs\\evidence\\ticket-31\\final\\t11-thread-unload-10\\workspace\\verify-native-thread-unload.mjs",
+      "sha256": "e662e7abc7c977f35b6675f7a311fbdafa7a53e0a37ab58db64557263b1238f1",
+      "content_base64": "aW1wb3J0IHsgcmVhZEZpbGVTeW5jIH0gZnJvbSAnbm9kZTpmcyc7CmlmIChyZWFkRmlsZVN5bmMoJ25hdGl2ZS10aHJlYWQtdW5sb2FkLnR4dCcsICd1dGY4JykgIT09ICduYXRpdmUtdGhyZWFkLXVubG9hZC1vaycpIHByb2Nlc3MuZXhpdCgxKTsKY29uc29sZS5sb2coJ1QxMSBuYXRpdmUgdGhyZWFkIHVubG9hZCB2ZXJpZmllciBQQVNTJyk7Cg=="
+    }
+  ],
+  "recovery_failures": [
+    {
+      "signature": "unknown:worker thread thread/status/changed (notloaded); recovery will resume the saved worker identity.",
+      "kind": "unknown",
+      "count": 1,
+      "message": "Worker thread thread/status/changed (notLoaded); recovery will resume the saved worker identity.",
+      "instruction": "Retry the same authorized operation after the scheduled backoff and record the resulting evidence.",
+      "at": "2026-10-31T23:02:24.471Z"
+    }
+  ],
+  "last_error": "Worker thread thread/status/changed (notLoaded); recovery will resume the saved worker identity.",
+  "judge_thread_ids": [
+    "01a19433-4839-7902-8358-a1da981e9734"
+  ]
+}

@@ -11,14 +11,38 @@
     "node scripts/run-ticket31-live.mjs <run> --phase WORKER",
     "node scripts/run-ticket31-live.mjs <run> --phase JUDGE",
     "node scripts/run-ticket31-live.mjs <run> --phase VERIFY",
-    "node scripts/run-ticket31-live.mjs <run> --t11"
+    "node scripts/run-ticket31-live.mjs <run> --t11",
+    "node scripts/run-ticket31-live.mjs <run> --t11-thread-unload"
   ],
-  "tests": { "passed": 69, "total": 69, "build": "PASS" },
+  "tests": {
+    "passed": 69,
+    "total": 69,
+    "build": "PASS"
+  },
   "live": {
     "t08": {
-      "worker": { "state": "final/t08-pty/worker/state.json", "worker_thread_id": "01a1940b-4511-7d30-a7bd-4171d6cd51e1", "status": "PAUSED", "task_version": 2, "signal": "real Windows PTY Ctrl+C" },
-      "judge": { "state": "final/t08-pty/judge/state.json", "worker_thread_id": "01a1940b-c4fe-7a00-9401-3ff6b28417dc", "status": "PAUSED", "task_version": 2, "signal": "real Windows PTY Ctrl+C" },
-      "verification": { "state": "final/t08-pty/verification/state.json", "worker_thread_id": "01a1940c-beef-7293-9536-85f2dec76e91", "judge_thread_id": "01a1940d-0c0c-7cf0-a9c1-80fbc4026580", "status": "PAUSED", "task_version": 2, "signal": "real Windows PTY Ctrl+C" }
+      "worker": {
+        "state": "final/t08-pty/worker/state.json",
+        "worker_thread_id": "01a1940b-4511-7d30-a7bd-4171d6cd51e1",
+        "status": "PAUSED",
+        "task_version": 2,
+        "signal": "real Windows PTY Ctrl+C"
+      },
+      "judge": {
+        "state": "final/t08-pty/judge/state.json",
+        "worker_thread_id": "01a1940b-c4fe-7a00-9401-3ff6b28417dc",
+        "status": "PAUSED",
+        "task_version": 2,
+        "signal": "real Windows PTY Ctrl+C"
+      },
+      "verification": {
+        "state": "final/t08-pty/verification/state.json",
+        "worker_thread_id": "01a1940c-beef-7293-9536-85f2dec76e91",
+        "judge_thread_id": "01a1940d-0c0c-7cf0-a9c1-80fbc4026580",
+        "status": "PAUSED",
+        "task_version": 2,
+        "signal": "real Windows PTY Ctrl+C"
+      }
     },
     "t11_app_server_exit": {
       "state": "final/t11/state.json",
@@ -27,10 +51,24 @@
       "reconnects": 1,
       "status": "DONE",
       "verification": "exit.txt verifier passed"
+    },
+    "t11_thread_unload": {
+      "state": "final/t11/thread-unload/state.json",
+      "result": "final/t11/thread-unload/result.json",
+      "worker_thread_id": "01a19432-c38e-7d73-9bb8-323562aa24a1",
+      "unload_method": "thread/unsubscribe",
+      "unavailable_events": [
+        "thread/status/changed:notLoaded",
+        "thread/closed"
+      ],
+      "reconnects": 1,
+      "status": "DONE",
+      "artifact": "native-thread-unload-ok",
+      "verifier": "PASS"
     }
   },
   "controlled": {
-    "t11_thread_unload": "thread/closed recovery regression in test/recovery-cli.test.ts; same worker identity and final DONE"
+    "t11_thread_unload": null
   },
   "reused": [
     "ticket-28 live T01/T02/T03/T04/T05 evidence",
@@ -39,7 +77,6 @@
     "ticket-25 pause, limit and resume evidence"
   ],
   "limitations": [
-    "Native app-server process exit is live; native thread-unload injection is represented by the controlled protocol event because the installed app-server exposes no supported external unload command.",
     "The unattended harness uses the Ctrl+C control byte because direct child.kill('SIGINT') is not reliable on Windows; the committed live evidence was captured through a real Windows PTY."
   ],
   "matrix": "final/matrix.md"

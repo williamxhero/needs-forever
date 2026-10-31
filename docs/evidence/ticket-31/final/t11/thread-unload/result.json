@@ -1,0 +1,15 @@
+{
+  "label": "native-thread-unload",
+  "status": "DONE",
+  "worker_thread_id": "01a19432-c38e-7d73-9bb8-323562aa24a1",
+  "unload_requests": 1,
+  "unavailable_methods": [
+    "thread/status/changed",
+    "thread/closed"
+  ],
+  "reconnects": 1,
+  "artifact": "native-thread-unload-ok",
+  "process_shutdown": "exited",
+  "stdout": "worker: I’ll inspect the provided verifier, write the requested file in the workspace, and run the authorized check.\nworker: Created `native-thread-unload.txt` with the exact text `native-thread-unload-ok`.\n\nVerifier passed successfully.\nRECOVERING: unknown; attempt 1; retry at 2026-10-31T23:02:29.472Z; Retry the same authorized operation after the scheduled backoff and record the resulting evidence.\nDONE (live): The requested file was written with the exact required text, and the verifier completed successfully.\n",
+  "stderr": ""
+}

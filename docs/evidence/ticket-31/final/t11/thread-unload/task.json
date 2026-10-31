@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "task_id": "ticket31-t11-thread-unload",
+  "workspace": "D:\\WILL\\TOOLS\\needs-forever\\docs\\evidence\\ticket-31\\final\\t11-thread-unload-10\\workspace",
+  "goal": "Write native-thread-unload.txt with the exact text native-thread-unload-ok, then stop.",
+  "acceptance": [
+    {
+      "id": "A1",
+      "text": "native-thread-unload.txt contains native-thread-unload-ok."
+    }
+  ],
+  "authorization": "Use only this local workspace. No network, credentials, or external side effects. All listed work is authorized.",
+  "verify": {
+    "argv": [
+      "C:\\Program Files\\nodejs\\node.exe",
+      "D:\\WILL\\TOOLS\\needs-forever\\docs\\evidence\\ticket-31\\final\\t11-thread-unload-10\\workspace\\verify-native-thread-unload.mjs"
+    ],
+    "timeout_seconds": 20,
+    "protected_files": [
+      "verify-native-thread-unload.mjs"
+    ]
+  },
+  "limits": {
+    "max_worker_turns": null,
+    "max_minutes": null
+  }
+}

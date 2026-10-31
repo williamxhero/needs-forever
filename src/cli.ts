@@ -105,7 +105,7 @@ async function main(): Promise<void> {
       real_judge: fixture.real_judge === true,
       ...(recoveryDelays === undefined ? {} : { recovery_delays_ms: recoveryDelays as number[] }),
       ...(reconcileInterval === undefined ? {} : { reconcile_interval_ms: reconcileInterval }),
-    } : undefined;
+    } : process.env.CODEX_SUPERVISOR_TEST_NATIVE_THREAD_UNLOAD === '1' ? { native_thread_unload_once: true, recovery_enabled: true, real_judge: true } : undefined;
     const supervisor = new Supervisor(state, store, judge, supervisorOptions);
     const pause = () => supervisor.pause();
     // A foreground console delivers Ctrl+C as SIGINT.  When the CLI is driven

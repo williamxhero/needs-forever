@@ -12,10 +12,10 @@
 | T08 Ctrl+C during worker, judge and verification | live | PASS | `final/t08-pty/{worker,judge,verification}`; real Windows PTY Ctrl+C, all three end `PAUSED`, version increments, cancellation recorded |
 | T09 judge timeout and invalid JSON recover | simulated | PASS | ticket-29 regression and `npm test` |
 | T10 service failure/backoff and quota distinction | simulated | PASS | ticket-29 recovery tests; 5/15/60/300 second policy |
-| T11 thread/process recovery with same worker | mixed live + controlled event | PASS | `final/t11` native app-server exit; existing `thread/closed` recovery regression for controlled unload notification |
+| T11 thread/process recovery with same worker | live | PASS | `final/t11/t11-app-server-exit.json` native app-server exit; `final/t11/thread-unload/result.json` native `thread/unsubscribe` unload with `notLoaded`/`thread/closed`, one reconnect, same worker ID, and verifier PASS |
 | T12 unknown send result is reconciled before resend | simulated | PASS | ticket-30 periodic and explicit reconciliation tests |
 | T13 missed request is answered or cancelled deterministically | simulated reused | PASS | ticket-28 request handling evidence |
 | T14 cumulative limits survive recovery | simulated reused | PASS | ticket-25 limit and resume evidence |
 | T15 missed terminal notification is reconciled once | simulated | PASS | ticket-30 paginated history and periodic reconcile tests |
 
-T11's native live portion is the actual app-server process exit. The thread-unload half uses the same event and recovery path through the deterministic protocol boundary because the installed app-server did not expose a user-injectable native unload command. It is retained as controlled evidence rather than mislabelled as a native model run.
+T11 uses two live injections against the managed app-server: native process termination and native `thread/unsubscribe` unload. Both recover the saved worker identity and finish independent verification.

@@ -139,6 +139,7 @@ export async function connect(argv: string[], workspace: string, signal?: AbortS
     'web_search="disabled"', 'approval_policy="never"', 'sandbox_mode="workspace-write"',
     'sandbox_workspace_write.network_access=false', 'sandbox_workspace_write.exclude_tmpdir_env_var=true', 'sandbox_workspace_write.exclude_slash_tmp=true',
   ];
+  if (process.env.CODEX_SUPERVISOR_TEST_NATIVE_THREAD_UNLOAD === '1') common.push('thread_unload_delay_secs=0');
   // Discovery connection never creates a thread or starts a model/tool.
   const probe = new Rpc(argv, workspace, common, signal);
   let names: string[];

@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync, appendFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
 import { platform, release } from 'node:os';
@@ -39,13 +39,17 @@ function task(taskId, goal, acceptance, verify = null) {
     limits: { max_worker_turns: null, max_minutes: null },
   };
 }
-function launch(taskFile) {
+function launch(taskFile, environment = {}) {
   const stateFile = resolve(activeRoot, 'state.json');
-  const child = spawn(process.execPath, [resolve('dist/src/cli.js'), 'start', '--task', taskFile, '--state', stateFile], { cwd: resolve('.'), windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] });
+  const stdoutLog = resolve(activeRoot, 'supervisor.stdout.log');
+  const stderrLog = resolve(activeRoot, 'supervisor.stderr.log');
+  writeFileSync(stdoutLog, '', 'utf8');
+  writeFileSync(stderrLog, '', 'utf8');
+  const child = spawn(process.execPath, [resolve('dist/src/cli.js'), 'start', '--task', taskFile, '--state', stateFile], { cwd: resolve('.'), windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'], env: { ...process.env, ...environment } });
   let stdout = '';
   let stderr = '';
-  child.stdout.on('data', (chunk) => { stdout += chunk.toString(); });
-  child.stderr.on('data', (chunk) => { stderr += chunk.toString(); });
+  child.stdout.on('data', (chunk) => { stdout += chunk.toString(); appendFileSync(stdoutLog, chunk); });
+  child.stderr.on('data', (chunk) => { stderr += chunk.toString(); appendFileSync(stderrLog, chunk); });
   return { child, stateFile, stdout: () => stdout, stderr: () => stderr };
 }
 async function waitChild(child, timeoutMs = 10_000) {
@@ -106,6 +110,23 @@ async function appServerExit() {
   }
 }
 
+async function nativeThreadUnload() {
+  const taskFile = resolve(activeRoot, 'native-thread-unload.task.json');
+  const verifier = `import { readFileSync } from 'node:fs';\nif (readFileSync('native-thread-unload.txt', 'utf8') !== 'native-thread-unload-ok') process.exit(1);\nconsole.log('T11 native thread unload verifier PASS');\n`;
+  writeFileSync(resolve(workspace, 'verify-native-thread-unload.mjs'), verifier, 'utf8');
+  const value = task('ticket31-t11-thread-unload', 'Write native-thread-unload.txt with the exact text native-thread-unload-ok, then stop.', [{ id: 'A1', text: 'native-thread-unload.txt contains native-thread-unload-ok.' }], { argv: [process.execPath, resolve(workspace, 'verify-native-thread-unload.mjs')], timeout_seconds: 20, protected_files: ['verify-native-thread-unload.mjs'] });
+  save('native-thread-unload.task.json', value);
+  const run = launch(taskFile, { CODEX_SUPERVISOR_TEST_NATIVE_THREAD_UNLOAD: '1' });
+  try {
+    const recovered = await waitFor((s, list) => s.status === 'DONE' && list.some((event) => event.type === 'native_thread_unload_requested') && list.some((event) => event.type === 'worker_thread_unavailable') && list.some((event) => event.type === 'connection_reconnected'), 240_000);
+    const process_shutdown = await waitChild(run.child);
+    const eventList = events();
+    return { label: 'native-thread-unload', status: recovered.status, worker_thread_id: recovered.worker_thread_id, unload_requests: eventList.filter((event) => event.type === 'native_thread_unload_requested').length, unavailable_methods: eventList.filter((event) => event.type === 'worker_thread_unavailable').map((event) => event.method), reconnects: eventList.filter((event) => event.type === 'connection_reconnected').length, artifact: readFileSync(resolve(workspace, 'native-thread-unload.txt'), 'utf8'), process_shutdown, stdout: run.stdout(), stderr: run.stderr() };
+  } finally {
+    if (run.child.exitCode === null) await waitChild(run.child).catch(() => killTree(run.child.pid));
+  }
+}
+
 writeFileSync(resolve(activeRoot, 'slow-verify.mjs'), `await new Promise((resolveWait) => setTimeout(resolveWait, 90_000));\nconsole.log('slow verifier completed');\n`, 'utf8');
 const startedAt = new Date().toISOString();
 const results = [];
@@ -131,5 +152,11 @@ if (process.argv[3] === '--t11') {
   console.log(JSON.stringify(result, null, 2));
   process.exit(0);
 }
+if (process.argv[3] === '--t11-thread-unload') {
+  const result = await nativeThreadUnload();
+  save('t11-native-thread-unload.json', result);
+  console.log(JSON.stringify(result, null, 2));
+  process.exit(0);
+}
 
-console.log(JSON.stringify({ mode: 'live-process-boundary', root, manifest: resolve(root, 'manifest.json'), commands: { worker: `${process.execPath} ${resolve('scripts/run-ticket31-live.mjs')} ${root} --phase WORKER`, judge: `${process.execPath} ${resolve('scripts/run-ticket31-live.mjs')} ${root} --phase JUDGE`, verification: `${process.execPath} ${resolve('scripts/run-ticket31-live.mjs')} ${root} --phase VERIFY`, t11: `${process.execPath} ${resolve('scripts/run-ticket31-live.mjs')} ${root} --t11` } }, null, 2));
+console.log(JSON.stringify({ mode: 'live-process-boundary', root, manifest: resolve(root, 'manifest.json'), commands: { worker: `${process.execPath} ${resolve('scripts/run-ticket31-live.mjs')} ${root} --phase WORKER`, judge: `${process.execPath} ${resolve('scripts/run-ticket31-live.mjs')} ${root} --phase JUDGE`, verification: `${process.execPath} ${resolve('scripts/run-ticket31-live.mjs')} ${root} --phase VERIFY`, t11: `${process.execPath} ${resolve('scripts/run-ticket31-live.mjs')} ${root} --t11`, t11_thread_unload: `${process.execPath} ${resolve('scripts/run-ticket31-live.mjs')} ${root} --t11-thread-unload` } }, null, 2));

@@ -31,7 +31,19 @@ export class Supervisor {
   private activeCheckpoint = 0;
   private cancellation: Promise<void> | undefined;
   private readonly abort = new AbortController();
-  constructor(private readonly state: State, private readonly store: Store, private readonly judge: Judge, private readonly fixture?: { simulate_verification?: boolean; recovery_enabled?: boolean; recovery_delays_ms?: number[]; real_judge?: boolean; reconcile_interval_ms?: number }) {}
+  private nativeThreadUnloadRequested = false;
+  private nativeThreadUnloadPending = false;
+  private deferredNativeUnloadCompletion: { method: string; params: unknown } | undefined;
+  constructor(private readonly state: State, private readonly store: Store, private readonly judge: Judge, private readonly fixture?: { simulate_verification?: boolean; recovery_enabled?: boolean; recovery_delays_ms?: number[]; real_judge?: boolean; reconcile_interval_ms?: number; native_thread_unload_once?: boolean }) {}
+
+  private async maybeRequestNativeThreadUnload(rpc: Rpc, threadId: string): Promise<void> {
+    if (!this.fixture?.native_thread_unload_once || this.nativeThreadUnloadRequested) return;
+    this.nativeThreadUnloadRequested = true;
+    this.nativeThreadUnloadPending = true;
+    const params: { threadId: string } = { threadId };
+    await rpc.request('thread/unsubscribe', params);
+    this.store.event(this.state, 'native_thread_unload_requested', { thread_id: threadId, method: 'thread/unsubscribe' });
+  }
 
   private async scheduleRecovery(error: unknown): Promise<boolean> {
     const classification = classifyRecoveryError(error);
@@ -332,10 +344,25 @@ export class Supervisor {
         if (rpc !== this.rpc) return;
         if (this.fixture && notification.method === 'supervisor/test/pause') { this.pause(); continue; }
         const params = notification.params && typeof notification.params === 'object' ? record(notification.params) : {};
-        if (params.threadId === this.state.worker_thread_id && ['thread/closed', 'thread/notLoaded', 'thread/unloaded'].includes(notification.method)) {
-          this.store.event(this.state, 'worker_thread_unavailable', { thread_id: params.threadId, method: notification.method });
-          this.enqueue({ kind: 'failure', error: new Error(`Worker thread ${notification.method}; recovery will resume the saved worker identity.`) });
+        const statusType = params.status && typeof params.status === 'object' ? record(params.status).type : undefined;
+        const threadUnavailable = ['thread/closed', 'thread/notLoaded', 'thread/unloaded'].includes(notification.method)
+          || (notification.method === 'thread/status/changed' && statusType === 'notLoaded');
+        if (params.threadId === this.state.worker_thread_id && threadUnavailable) {
+          this.nativeThreadUnloadPending = false;
+          this.store.event(this.state, 'worker_thread_unavailable', { thread_id: params.threadId, method: notification.method, status: statusType ?? null });
+          this.enqueue({ kind: 'failure', error: new Error(`Worker thread ${notification.method}${statusType === 'notLoaded' ? ' (notLoaded)' : ''}; recovery will resume the saved worker identity.`) });
+          if (this.deferredNativeUnloadCompletion) {
+            this.enqueue({ kind: 'notification', ...this.deferredNativeUnloadCompletion });
+            this.deferredNativeUnloadCompletion = undefined;
+          }
           continue;
+        }
+        if (typeof params.threadId === 'string' && params.threadId === this.state.worker_thread_id && notification.method === 'turn/completed') {
+          await this.maybeRequestNativeThreadUnload(rpc, params.threadId);
+          if (this.nativeThreadUnloadPending) {
+            this.deferredNativeUnloadCompletion = notification;
+            continue;
+          }
         }
         if (params.threadId === this.state.worker_thread_id && ['item/completed', 'turn/completed', 'turn/plan/updated'].includes(notification.method)) this.store.event(this.state, 'worker_evidence', { role: 'worker', thread_id: params.threadId, method: notification.method, params });
         if (params.threadId === this.state.worker_thread_id && notification.method === 'item/completed') this.displayOutput(record(redact(params.item)), String(params.turnId));
@@ -459,6 +486,11 @@ export class Supervisor {
         this.wake = undefined;
         if (this.state.status !== 'ACTIVE') break;
         const incoming = this.incoming.shift()!;
+        if (this.nativeThreadUnloadPending && incoming.kind === 'notification') {
+          this.incoming.push(incoming);
+          await delay(10);
+          continue;
+        }
         if (incoming.kind === 'failure') {
           if (incoming.delivery && (incoming.version !== this.state.task_version || incoming.delivery !== this.state.pending_action?.delivery_id || this.state.pending_action.stage === 'confirmed')) {
             this.store.event(this.state, 'stale_send_result_ignored', { delivery_id: incoming.delivery, error: incoming.error.message });
