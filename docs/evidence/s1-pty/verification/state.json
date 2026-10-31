@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "task_id": "pty-verification",
+  "task_version": 2,
+  "task": {
+    "schema_version": 1,
+    "task_id": "pty-verification",
+    "workspace": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\new-workflow\\pty\\verification\\workspace",
+    "goal": "Check manual Ctrl+C at a simulated boundary.",
+    "acceptance": [
+      {
+        "id": "A1",
+        "text": "PAUSED wins before cancellation."
+      }
+    ],
+    "authorization": "Only the isolated fixture.",
+    "limits": {
+      "max_worker_turns": null,
+      "max_minutes": null
+    },
+    "verify": {
+      "argv": [
+        "fixture-verification"
+      ],
+      "timeout_seconds": 180,
+      "protected_files": []
+    }
+  },
+  "worker_thread_id": "worker-from-server",
+  "status": "PAUSED",
+  "phase": "IDLE",
+  "active_worker_turn_id": null,
+  "reviewing_turn_id": null,
+  "handled_turn_ids": [
+    "first-turn-from-server"
+  ],
+  "pending_action": null,
+  "retry": {
+    "kind": null,
+    "attempt": 0,
+    "next_at": null
+  },
+  "last_decision": {
+    "action": "DONE",
+    "reason": "Fixed simulated success.",
+    "evidence_ids": [
+      "E1"
+    ],
+    "next_message": "",
+    "external": null
+  },
+  "worker_turn_count": 1,
+  "elapsed_active_seconds": 28.601,
+  "updated_at": "2026-10-31T16:48:27.751Z",
+  "codex_version": "codex-cli 0.166.0",
+  "mode": "simulated",
+  "pause_reason": "user"
+}

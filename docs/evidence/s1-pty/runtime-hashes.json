@@ -1,0 +1,47 @@
+[
+  {
+    "Algorithm": "SHA256",
+    "Hash": "0FABA252D3DA913723D7F511E13E7F7BA9BDFCBFB411E97A5EC29CF32396CE3F",
+    "Path": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\new-workflow\\pty-runtime\\src\\cli.js"
+  },
+  {
+    "Algorithm": "SHA256",
+    "Hash": "8ABE2A5625484FF25FFC8C4B101BD130DAC8AEF91B6190A58C5894C05E47B8A8",
+    "Path": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\new-workflow\\pty-runtime\\src\\index.js"
+  },
+  {
+    "Algorithm": "SHA256",
+    "Hash": "1F5F07C53E7EFEE3FCC890105E6AAA485B5B41D889F901A6AEE1A3A52AC9641C",
+    "Path": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\new-workflow\\pty-runtime\\src\\judge.js"
+  },
+  {
+    "Algorithm": "SHA256",
+    "Hash": "F1BFAC73BBB9C4B5E9456F47D7543E0AEE3AA213F87764DA0F8EE3A747D4632B",
+    "Path": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\new-workflow\\pty-runtime\\src\\redact.js"
+  },
+  {
+    "Algorithm": "SHA256",
+    "Hash": "74FA90FD15BA06507A2CE7EC143747AAF241C74C6FA7F028A52EEBDBF8489372",
+    "Path": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\new-workflow\\pty-runtime\\src\\rules.js"
+  },
+  {
+    "Algorithm": "SHA256",
+    "Hash": "010FCDCA533DDD7639F19F239E3DDECFC560AA65CC68E0DBB88144980691E8BE",
+    "Path": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\new-workflow\\pty-runtime\\src\\store.js"
+  },
+  {
+    "Algorithm": "SHA256",
+    "Hash": "1401681E34F72E4D2B8AE0BC38E98544109EDCC0308752ED765A2F521BE4F1FD",
+    "Path": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\new-workflow\\pty-runtime\\src\\supervisor.js"
+  },
+  {
+    "Algorithm": "SHA256",
+    "Hash": "798769B5A47D47D905CF56EF71BE3E23AD9707317A13E452DA6BAF5835F96FCC",
+    "Path": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\new-workflow\\pty-runtime\\src\\transport.js"
+  },
+  {
+    "Algorithm": "SHA256",
+    "Hash": "91E5D17FD62D7BA22797C0F543CE764BA2769306540C0D3DCC2CC5C9DB16CC4B",
+    "Path": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\new-workflow\\pty-runtime\\src\\types.js"
+  }
+]

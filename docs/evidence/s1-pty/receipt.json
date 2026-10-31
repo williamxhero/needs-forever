@@ -1,0 +1,88 @@
+{
+  "observed_at": "2026-10-31T16:49:32.6585784Z",
+  "provenance": "S1 ticket25 draft runtime copied before manual probe; final ticket tests remain required",
+  "runtime_hashes": "pty-runtime/hashes.json",
+  "notes": "Outer PowerShell PTY exits 1 after Ctrl+C; assertions use saved state and actual owned-process termination, not that shell exit code. No live model or actual verifier acceptance claimed.",
+  "observations": [
+    {
+      "fixture": "worker",
+      "mode": "simulated",
+      "signal": "Actual console Ctrl+C through exec PTY",
+      "pre_signal_phase": "WORKER",
+      "status": "PAUSED",
+      "version": 2,
+      "pause_reason": "user",
+      "server_pid": 27116,
+      "server_exited": true,
+      "state_lock_released": true,
+      "events": [
+        "connection_verified",
+        "worker_created",
+        "send_prepared",
+        "send_attempted",
+        "send_confirmed",
+        "worker_started",
+        "worker_input",
+        "paused",
+        "owned_calls_cancelled"
+      ],
+      "result": "PASS"
+    },
+    {
+      "fixture": "judge",
+      "mode": "simulated",
+      "signal": "Actual console Ctrl+C through exec PTY",
+      "pre_signal_phase": "JUDGE",
+      "status": "PAUSED",
+      "version": 2,
+      "pause_reason": "user",
+      "server_pid": 34320,
+      "server_exited": true,
+      "state_lock_released": true,
+      "events": [
+        "connection_verified",
+        "worker_created",
+        "send_prepared",
+        "send_attempted",
+        "send_confirmed",
+        "worker_started",
+        "worker_input",
+        "worker_completed",
+        "worker_output",
+        "paused",
+        "stale_judge_result_ignored",
+        "owned_calls_cancelled"
+      ],
+      "result": "PASS"
+    },
+    {
+      "fixture": "verification",
+      "mode": "simulated",
+      "signal": "Actual console Ctrl+C through exec PTY",
+      "pre_signal_phase": "VERIFY",
+      "status": "PAUSED",
+      "version": 2,
+      "pause_reason": "user",
+      "server_pid": 35188,
+      "server_exited": true,
+      "state_lock_released": true,
+      "events": [
+        "connection_verified",
+        "worker_created",
+        "send_prepared",
+        "send_attempted",
+        "send_confirmed",
+        "worker_started",
+        "worker_input",
+        "worker_completed",
+        "worker_output",
+        "decision",
+        "fixture_verification_started",
+        "paused",
+        "stale_verification_result_ignored",
+        "owned_calls_cancelled"
+      ],
+      "result": "PASS"
+    }
+  ]
+}

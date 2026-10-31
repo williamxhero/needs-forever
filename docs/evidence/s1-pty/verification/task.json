@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "task_id": "pty-verification",
+  "workspace": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\new-workflow\\pty\\verification\\workspace",
+  "goal": "Check manual Ctrl+C at a simulated boundary.",
+  "acceptance": [
+    {
+      "id": "A1",
+      "text": "PAUSED wins before cancellation."
+    }
+  ],
+  "authorization": "Only the isolated fixture.",
+  "verify": {
+    "argv": [
+      "fixture-verification"
+    ],
+    "timeout_seconds": 180,
+    "protected_files": []
+  }
+}

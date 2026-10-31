@@ -1,0 +1,12 @@
+{"at":"2026-10-31T16:47:59.372Z","type":"connection_verified","task_id":"pty-judge","task_version":1,"mode":"simulated","codex_version":"codex-cli 0.166.0","disabled_mcp":[],"server_process_id":34320}
+{"at":"2026-10-31T16:47:59.374Z","type":"worker_created","task_id":"pty-judge","task_version":1,"mode":"simulated","role":"worker","thread_id":"worker-from-server"}
+{"at":"2026-10-31T16:47:59.375Z","type":"send_prepared","task_id":"pty-judge","task_version":1,"mode":"simulated","delivery_id":"83e91643-ef4c-4daf-8d6a-8d898b835b68"}
+{"at":"2026-10-31T16:47:59.376Z","type":"send_attempted","task_id":"pty-judge","task_version":1,"mode":"simulated","delivery_id":"83e91643-ef4c-4daf-8d6a-8d898b835b68"}
+{"at":"2026-10-31T16:47:59.378Z","type":"send_confirmed","task_id":"pty-judge","task_version":1,"mode":"simulated","role":"worker","thread_id":"worker-from-server","turn_id":"first-turn-from-server","delivery_id":"83e91643-ef4c-4daf-8d6a-8d898b835b68","via":"response"}
+{"at":"2026-10-31T16:47:59.379Z","type":"worker_started","task_id":"pty-judge","task_version":1,"mode":"simulated","role":"worker","thread_id":"worker-from-server","turn_id":"first-turn-from-server","status":"inProgress","action":"observe"}
+{"at":"2026-10-31T16:47:59.379Z","type":"worker_input","task_id":"pty-judge","task_version":1,"mode":"simulated","role":"worker","thread_id":"worker-from-server","turn_id":"first-turn-from-server","status":"input","action":"observe"}
+{"at":"2026-10-31T16:47:59.379Z","type":"worker_completed","task_id":"pty-judge","task_version":1,"mode":"simulated","role":"worker","thread_id":"worker-from-server","turn_id":"first-turn-from-server","status":"completed","action":"judge"}
+{"at":"2026-10-31T16:47:59.380Z","type":"worker_output","task_id":"pty-judge","task_version":1,"mode":"simulated","role":"worker","thread_id":"worker-from-server","turn_id":"first-turn-from-server","text":"Only fixture stage completed."}
+{"at":"2026-10-31T16:48:27.734Z","type":"paused","task_id":"pty-judge","task_version":2,"mode":"simulated","reason":"user","active_turn_id":null}
+{"at":"2026-10-31T16:48:27.735Z","type":"stale_judge_result_ignored","task_id":"pty-judge","task_version":2,"mode":"simulated","snapshot_id":"518a241e-6bf7-4e14-a1c5-c8c727ee1fb1"}
+{"at":"2026-10-31T16:48:27.742Z","type":"owned_calls_cancelled","task_id":"pty-judge","task_version":2,"mode":"simulated"}
