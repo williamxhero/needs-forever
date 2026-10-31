@@ -1,0 +1,41 @@
+{
+  "current_spec": 22,
+  "ticket": 30,
+  "mechanism": "Loaded to-tickets and implement-spec instructions; reused the existing approved ticket and completed implementation plus independent reviews",
+  "integrated_at": "2026-10-31T21:48:39Z",
+  "branch": "spec/22-s3",
+  "before": "98e84d4",
+  "commit": "1a3f0f3",
+  "ancestry": "PASS",
+  "build": {
+    "command": "npm run build",
+    "exit_code": 0
+  },
+  "tests": {
+    "command": "npm test",
+    "exit_code": 0,
+    "failed": 0,
+    "passed": 69,
+    "mode": "simulated"
+  },
+  "reviews": {
+    "standards": "PASS",
+    "spec": "PASS",
+    "head": "1a3f0f3"
+  },
+  "diff_check": "PASS: git diff --check origin/main...HEAD",
+  "source_worktree_clean": true,
+  "integration_worktree_clean": true,
+  "implemented": [
+    "Paginated worker history hydration follows every cursor page, rejects repeated cursors, and deduplicates turns by ID.",
+    "A single configurable test seam and 30-second production checkpoint reconcile entry compensates missed terminal events without a second scheduler loop.",
+    "thread/closed, thread/notLoaded, and thread/unloaded notifications recover the saved worker identity after the owned app-server connection is closed.",
+    "Periodic sent-unconfirmed reconciliation defers when history is inconclusive; explicit recovery may resend only after the history path proves absence.",
+    "Worker identity changes become explicit recovery errors, while task state, pending actions, cumulative counters, pause, wait, and DONE gates remain durable."
+  ],
+  "limitations": [
+    "Automated acceptance uses the deterministic app-server fixture transport; it is simulated evidence, not live production validation.",
+    "No main merge was performed; this receipt covers the S3 integration branch only.",
+    "#30 remains unpushed and open until this delivery record is published and the issue is closed."
+  ]
+}
