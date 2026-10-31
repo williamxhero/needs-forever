@@ -1,0 +1,11 @@
+codex_version=codex-cli 0.166.0
+worker_thread_id=01a1934b-e35d-7d01-8f80-654988ee6b97
+worker_turns=3
+judge_thread_id=01a1934d-bf62-72c3-941b-476448dcbe56
+judge_turn_id=01a1934d-bfec-7f52-b5a0-670f12f5d203
+judge decision: DONE; evidence E1/E2; next_message=""
+verification argv=[C:\\Program Files\\nodejs\\node.exe, verify.mjs]
+verification exitCode=0
+verification stdout=All three independent stage checks PASS; the failed first route was attempted.
+protected_before=[] protected_after=[] passed=true
+verdict: live T01-T05 complete for the isolated three-stage acceptance
