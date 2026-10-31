@@ -1,0 +1,7 @@
+{
+  "installed_baseline": "codex-cli 0.166.0",
+  "generated_source": "C:\\Users\\will\\AppData\\Local\\Temp\\needs-forever-protocol-01660",
+  "files_verified": 114,
+  "normalization": "Only .js import extensions; exact generated contents otherwise",
+  "verdict": "PASS"
+}

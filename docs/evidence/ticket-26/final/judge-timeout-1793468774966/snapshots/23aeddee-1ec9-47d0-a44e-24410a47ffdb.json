@@ -1,0 +1,62 @@
+{
+  "input": {
+    "snapshot_id": "23aeddee-1ec9-47d0-a44e-24410a47ffdb",
+    "task_id": "judge-timeout",
+    "task_version": 1,
+    "worker_thread_id": "worker-from-server",
+    "worker_turn_id": "first-turn-from-server",
+    "task": {
+      "schema_version": 1,
+      "task_id": "judge-timeout",
+      "workspace": "C:\\Users\\will\\.codex\\worktrees\\s2-redo-ticket26\\needs-forever\\runs\\ticket26\\judge-timeout-1793468774966\\workspace",
+      "goal": "Produce the accepted local result.",
+      "acceptance": [
+        {
+          "id": "A1",
+          "text": "The result is checked."
+        }
+      ],
+      "authorization": "Local workspace only; no network.",
+      "limits": {
+        "max_worker_turns": null,
+        "max_minutes": null
+      }
+    },
+    "evidence": [
+      {
+        "id": "E1",
+        "type": "agentMessage",
+        "value": {
+          "type": "agentMessage",
+          "id": "answer-1",
+          "text": "Only fixture stage completed."
+        },
+        "source": {
+          "event_id": "da7d56ec-8f72-4ce5-9c5c-c18dcea6108c",
+          "thread_id": "worker-from-server",
+          "turn_id": "first-turn-from-server",
+          "item_id": "answer-1"
+        }
+      }
+    ],
+    "plan": {
+      "missing": "No current plan or remaining-items update observed."
+    },
+    "recent_verification": {
+      "missing": "No independent verification result recorded yet."
+    },
+    "recent_instructions": [],
+    "repeated_failure": {
+      "investigate": false,
+      "signatures": [],
+      "instruction": "No repeated failure threshold observed."
+    },
+    "omissions": [
+      "Current plan and remaining items were not observed.",
+      "Independent verification has not run."
+    ],
+    "evidence_complete": true
+  },
+  "raw_output": "",
+  "validation": "invalid"
+}

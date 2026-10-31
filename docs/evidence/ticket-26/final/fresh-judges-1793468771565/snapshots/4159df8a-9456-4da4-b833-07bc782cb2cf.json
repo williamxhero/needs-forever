@@ -1,0 +1,93 @@
+{
+  "input": {
+    "snapshot_id": "4159df8a-9456-4da4-b833-07bc782cb2cf",
+    "task_id": "fresh-judges",
+    "task_version": 1,
+    "worker_thread_id": "worker-from-server",
+    "worker_turn_id": "turn-2-from-server",
+    "task": {
+      "schema_version": 1,
+      "task_id": "fresh-judges",
+      "workspace": "C:\\Users\\will\\.codex\\worktrees\\s2-redo-ticket26\\needs-forever\\runs\\ticket26\\fresh-judges-1793468771565\\workspace",
+      "goal": "Produce the accepted local result.",
+      "acceptance": [
+        {
+          "id": "A1",
+          "text": "The result is checked."
+        }
+      ],
+      "authorization": "Local workspace only; no network.",
+      "limits": {
+        "max_worker_turns": null,
+        "max_minutes": null
+      }
+    },
+    "evidence": [
+      {
+        "id": "E1",
+        "type": "commandExecution",
+        "value": {
+          "type": "commandExecution",
+          "id": "check",
+          "command": "check-result",
+          "exitCode": 0,
+          "status": "completed",
+          "aggregatedOutput": "A1 passes."
+        },
+        "source": {
+          "event_id": "36fe902e-f555-4ed5-901b-cab78ea5285d",
+          "thread_id": "worker-from-server",
+          "turn_id": "turn-2-from-server",
+          "item_id": "check"
+        }
+      },
+      {
+        "id": "E2",
+        "type": "agentMessage",
+        "value": {
+          "type": "agentMessage",
+          "id": "answer-1",
+          "text": "Only fixture stage completed."
+        },
+        "source": {
+          "event_id": "36fe902e-f555-4ed5-901b-cab78ea5285d",
+          "thread_id": "worker-from-server",
+          "turn_id": "turn-2-from-server",
+          "item_id": "answer-1"
+        }
+      }
+    ],
+    "plan": {
+      "missing": "No current plan or remaining-items update observed."
+    },
+    "recent_verification": {
+      "missing": "No independent verification result recorded yet."
+    },
+    "recent_instructions": [
+      {
+        "delivery_id": "f877e3f6-3c95-4a11-9878-e5e9c75c4fff",
+        "message": "[supervisor:f877e3f6-3c95-4a11-9878-e5e9c75c4fff]\nCheck the remaining acceptance result.",
+        "turn_id": "turn-2-from-server",
+        "result": {
+          "event_id": "36fe902e-f555-4ed5-901b-cab78ea5285d",
+          "status": "completed",
+          "replies": [
+            "Only fixture stage completed."
+          ]
+        }
+      }
+    ],
+    "repeated_failure": {
+      "investigate": false,
+      "signatures": [],
+      "instruction": "No repeated failure threshold observed."
+    },
+    "omissions": [
+      "Current plan and remaining items were not observed.",
+      "Independent verification has not run."
+    ],
+    "evidence_complete": true
+  },
+  "raw_output": "{\"action\":\"DONE\",\"reason\":\"A1 evidence checked.\",\"evidence_ids\":[\"E1\",\"E2\"],\"next_message\":\"\",\"external\":null}",
+  "validation": "valid"
+}

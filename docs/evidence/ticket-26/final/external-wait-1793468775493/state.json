@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "task_id": "external-wait",
+  "task_version": 1,
+  "task": {
+    "schema_version": 1,
+    "task_id": "external-wait",
+    "workspace": "C:\\Users\\will\\.codex\\worktrees\\s2-redo-ticket26\\needs-forever\\runs\\ticket26\\external-wait-1793468775493\\workspace",
+    "goal": "Produce the accepted local result.",
+    "acceptance": [
+      {
+        "id": "A1",
+        "text": "The result is checked."
+      }
+    ],
+    "authorization": "Local workspace only; no network.",
+    "limits": {
+      "max_worker_turns": null,
+      "max_minutes": null
+    }
+  },
+  "worker_thread_id": "worker-from-server",
+  "status": "WAIT_EXTERNAL",
+  "phase": "IDLE",
+  "active_worker_turn_id": null,
+  "reviewing_turn_id": null,
+  "handled_turn_ids": [
+    "first-turn-from-server"
+  ],
+  "pending_action": null,
+  "retry": {
+    "kind": null,
+    "attempt": 0,
+    "next_at": null
+  },
+  "last_decision": {
+    "action": "WAIT_EXTERNAL",
+    "reason": "A1 evidence checked.",
+    "evidence_ids": [
+      "E1",
+      "E2"
+    ],
+    "next_message": "",
+    "external": {
+      "missing": "Required credential.",
+      "attempted": [
+        "Checked local credentials."
+      ],
+      "why_no_other_work": "The only remaining item requires the credential.",
+      "resume_when": "User supplies credential."
+    }
+  },
+  "worker_turn_count": 1,
+  "elapsed_active_seconds": 0.22400000000000003,
+  "updated_at": "2026-10-31T17:46:15.786Z",
+  "codex_version": "codex-cli 0.166.0",
+  "mode": "simulated",
+  "judge_thread_ids": [
+    "judge-1"
+  ]
+}

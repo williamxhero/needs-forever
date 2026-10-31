@@ -1,0 +1,138 @@
+{
+  "input": {
+    "snapshot_id": "a146e341-336e-47e7-867b-9f512575601f",
+    "task_id": "bounded-snapshot",
+    "task_version": 1,
+    "worker_thread_id": "worker-from-server",
+    "worker_turn_id": "first-turn-from-server",
+    "task": {
+      "schema_version": 1,
+      "task_id": "bounded-snapshot",
+      "workspace": "C:\\Users\\will\\.codex\\worktrees\\s2-redo-ticket26\\needs-forever\\runs\\ticket26\\bounded-snapshot-1793468774306\\workspace",
+      "goal": "Produce the accepted local result. Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages. ",
+      "acceptance": [
+        {
+          "id": "A1",
+          "text": "The result is checked."
+        }
+      ],
+      "authorization": "Local workspace only; no network. Never request external permissions.",
+      "limits": {
+        "max_worker_turns": 3,
+        "max_minutes": null
+      }
+    },
+    "evidence": [
+      {
+        "id": "E1",
+        "type": "commandExecution",
+        "value": {
+          "type": "commandExecution",
+          "id": "failed",
+          "command": "missing-credential-check",
+          "status": "failed",
+          "exitCode": 1,
+          "aggregatedOutput": "Required credential is absent."
+        },
+        "source": {
+          "event_id": "eb24248f-7334-432d-9cab-3061ab6531aa",
+          "thread_id": "worker-from-server",
+          "turn_id": "first-turn-from-server",
+          "item_id": "failed"
+        }
+      },
+      {
+        "id": "E2",
+        "type": "fileChange",
+        "value": {
+          "type": "fileChange",
+          "id": "change",
+          "status": "completed",
+          "changes": [
+            {
+              "path": "result.txt",
+              "kind": {
+                "type": "add"
+              },
+              "diff": "+Result"
+            }
+          ]
+        },
+        "source": {
+          "event_id": "eb24248f-7334-432d-9cab-3061ab6531aa",
+          "thread_id": "worker-from-server",
+          "turn_id": "first-turn-from-server",
+          "item_id": "change"
+        }
+      },
+      {
+        "id": "E3",
+        "type": "commandExecution",
+        "value": {
+          "type": "commandExecution",
+          "id": "verbose",
+          "command": "verbose-check",
+          "status": "completed",
+          "exitCode": 0,
+          "aggregatedOutput": "Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge output. Huge o [TRUNCATED: 76200 chars]"
+        },
+        "source": {
+          "event_id": "eb24248f-7334-432d-9cab-3061ab6531aa",
+          "thread_id": "worker-from-server",
+          "turn_id": "first-turn-from-server",
+          "item_id": "verbose"
+        }
+      },
+      {
+        "id": "E4",
+        "type": "plan",
+        "value": {
+          "type": "plan",
+          "id": "plan",
+          "text": "Check credential then finish remaining A1."
+        },
+        "source": {
+          "event_id": "eb24248f-7334-432d-9cab-3061ab6531aa",
+          "thread_id": "worker-from-server",
+          "turn_id": "first-turn-from-server",
+          "item_id": "plan"
+        }
+      },
+      {
+        "id": "E5",
+        "type": "agentMessage",
+        "value": {
+          "type": "agentMessage",
+          "id": "answer-1",
+          "text": "Only fixture stage completed."
+        },
+        "source": {
+          "event_id": "eb24248f-7334-432d-9cab-3061ab6531aa",
+          "thread_id": "worker-from-server",
+          "turn_id": "first-turn-from-server",
+          "item_id": "answer-1"
+        }
+      }
+    ],
+    "plan": {
+      "observed": "Check credential then finish remaining A1.",
+      "remaining": "See observed worker plan; not independently verified."
+    },
+    "recent_verification": {
+      "missing": "No independent verification result recorded yet."
+    },
+    "recent_instructions": [],
+    "repeated_failure": {
+      "investigate": false,
+      "signatures": [],
+      "instruction": "No repeated failure threshold observed."
+    },
+    "omissions": [
+      "Independent verification has not run.",
+      "E3: item payload truncated; full record is at source.event_id."
+    ],
+    "evidence_complete": false
+  },
+  "raw_output": "{\"action\":\"CONTINUE\",\"reason\":\"A1 evidence checked.\",\"evidence_ids\":[\"E1\",\"E2\",\"E3\",\"E4\",\"E5\"],\"next_message\":\"Check the remaining acceptance result.\",\"external\":null}",
+  "validation": "valid"
+}

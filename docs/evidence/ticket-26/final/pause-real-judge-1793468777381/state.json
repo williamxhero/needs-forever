@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "task_id": "pause-real-judge",
+  "task_version": 2,
+  "task": {
+    "schema_version": 1,
+    "task_id": "pause-real-judge",
+    "workspace": "C:\\Users\\will\\.codex\\worktrees\\s2-redo-ticket26\\needs-forever\\runs\\ticket26\\pause-real-judge-1793468777381\\workspace",
+    "goal": "Produce the accepted local result.",
+    "acceptance": [
+      {
+        "id": "A1",
+        "text": "The result is checked."
+      }
+    ],
+    "authorization": "Local workspace only; no network.",
+    "limits": {
+      "max_worker_turns": null,
+      "max_minutes": null
+    }
+  },
+  "worker_thread_id": "worker-from-server",
+  "status": "PAUSED",
+  "phase": "IDLE",
+  "active_worker_turn_id": null,
+  "reviewing_turn_id": "first-turn-from-server",
+  "handled_turn_ids": [],
+  "pending_action": null,
+  "retry": {
+    "kind": null,
+    "attempt": 0,
+    "next_at": null
+  },
+  "last_decision": null,
+  "worker_turn_count": 1,
+  "elapsed_active_seconds": 0.312,
+  "updated_at": "2026-10-31T17:46:17.760Z",
+  "codex_version": "codex-cli 0.166.0",
+  "mode": "simulated",
+  "judge_thread_ids": [
+    "judge-1"
+  ],
+  "pause_reason": "user"
+}

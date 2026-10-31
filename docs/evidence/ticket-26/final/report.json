@@ -1,0 +1,92 @@
+{
+  "mode": "simulated",
+  "codex_version": "codex-cli 0.166.0 (fixture protocol)",
+  "os": "win32 10.0.26300",
+  "node": "v24.19.0",
+  "command": [
+    "C:\\Program Files\\nodejs\\node.exe",
+    "--test",
+    "--test-reporter=tap",
+    "dist/test/cli.test.js",
+    "dist/test/judge-cli.test.js"
+  ],
+  "started_at": "2026-10-31T17:46:11.445Z",
+  "finished_at": "2026-10-31T17:46:23.432Z",
+  "verdict": "PASS",
+  "status": 0,
+  "error": null,
+  "tests": 38,
+  "passed": 38,
+  "samples": [
+    {
+      "source": "C:\\Users\\will\\.codex\\worktrees\\s2-redo-ticket26\\needs-forever\\runs\\ticket26\\bounded-snapshot-1793468774306",
+      "sample": "C:\\Users\\will\\.codex\\worktrees\\s2-redo-ticket26\\needs-forever\\docs\\evidence\\ticket-26\\final\\bounded-snapshot-1793468774306",
+      "status": "PAUSED",
+      "phase": "IDLE",
+      "worker_thread_id": "worker-from-server",
+      "judge_thread_ids": [
+        "judge-1",
+        "judge-2",
+        "judge-3"
+      ],
+      "worker_turn_count": 3
+    },
+    {
+      "source": "C:\\Users\\will\\.codex\\worktrees\\s2-redo-ticket26\\needs-forever\\runs\\ticket26\\external-wait-1793468775493",
+      "sample": "C:\\Users\\will\\.codex\\worktrees\\s2-redo-ticket26\\needs-forever\\docs\\evidence\\ticket-26\\final\\external-wait-1793468775493",
+      "status": "WAIT_EXTERNAL",
+      "phase": "IDLE",
+      "worker_thread_id": "worker-from-server",
+      "judge_thread_ids": [
+        "judge-1"
+      ],
+      "worker_turn_count": 1
+    },
+    {
+      "source": "C:\\Users\\will\\.codex\\worktrees\\s2-redo-ticket26\\needs-forever\\runs\\ticket26\\fresh-judges-1793468771565",
+      "sample": "C:\\Users\\will\\.codex\\worktrees\\s2-redo-ticket26\\needs-forever\\docs\\evidence\\ticket-26\\final\\fresh-judges-1793468771565",
+      "status": "DONE",
+      "phase": "IDLE",
+      "worker_thread_id": "worker-from-server",
+      "judge_thread_ids": [
+        "judge-1",
+        "judge-2"
+      ],
+      "worker_turn_count": 2
+    },
+    {
+      "source": "C:\\Users\\will\\.codex\\worktrees\\s2-redo-ticket26\\needs-forever\\runs\\ticket26\\judge-timeout-1793468774966",
+      "sample": "C:\\Users\\will\\.codex\\worktrees\\s2-redo-ticket26\\needs-forever\\docs\\evidence\\ticket-26\\final\\judge-timeout-1793468774966",
+      "status": "ACTIVE",
+      "phase": "RECOVERING",
+      "worker_thread_id": "worker-from-server",
+      "judge_thread_ids": [
+        "judge-1"
+      ],
+      "worker_turn_count": 1
+    },
+    {
+      "source": "C:\\Users\\will\\.codex\\worktrees\\s2-redo-ticket26\\needs-forever\\runs\\ticket26\\pause-real-judge-1793468777381",
+      "sample": "C:\\Users\\will\\.codex\\worktrees\\s2-redo-ticket26\\needs-forever\\docs\\evidence\\ticket-26\\final\\pause-real-judge-1793468777381",
+      "status": "PAUSED",
+      "phase": "IDLE",
+      "worker_thread_id": "worker-from-server",
+      "judge_thread_ids": [
+        "judge-1"
+      ],
+      "worker_turn_count": 1
+    },
+    {
+      "source": "C:\\Users\\will\\.codex\\worktrees\\s2-redo-ticket26\\needs-forever\\runs\\ticket26\\streamed-items-1793468774662",
+      "sample": "C:\\Users\\will\\.codex\\worktrees\\s2-redo-ticket26\\needs-forever\\docs\\evidence\\ticket-26\\final\\streamed-items-1793468774662",
+      "status": "DONE",
+      "phase": "IDLE",
+      "worker_thread_id": "worker-from-server",
+      "judge_thread_ids": [
+        "judge-1"
+      ],
+      "worker_turn_count": 1
+    }
+  ],
+  "live": "not_run; S2 live T01-T05 belongs to the coordinating acceptance after tickets #27/#28"
+}

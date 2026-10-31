@@ -1,0 +1,80 @@
+{
+  "input": {
+    "snapshot_id": "bbe73372-d92e-4273-b44b-e3e0727bfb70",
+    "task_id": "streamed-items",
+    "task_version": 1,
+    "worker_thread_id": "worker-from-server",
+    "worker_turn_id": "first-turn-from-server",
+    "task": {
+      "schema_version": 1,
+      "task_id": "streamed-items",
+      "workspace": "C:\\Users\\will\\.codex\\worktrees\\s2-redo-ticket26\\needs-forever\\runs\\ticket26\\streamed-items-1793468774662\\workspace",
+      "goal": "Produce the accepted local result.",
+      "acceptance": [
+        {
+          "id": "A1",
+          "text": "The result is checked."
+        }
+      ],
+      "authorization": "Local workspace only; no network.",
+      "limits": {
+        "max_worker_turns": null,
+        "max_minutes": null
+      }
+    },
+    "evidence": [
+      {
+        "id": "E1",
+        "type": "commandExecution",
+        "value": {
+          "type": "commandExecution",
+          "id": "check",
+          "command": "check-result",
+          "exitCode": 0,
+          "status": "completed",
+          "aggregatedOutput": "A1 passes."
+        },
+        "source": {
+          "event_id": "9373a7fe-e3c5-4bdb-b016-58f16b29d6b4",
+          "thread_id": "worker-from-server",
+          "turn_id": "first-turn-from-server",
+          "item_id": "check"
+        }
+      },
+      {
+        "id": "E2",
+        "type": "agentMessage",
+        "value": {
+          "type": "agentMessage",
+          "id": "answer-1",
+          "text": "Only fixture stage completed."
+        },
+        "source": {
+          "event_id": "4d0dee60-02f5-49a2-927e-6e64d98bbf00",
+          "thread_id": "worker-from-server",
+          "turn_id": "first-turn-from-server",
+          "item_id": "answer-1"
+        }
+      }
+    ],
+    "plan": {
+      "missing": "No current plan or remaining-items update observed."
+    },
+    "recent_verification": {
+      "missing": "No independent verification result recorded yet."
+    },
+    "recent_instructions": [],
+    "repeated_failure": {
+      "investigate": false,
+      "signatures": [],
+      "instruction": "No repeated failure threshold observed."
+    },
+    "omissions": [
+      "Current plan and remaining items were not observed.",
+      "Independent verification has not run."
+    ],
+    "evidence_complete": true
+  },
+  "raw_output": "{\"action\":\"DONE\",\"reason\":\"A1 evidence checked.\",\"evidence_ids\":[\"E1\",\"E2\"],\"next_message\":\"\",\"external\":null}",
+  "validation": "valid"
+}

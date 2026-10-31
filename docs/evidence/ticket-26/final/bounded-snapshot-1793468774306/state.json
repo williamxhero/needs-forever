@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "task_id": "bounded-snapshot",
+  "task_version": 2,
+  "task": {
+    "schema_version": 1,
+    "task_id": "bounded-snapshot",
+    "workspace": "C:\\Users\\will\\.codex\\worktrees\\s2-redo-ticket26\\needs-forever\\runs\\ticket26\\bounded-snapshot-1793468774306\\workspace",
+    "goal": "Produce the accepted local result. Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages.  Complete original stages. ",
+    "acceptance": [
+      {
+        "id": "A1",
+        "text": "The result is checked."
+      }
+    ],
+    "authorization": "Local workspace only; no network. Never request external permissions.",
+    "limits": {
+      "max_worker_turns": 3,
+      "max_minutes": null
+    }
+  },
+  "worker_thread_id": "worker-from-server",
+  "status": "PAUSED",
+  "phase": "IDLE",
+  "active_worker_turn_id": null,
+  "reviewing_turn_id": null,
+  "handled_turn_ids": [
+    "first-turn-from-server",
+    "turn-2-from-server",
+    "turn-3-from-server"
+  ],
+  "pending_action": null,
+  "retry": {
+    "kind": null,
+    "attempt": 0,
+    "next_at": null
+  },
+  "last_decision": {
+    "action": "CONTINUE",
+    "reason": "A1 evidence checked.",
+    "evidence_ids": [
+      "E1",
+      "E2",
+      "E3",
+      "E4",
+      "E5"
+    ],
+    "next_message": "Check the remaining acceptance result.",
+    "external": null
+  },
+  "worker_turn_count": 3,
+  "elapsed_active_seconds": 0.25900000000000006,
+  "updated_at": "2026-10-31T17:46:14.630Z",
+  "codex_version": "codex-cli 0.166.0",
+  "mode": "simulated",
+  "judge_thread_ids": [
+    "judge-1",
+    "judge-2",
+    "judge-3"
+  ],
+  "pause_reason": "user_limit"
+}
