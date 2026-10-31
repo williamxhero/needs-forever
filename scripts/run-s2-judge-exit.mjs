@@ -21,6 +21,8 @@ for (const sample of samples) {
   const target = resolve(directory, sample);
   mkdirSync(resolve(target, 'snapshots'), { recursive: true });
   for (const file of ['state.json', 'events.jsonl', 'summary.md', 'protocol.jsonl']) copyFileSync(resolve(source, file), resolve(target, file));
+  const summary = readFileSync(resolve(source, 'summary.md'), 'utf8').split(/\r?\n/).map((line) => line.trimEnd()).join('\n');
+  writeFileSync(resolve(target, 'summary.md'), summary);
   for (const file of readdirSync(resolve(source, 'snapshots'))) copyFileSync(resolve(source, 'snapshots', file), resolve(target, 'snapshots', file));
   const state = JSON.parse(readFileSync(resolve(source, 'state.json'), 'utf8'));
   receipts.push({ source, sample: target, status: state.status, phase: state.phase, worker_thread_id: state.worker_thread_id, judge_thread_ids: state.judge_thread_ids, worker_turn_count: state.worker_turn_count });
