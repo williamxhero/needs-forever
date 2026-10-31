@@ -1,0 +1,63 @@
+{
+  "input": {
+    "snapshot_id": "a308fbff-feec-46a6-ab41-879e3bdb158e",
+    "task_id": "s1-start-demonstration",
+    "task_version": 1,
+    "worker_thread_id": "worker-from-server",
+    "worker_turn_id": "first-turn-from-server",
+    "task": {
+      "schema_version": 1,
+      "task_id": "s1-start-demonstration",
+      "workspace": "C:\\Users\\will\\.codex\\worktrees\\s1-redo-ticket23\\needs-forever\\runs\\ticket23\\final-demo\\workspace",
+      "goal": "Demonstrate the initial worker turn and a queryable external wait.",
+      "acceptance": [
+        {
+          "id": "A1",
+          "text": "The initial turn is confirmed and the complete task is retained."
+        }
+      ],
+      "authorization": "Only this isolated local fixture workspace may be changed.",
+      "limits": {
+        "max_worker_turns": null,
+        "max_minutes": null
+      }
+    },
+    "evidence": [
+      {
+        "id": "E1",
+        "type": "worker_terminal",
+        "value": {
+          "threadId": "worker-from-server",
+          "turn": {
+            "id": "first-turn-from-server",
+            "status": "completed",
+            "items": [
+              {
+                "type": "agentMessage",
+                "id": "answer-1",
+                "text": "The first fixture stage is complete. Required fixture input is unavailable."
+              }
+            ]
+          }
+        }
+      }
+    ]
+  },
+  "raw_output": {
+    "action": "WAIT_EXTERNAL",
+    "reason": "The fixed fixture demonstrates a concrete external wait, not semantic completion.",
+    "evidence_ids": [
+      "E1"
+    ],
+    "next_message": "",
+    "external": {
+      "missing": "The demonstration input fixture.",
+      "attempted": [
+        "The fixture stage returned without the required input."
+      ],
+      "why_no_other_work": "The remaining fixture step depends on that input.",
+      "resume_when": "Supply the demonstration input fixture."
+    }
+  },
+  "validation": "fixture-only"
+}

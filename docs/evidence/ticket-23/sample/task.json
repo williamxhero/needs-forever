@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "task_id": "s1-start-demonstration",
+  "workspace": "C:\\Users\\will\\.codex\\worktrees\\s1-redo-ticket23\\needs-forever\\runs\\ticket23\\final-demo\\workspace",
+  "goal": "Demonstrate the initial worker turn and a queryable external wait.",
+  "acceptance": [
+    {
+      "id": "A1",
+      "text": "The initial turn is confirmed and the complete task is retained."
+    }
+  ],
+  "authorization": "Only this isolated local fixture workspace may be changed."
+}

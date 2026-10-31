@@ -1,0 +1,23 @@
+
+> codex-supervisor@0.1.0 test
+> npm run build && node --test "dist/test/*.test.js"
+
+
+> codex-supervisor@0.1.0 build
+> tsc
+
+✔ start preserves the task and server identities; status reads WAIT_EXTERNAL without launching a server (329.3894ms)
+✔ start rejects a server policy granting writes outside the configured workspace before running a turn (261.5143ms)
+✔ a second CLI cannot supervise the same task through another state file (372.5524ms)
+✔ credential-shaped tool output is redacted before becoming a saved judge input (285.0404ms)
+✔ inherited MCP names are disabled before creating any worker, including names with dots or quotes (269.1902ms)
+✔ the foreground CLI displays the worker reply and the supervisor waiting reason (274.4842ms)
+✔ server-provided turn identities cannot place snapshot evidence outside the snapshot directory (277.4396ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2139.255

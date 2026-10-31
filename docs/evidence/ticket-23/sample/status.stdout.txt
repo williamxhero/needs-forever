@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "task_id": "s1-start-demonstration",
+  "task_version": 1,
+  "task": {
+    "schema_version": 1,
+    "task_id": "s1-start-demonstration",
+    "workspace": "C:\\Users\\will\\.codex\\worktrees\\s1-redo-ticket23\\needs-forever\\runs\\ticket23\\final-demo\\workspace",
+    "goal": "Demonstrate the initial worker turn and a queryable external wait.",
+    "acceptance": [
+      {
+        "id": "A1",
+        "text": "The initial turn is confirmed and the complete task is retained."
+      }
+    ],
+    "authorization": "Only this isolated local fixture workspace may be changed.",
+    "limits": {
+      "max_worker_turns": null,
+      "max_minutes": null
+    }
+  },
+  "worker_thread_id": "worker-from-server",
+  "status": "WAIT_EXTERNAL",
+  "phase": "IDLE",
+  "active_worker_turn_id": null,
+  "reviewing_turn_id": null,
+  "handled_turn_ids": [
+    "first-turn-from-server"
+  ],
+  "pending_action": null,
+  "retry": {
+    "kind": null,
+    "attempt": 0,
+    "next_at": null
+  },
+  "last_decision": {
+    "action": "WAIT_EXTERNAL",
+    "reason": "The fixed fixture demonstrates a concrete external wait, not semantic completion.",
+    "evidence_ids": [
+      "E1"
+    ],
+    "next_message": "",
+    "external": {
+      "missing": "The demonstration input fixture.",
+      "attempted": [
+        "The fixture stage returned without the required input."
+      ],
+      "why_no_other_work": "The remaining fixture step depends on that input.",
+      "resume_when": "Supply the demonstration input fixture."
+    }
+  },
+  "worker_turn_count": 1,
+  "elapsed_active_seconds": 0.21,
+  "updated_at": "2026-10-31T16:17:55.876Z",
+  "codex_version": "codex-cli 0.166.0",
+  "mode": "simulated"
+}

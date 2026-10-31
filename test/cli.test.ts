@@ -1,0 +1,158 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { spawn, spawnSync } from 'node:child_process';
+import { once } from 'node:events';
+import { setTimeout as delay } from 'node:timers/promises';
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+const cli = resolve('dist/src/cli.js');
+const server = resolve('test/fixtures/app-server.mjs');
+function run(argv: string[]) {
+  return spawnSync(process.execPath, [cli, ...argv], { encoding: 'utf8', timeout: 15_000 });
+}
+function json(path: string): any { return JSON.parse(readFileSync(path, 'utf8')); }
+function snapshotFile(directory: string): string {
+  const snapshots = resolve(directory, 'snapshots');
+  const files = readdirSync(snapshots);
+  assert.equal(files.length, 1);
+  return resolve(snapshots, files[0]!);
+}
+
+function setup(name: string, options: Record<string, unknown> = {}) {
+  const directory = resolve('runs/ticket23', `${name}-${Date.now()}`);
+  const workspace = resolve(directory, 'workspace');
+  mkdirSync(workspace, { recursive: true });
+  const trace = resolve(directory, 'protocol.jsonl');
+  const scenario = resolve(directory, 'scenario.json');
+  writeFileSync(scenario, JSON.stringify({ trace, ...options }));
+  const fixture = resolve(directory, 'fixture.json');
+  writeFileSync(fixture, JSON.stringify({ app_server_argv: [process.execPath, server, scenario], judge: { action: 'WAIT_EXTERNAL', reason: 'Fixture external dependency.', evidence_ids: ['E1'], next_message: '', external: { missing: 'Fixture input.', attempted: ['Known route.'], why_no_other_work: 'No other fixture work.', resume_when: 'Input available.' } } }));
+  const taskFile = resolve(directory, 'task.json');
+  writeFileSync(taskFile, JSON.stringify({ schema_version: 1, task_id: name, workspace, goal: 'Complete the goal.', acceptance: [{ id: 'A1', text: 'Accepted result.' }], authorization: 'Local work only.' }));
+  const stateFile = resolve(directory, 'state.json');
+  return { directory, workspace, trace, scenario, fixture, taskFile, stateFile, argv: ['start', '--task', taskFile, '--state', stateFile, '--test-fixture', fixture] };
+}
+
+test('start preserves the task and server identities; status reads WAIT_EXTERNAL without launching a server', () => {
+  const directory = resolve('runs/ticket23', `initial-${Date.now()}`);
+  const workspace = resolve(directory, 'workspace');
+  mkdirSync(workspace, { recursive: true });
+  const task = { schema_version: 1, task_id: 'fixture-initial', workspace, goal: 'Complete all original stages.', acceptance: [{ id: 'A1', text: 'All stages exist.' }], authorization: 'Only local workspace changes.' };
+  const trace = resolve(directory, 'protocol.jsonl');
+  const scenario = resolve(directory, 'scenario.json');
+  writeFileSync(scenario, JSON.stringify({ trace }));
+  const fixture = resolve(directory, 'fixture.json');
+  writeFileSync(fixture, JSON.stringify({ app_server_argv: [process.execPath, server, scenario], judge: { action: 'WAIT_EXTERNAL', reason: 'Fixture external dependency.', evidence_ids: ['E1'], next_message: '', external: { missing: 'Fixture supplied input.', attempted: ['Fixture supplied route.'], why_no_other_work: 'All other fixture work is exhausted.', resume_when: 'Fixture input arrives.' } } }));
+  const taskFile = resolve(directory, 'task.json');
+  writeFileSync(taskFile, JSON.stringify(task));
+  const stateFile = resolve(directory, 'state.json');
+  const started = run(['start', '--task', taskFile, '--state', stateFile, '--test-fixture', fixture]);
+  assert.equal(started.status, 0, started.stderr);
+  const state = json(stateFile);
+  assert.equal(state.status, 'WAIT_EXTERNAL');
+  assert.equal(state.phase, 'IDLE');
+  assert.deepEqual(state.task, { ...task, limits: { max_worker_turns: null, max_minutes: null } });
+  assert.equal(state.worker_thread_id, 'worker-from-server');
+  assert.equal(state.worker_turn_count, 1);
+  assert.equal(state.codex_version, 'codex-cli 0.166.0');
+  assert.equal(state.mode, 'simulated');
+  assert.deepEqual(state.handled_turn_ids, ['first-turn-from-server']);
+  const events = readFileSync(resolve(directory, 'events.jsonl'), 'utf8');
+  assert.match(events, /"turn_id":"first-turn-from-server"/);
+  assert.match(readFileSync(resolve(directory, 'summary.md'), 'utf8'), /Fixture supplied input/);
+  assert.match(readFileSync(snapshotFile(directory), 'utf8'), /Complete all original stages/);
+  const before = readFileSync(trace, 'utf8');
+  const messages = before.trim().split('\n').map((line) => JSON.parse(line)).filter((event) => event.kind === 'request');
+  for (const pid of new Set(messages.map((event) => event.pid))) {
+    const connection = messages.filter((event) => event.pid === pid);
+    assert.equal(connection[0].message.method, 'initialize');
+    assert.equal(connection[1].message.method, 'initialized');
+    const ids = connection.filter((event) => 'id' in event.message).map((event) => event.message.id);
+    assert.equal(new Set(ids).size, ids.length, 'Request IDs must be unique within a connection.');
+  }
+  const status = run(['status', '--state', stateFile]);
+  assert.equal(status.status, 0, status.stderr);
+  assert.equal(JSON.parse(status.stdout).status, 'WAIT_EXTERNAL');
+  assert.equal(readFileSync(trace, 'utf8'), before);
+});
+
+test('start rejects a server policy granting writes outside the configured workspace before running a turn', () => {
+  const fixture = setup('unsafe-policy', { sandbox: { type: 'workspaceWrite', writableRoots: [resolve('runs')], networkAccess: false, excludeTmpdirEnvVar: true, excludeSlashTmp: true } });
+  const started = run(fixture.argv);
+  assert.equal(started.status, 1, 'An expanded writable root must fail startup.');
+  assert.match(started.stderr, /policy verification failed/);
+  assert.equal(json(fixture.stateFile).worker_turn_count, 0);
+  assert.doesNotMatch(readFileSync(fixture.trace, 'utf8'), /"method":"turn\/start"/);
+});
+
+test('a second CLI cannot supervise the same task through another state file', async () => {
+  const fixture = setup('exclusive-task', { hold_worker: true });
+  const first = spawn(process.execPath, [cli, ...fixture.argv], { stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
+  let firstError = '';
+  first.stderr.on('data', (chunk) => { firstError += chunk.toString(); });
+  const exited = once(first, 'exit');
+  try {
+    const deadline = Date.now() + 10_000;
+    while (true) {
+      try { if (json(fixture.stateFile).active_worker_turn_id) break; } catch {}
+      assert.ok(Date.now() < deadline && first.exitCode === null, firstError || 'First CLI did not start a worker.');
+      await delay(20);
+    }
+    const alternative = resolve(fixture.directory, 'alternative', 'state.json');
+    const argv = fixture.argv.map((value) => value === fixture.stateFile ? alternative : value);
+    const second = run(argv);
+    assert.equal(second.status, 1, second.stderr);
+    assert.match(second.stderr, /supervisor lock/);
+  } finally {
+    first.kill('SIGKILL');
+    await exited;
+    // Ticket #25 owns Ctrl+C and graceful lifecycle. Clean the exact fixture PIDs after force-killing this test process.
+    for (const line of readFileSync(fixture.trace, 'utf8').trim().split('\n')) {
+      const event = JSON.parse(line);
+      if (event.kind === 'spawn') { try { process.kill(event.pid, 'SIGKILL'); } catch {} }
+    }
+  }
+});
+
+test('credential-shaped tool output is redacted before becoming a saved judge input', () => {
+  const secret = 'sk-supervisor-fixture-secret-1234567890';
+  const fixture = setup('secret-output', { answer: `A command accidentally printed ${secret}. Authorization: Bearer fixture-private-token-12345` });
+  const started = run(fixture.argv);
+  assert.equal(started.status, 0, started.stderr);
+  const snapshot = readFileSync(snapshotFile(fixture.directory), 'utf8');
+  assert.ok(!snapshot.includes(secret), 'Saved judge input must not contain an API token.');
+  assert.ok(!snapshot.includes('fixture-private-token-12345'), 'Bearer credentials must be removed.');
+  assert.match(snapshot, /REDACTED/);
+});
+
+test('inherited MCP names are disabled before creating any worker, including names with dots or quotes', () => {
+  const fixture = setup('mcp-isolation', { mcp_servers: ['legacy.server', 'quotes"name'] });
+  const started = run(fixture.argv);
+  assert.equal(started.status, 0, started.stderr);
+  const state = json(fixture.stateFile);
+  assert.equal(state.status, 'WAIT_EXTERNAL');
+  const trace = readFileSync(fixture.trace, 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+  const workerRequest = trace.find((event) => event.kind === 'request' && event.message.method === 'thread/start');
+  assert.ok(workerRequest, 'Isolated app-server must actually create a worker.');
+  const events = readFileSync(resolve(fixture.directory, 'events.jsonl'), 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+  assert.deepEqual(events.find((event) => event.type === 'connection_verified').disabled_mcp, ['legacy.server', 'quotes"name']);
+});
+
+test('the foreground CLI displays the worker reply and the supervisor waiting reason', () => {
+  const fixture = setup('foreground-output', { answer: 'Worker produced the first stage artifact.' });
+  const started = run(fixture.argv);
+  assert.equal(started.status, 0, started.stderr);
+  assert.match(started.stdout, /Worker produced the first stage artifact/);
+  assert.match(started.stdout, /WAIT_EXTERNAL: Fixture input/);
+});
+
+test('server-provided turn identities cannot place snapshot evidence outside the snapshot directory', () => {
+  const fixture = setup('snapshot-path', { turn_id: '../escaped' });
+  const started = run(fixture.argv);
+  assert.equal(started.status, 0, started.stderr);
+  assert.equal(existsSync(resolve(fixture.directory, 'escaped.json')), false);
+  const files = readdirSync(resolve(fixture.directory, 'snapshots'));
+  assert.equal(files.length, 1);
+  assert.equal(json(resolve(fixture.directory, 'snapshots', files[0]!)).input.worker_turn_id, '../escaped');
+});

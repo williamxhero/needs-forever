@@ -1,0 +1,23 @@
+{
+  "app_server_argv": [
+    "C:\\Program Files\\nodejs\\node.exe",
+    "C:\\Users\\will\\.codex\\worktrees\\s1-redo-ticket23\\needs-forever\\test\\fixtures\\app-server.mjs",
+    "C:\\Users\\will\\.codex\\worktrees\\s1-redo-ticket23\\needs-forever\\runs\\ticket23\\final-demo\\scenario.json"
+  ],
+  "judge": {
+    "action": "WAIT_EXTERNAL",
+    "reason": "The fixed fixture demonstrates a concrete external wait, not semantic completion.",
+    "evidence_ids": [
+      "E1"
+    ],
+    "next_message": "",
+    "external": {
+      "missing": "The demonstration input fixture.",
+      "attempted": [
+        "The fixture stage returned without the required input."
+      ],
+      "why_no_other_work": "The remaining fixture step depends on that input.",
+      "resume_when": "Supply the demonstration input fixture."
+    }
+  }
+}

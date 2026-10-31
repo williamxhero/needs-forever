@@ -1,0 +1,3 @@
+SIMULATED: app-server and judge fixtures are active.
+worker: The first fixture stage is complete. Required fixture input is unavailable.
+WAIT_EXTERNAL: The demonstration input fixture.; resume when Supply the demonstration input fixture.

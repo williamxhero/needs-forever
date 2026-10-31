@@ -1,0 +1,54 @@
+{
+  "source_run": "C:\\Users\\will\\.codex\\worktrees\\s1-redo-ticket23\\needs-forever\\runs\\ticket23\\final-demo",
+  "mode": "simulated",
+  "files": [
+    {
+      "path": "events.jsonl",
+      "sha256": "1b8e96aaf40c1bb8f9549f995dad764bdfe2e3dfdcde9669d0d700564927fb79"
+    },
+    {
+      "path": "fixture.json",
+      "sha256": "73256b8ed839890441de45b2f3fbae1f14cb2b4760c82917d671b23088e66a95"
+    },
+    {
+      "path": "protocol.jsonl",
+      "sha256": "a0b930b350cb8aaa55f6f632884a032576a1273ebbc1e734728843784744c5a4"
+    },
+    {
+      "path": "scenario.json",
+      "sha256": "f8a79dfabe74118e91f544e7612cf22a840551fe224a5381cec5f8ad7d3db226"
+    },
+    {
+      "path": "snapshots/a308fbff-feec-46a6-ab41-879e3bdb158e.json",
+      "sha256": "0fa83c085c86f2edbd54bece8289773406639d2f19246f466090798b52908f94"
+    },
+    {
+      "path": "start.stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "start.stdout.txt",
+      "sha256": "6063fff621399a1f806ece282fafeb1ed4e5b59de3cecbb33b7dfc7338745333"
+    },
+    {
+      "path": "state.json",
+      "sha256": "14bb21b0a6f488659433ff288d1ba97213a6e671db3429e34aa42d8c9c7cf372"
+    },
+    {
+      "path": "status.stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "status.stdout.txt",
+      "sha256": "14bb21b0a6f488659433ff288d1ba97213a6e671db3429e34aa42d8c9c7cf372"
+    },
+    {
+      "path": "summary.md",
+      "sha256": "d7758678bcfdf004965006641272665328bb3a93c8cb4401d80ee6185180aa82"
+    },
+    {
+      "path": "task.json",
+      "sha256": "7c38df9f2eda90de69d773c73fad7ea76888aa0b7b93d4f5aa1bd8f5673ba852"
+    }
+  ]
+}
