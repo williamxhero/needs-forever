@@ -5,7 +5,7 @@
   "integrated_at": "2026-10-31T18:40:01.8723583Z",
   "branch": "spec/21-s2-redo",
   "before": "b39865fdcb1c19d6c7e763456bfe94e2f542ce38",
-  "commit": "bad772c405fc521ee677006c9085ad5fd5612457",
+  "commit": "2e6b111",
   "merge": "git merge --ff-only ticket/28-redo",
   "ancestry": "PASS",
   "build": {
@@ -111,5 +111,5 @@
     "Two post-correction T01-T03 reruns are retained as negative/not-run evidence; only local-gate is used for T01-T03 PASS claims",
     "No main/push/Issue closure/archive"
   ],
-  "post_merge_head": "bad772c405fc521ee677006c9085ad5fd5612457"
+  "post_merge_head": "2e6b111"
 }
