@@ -71,8 +71,8 @@ simulated, live, and not_run.
 
 | Ticket | Behavior | Blocked by | Status |
 | --- | --- | --- | --- |
-| #23 | Start a task and query durable execution state | None | In progress |
-| #24 | Same-thread continuation, confirmed sending, stable terminal state | #23 | Not started |
+| #23 | Start a task and query durable execution state | None | Integrated; S1 delivery gate pending |
+| #24 | Same-thread continuation, confirmed sending, stable terminal state | #23 | In progress |
 | #25 | Pause, explicit resume, cumulative limits and S1 exit acceptance | #24 | Not started |
 
 All three tickets are native sub-issues of #20, carry `ready-for-agent`, and
@@ -104,6 +104,17 @@ Node `24.19.0`, npm `11.19.1`, Codex CLI `0.166.0`, Windows. Official app-server
 documentation was searched and fetched again. Exact wire shapes must still be
 checked against the installed CLI's stable generated protocol definitions.
 
-Fresh implementation acceptance has not run yet. Earlier test counts and live
-probes are not reused as fresh acceptance passes. No S1, S2, S3, or total SPEC is
-complete.
+Ticket #23 was independently merged and verified at
+`7671cd2e3805507f190db2962b0ff1dea14b53de`. The merger reran `npm test`:
+7/7 simulated tests passed; the integration diff check passed and both source
+and integration worktrees were clean. All 105 generated protocol dependencies
+were compared with their recorded installed-CLI source (only `.js` imports
+changed), and all 12 captured sample hashes matched. The original ticket run
+files were copied to `.scratch/new-workflow/evidence/ticket23-raw/ticket23`
+before any future worktree cleanup. Tracked evidence is under
+`docs/evidence/ticket-23/`.
+
+Ticket #24 starts from that verified integration tip in its own managed
+worktree and branch `ticket/24-redo`. #25 remains unstarted. Earlier test counts
+and live probes are not reused as fresh acceptance passes. No S1, S2, S3, or
+total SPEC is complete; no implementation Issue has been closed.
