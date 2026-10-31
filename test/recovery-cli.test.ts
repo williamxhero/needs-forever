@@ -116,3 +116,14 @@ test('transient initial app-server startup failure uses the same recovery backof
   assert.match(events, /"type":"recovery_retry_scheduled"/);
   assert.match(events, /service_unavailable/);
 });
+
+test('pausing during recovery cancels the backoff timer immediately', () => {
+  const run = fixture('pause-recovery', { judge_failures: ['Judge timeout.'], pause_after_ms: 50, recovery_delays_ms: [5000] });
+  const started = Date.now();
+  const result = run.run();
+  assert.equal(result.status, 0, result.stderr);
+  assert.ok(Date.now() - started < 2000, 'Pause should cancel the recovery backoff instead of waiting five seconds.');
+  const state = json(run.state);
+  assert.equal(state.status, 'PAUSED');
+  assert.equal(state.retry.next_at, null);
+});

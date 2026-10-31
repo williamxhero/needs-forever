@@ -443,6 +443,41 @@ test('explicit resume preserves an unknown sent delivery and never blindly repla
   assert.equal(trace.filter((entry) => entry.message?.method === 'turn/start').length, 2);
 });
 
+test('resume reconciles an interrupted sent delivery into one new continuation', () => {
+  const fixture = setup('resume-interrupted', { disconnect_on_send_once: true });
+  assert.equal(run(fixture.argv).status, 1);
+  const pending = json(fixture.stateFile).pending_action;
+  writeFileSync(fixture.scenario, JSON.stringify({ trace: fixture.trace, resume_turns: [{ id: 'first-turn-from-server', status: 'interrupted', items: [{ type: 'userMessage', clientId: pending.delivery_id }] }] }));
+  const resumed = run(['resume', '--state', fixture.stateFile, '--test-fixture', fixture.fixture]);
+  assert.equal(resumed.status, 0, resumed.stderr);
+  const state = json(fixture.stateFile);
+  assert.equal(state.status, 'WAIT_EXTERNAL');
+  assert.equal(state.pending_action, null);
+  const events = readFileSync(resolve(fixture.directory, 'events.jsonl'), 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+  assert.equal(events.filter((event) => event.type === 'worker_history_interrupted').length, 1);
+  assert.equal(events.filter((event) => event.type === 'send_confirmed').length, 1);
+  const trace = readFileSync(fixture.trace, 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+  const sends = trace.filter((entry) => entry.message?.method === 'turn/start');
+  assert.equal(sends.length, 2);
+  assert.notEqual(sends[0].message.params.clientUserMessageId, sends[1].message.params.clientUserMessageId);
+});
+
+test('resume records a failed sent delivery and enters unified recovery without confirming it', () => {
+  const fixture = setup('resume-failed', { disconnect_on_send_once: true });
+  assert.equal(run(fixture.argv).status, 1);
+  const pending = json(fixture.stateFile).pending_action;
+  writeFileSync(fixture.scenario, JSON.stringify({ trace: fixture.trace, resume_turns: [{ id: 'first-turn-from-server', status: 'failed', error: { message: 'Worker process exited with code 17.' }, items: [{ type: 'userMessage', clientId: pending.delivery_id }] }] }));
+  const resumed = run(['resume', '--state', fixture.stateFile, '--test-fixture', fixture.fixture]);
+  assert.equal(resumed.status, 1);
+  const state = json(fixture.stateFile);
+  assert.equal(state.phase, 'RECOVERING');
+  assert.equal(state.pending_action.delivery_id, pending.delivery_id);
+  assert.match(state.last_error, /Worker process exited with code 17/);
+  const events = readFileSync(resolve(fixture.directory, 'events.jsonl'), 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+  assert.equal(events.filter((event) => event.type === 'worker_history_failed').length, 1);
+  assert.equal(events.filter((event) => event.type === 'send_confirmed').length, 0);
+});
+
 test('resume reviews the saved completed worker turn without adding another worker round', () => {
   const fixture = setup('resume-completed', { hold_worker: true, pause_after_ms: 80 });
   assert.equal(run(fixture.argv).status, 0);

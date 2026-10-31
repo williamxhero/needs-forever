@@ -7,7 +7,7 @@ import type { TurnStartParams } from './protocol/generated/v2/TurnStartParams.js
 import type { TurnStartResponse } from './protocol/generated/v2/TurnStartResponse.js';
 import type { CommandExecParams } from './protocol/generated/v2/CommandExecParams.js';
 import type { CommandExecResponse } from './protocol/generated/v2/CommandExecResponse.js';
-import type { State, Snapshot } from './types.js';
+import type { PendingAction, State, Snapshot } from './types.js';
 import { record, text } from './types.js';
 import { Store } from './store.js';
 import type { Judge } from './judge.js';
@@ -16,6 +16,7 @@ import { connect, RpcServerError, type Rpc } from './transport.js';
 import { redact } from './redact.js';
 import { buildSnapshot } from './snapshot.js';
 import { classifyRecoveryError, nextBackoff, recordRecoveryFailure } from './recovery.js';
+import { setTimeout as delay } from 'node:timers/promises';
 
 export class Supervisor {
   private rpc: Rpc | undefined;
@@ -57,7 +58,12 @@ export class Supervisor {
     this.store.event(this.state, 'recovery_retry_scheduled', { kind: classification.kind, error: classification.message, attempt, next_at: nextAt, delay_seconds: delayMs / 1000, instruction: latest.instruction });
     this.save();
     console.log(`RECOVERING: ${classification.kind}; attempt ${attempt}; retry at ${nextAt}; ${latest.instruction}`);
-    await new Promise<void>((resolve_) => setTimeout(resolve_, delayMs));
+    try {
+      await delay(delayMs, undefined, { signal: this.abort.signal });
+    } catch (error) {
+      if (this.abort.signal.aborted) return false;
+      throw error;
+    }
     if (this.state.status !== 'ACTIVE' || this.abort.signal.aborted) return false;
     return true;
   }
@@ -201,6 +207,8 @@ export class Supervisor {
       if (!matchingActive) throw new Error('Saved active worker turn is absent from resume history; no resend performed.');
       this.store.event(this.state, 'worker_history_reconciled', { turn_id: active, status: matchingActive.status });
       if (matchingActive.status === 'completed') this.enqueue({ kind: 'notification', method: 'turn/completed', params: { threadId: this.state.worker_thread_id, turn: matchingActive } });
+      else if (matchingActive.status === 'interrupted') this.continueAfterInterrupted(null, matchingActive);
+      else if (matchingActive.status === 'failed') throw this.failedHistoryError(matchingActive);
       return;
     }
     const matching = turns.find((turn) => Array.isArray(turn.items) && turn.items.some((item) => item.type === 'userMessage' && item.clientId === pending.delivery_id));
@@ -215,9 +223,34 @@ export class Supervisor {
       this.sendNext(message, pending.source_turn_id);
       return;
     }
-    this.confirm(matching.id, pending.delivery_id, this.state.task_version, 'history');
     this.store.event(this.state, 'send_reconciled_present', { delivery_id: pending.delivery_id, turn_id: matching.id, status: matching.status });
-    if (matching.status === 'completed') this.enqueue({ kind: 'notification', method: 'turn/completed', params: { threadId: this.state.worker_thread_id, turn: matching } });
+    if (matching.status === 'completed') {
+      this.confirm(matching.id, pending.delivery_id, this.state.task_version, 'history');
+      this.enqueue({ kind: 'notification', method: 'turn/completed', params: { threadId: this.state.worker_thread_id, turn: matching } });
+    } else if (matching.status === 'inProgress') {
+      this.confirm(matching.id, pending.delivery_id, this.state.task_version, 'history');
+    } else if (matching.status === 'interrupted') {
+      this.continueAfterInterrupted(pending, matching);
+    } else if (matching.status === 'failed') {
+      throw this.failedHistoryError(matching);
+    }
+  }
+  private failedHistoryError(turn: { id: string; error?: { message?: string } | null }): Error {
+    const message = turn.error?.message ?? `Worker turn ${turn.id} failed without an error message.`;
+    this.state.last_error = message;
+    this.store.event(this.state, 'worker_history_failed', { turn_id: turn.id, error: message });
+    this.save();
+    return new Error(`Worker turn ${turn.id} failed: ${message}`);
+  }
+  private continueAfterInterrupted(pending: PendingAction | null, turn: { id: string }): void {
+    const message = pending?.message.replace(/^\[supervisor:[^\]]+\]\n/, '') ?? JSON.stringify(this.state.task);
+    this.state.pending_action = null;
+    this.state.active_worker_turn_id = null;
+    this.state.reviewing_turn_id = null;
+    this.state.phase = 'WORKER';
+    this.save();
+    this.store.event(this.state, 'worker_history_interrupted', { turn_id: turn.id, old_delivery_id: pending?.delivery_id ?? null, action: 'new_continuation' });
+    this.sendNext(message, pending?.source_turn_id ?? turn.id);
   }
   private async reconnectAndReconcile(argv: string[]): Promise<void> {
     const old = this.rpc;
