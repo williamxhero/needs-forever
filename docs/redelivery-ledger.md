@@ -205,3 +205,15 @@ T01-T05 are `not_run_to_completion`, not passed. Raw live evidence is preserved 
 `.scratch/new-workflow/evidence/ticket28-raw/ticket28-live` (10 files, 53,669
 bytes). #28 and #21 remain open; no main merge, push, cleanup, or S3 start is
 authorized by the completion gate.
+
+The #28 candidate was then corrected to require an empty `next_message` for
+`WAIT_EXTERNAL` and merged at `8a60c099442430565a1f66d28ac67fa09db6979d`;
+final receipt commit is `bde7ce3556254ffb7b4901705f267f63e7c6c446`.
+The merger reran build and **50/50 simulated tests**. Three bounded real runs
+were preserved: the first judge did not finish; the second returned an invalid
+`WAIT_EXTERNAL` and was rejected; the third returned a valid `WAIT_EXTERNAL` with
+empty `next_message`, after the real worker completed stage 1 but failed to write
+stage2/final in the isolated workspace. Worker and judge IDs, event sequences,
+snapshots and raw outputs are retained in the ticket evidence and ignored raw
+backups. This proves protocol refusal and valid waiting behavior, but does not
+prove T01-T05. #28 and #21 remain OPEN; S2 cannot enter main delivery or S3.
