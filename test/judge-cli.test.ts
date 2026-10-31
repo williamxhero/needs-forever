@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { judgeInstructions } from '../src/judge.js';
 
 function json(path: string): any { return JSON.parse(readFileSync(path, 'utf8')); }
 function scenario(name: string, options: Record<string, unknown> = {}) {
@@ -19,6 +20,11 @@ function scenario(name: string, options: Record<string, unknown> = {}) {
   writeFileSync(fixture, JSON.stringify({ app_server_argv: [process.execPath, resolve('test/fixtures/app-server.mjs'), config], real_judge: true }));
   return { directory, workspace, task, state, trace, config, fixture, run() { return spawnSync(process.execPath, [resolve('dist/src/cli.js'), 'start', '--task', task, '--state', state, '--test-fixture', fixture], { encoding: 'utf8', timeout: 15000 }); }, events() { return readFileSync(resolve(directory, 'events.jsonl'), 'utf8').trim().split('\n').map((line) => JSON.parse(line)); }, protocol() { return readFileSync(trace, 'utf8').trim().split('\n').map((line) => JSON.parse(line)); }, snapshots() { return readdirSync(resolve(directory, 'snapshots')).map((name) => json(resolve(directory, 'snapshots', name))); } };
 }
+
+test('judge prompt states the terminal next_message contract', () => {
+  assert.match(judgeInstructions, /WAIT_EXTERNAL, next_message MUST be exactly the empty string/);
+  assert.match(judgeInstructions, /Only CONTINUE may have a nonempty next_message/);
+});
 
 test('real judge boundary continues the original worker then completes with fresh archived read-only judges', () => {
   const fixture = scenario('fresh-judges', { judge_actions: ['CONTINUE', 'DONE'], tool_items: [{ type: 'commandExecution', id: 'check', command: 'check-result', exitCode: 0, status: 'completed', aggregatedOutput: 'A1 passes.' }] });
