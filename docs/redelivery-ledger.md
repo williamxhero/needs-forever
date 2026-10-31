@@ -19,7 +19,37 @@ count as accepted implementation or acceptance evidence.
   are `74444ECF532919C1D48BC3081FC27253C5E921E4D7BC15A8A2ABA10ECF8B9F00`
   and `D3BD138C3BE2D409FFC8CDF0956858EC86BF7BEF03980149CCEE24EB4F9F58D1`.
 
-## Authorized workflow
+## Current workflow (2026-11-01)
+
+The user invoked `implement-spec-to-done` for #19. The sole current SPEC is #20.
+Its full body and comments, #19's full contract, native child relationships and
+SPEC dependency edges were read again. Order: #20, then #21, then #22.
+
+Skills are executed by loading their installed SKILL.md files and following the
+complete procedures; this environment exposes no dedicated skill-call tool.
+The current `/to-tickets` phase revalidates existing #23/#24/#25, including
+coverage, labels, native parent and blocker links. Their order remains
+#23 -> #24 -> #25. No later SPEC is decomposed or implemented in this phase.
+
+Ticket #23's policy criterion is clarified to match #20: validate the actual
+worker policy in S1, use a fixed judge for deterministic tests, and validate the
+real judge's read-only policy in S2. The total requirement remains unchanged.
+
+After current-ticket revalidation, resume the unfinished #23 worktree as a
+draft: no earlier passing test is assumed to be current acceptance. Complete
+each ready ticket with TDD, then integrate using a merger agent. Re-read all S1
+criteria, run its complete simulated acceptance and independent Standards/Spec
+reviews, resolve findings, merge to main, preserve evidence and clean only
+delivered temporary resources, push and verify remote equality. Publish and
+read back completion evidence, close S1's tickets and #20, and confirm CLOSED.
+Only then may #21 enter its own `/to-tickets` phase. The same gate applies
+between #21 and #22, followed by total #19 acceptance and closure.
+
+The user's standing approval covers breakdown decisions, not exceptions to
+this sequence. Resume/transition records must identify the current SPEC and
+actual evidence for closing its predecessor.
+
+## Earlier workflow record (superseded)
 
 The user approved all ticket breakdown decisions, including future breakdowns;
 no additional granularity approval is required. This does not waive any technical
@@ -50,21 +80,14 @@ have native blocked-by relationships. Published bodies were uploaded from UTF-8
 without BOM files and compared exactly after readback, including GitHub's CRLF
 line endings. Publication receipts are retained under ignored `.scratch/redo`.
 
-## Approved future ticket graph
+## Historical premature ticket publication
 
-| SPEC | Ticket | Behavior | Blocked by | Status |
-| --- | --- | --- | --- | --- |
-| #21 / S2 | #26 | Fresh read-only judge, actual evidence, strict decision schema | #25 | Not started |
-| #21 / S2 | #27 | Fixed independent verification and protected files | #26 | Not started |
-| #21 / S2 | #28 | Deterministic requests and complete real S2 demonstration | #27 | Not started |
-| #22 / S3 | #29 | Shared errors, unlimited backoff and repeat-failure diagnosis | #28 | Not started |
-| #22 / S3 | #30 | Original-thread history reconciliation and safe recovery | #29 | Not started |
-| #22 / S3 | #31 | Actual fault injection, complete acceptance and delivery | #30 | Not started |
-
-Every future ticket was published from a UTF-8 without BOM body file, compared
-exactly on readback, assigned `ready-for-agent`, attached to its native parent,
-and checked for its native blocked-by relationship. Advance publication does
-not authorize bypassing the previous SPEC's delivery gate.
+#26–#28 under #21 and #29–#31 under #22 were published before the preceding
+SPECs were closed. That was a workflow error. These issues are preserved as
+unstarted historical records; their earlier publication is not completion of
+any phase in the current workflow. Do not start or further refine them now.
+Revalidate only when their owning SPEC becomes current after its predecessor
+is delivered and CLOSED. The original publication receipts remain historical.
 
 During publication, GitHub REST reads returned repeated `EOF` with the default
 HTTP transport. Repeating a read with process-local `GODEBUG=http2client=0`

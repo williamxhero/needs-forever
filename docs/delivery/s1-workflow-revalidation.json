@@ -1,0 +1,36 @@
+{
+  "date": "2026-11-01",
+  "workflow": "implement-spec-to-done",
+  "current_spec": 20,
+  "phase": "to-tickets",
+  "mechanism": "Loaded and executed the installed SKILL.md; no dedicated skill-call tool is exposed.",
+  "source_skill": "C:/Users/will/.codex/skills/to-tickets/SKILL.md",
+  "approval": "User standing approval of all ticket breakdowns; sequential SPEC gate remains mandatory.",
+  "result": "Current S1 existing tickets revalidated; no new issues; no later SPEC ticket work performed.",
+  "tickets": [
+    {
+      "number": 23,
+      "parent": 20,
+      "blocked_by": null,
+      "body_sha256": "720018de22b826ef09072388f8003933635a72afbb95ccf4b75ae0618e9b2105",
+      "state": "OPEN",
+      "comments": 0
+    },
+    {
+      "number": 24,
+      "parent": 20,
+      "blocked_by": 23,
+      "body_sha256": "97335203a2114355d07a7527a51f310c34de9b774c33f7f92a1644e56c251dbe",
+      "state": "OPEN",
+      "comments": 0
+    },
+    {
+      "number": 25,
+      "parent": 20,
+      "blocked_by": 24,
+      "body_sha256": "0c34bfe665ff66ff8d43eaaa8321b0375ddd9ce5deb0140bcc9c1c0001cb8ec6",
+      "state": "OPEN",
+      "comments": 0
+    }
+  ]
+}
