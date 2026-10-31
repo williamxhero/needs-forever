@@ -1,0 +1,9 @@
+codex_version=codex-cli 0.166.0
+worker_thread_id=01a1933d-942a-7620-91c9-feaeabd3ab8f
+worker_turn_id=01a1933d-951c-7b80-a0f8-8f71aed7d91a
+judge_thread_id=01a1933e-39e1-7390-996c-0f49ec3c8f6e
+judge_turn_id=01a1933e-3a97-79d0-89bd-32848d6d539c
+worker: unavailable-route.mjs exit 23; route marker and stage1.json verified
+judge: valid WAIT_EXTERNAL with next_message=""; evidence E1/E3/E4; verifier reports stage2.json missing
+live result: no DONE; task correctly persisted WAIT_EXTERNAL because this isolated run could not write stage2/final
+verdict: protocol contract passed; complete T01-T05 not_run_to_completion
