@@ -304,3 +304,166 @@ test('judge input is saved while its result is pending and duplicate terminal ev
     assert.equal(readdirSync(resolve(fixture.directory, 'snapshots')).length, 1);
   } finally { if (child.exitCode === null) { child.kill('SIGKILL'); await exited; } }
 });
+
+test('T08 simulated worker pause is saved before interrupting its owned turn', () => {
+  const fixture = setup('pause-worker', { hold_worker: true, pause_after_ms: 80 });
+  writeFileSync(fixture.scenario, JSON.stringify({ ...json(fixture.scenario), state_file: fixture.stateFile }));
+  const result = run(fixture.argv);
+  assert.equal(result.status, 0, result.stderr);
+  const state = json(fixture.stateFile);
+  assert.equal(state.status, 'PAUSED');
+  assert.equal(state.task_version, 2);
+  assert.equal(state.pause_reason, 'user');
+  assert.equal(state.pending_action, null);
+  assert.equal(state.retry.next_at, null);
+  assert.ok(state.elapsed_active_seconds > 0);
+  const trace = readFileSync(fixture.trace, 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+  assert.equal(trace.find((entry) => entry.kind === 'checkpoint_at_interrupt').state.status, 'PAUSED');
+});
+
+test('T08 simulated delayed judge success cannot overwrite durable PAUSED', () => {
+  const fixture = setup('pause-judge', { pause_after_ms: 80 });
+  writeFileSync(fixture.fixture, JSON.stringify({ ...json(fixture.fixture), judge_delay_ms: 250, judge_ignores_cancellation: true, judge: { action: 'DONE', reason: 'Late fixture success.', evidence_ids: ['E1'], next_message: '', external: null } }));
+  const result = run(fixture.argv);
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(json(fixture.stateFile).status, 'PAUSED');
+  assert.equal(json(fixture.stateFile).last_decision, null);
+  assert.match(readFileSync(resolve(fixture.directory, 'events.jsonl'), 'utf8'), /stale_judge_result_ignored/);
+});
+
+test('T08 simulated verification is interrupted after PAUSED and cannot mark DONE', () => {
+  const fixture = setup('pause-verification', { pause_after_ms: 100, verification_delay_ms: 300 });
+  writeFileSync(fixture.taskFile, JSON.stringify({ ...json(fixture.taskFile), verify: { argv: ['fixture-verification'], timeout_seconds: 10, protected_files: [] } }));
+  writeFileSync(fixture.fixture, JSON.stringify({ ...json(fixture.fixture), simulate_verification: true, judge: { action: 'DONE', reason: 'Fixed fixture success.', evidence_ids: ['E1'], next_message: '', external: null } }));
+  const result = run(fixture.argv);
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(json(fixture.stateFile).status, 'PAUSED');
+  const events = readFileSync(resolve(fixture.directory, 'events.jsonl'), 'utf8');
+  assert.match(events, /fixture_verification_started/);
+  assert.match(events, /stale_verification_result_ignored/);
+  assert.doesNotMatch(events, /verification_passed/);
+});
+
+test('explicit resume uses saved task and worker identity, and DONE cannot reopen', () => {
+  const fixture = setup('explicit-resume');
+  assert.equal(run(fixture.argv).status, 0);
+  writeFileSync(fixture.taskFile, JSON.stringify({ ...json(fixture.taskFile), goal: 'Unapproved changed file.' }));
+  writeFileSync(fixture.scenario, JSON.stringify({ ...json(fixture.scenario), turn_id: 'resumed-turn' }));
+  writeFileSync(fixture.fixture, JSON.stringify({ ...json(fixture.fixture), judge: { action: 'DONE', reason: 'Fixed fixture complete.', evidence_ids: ['E1'], next_message: '', external: null } }));
+  const argv = ['resume', '--state', fixture.stateFile, '--test-fixture', fixture.fixture];
+  const resumed = run(argv);
+  assert.equal(resumed.status, 0, resumed.stderr);
+  const state = json(fixture.stateFile);
+  assert.equal(state.status, 'DONE');
+  assert.equal(state.task_version, 2);
+  assert.equal(state.task.goal, 'Complete the goal.');
+  assert.equal(state.worker_turn_count, 2);
+  const trace = readFileSync(fixture.trace, 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+  assert.equal(trace.filter((entry) => entry.message?.method === 'thread/start').length, 1);
+  assert.equal(trace.find((entry) => entry.message?.method === 'thread/resume').message.params.threadId, 'worker-from-server');
+  const before = readFileSync(fixture.trace, 'utf8');
+  assert.equal(run(argv).status, 1);
+  assert.equal(readFileSync(fixture.trace, 'utf8'), before);
+});
+
+test('cumulative turn limit pauses before another send and resume requires an increased or removed limit', () => {
+  const fixture = setup('turn-limit');
+  writeFileSync(fixture.taskFile, JSON.stringify({ ...json(fixture.taskFile), limits: { max_worker_turns: 1, max_minutes: null } }));
+  writeFileSync(fixture.fixture, JSON.stringify({ ...json(fixture.fixture), judge: { action: 'CONTINUE', reason: 'More authorized work.', evidence_ids: ['E1'], next_message: 'Finish next stage.', external: null } }));
+  const result = run(fixture.argv);
+  assert.equal(result.status, 0, result.stderr);
+  const paused = json(fixture.stateFile);
+  assert.equal(paused.status, 'PAUSED');
+  assert.equal(paused.pause_reason, 'user_limit');
+  assert.equal(paused.worker_turn_count, 1);
+  const argv = ['resume', '--state', fixture.stateFile, '--test-fixture', fixture.fixture];
+  const before = readFileSync(fixture.trace, 'utf8');
+  assert.equal(run(argv).status, 1);
+  assert.equal(readFileSync(fixture.trace, 'utf8'), before);
+  writeFileSync(fixture.taskFile, JSON.stringify({ ...json(fixture.taskFile), limits: { max_worker_turns: 2, max_minutes: null } }));
+  writeFileSync(fixture.fixture, JSON.stringify({ ...json(fixture.fixture), judge: { action: 'DONE', reason: 'Fixture done.', evidence_ids: ['E1'], next_message: '', external: null } }));
+  writeFileSync(fixture.scenario, JSON.stringify({ ...json(fixture.scenario), turn_id: 'after-limit-turn' }));
+  const resumed = run([...argv, '--task', fixture.taskFile]);
+  assert.equal(resumed.status, 0, resumed.stderr);
+  assert.equal(json(fixture.stateFile).worker_turn_count, 2);
+  assert.ok(json(fixture.stateFile).elapsed_active_seconds >= paused.elapsed_active_seconds);
+});
+
+test('ACTIVE time is checkpointed while waiting and the explicit total-time limit pauses a running worker', async () => {
+  const fixture = setup('time-limit', { hold_worker: true });
+  writeFileSync(fixture.taskFile, JSON.stringify({ ...json(fixture.taskFile), limits: { max_worker_turns: null, max_minutes: 0.02 } }));
+  const child = spawn(process.execPath, [cli, ...fixture.argv], { stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
+  const exited = once(child, 'exit');
+  try {
+    const deadline = Date.now() + 3000;
+    while (true) {
+      try { const state = json(fixture.stateFile); if (state.status === 'ACTIVE' && state.elapsed_active_seconds > 0.1) break; } catch {}
+      assert.ok(Date.now() < deadline, 'ACTIVE elapsed time was not checkpointed.');
+      await delay(20);
+    }
+    const [code] = await exited;
+    assert.equal(code, 0);
+    const state = json(fixture.stateFile);
+    assert.equal(state.status, 'PAUSED');
+    assert.equal(state.pause_reason, 'user_limit');
+    assert.ok(state.elapsed_active_seconds >= 1.2);
+    assert.equal(run(['resume', '--state', fixture.stateFile, '--test-fixture', fixture.fixture]).status, 1);
+  } finally { if (child.exitCode === null) { child.kill('SIGKILL'); await exited; } }
+});
+
+test('explicit resume preserves an unknown sent delivery and never blindly replays it', () => {
+  const fixture = setup('unknown-resume', { disconnect_on_send: true });
+  assert.equal(run(fixture.argv).status, 1);
+  const pending = json(fixture.stateFile).pending_action;
+  const resumed = run(['resume', '--state', fixture.stateFile, '--test-fixture', fixture.fixture]);
+  assert.equal(resumed.status, 1);
+  const state = json(fixture.stateFile);
+  assert.equal(state.phase, 'RECOVERING');
+  assert.equal(state.pending_action.delivery_id, pending.delivery_id);
+  assert.equal(state.task_version, 2);
+  const trace = readFileSync(fixture.trace, 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+  assert.equal(trace.filter((entry) => entry.message?.method === 'turn/start').length, 1);
+});
+
+test('resume reviews the saved completed worker turn without adding another worker round', () => {
+  const fixture = setup('resume-completed', { hold_worker: true, pause_after_ms: 80 });
+  assert.equal(run(fixture.argv).status, 0);
+  writeFileSync(fixture.scenario, JSON.stringify({ trace: fixture.trace, resume_turns: [{ id: 'first-turn-from-server', status: 'completed', items: [] }] }));
+  writeFileSync(fixture.fixture, JSON.stringify({ ...json(fixture.fixture), judge: { action: 'DONE', reason: 'Completed while interrupt raced.', evidence_ids: ['E1'], next_message: '', external: null } }));
+  const result = run(['resume', '--state', fixture.stateFile, '--test-fixture', fixture.fixture]);
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(json(fixture.stateFile).status, 'DONE');
+  assert.equal(json(fixture.stateFile).worker_turn_count, 1);
+  const trace = readFileSync(fixture.trace, 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+  assert.equal(trace.filter((entry) => entry.message?.method === 'turn/start').length, 1);
+});
+
+test('explicit resume reclaims only a dead supervisor lock and preserves checkpointed time after a crash', async () => {
+  const fixture = setup('crash-resume', { hold_worker: true });
+  const child = spawn(process.execPath, [cli, ...fixture.argv], { stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
+  const exited = once(child, 'exit');
+  let checkpoint;
+  try {
+    const deadline = Date.now() + 5000;
+    while (true) {
+      try { const state = json(fixture.stateFile); if (state.active_worker_turn_id && state.elapsed_active_seconds > 0.35) { checkpoint = state; break; } } catch {}
+      assert.ok(Date.now() < deadline, 'No active crash checkpoint.');
+      await delay(20);
+    }
+  } finally {
+    child.kill('SIGKILL');
+    await exited;
+    for (const line of readFileSync(fixture.trace, 'utf8').trim().split('\n')) {
+      const event = JSON.parse(line);
+      if (event.kind === 'spawn') { try { process.kill(event.pid, 'SIGKILL'); } catch {} }
+    }
+  }
+  writeFileSync(fixture.scenario, JSON.stringify({ trace: fixture.trace, resume_turns: [{ id: 'first-turn-from-server', status: 'completed', items: [] }] }));
+  writeFileSync(fixture.fixture, JSON.stringify({ ...json(fixture.fixture), judge: { action: 'DONE', reason: 'Recovered fixture history.', evidence_ids: ['E1'], next_message: '', external: null } }));
+  const resumed = run(['resume', '--state', fixture.stateFile, '--test-fixture', fixture.fixture]);
+  assert.equal(resumed.status, 0, resumed.stderr);
+  const state = json(fixture.stateFile);
+  assert.equal(state.status, 'DONE');
+  assert.equal(state.worker_turn_count, 1);
+  assert.ok(state.elapsed_active_seconds >= checkpoint.elapsed_active_seconds);
+});

@@ -21,5 +21,5 @@ function copy(file) {
   mkdirSync(dirname(output), { recursive: true });
   writeFileSync(output, contents);
 }
-for (const file of ['InitializeParams.ts', 'InitializeResponse.ts', 'v2/ThreadStartParams.ts', 'v2/ThreadStartResponse.ts', 'v2/TurnStartParams.ts', 'v2/TurnStartResponse.ts', 'v2/TurnStartedNotification.ts', 'v2/TurnCompletedNotification.ts', 'v2/ConfigReadParams.ts', 'v2/ConfigReadResponse.ts']) copy(file);
+for (const file of ['InitializeParams.ts', 'InitializeResponse.ts', 'v2/ThreadStartParams.ts', 'v2/ThreadStartResponse.ts', 'v2/ThreadResumeParams.ts', 'v2/ThreadResumeResponse.ts', 'v2/TurnStartParams.ts', 'v2/TurnStartResponse.ts', 'v2/TurnStartedNotification.ts', 'v2/TurnCompletedNotification.ts', 'v2/ConfigReadParams.ts', 'v2/ConfigReadResponse.ts']) copy(file);
 console.log(`Imported ${visited.size} generated type files; only .js import extensions normalized for NodeNext.`);

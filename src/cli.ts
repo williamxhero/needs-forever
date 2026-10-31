@@ -48,13 +48,17 @@ async function main(): Promise<void> {
     console.log(JSON.stringify(store.read(), null, 2));
     return;
   }
-  if (command !== 'start') throw new Error('Usage: codex-supervisor start --task FILE [--state FILE] [--test-fixture FILE] | status --state FILE. resume is delivered by ticket #25.');
-  const task = taskInput(readJson(resolve(text(flags.get('--task'), '--task'))));
+  if (command !== 'start' && command !== 'resume') throw new Error('Usage: codex-supervisor start --task FILE [--state FILE] [--test-fixture FILE] | resume --state FILE [--task FILE] [--test-fixture FILE] | status --state FILE.');
+  const saved = command === 'resume' ? new Store(resolve(text(flags.get('--state'), '--state'))).read() : undefined;
+  if (saved && (saved.schema_version !== 1 || saved.status === 'DONE')) throw new Error('DONE cannot resume; saved state must use schema_version 1.');
+  const task = flags.has('--task') ? taskInput(readJson(resolve(flags.get('--task')!))) : saved ? taskInput(saved.task) : taskInput(undefined);
+  if (saved && (saved.task_id !== task.task_id || resolve(saved.task.workspace) !== task.workspace)) throw new Error('Explicit --task cannot change task_id or workspace.');
+  if (saved && ((task.limits.max_worker_turns !== null && saved.worker_turn_count >= task.limits.max_worker_turns) || (task.limits.max_minutes !== null && saved.elapsed_active_seconds >= task.limits.max_minutes * 60))) throw new Error('Cumulative user_limit reached; raise or remove the limit through explicit --task before resume.');
   const stateFile = resolve(flags.get('--state') ?? resolve('runs', task.task_id, 'state.json'));
   const store = new Store(stateFile);
-  store.lock(task);
+  store.lock(task, !!saved);
   try {
-    if (existsSync(stateFile)) throw new Error('Task state already exists; start cannot overwrite an existing task.');
+    if (!saved && existsSync(stateFile)) throw new Error('Task state already exists; start cannot overwrite an existing task.');
     const fixturePath = flags.get('--test-fixture');
     const fixture = fixturePath ? record(readJson(resolve(fixturePath))) : undefined;
     let argv = codexCommand;
@@ -64,11 +68,22 @@ async function main(): Promise<void> {
       commandArgv = fixture.app_server_argv as string[];
       console.log('SIMULATED: app-server and judge fixtures are active.');
     } else commandArgv = argv();
-    const state: State = { schema_version: 1, task_id: task.task_id, task_version: 1, task, worker_thread_id: null, status: 'ACTIVE', phase: 'WORKER', active_worker_turn_id: null, reviewing_turn_id: null, handled_turn_ids: [], pending_action: null, retry: { kind: null, attempt: 0, next_at: null }, last_decision: null, worker_turn_count: 0, elapsed_active_seconds: 0, updated_at: new Date().toISOString(), codex_version: null, mode: fixture ? 'simulated' : 'live' };
+    const state: State = saved ?? { schema_version: 1, task_id: task.task_id, task_version: 1, task, worker_thread_id: null, status: 'ACTIVE', phase: 'WORKER', active_worker_turn_id: null, reviewing_turn_id: null, handled_turn_ids: [], pending_action: null, retry: { kind: null, attempt: 0, next_at: null }, last_decision: null, worker_turn_count: 0, elapsed_active_seconds: 0, updated_at: new Date().toISOString(), codex_version: null, mode: fixture ? 'simulated' : 'live' };
+    if (saved) {
+      if (state.mode !== (fixture ? 'simulated' : 'live')) throw new Error('Resume must preserve simulated/live mode.');
+      state.task = task;
+      state.task_version++;
+      state.status = 'ACTIVE';
+      delete state.pause_reason;
+      state.retry = { kind: null, attempt: 0, next_at: null };
+    }
     const judgeDelay = fixture?.judge_delay_ms ?? 0;
     if (typeof judgeDelay !== 'number' || !Number.isFinite(judgeDelay) || judgeDelay < 0) throw new Error('Fixture judge_delay_ms must be a nonnegative number.');
-    const judge = fixture ? new FixtureJudge(fixture.judge as Decision | Decision[], judgeDelay) : new UnavailableJudge();
-    await new Supervisor(state, store, judge).start(commandArgv);
+    const judge = fixture ? new FixtureJudge(fixture.judge as Decision | Decision[], judgeDelay, fixture.judge_ignores_cancellation === true) : new UnavailableJudge();
+    const supervisor = new Supervisor(state, store, judge, fixture ? { simulate_verification: fixture.simulate_verification === true } : undefined);
+    const pause = () => supervisor.pause();
+    process.on('SIGINT', pause);
+    try { await supervisor.start(commandArgv, !!saved); } finally { process.off('SIGINT', pause); }
   } finally { store.release(); }
 }
 main().catch((error: unknown) => { console.error(error instanceof Error ? error.message : 'Supervisor failed.'); process.exitCode = 1; });

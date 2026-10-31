@@ -33,7 +33,9 @@ export class Rpc {
   private wake: (() => void) | undefined;
   private failure: Error | undefined;
   private closed = false;
-  constructor(argv: string[], cwd: string, overrides: string[]) {
+  private readonly onAbort = () => { void this.close(); };
+  constructor(argv: string[], cwd: string, overrides: string[], private readonly signal?: AbortSignal) {
+    signal?.throwIfAborted();
     const [executable, ...arguments_] = argv;
     if (!executable) throw new Error('Empty app-server argv.');
     this.child = spawn(executable, [...arguments_, 'app-server', ...overrides.flatMap((value) => ['-c', value])], { cwd, windowsHide: true, stdio: 'pipe' });
@@ -57,6 +59,7 @@ export class Rpc {
     this.child.on('error', () => this.fail(new Error('Unable to start app-server.')));
     this.child.on('exit', (code) => this.fail(new Error(`app-server exited (${code}). Recovery remains an S3 responsibility.`)));
     this.child.stdin.on('error', () => this.fail(new Error('app-server input connection closed.')));
+    signal?.addEventListener('abort', this.onAbort, { once: true });
   }
   get processId(): number | undefined { return this.child.pid; }
   private fail(error: Error): void {
@@ -85,6 +88,7 @@ export class Rpc {
   async close(): Promise<void> {
     if (this.closed) return;
     this.closed = true;
+    this.signal?.removeEventListener('abort', this.onAbort);
     if (this.child.exitCode !== null || this.child.signalCode !== null) return;
     const exited = once(this.child, 'exit');
     this.child.kill();
@@ -98,7 +102,8 @@ async function handshake(rpc: Rpc): Promise<void> {
   await rpc.request('initialize', params);
   rpc.notify('initialized');
 }
-export async function connect(argv: string[], workspace: string): Promise<{ rpc: Rpc; version: string; disabled_mcp: string[] }> {
+export async function connect(argv: string[], workspace: string, signal?: AbortSignal): Promise<{ rpc: Rpc; version: string; disabled_mcp: string[] }> {
+  signal?.throwIfAborted();
   const [executable, ...arguments_] = argv;
   if (!executable) throw new Error('Empty Codex command.');
   const versionResult = spawnSync(executable, [...arguments_, '--version'], { cwd: workspace, windowsHide: true, encoding: 'utf8', timeout: 10_000 });
@@ -110,7 +115,7 @@ export async function connect(argv: string[], workspace: string): Promise<{ rpc:
     'sandbox_workspace_write.network_access=false', 'sandbox_workspace_write.exclude_tmpdir_env_var=true', 'sandbox_workspace_write.exclude_slash_tmp=true',
   ];
   // Discovery connection never creates a thread or starts a model/tool.
-  const probe = new Rpc(argv, workspace, common);
+  const probe = new Rpc(argv, workspace, common, signal);
   let names: string[];
   const params: ConfigReadParams = { cwd: workspace, includeLayers: false };
   try {
@@ -122,7 +127,7 @@ export async function connect(argv: string[], workspace: string): Promise<{ rpc:
   // -c's dotted path parser does not unquote segments. Put escaped MCP keys
   // inside one TOML inline table so names containing punctuation stay exact.
   const mcpOverride = `mcp_servers={${names.map((name) => `${JSON.stringify(name)}={enabled=false}`).join(',')}}`;
-  const rpc = new Rpc(argv, workspace, [...common, mcpOverride]);
+  const rpc = new Rpc(argv, workspace, [...common, mcpOverride], signal);
   try {
     await handshake(rpc);
     const result = record(await rpc.request('config/read', params));

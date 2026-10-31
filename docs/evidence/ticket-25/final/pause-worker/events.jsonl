@@ -1,0 +1,9 @@
+{"at":"2026-10-31T16:56:35.077Z","type":"connection_verified","task_id":"pause-worker","task_version":1,"mode":"simulated","codex_version":"codex-cli 0.166.0","disabled_mcp":[],"server_process_id":2896}
+{"at":"2026-10-31T16:56:35.078Z","type":"worker_created","task_id":"pause-worker","task_version":1,"mode":"simulated","role":"worker","thread_id":"worker-from-server"}
+{"at":"2026-10-31T16:56:35.080Z","type":"send_prepared","task_id":"pause-worker","task_version":1,"mode":"simulated","delivery_id":"eeebff78-e1af-4b51-902d-7d024bda7ae2"}
+{"at":"2026-10-31T16:56:35.082Z","type":"send_attempted","task_id":"pause-worker","task_version":1,"mode":"simulated","delivery_id":"eeebff78-e1af-4b51-902d-7d024bda7ae2"}
+{"at":"2026-10-31T16:56:35.137Z","type":"send_confirmed","task_id":"pause-worker","task_version":1,"mode":"simulated","role":"worker","thread_id":"worker-from-server","turn_id":"first-turn-from-server","delivery_id":"eeebff78-e1af-4b51-902d-7d024bda7ae2","via":"response"}
+{"at":"2026-10-31T16:56:35.137Z","type":"worker_started","task_id":"pause-worker","task_version":1,"mode":"simulated","role":"worker","thread_id":"worker-from-server","turn_id":"first-turn-from-server","status":"inProgress","action":"observe"}
+{"at":"2026-10-31T16:56:35.137Z","type":"worker_input","task_id":"pause-worker","task_version":1,"mode":"simulated","role":"worker","thread_id":"worker-from-server","turn_id":"first-turn-from-server","status":"input","action":"observe"}
+{"at":"2026-10-31T16:56:35.167Z","type":"paused","task_id":"pause-worker","task_version":2,"mode":"simulated","reason":"user","active_turn_id":"first-turn-from-server"}
+{"at":"2026-10-31T16:56:35.198Z","type":"owned_calls_cancelled","task_id":"pause-worker","task_version":2,"mode":"simulated"}

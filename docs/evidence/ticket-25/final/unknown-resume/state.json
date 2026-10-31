@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "task_id": "unknown-resume",
+  "task_version": 2,
+  "task": {
+    "schema_version": 1,
+    "task_id": "unknown-resume",
+    "workspace": "C:\\Users\\will\\.codex\\worktrees\\s1-redo-ticket25\\needs-forever\\runs\\ticket23\\unknown-resume-1793465799162\\workspace",
+    "goal": "Complete the goal.",
+    "acceptance": [
+      {
+        "id": "A1",
+        "text": "Accepted result."
+      }
+    ],
+    "authorization": "Local work only.",
+    "limits": {
+      "max_worker_turns": null,
+      "max_minutes": null
+    }
+  },
+  "worker_thread_id": "worker-from-server",
+  "status": "ACTIVE",
+  "phase": "RECOVERING",
+  "active_worker_turn_id": null,
+  "reviewing_turn_id": null,
+  "handled_turn_ids": [],
+  "pending_action": {
+    "delivery_id": "e203c88f-e4f9-4b45-a0c1-8962396237a9",
+    "source_turn_id": null,
+    "task_version": 1,
+    "message": "[supervisor:e203c88f-e4f9-4b45-a0c1-8962396237a9]\n{\"schema_version\":1,\"task_id\":\"unknown-resume\",\"workspace\":\"C:\\\\Users\\\\will\\\\.codex\\\\worktrees\\\\s1-redo-ticket25\\\\needs-forever\\\\runs\\\\ticket23\\\\unknown-resume-1793465799162\\\\workspace\",\"goal\":\"Complete the goal.\",\"acceptance\":[{\"id\":\"A1\",\"text\":\"Accepted result.\"}],\"authorization\":\"Local work only.\",\"limits\":{\"max_worker_turns\":null,\"max_minutes\":null}}",
+    "stage": "sent",
+    "target_turn_id": null
+  },
+  "retry": {
+    "kind": null,
+    "attempt": 0,
+    "next_at": null
+  },
+  "last_decision": null,
+  "worker_turn_count": 0,
+  "elapsed_active_seconds": 0.22000000000000003,
+  "updated_at": "2026-10-31T16:56:39.521Z",
+  "codex_version": "codex-cli 0.166.0",
+  "mode": "simulated",
+  "last_error": "Unknown sent delivery retained; S3 reconciliation required before any resend."
+}

@@ -1,0 +1,13 @@
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+const phase = process.argv[2];
+if (!['worker', 'judge', 'verification'].includes(phase)) throw new Error('Pass worker, judge or verification.');
+const directory = resolve(process.argv[3] ?? `runs/ticket25/pty-${phase}-${Date.now()}`);
+const workspace = resolve(directory, 'workspace');
+mkdirSync(workspace, { recursive: true });
+const write = (name, value) => { const path = resolve(directory, name); writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`, 'utf8'); return path; };
+const state = resolve(directory, 'state.json');
+const task = write('task.json', { schema_version: 1, task_id: `pty-${phase}`, workspace, goal: 'Check manual Ctrl+C at a simulated boundary.', acceptance: [{ id: 'A1', text: 'PAUSED wins before cancellation.' }], authorization: 'Only the isolated fixture.', ...(phase === 'verification' ? { verify: { argv: ['fixture-verification'], timeout_seconds: 180, protected_files: [] } } : {}) });
+const scenario = write('scenario.json', { trace: resolve(directory, 'protocol.jsonl'), state_file: state, hold_worker: phase === 'worker', verification_delay_ms: 120000 });
+const fixture = write('fixture.json', { app_server_argv: [process.execPath, resolve('test/fixtures/app-server.mjs'), scenario], judge_delay_ms: phase === 'judge' ? 120000 : 0, simulate_verification: phase === 'verification', judge: { action: 'DONE', reason: 'Fixed simulated success.', evidence_ids: ['E1'], next_message: '', external: null } });
+console.log(JSON.stringify({ mode: 'simulated', phase, directory, argv: [process.execPath, resolve('dist/src/cli.js'), 'start', '--task', task, '--state', state, '--test-fixture', fixture] }, null, 2));

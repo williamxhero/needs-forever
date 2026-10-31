@@ -1,0 +1,183 @@
+{
+  "mode": "simulated",
+  "created_at": "2026-10-31T16:56:41.174Z",
+  "codex_protocol_baseline": "codex-cli 0.166.0",
+  "platform": {
+    "os": "win32",
+    "release": "10.0.26300",
+    "node": "v24.19.0"
+  },
+  "command": [
+    "C:\\Program Files\\nodejs\\node.exe",
+    "--test",
+    "--test-reporter=tap",
+    "C:\\Users\\will\\.codex\\worktrees\\s1-redo-ticket25\\needs-forever\\dist\\test\\cli.test.js"
+  ],
+  "exit_code": 0,
+  "passed_tests": 23,
+  "checks": {
+    "T01": {
+      "mode": "simulated",
+      "result": "PASS",
+      "tests": [
+        "two early finishes continue the same worker then persist stable simulated DONE with prepared deliveries"
+      ]
+    },
+    "T02": {
+      "mode": "simulated",
+      "result": "PASS",
+      "tests": [
+        "two early finishes continue the same worker then persist stable simulated DONE with prepared deliveries"
+      ]
+    },
+    "T05": {
+      "mode": "simulated",
+      "result": "PASS",
+      "tests": [
+        "two early finishes continue the same worker then persist stable simulated DONE with prepared deliveries",
+        "explicit resume uses saved task and worker identity, and DONE cannot reopen"
+      ]
+    },
+    "T07": {
+      "mode": "simulated",
+      "result": "PASS",
+      "tests": [
+        "started/completed before response and duplicate/foreign/stale events cannot add work",
+        "a late failure for an already confirmed old delivery cannot cancel the next worker",
+        "T08 simulated delayed judge success cannot overwrite durable PAUSED"
+      ]
+    },
+    "T08": {
+      "mode": "simulated",
+      "result": "PASS",
+      "tests": [
+        "T08 simulated worker pause is saved before interrupting its owned turn",
+        "T08 simulated delayed judge success cannot overwrite durable PAUSED",
+        "T08 simulated verification is interrupted after PAUSED and cannot mark DONE"
+      ]
+    },
+    "T14": {
+      "mode": "simulated",
+      "result": "PASS",
+      "tests": [
+        "cumulative turn limit pauses before another send and resume requires an increased or removed limit",
+        "ACTIVE time is checkpointed while waiting and the explicit total-time limit pauses a running worker"
+      ]
+    },
+    "status_and_task": {
+      "mode": "simulated",
+      "result": "PASS",
+      "tests": [
+        "start preserves the task and server identities; status reads WAIT_EXTERNAL without launching a server"
+      ]
+    },
+    "task_lock": {
+      "mode": "simulated",
+      "result": "PASS",
+      "tests": [
+        "a second CLI cannot supervise the same task through another state file"
+      ]
+    },
+    "original_worker_resume": {
+      "mode": "simulated",
+      "result": "PASS",
+      "tests": [
+        "explicit resume uses saved task and worker identity, and DONE cannot reopen",
+        "resume reviews the saved completed worker turn without adding another worker round"
+      ]
+    },
+    "prepared_before_send": {
+      "mode": "simulated",
+      "result": "PASS",
+      "tests": [
+        "two early finishes continue the same worker then persist stable simulated DONE with prepared deliveries"
+      ]
+    },
+    "unknown_send_guard": {
+      "mode": "simulated",
+      "result": "PASS",
+      "tests": [
+        "unknown turn/start outcome preserves the sent delivery in RECOVERING without resending",
+        "explicit resume preserves an unknown sent delivery and never blindly replays it"
+      ]
+    },
+    "cumulative_crash_checkpoint": {
+      "mode": "simulated",
+      "result": "PASS",
+      "tests": [
+        "explicit resume reclaims only a dead supervisor lock and preserves checkpointed time after a crash"
+      ]
+    }
+  },
+  "later_scope": {
+    "T03": "not_run",
+    "T04": "not_run",
+    "T06": "not_run",
+    "T09": "not_run",
+    "T10": "not_run",
+    "T11": "not_run",
+    "T12_full_history_reconciliation": "not_run",
+    "T13": "not_run",
+    "T15": "not_run",
+    "S2_live_judge": "not_run",
+    "S2_protected_verification": "not_run",
+    "S3_recovery": "not_run",
+    "main_merge_cleanup_push_and_issue_closure": "not_run"
+  },
+  "samples": [
+    {
+      "path": "continue-twice",
+      "original_run": "C:\\Users\\will\\.codex\\worktrees\\s1-redo-ticket25\\needs-forever\\runs\\ticket23\\continue-twice-1793465791917",
+      "task_id": "continue-twice",
+      "worker_thread_id": "worker-from-server",
+      "status": "DONE",
+      "phase": "IDLE",
+      "worker_turn_count": 3
+    },
+    {
+      "path": "pause-worker",
+      "original_run": "C:\\Users\\will\\.codex\\worktrees\\s1-redo-ticket25\\needs-forever\\runs\\ticket23\\pause-worker-1793465794800",
+      "task_id": "pause-worker",
+      "worker_thread_id": "worker-from-server",
+      "status": "PAUSED",
+      "phase": "IDLE",
+      "worker_turn_count": 1
+    },
+    {
+      "path": "pause-judge",
+      "original_run": "C:\\Users\\will\\.codex\\worktrees\\s1-redo-ticket25\\needs-forever\\runs\\ticket23\\pause-judge-1793465795281",
+      "task_id": "pause-judge",
+      "worker_thread_id": "worker-from-server",
+      "status": "PAUSED",
+      "phase": "IDLE",
+      "worker_turn_count": 1
+    },
+    {
+      "path": "pause-verification",
+      "original_run": "C:\\Users\\will\\.codex\\worktrees\\s1-redo-ticket25\\needs-forever\\runs\\ticket23\\pause-verification-1793465795835",
+      "task_id": "pause-verification",
+      "worker_thread_id": "worker-from-server",
+      "status": "PAUSED",
+      "phase": "IDLE",
+      "worker_turn_count": 1
+    },
+    {
+      "path": "crash-resume",
+      "original_run": "C:\\Users\\will\\.codex\\worktrees\\s1-redo-ticket25\\needs-forever\\runs\\ticket23\\crash-resume-1793465800326",
+      "task_id": "crash-resume",
+      "worker_thread_id": "worker-from-server",
+      "status": "DONE",
+      "phase": "IDLE",
+      "worker_turn_count": 1
+    },
+    {
+      "path": "unknown-resume",
+      "original_run": "C:\\Users\\will\\.codex\\worktrees\\s1-redo-ticket25\\needs-forever\\runs\\ticket23\\unknown-resume-1793465799162",
+      "task_id": "unknown-resume",
+      "worker_thread_id": "worker-from-server",
+      "status": "ACTIVE",
+      "phase": "RECOVERING",
+      "worker_turn_count": 0
+    }
+  ]
+}

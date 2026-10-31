@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "task_id": "crash-resume",
+  "task_version": 2,
+  "task": {
+    "schema_version": 1,
+    "task_id": "crash-resume",
+    "workspace": "C:\\Users\\will\\.codex\\worktrees\\s1-redo-ticket25\\needs-forever\\runs\\ticket23\\crash-resume-1793465800326\\workspace",
+    "goal": "Complete the goal.",
+    "acceptance": [
+      {
+        "id": "A1",
+        "text": "Accepted result."
+      }
+    ],
+    "authorization": "Local work only.",
+    "limits": {
+      "max_worker_turns": null,
+      "max_minutes": null
+    }
+  },
+  "worker_thread_id": "worker-from-server",
+  "status": "DONE",
+  "phase": "IDLE",
+  "active_worker_turn_id": null,
+  "reviewing_turn_id": null,
+  "handled_turn_ids": [
+    "first-turn-from-server"
+  ],
+  "pending_action": null,
+  "retry": {
+    "kind": null,
+    "attempt": 0,
+    "next_at": null
+  },
+  "last_decision": {
+    "action": "DONE",
+    "reason": "Recovered fixture history.",
+    "evidence_ids": [
+      "E1"
+    ],
+    "next_message": "",
+    "external": null
+  },
+  "worker_turn_count": 1,
+  "elapsed_active_seconds": 0.62,
+  "updated_at": "2026-10-31T16:56:41.132Z",
+  "codex_version": "codex-cli 0.166.0",
+  "mode": "simulated"
+}

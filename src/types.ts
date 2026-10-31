@@ -43,6 +43,7 @@ export interface State {
   codex_version: string | null;
   mode: 'live' | 'simulated';
   last_error?: string;
+  pause_reason?: 'user' | 'user_limit';
 }
 export interface Snapshot {
   snapshot_id: string;

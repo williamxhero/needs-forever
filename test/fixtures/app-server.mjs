@@ -38,9 +38,9 @@ for await (const line of lines) {
       config.mcp_servers[name] = { enabled: overrides.some((value) => value.startsWith('mcp_servers=') && value.includes(`${JSON.stringify(name)}={enabled=false}`)) ? false : true };
     }
     send({ id: message.id, result: { config, origins: {}, layers: null } });
-  } else if (message.method === 'thread/start') {
+  } else if (message.method === 'thread/start' || message.method === 'thread/resume') {
     send({ id: message.id, result: {
-      thread: { id: 'worker-from-server', turns: [] }, cwd: message.params.cwd,
+      thread: { id: 'worker-from-server', turns: message.method === 'thread/resume' ? scenario.resume_turns ?? [] : [] }, cwd: message.params.cwd,
       approvalPolicy: scenario.approval_policy ?? 'never',
       sandbox: scenario.sandbox ?? { type: 'workspaceWrite', writableRoots: [], networkAccess: false, excludeTmpdirEnvVar: true, excludeSlashTmp: true },
     } });
@@ -62,6 +62,7 @@ for await (const line of lines) {
     }
     send({ method: 'turn/started', params: { threadId: message.params.threadId, turn: { id: turnId, status: 'inProgress', items: [] } } });
     send({ method: 'item/started', params: { threadId: message.params.threadId, turnId, item: { type: 'userMessage', id: `input-${turns}`, clientId: message.params.clientUserMessageId, content: message.params.input } } });
+    if (scenario.pause_after_ms !== undefined) setTimeout(() => send({ method: 'supervisor/test/pause', params: {} }), scenario.pause_after_ms);
     if (!scenario.hold_worker) {
       const completed = { method: 'turn/completed', params: { threadId: message.params.threadId, turn: { id: turnId, status: scenario.terminal_status ?? 'completed', items: [{ type: 'agentMessage', id: 'answer-1', text: scenario.answer ?? 'Only fixture stage completed.' }] } } };
       if (scenario.late_error_first && turns > 1) setTimeout(() => send(completed), 80);
@@ -70,6 +71,11 @@ for await (const line of lines) {
     }
     if (scenario.response_order === 'after-completed') setTimeout(response, 30);
     if (scenario.response_order === 'missing') setTimeout(() => process.exit(0), 1000);
+  } else if (message.method === 'command/exec') {
+    setTimeout(() => send({ id: message.id, result: { exitCode: 0, stdout: 'Fixture late success.', stderr: '' } }), scenario.verification_delay_ms ?? 300);
+  } else if (message.method === 'turn/interrupt') {
+    if (scenario.state_file) trace({ kind: 'checkpoint_at_interrupt', state: JSON.parse(readFileSync(scenario.state_file, 'utf8')) });
+    send({ id: message.id, result: {} });
   } else {
     send({ id: message.id, error: { code: -32601, message: 'Not supported by fixture' } });
   }

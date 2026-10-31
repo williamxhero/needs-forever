@@ -1,0 +1,63 @@
+{
+  "input": {
+    "snapshot_id": "a99df474-554a-4b59-9cb6-18e4f13b3298",
+    "task_id": "pause-verification",
+    "task_version": 1,
+    "worker_thread_id": "worker-from-server",
+    "worker_turn_id": "first-turn-from-server",
+    "task": {
+      "schema_version": 1,
+      "task_id": "pause-verification",
+      "workspace": "C:\\Users\\will\\.codex\\worktrees\\s1-redo-ticket25\\needs-forever\\runs\\ticket23\\pause-verification-1793465795835\\workspace",
+      "goal": "Complete the goal.",
+      "acceptance": [
+        {
+          "id": "A1",
+          "text": "Accepted result."
+        }
+      ],
+      "authorization": "Local work only.",
+      "limits": {
+        "max_worker_turns": null,
+        "max_minutes": null
+      },
+      "verify": {
+        "argv": [
+          "fixture-verification"
+        ],
+        "timeout_seconds": 10,
+        "protected_files": []
+      }
+    },
+    "evidence": [
+      {
+        "id": "E1",
+        "type": "worker_terminal",
+        "value": {
+          "threadId": "worker-from-server",
+          "turn": {
+            "id": "first-turn-from-server",
+            "status": "completed",
+            "items": [
+              {
+                "type": "agentMessage",
+                "id": "answer-1",
+                "text": "Only fixture stage completed."
+              }
+            ]
+          }
+        }
+      }
+    ]
+  },
+  "raw_output": {
+    "action": "DONE",
+    "reason": "Fixed fixture success.",
+    "evidence_ids": [
+      "E1"
+    ],
+    "next_message": "",
+    "external": null
+  },
+  "validation": "fixture-only"
+}
