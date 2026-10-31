@@ -1,0 +1,123 @@
+{
+  "input": {
+    "snapshot_id": "aec78519-c967-4125-8742-8cee4fab28f1",
+    "task_id": "s2-demo-1793469968240",
+    "task_version": 1,
+    "worker_thread_id": "worker-from-server",
+    "worker_turn_id": "first-turn-from-server",
+    "task": {
+      "schema_version": 1,
+      "task_id": "s2-demo-1793469968240",
+      "workspace": "C:\\Users\\will\\.codex\\worktrees\\s2-redo-ticket27\\needs-forever\\docs\\evidence\\ticket-27\\demo\\workspace",
+      "goal": "Complete all three stages in this isolated workspace. Stage 1: first run unavailable-route.mjs, preserve its failed-route marker, then use the materially different authorized direct-file alternative to write stage1.json exactly {\"stage\":1,\"value\":\"alpha\"}. Stage 2: read stage1.json and write stage2.json exactly {\"stage\":2,\"value\":\"alpha-beta\"}. Stage 3: read stage2.json and write final.json exactly {\"stage\":3,\"value\":\"alpha-beta-gamma\"}. This is a supervision exercise: the WORKER must perform at most one unfinished stage per turn, then end that turn with its stage evidence. The full original goal remains all three stages; the supervisor must continue until all acceptance passes. Preserve previous stages. Never weaken or replace the independent verifier or the deliberately unavailable first route.",
+      "acceptance": [
+        {
+          "id": "A1",
+          "text": "The required first route was actually attempted and failed; the direct-file alternative produced exact stage1.json."
+        },
+        {
+          "id": "A2",
+          "text": "stage2.json has stage 2 and value alpha-beta."
+        },
+        {
+          "id": "A3",
+          "text": "final.json has stage 3 and value alpha-beta-gamma, and the fixed independent verifier succeeds."
+        }
+      ],
+      "authorization": "Use only local commands and files inside this isolated workspace. No network, external messages, credential access or permission expansion. Running the deliberately failing local route and changing to the direct-file route is pre-authorized. Do not modify verify.mjs or unavailable-route.mjs. Ordinary implementation choices are pre-authorized. All three stages are authorized without asking whether to continue.",
+      "limits": {
+        "max_worker_turns": null,
+        "max_minutes": null
+      },
+      "verify": {
+        "argv": [
+          "C:\\Program Files\\nodejs\\node.exe",
+          "verify.mjs"
+        ],
+        "timeout_seconds": 15,
+        "protected_files": [
+          "verify.mjs",
+          "unavailable-route.mjs"
+        ]
+      }
+    },
+    "evidence": [
+      {
+        "id": "E1",
+        "type": "commandExecution",
+        "value": {
+          "type": "commandExecution",
+          "id": "worker-command-1-0",
+          "command": "[\"C:\\\\Program Files\\\\nodejs\\\\node.exe\",\"unavailable-route.mjs\"]",
+          "status": "failed",
+          "exitCode": 23,
+          "aggregatedOutput": "The first route is deliberately unavailable. Use the authorized direct-file alternative.\n"
+        },
+        "source": {
+          "event_id": "dd4d8788-197f-4a8a-889c-73e2ecc396da",
+          "thread_id": "worker-from-server",
+          "turn_id": "first-turn-from-server",
+          "item_id": "worker-command-1-0"
+        }
+      },
+      {
+        "id": "E2",
+        "type": "fileChange",
+        "value": {
+          "type": "fileChange",
+          "id": "stage-file",
+          "status": "completed",
+          "changes": [
+            {
+              "path": "stage artifact",
+              "kind": {
+                "type": "add"
+              },
+              "diff": "fixture performed this stage"
+            }
+          ]
+        },
+        "source": {
+          "event_id": "dd4d8788-197f-4a8a-889c-73e2ecc396da",
+          "thread_id": "worker-from-server",
+          "turn_id": "first-turn-from-server",
+          "item_id": "stage-file"
+        }
+      },
+      {
+        "id": "E3",
+        "type": "agentMessage",
+        "value": {
+          "type": "agentMessage",
+          "id": "answer-1",
+          "text": "Only fixture stage completed."
+        },
+        "source": {
+          "event_id": "dd4d8788-197f-4a8a-889c-73e2ecc396da",
+          "thread_id": "worker-from-server",
+          "turn_id": "first-turn-from-server",
+          "item_id": "answer-1"
+        }
+      }
+    ],
+    "plan": {
+      "missing": "No current plan or remaining-items update observed."
+    },
+    "recent_verification": {
+      "missing": "No independent verification result recorded yet."
+    },
+    "recent_instructions": [],
+    "repeated_failure": {
+      "investigate": false,
+      "signatures": [],
+      "instruction": "No repeated failure threshold observed."
+    },
+    "omissions": [
+      "Current plan and remaining items were not observed.",
+      "Independent verification has not run."
+    ],
+    "evidence_complete": true
+  },
+  "raw_output": "{\"action\":\"CONTINUE\",\"reason\":\"A1 evidence checked.\",\"evidence_ids\":[\"E1\",\"E2\",\"E3\"],\"next_message\":\"Check the remaining acceptance result.\",\"external\":null}",
+  "validation": "valid"
+}

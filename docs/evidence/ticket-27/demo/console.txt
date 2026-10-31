@@ -1,0 +1,5 @@
+SIMULATED: app-server and judge fixtures are active.
+worker: Only fixture stage completed.
+worker: Only fixture stage completed.
+worker: Only fixture stage completed.
+DONE (simulated): A1 evidence checked.

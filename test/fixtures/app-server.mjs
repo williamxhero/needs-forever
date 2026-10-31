@@ -1,5 +1,7 @@
 import { createInterface } from 'node:readline';
-import { appendFileSync, readFileSync } from 'node:fs';
+import { appendFileSync, readFileSync, writeFileSync, unlinkSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { spawnSync } from 'node:child_process';
 
 const scenario = JSON.parse(readFileSync(process.argv[2], 'utf8'));
 const trace = (value) => appendFileSync(scenario.trace, `${JSON.stringify(value)}\n`);
@@ -15,8 +17,9 @@ if (process.argv.some((value) => value.startsWith('mcp_servers."'))) {
   process.exit(1);
 }
 let initialized = false;
-let turns = 0;
-let judges = 0;
+const history = readFileSync(scenario.trace, 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+let turns = history.filter((entry) => entry.message?.method === 'turn/start' && entry.message.params.threadId === 'worker-from-server').length;
+let judges = history.filter((entry) => entry.message?.method === 'thread/start' && entry.message.params.sandbox === 'read-only').length;
 const judgeThreads = new Set();
 const send = (message) => process.stdout.write(`${JSON.stringify(message)}\n`);
 const lines = createInterface({ input: process.stdin });
@@ -68,6 +71,16 @@ for await (const line of lines) {
       continue;
     }
     turns++;
+    const workspace = scenario.state_file ? JSON.parse(readFileSync(scenario.state_file, 'utf8')).task.workspace : message.params.cwd;
+    const commandItems = (scenario.worker_commands?.[turns - 1] ?? []).map((argv, index) => {
+      const result = spawnSync(argv[0], argv.slice(1), { cwd: workspace, windowsHide: true, encoding: 'utf8', timeout: 5000 });
+      return { type: 'commandExecution', id: `worker-command-${turns}-${index}`, command: JSON.stringify(argv), status: result.status === 0 ? 'completed' : 'failed', exitCode: result.status, aggregatedOutput: `${result.stdout ?? ''}${result.stderr ?? ''}` };
+    });
+    for (const change of scenario.worker_changes?.[turns - 1] ?? []) {
+      const file = resolve(message.params.cwd ?? JSON.parse(readFileSync(scenario.state_file, 'utf8')).task.workspace, change.path);
+      if (change.remove) unlinkSync(file);
+      else writeFileSync(file, change.content);
+    }
     const turnId = scenario.turn_id ?? (turns === 1 ? 'first-turn-from-server' : `turn-${turns}-from-server`);
     if (scenario.state_file) trace({ kind: 'checkpoint_at_send', state: JSON.parse(readFileSync(scenario.state_file, 'utf8')) });
     if (scenario.disconnect_on_send) process.exit(0);
@@ -86,7 +99,7 @@ for await (const line of lines) {
     send({ method: 'item/started', params: { threadId: message.params.threadId, turnId, item: { type: 'userMessage', id: `input-${turns}`, clientId: message.params.clientUserMessageId, content: message.params.input } } });
     if (scenario.pause_after_ms !== undefined) setTimeout(() => send({ method: 'supervisor/test/pause', params: {} }), scenario.pause_after_ms);
     if (!scenario.hold_worker) {
-      const completed = { method: 'turn/completed', params: { threadId: message.params.threadId, turn: { id: turnId, status: scenario.terminal_status ?? 'completed', items: [...scenario.tool_items ?? [], { type: 'agentMessage', id: 'answer-1', text: scenario.answer ?? 'Only fixture stage completed.' }] } } };
+      const completed = { method: 'turn/completed', params: { threadId: message.params.threadId, turn: { id: turnId, status: scenario.terminal_status ?? 'completed', items: [...scenario.tool_items ?? [], ...commandItems, { type: 'agentMessage', id: 'answer-1', text: scenario.answer ?? 'Only fixture stage completed.' }] } } };
       if (scenario.stream_items) { for (const item of completed.params.turn.items) send({ method: 'item/completed', params: { threadId: message.params.threadId, turnId, item } }); completed.params.turn.items = []; }
       if (scenario.late_error_first && turns > 1) setTimeout(() => send(completed), 80);
       else send(completed);
@@ -95,7 +108,11 @@ for await (const line of lines) {
     if (scenario.response_order === 'after-completed') setTimeout(response, 30);
     if (scenario.response_order === 'missing') setTimeout(() => process.exit(0), 1000);
   } else if (message.method === 'command/exec') {
-    setTimeout(() => send({ id: message.id, result: { exitCode: 0, stdout: 'Fixture late success.', stderr: '' } }), scenario.verification_delay_ms ?? 300);
+    const index = readFileSync(scenario.trace, 'utf8').trim().split('\n').map((line) => JSON.parse(line)).filter((entry) => entry.message?.method === 'command/exec').length - 1;
+    const executed = scenario.execute_verification ? spawnSync(message.params.command[0], message.params.command.slice(1), { cwd: message.params.cwd, encoding: 'utf8', windowsHide: true, timeout: message.params.timeoutMs }) : null;
+    const outcome = executed ? { exitCode: executed.status, stdout: executed.stdout ?? '', stderr: executed.stderr ?? '' } : scenario.verification_results?.[index] ?? { exitCode: 0, stdout: 'Fixture late success.', stderr: '' };
+    for (const change of scenario.verification_changes?.[index] ?? []) writeFileSync(resolve(message.params.cwd, change.path), change.content);
+    if (!scenario.hold_verification && !scenario.hold_verification_indices?.includes(index)) setTimeout(() => send(outcome.error ? { id: message.id, error: outcome.error } : { id: message.id, result: outcome }), scenario.verification_delay_ms ?? 300);
   } else if (message.method === 'turn/interrupt') {
     if (scenario.state_file) trace({ kind: 'checkpoint_at_interrupt', state: JSON.parse(readFileSync(scenario.state_file, 'utf8')) });
     send({ id: message.id, result: {} });

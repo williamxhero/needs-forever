@@ -1,6 +1,6 @@
 # Codex Supervisor v0.1
 
-S1 (#20) delivers validated startup/status, same-worker continuation, durable pause/resume and cumulative limits. S2 ticket #26 adds the default independent read-only semantic judge and bounded evidence protocol. S2 delivery still requires independent verification, request handling, live acceptance, review and the coordinating agent's delivery gates.
+S1 (#20) delivers validated startup/status, same-worker continuation, durable pause/resume and cumulative limits. S2 tickets #26/#27 add the independent read-only semantic judge, bounded evidence protocol and protected fixed-argv verification. S2 delivery still requires request handling, live acceptance, review and the coordinating agent's delivery gates.
 
 Requires Node.js 24 or later. Dependencies are locked in `package-lock.json`.
 
@@ -51,8 +51,15 @@ Resume rereads and validates the checkpoint after acquiring the task lock; the e
 
 Resume can review a known completed turn or continue observing a known in-progress turn returned by `thread/resume`. An interrupted known turn permits a fresh input. Unknown sent deliveries and absent saved turns remain `ACTIVE/RECOVERING` with an explicit S3 reconciliation error and no resend. Full reconnect, paginated history reconciliation and crash windows remain S3 scope.
 
-Protected independent verification and request handling are subsequent S2 tickets; automatic recovery/history reconciliation is S3. DONE is still refused when independent verification is configured, until that verifier is delivered. The S1 verification fixture tests only cancellation. Ticket #26's deterministic evidence does not constitute S2's required live T01–T05 acceptance.
+Configured independent verification runs only after a valid DONE judgment, using the saved task's argv array directly through `command/exec`. Its explicit sandbox permits writes only in the task workspace, disables network and excludes temporary roots. Before the first worker turn, `protected_files` are saved with SHA-256 hashes and original content in `state.protected_baseline`; resume retains that baseline. Changed or missing protected files prevent execution or invalidate a successful check. The original worker receives the actual exit/stdout/stderr/hash evidence and original content needed for restoration, through the same durable sending entry.
+
+The installed Windows 0.166.0 server reports a command timeout as an RPC error containing `sandbox error: command timed out`; measured probes show it terminates the command and leaves the server usable. That actual error is retained, redacted and returned to the worker. A command that fails to settle by its timeout plus one second is terminated by closing this program's owned app-server. Only then does this specific idle-worker path reconnect, verify the exact saved worker identity/policy and send the failure evidence. General fault reconnection/history reconciliation remains S3. Pause saves its state and version before cancellation; late verification cannot set DONE.
+
+To prepare the isolated three-stage live exercise without starting a model, run `node scripts/prepare-s2-demo.mjs`. Its printed argv starts the live supervisor. The exercise includes a deliberately failing first route, an authorized direct-file alternative and a protected independent Node verifier. `node scripts/run-s2-simulated-demo.mjs` runs the same exercise through the replacement JSONL server, with actual local route/verifier subprocesses and simulated worker/judge decisions. The replacement server does not enforce the real Codex sandbox. Both entries retain state, events, snapshots and artifacts under their printed run directory.
+
+Request handling is the next S2 ticket; automatic recovery/history reconciliation is S3. The S1 verification fixture still tests only cancellation. Deterministic ticket evidence does not constitute S2's required live T01–T05 acceptance.
 
 See `docs/evidence/ticket-23/README.md` for the test seam, observed red/green results, captured run and limits of the no-model live preflight.
 See `docs/evidence/ticket-24/README.md` for deterministic continuation evidence and its limits.
+See `docs/evidence/ticket-27/README.md` for protected verification red/green evidence, its simulated exit report and demo entry.
 See `docs/evidence/ticket-25/README.md` and `docs/evidence/ticket-25/final/report.json` for the S1 simulated exit report. For a manual console interrupt against the simulated backend, run `node scripts/prepare-s1-pause-fixture.mjs worker` (or `judge` / `verification`), execute the printed argv, then press Ctrl+C. Those phases hold for 120 seconds. The backend remains simulated even when the console signal is real.

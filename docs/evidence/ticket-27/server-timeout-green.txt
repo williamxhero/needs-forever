@@ -1,0 +1,11 @@
+✔ DONE requires the fixed argv independent check in the explicit worker sandbox (643.4258ms)
+✔ T04 nonzero independent output reaches the original worker and only the repaired check can finish (935.692ms)
+✔ server-side verification timeout returns its actual error to the worker without losing the healthy connection (936.1961ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2582.494

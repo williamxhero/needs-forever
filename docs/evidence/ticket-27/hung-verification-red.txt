@@ -1,0 +1,30 @@
+✖ a hung independent call ends its owned server and resumes the exact idle worker before sending failure evidence (20027.7119ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 20101.848
+
+✖ failing tests:
+
+test at dist\test\verification-cli.test.js:144:1
+✖ a hung independent call ends its owned server and resumes the exact idle worker before sending failure evidence (20027.7119ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+  null !== 0
+
+      at TestContext.<anonymous> (file:///C:/Users/will/.codex/worktrees/s2-redo-ticket27/needs-forever/dist/test/verification-cli.test.js:150:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.start (node:internal/test_runner/test:1242:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

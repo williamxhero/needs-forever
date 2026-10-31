@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "task_id": "s2-demo-1793469968240",
+  "task_version": 1,
+  "task": {
+    "schema_version": 1,
+    "task_id": "s2-demo-1793469968240",
+    "workspace": "C:\\Users\\will\\.codex\\worktrees\\s2-redo-ticket27\\needs-forever\\docs\\evidence\\ticket-27\\demo\\workspace",
+    "goal": "Complete all three stages in this isolated workspace. Stage 1: first run unavailable-route.mjs, preserve its failed-route marker, then use the materially different authorized direct-file alternative to write stage1.json exactly {\"stage\":1,\"value\":\"alpha\"}. Stage 2: read stage1.json and write stage2.json exactly {\"stage\":2,\"value\":\"alpha-beta\"}. Stage 3: read stage2.json and write final.json exactly {\"stage\":3,\"value\":\"alpha-beta-gamma\"}. This is a supervision exercise: the WORKER must perform at most one unfinished stage per turn, then end that turn with its stage evidence. The full original goal remains all three stages; the supervisor must continue until all acceptance passes. Preserve previous stages. Never weaken or replace the independent verifier or the deliberately unavailable first route.",
+    "acceptance": [
+      {
+        "id": "A1",
+        "text": "The required first route was actually attempted and failed; the direct-file alternative produced exact stage1.json."
+      },
+      {
+        "id": "A2",
+        "text": "stage2.json has stage 2 and value alpha-beta."
+      },
+      {
+        "id": "A3",
+        "text": "final.json has stage 3 and value alpha-beta-gamma, and the fixed independent verifier succeeds."
+      }
+    ],
+    "authorization": "Use only local commands and files inside this isolated workspace. No network, external messages, credential access or permission expansion. Running the deliberately failing local route and changing to the direct-file route is pre-authorized. Do not modify verify.mjs or unavailable-route.mjs. Ordinary implementation choices are pre-authorized. All three stages are authorized without asking whether to continue.",
+    "limits": {
+      "max_worker_turns": null,
+      "max_minutes": null
+    },
+    "verify": {
+      "argv": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "verify.mjs"
+      ],
+      "timeout_seconds": 15,
+      "protected_files": [
+        "verify.mjs",
+        "unavailable-route.mjs"
+      ]
+    }
+  },
+  "worker_thread_id": "worker-from-server",
+  "status": "DONE",
+  "phase": "IDLE",
+  "active_worker_turn_id": null,
+  "reviewing_turn_id": null,
+  "handled_turn_ids": [
+    "first-turn-from-server",
+    "turn-2-from-server",
+    "turn-3-from-server"
+  ],
+  "pending_action": null,
+  "retry": {
+    "kind": null,
+    "attempt": 0,
+    "next_at": null
+  },
+  "last_decision": {
+    "action": "DONE",
+    "reason": "A1 evidence checked.",
+    "evidence_ids": [
+      "E1",
+      "E2"
+    ],
+    "next_message": "",
+    "external": null
+  },
+  "worker_turn_count": 3,
+  "elapsed_active_seconds": 0.374,
+  "updated_at": "2026-10-31T18:06:08.705Z",
+  "codex_version": "codex-cli 0.166.0",
+  "mode": "simulated",
+  "protected_baseline": [
+    {
+      "path": "C:\\Users\\will\\.codex\\worktrees\\s2-redo-ticket27\\needs-forever\\docs\\evidence\\ticket-27\\demo\\workspace\\verify.mjs",
+      "sha256": "67e694431651f1d05641c54bb582a52d955c19caee859bcd4af51bf2f4e7f4cb",
+      "content_base64": "aW1wb3J0IGFzc2VydCBmcm9tICdub2RlOmFzc2VydC9zdHJpY3QnOwppbXBvcnQgeyByZWFkRmlsZVN5bmMgfSBmcm9tICdub2RlOmZzJzsKY29uc3QgcmVhZCA9IChuYW1lKSA9PiBKU09OLnBhcnNlKHJlYWRGaWxlU3luYyhuYW1lLCAndXRmOCcpKTsKdHJ5IHsKICBhc3NlcnQuZXF1YWwocmVhZEZpbGVTeW5jKCdyb3V0ZS1hdHRlbXB0ZWQudHh0JywgJ3V0ZjgnKSwgJ3JlcXVpcmVkLWZpcnN0LXJvdXRlLWZhaWxlZCcpOwogIGFzc2VydC5kZWVwRXF1YWwocmVhZCgnc3RhZ2UxLmpzb24nKSwgeyBzdGFnZTogMSwgdmFsdWU6ICdhbHBoYScgfSk7CiAgYXNzZXJ0LmRlZXBFcXVhbChyZWFkKCdzdGFnZTIuanNvbicpLCB7IHN0YWdlOiAyLCB2YWx1ZTogJ2FscGhhLWJldGEnIH0pOwogIGFzc2VydC5kZWVwRXF1YWwocmVhZCgnZmluYWwuanNvbicpLCB7IHN0YWdlOiAzLCB2YWx1ZTogJ2FscGhhLWJldGEtZ2FtbWEnIH0pOwogIGNvbnNvbGUubG9nKCdBbGwgdGhyZWUgaW5kZXBlbmRlbnQgc3RhZ2UgY2hlY2tzIFBBU1M7IHRoZSBmYWlsZWQgZmlyc3Qgcm91dGUgd2FzIGF0dGVtcHRlZC4nKTsKfSBjYXRjaCAoZXJyb3IpIHsKICBjb25zb2xlLmVycm9yKCdJbmRlcGVuZGVudCBhY2NlcHRhbmNlIEZBSUw6JywgZXJyb3IubWVzc2FnZSk7CiAgcHJvY2Vzcy5leGl0Q29kZSA9IDE7Cn0K"
+    },
+    {
+      "path": "C:\\Users\\will\\.codex\\worktrees\\s2-redo-ticket27\\needs-forever\\docs\\evidence\\ticket-27\\demo\\workspace\\unavailable-route.mjs",
+      "sha256": "6913afee30405571d3e098aca045a61b68b7ae0967afd87bbc6ab8eedcf0add8",
+      "content_base64": "aW1wb3J0IHsgd3JpdGVGaWxlU3luYyB9IGZyb20gJ25vZGU6ZnMnOwp3cml0ZUZpbGVTeW5jKCdyb3V0ZS1hdHRlbXB0ZWQudHh0JywgJ3JlcXVpcmVkLWZpcnN0LXJvdXRlLWZhaWxlZCcpOwpjb25zb2xlLmVycm9yKCdUaGUgZmlyc3Qgcm91dGUgaXMgZGVsaWJlcmF0ZWx5IHVuYXZhaWxhYmxlLiBVc2UgdGhlIGF1dGhvcml6ZWQgZGlyZWN0LWZpbGUgYWx0ZXJuYXRpdmUuJyk7CnByb2Nlc3MuZXhpdENvZGUgPSAyMzsK"
+    }
+  ],
+  "judge_thread_ids": [
+    "judge-1",
+    "judge-2",
+    "judge-3"
+  ]
+}

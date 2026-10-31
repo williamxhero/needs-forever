@@ -1,5 +1,5 @@
 import { mkdirSync, openSync, closeSync, writeFileSync, renameSync, appendFileSync, readFileSync, unlinkSync, realpathSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { dirname, resolve, relative, isAbsolute } from 'node:path';
 import { randomUUID, createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import type { State, Snapshot, Task } from './types.js';
@@ -50,6 +50,28 @@ export class Store {
     }
   }
   read(): State { return JSON.parse(readFileSync(this.path, 'utf8')) as State; }
+  protect(state: State): void {
+    if (!state.task.verify) return;
+    if (state.protected_baseline) return;
+    if (state.worker_thread_id) throw new Error('Existing worker has no protected baseline; cannot invent a resumed baseline.');
+    state.protected_baseline = state.task.verify.protected_files.map((file) => {
+      const path = resolve(state.task.workspace, file);
+      const suffix = relative(realpathSync(state.task.workspace), realpathSync(path));
+      if (isAbsolute(suffix) || suffix === '..' || suffix.startsWith('../') || suffix.startsWith('..\\')) throw new Error('Protected files must remain within the task workspace.');
+      const content = readFileSync(path);
+      return { path, sha256: createHash('sha256').update(content).digest('hex'), content_base64: content.toString('base64') };
+    });
+    this.save(state);
+    this.event(state, 'protected_baseline_recorded', { files: state.protected_baseline.map(({ path, sha256 }) => ({ path, sha256 })) });
+  }
+  protectedChanges(state: State): { path: string; expected_sha256: string; actual_sha256: string | null }[] {
+    return (state.protected_baseline ?? []).flatMap((file) => {
+      let actual: string | null = null;
+      try { actual = createHash('sha256').update(readFileSync(file.path)).digest('hex'); }
+      catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
+      return actual === file.sha256 ? [] : [{ path: file.path, expected_sha256: file.sha256, actual_sha256: actual }];
+    });
+  }
   save(state: State): void {
     state.updated_at = new Date().toISOString();
     const temporary = `${this.path}.${randomUUID()}.tmp`;

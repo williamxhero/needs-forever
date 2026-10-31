@@ -1,0 +1,298 @@
+TAP version 13
+# Subtest: start preserves the task and server identities; status reads WAIT_EXTERNAL without launching a server
+ok 1 - start preserves the task and server identities; status reads WAIT_EXTERNAL without launching a server
+  ---
+  duration_ms: 379.1405
+  type: 'test'
+  ...
+# Subtest: start rejects a server policy granting writes outside the configured workspace before running a turn
+ok 2 - start rejects a server policy granting writes outside the configured workspace before running a turn
+  ---
+  duration_ms: 300.86
+  type: 'test'
+  ...
+# Subtest: a second CLI cannot supervise the same task through another state file
+ok 3 - a second CLI cannot supervise the same task through another state file
+  ---
+  duration_ms: 428.0169
+  type: 'test'
+  ...
+# Subtest: credential-shaped tool output is redacted before becoming a saved judge input
+ok 4 - credential-shaped tool output is redacted before becoming a saved judge input
+  ---
+  duration_ms: 290.1757
+  type: 'test'
+  ...
+# Subtest: inherited MCP names are disabled before creating any worker, including names with dots or quotes
+ok 5 - inherited MCP names are disabled before creating any worker, including names with dots or quotes
+  ---
+  duration_ms: 295.221
+  type: 'test'
+  ...
+# Subtest: the foreground CLI displays the worker reply and the supervisor waiting reason
+ok 6 - the foreground CLI displays the worker reply and the supervisor waiting reason
+  ---
+  duration_ms: 323.5665
+  type: 'test'
+  ...
+# Subtest: server-provided turn identities cannot place snapshot evidence outside the snapshot directory
+ok 7 - server-provided turn identities cannot place snapshot evidence outside the snapshot directory
+  ---
+  duration_ms: 304.0608
+  type: 'test'
+  ...
+# Subtest: two early finishes continue the same worker then persist stable simulated DONE with prepared deliveries
+ok 8 - two early finishes continue the same worker then persist stable simulated DONE with prepared deliveries
+  ---
+  duration_ms: 335.3242
+  type: 'test'
+  ...
+# Subtest: a correlated started turn progresses to DONE even when turn/start never returns a response
+ok 9 - a correlated started turn progresses to DONE even when turn/start never returns a response
+  ---
+  duration_ms: 318.2329
+  type: 'test'
+  ...
+# Subtest: started/completed before response and duplicate/foreign/stale events cannot add work
+ok 10 - started/completed before response and duplicate/foreign/stale events cannot add work
+  ---
+  duration_ms: 411.3531
+  type: 'test'
+  ...
+# Subtest: unknown turn/start outcome preserves the sent delivery in RECOVERING without resending
+ok 11 - unknown turn/start outcome preserves the sent delivery in RECOVERING without resending
+  ---
+  duration_ms: 295.6033
+  type: 'test'
+  ...
+# Subtest: failed worker terminal never reaches the fixed DONE judge
+ok 12 - failed worker terminal never reaches the fixed DONE judge
+  ---
+  duration_ms: 301.9132
+  type: 'test'
+  ...
+# Subtest: a late failure for an already confirmed old delivery cannot cancel the next worker
+ok 13 - a late failure for an already confirmed old delivery cannot cancel the next worker
+  ---
+  duration_ms: 408.5619
+  type: 'test'
+  ...
+# Subtest: judge input is saved while its result is pending and duplicate terminal events do not start another judge
+ok 14 - judge input is saved while its result is pending and duplicate terminal events do not start another judge
+  ---
+  duration_ms: 826.7698
+  type: 'test'
+  ...
+# Subtest: T08 simulated worker pause is saved before interrupting its owned turn
+ok 15 - T08 simulated worker pause is saved before interrupting its owned turn
+  ---
+  duration_ms: 505.7689
+  type: 'test'
+  ...
+# Subtest: T08 simulated delayed judge success cannot overwrite durable PAUSED
+ok 16 - T08 simulated delayed judge success cannot overwrite durable PAUSED
+  ---
+  duration_ms: 556.6287
+  type: 'test'
+  ...
+# Subtest: T08 simulated verification is interrupted after PAUSED and cannot mark DONE
+ok 17 - T08 simulated verification is interrupted after PAUSED and cannot mark DONE
+  ---
+  duration_ms: 399.315
+  type: 'test'
+  ...
+# Subtest: explicit resume uses saved task and worker identity, and DONE cannot reopen
+ok 18 - explicit resume uses saved task and worker identity, and DONE cannot reopen
+  ---
+  duration_ms: 695.1306
+  type: 'test'
+  ...
+# Subtest: cumulative turn limit pauses before another send and resume requires an increased or removed limit
+ok 19 - cumulative turn limit pauses before another send and resume requires an increased or removed limit
+  ---
+  duration_ms: 687.1837
+  type: 'test'
+  ...
+# Subtest: ACTIVE time is checkpointed while waiting and the explicit total-time limit pauses a running worker
+ok 20 - ACTIVE time is checkpointed while waiting and the explicit total-time limit pauses a running worker
+  ---
+  duration_ms: 1575.6763
+  type: 'test'
+  ...
+# Subtest: explicit resume preserves an unknown sent delivery and never blindly replays it
+ok 21 - explicit resume preserves an unknown sent delivery and never blindly replays it
+  ---
+  duration_ms: 352.9845
+  type: 'test'
+  ...
+# Subtest: resume reviews the saved completed worker turn without adding another worker round
+ok 22 - resume reviews the saved completed worker turn without adding another worker round
+  ---
+  duration_ms: 734.7529
+  type: 'test'
+  ...
+# Subtest: explicit resume reclaims only a dead supervisor lock and preserves checkpointed time after a crash
+ok 23 - explicit resume reclaims only a dead supervisor lock and preserves checkpointed time after a crash
+  ---
+  duration_ms: 790.2227
+  type: 'test'
+  ...
+# Subtest: ACTIVE resume rejects changed goal or authorization before altering the saved contract
+ok 24 - ACTIVE resume rejects changed goal or authorization before altering the saved contract
+  ---
+  duration_ms: 425.9134
+  type: 'test'
+  ...
+# Subtest: real judge boundary continues the original worker then completes with fresh archived read-only judges
+ok 25 - real judge boundary continues the original worker then completes with fresh archived read-only judges
+  ---
+  duration_ms: 337.7921
+  type: 'test'
+  ...
+# Subtest: judge outputs with unknown fields, references or illegal action combinations never finish the task
+ok 26 - judge outputs with unknown fields, references or illegal action combinations never finish the task
+  ---
+  duration_ms: 1949.649
+  type: 'test'
+  ...
+# Subtest: worker claims alone cannot prove DONE or an external dependency
+ok 27 - worker claims alone cannot prove DONE or an external dependency
+  ---
+  duration_ms: 627.308
+  type: 'test'
+  ...
+# Subtest: bounded snapshots preserve the contract, real sources, recent instructions and failures while explicitly omitting large output
+ok 28 - bounded snapshots preserve the contract, real sources, recent instructions and failures while explicitly omitting large output
+  ---
+  duration_ms: 379.8693
+  type: 'test'
+  ...
+# Subtest: streamed completed items supply worker evidence and judge JSON when terminal turns have no items
+ok 29 - streamed completed items supply worker evidence and judge JSON when terminal turns have no items
+  ---
+  duration_ms: 368.9978
+  type: 'test'
+  ...
+# Subtest: a timed out judge terminates the owned connection without a second judge or inferred completion
+ok 30 - a timed out judge terminates the owned connection without a second judge or inferred completion
+  ---
+  duration_ms: 504.6658
+  type: 'test'
+  ...
+# Subtest: T06 WAIT_EXTERNAL cites an actual failed route, stays idle and notifies once despite duplicates
+ok 31 - T06 WAIT_EXTERNAL cites an actual failed route, stays idle and notifies once despite duplicates
+  ---
+  duration_ms: 440.8023
+  type: 'test'
+  ...
+# Subtest: fences, appended text and a second JSON object are rejected with the exact raw output retained
+ok 32 - fences, appended text and a second JSON object are rejected with the exact raw output retained
+  ---
+  duration_ms: 901.8816
+  type: 'test'
+  ...
+# Subtest: judge policy expansion prevents its turn and archive failure cannot invalidate an otherwise valid decision
+ok 33 - judge policy expansion prevents its turn and archive failure cannot invalidate an otherwise valid decision
+  ---
+  duration_ms: 601.1249
+  type: 'test'
+  ...
+# Subtest: PAUSED wins over a real judge that is in flight and the owned judge connection terminates
+ok 34 - PAUSED wins over a real judge that is in flight and the owned judge connection terminates
+  ---
+  duration_ms: 503.2432
+  type: 'test'
+  ...
+# Subtest: only the expected judge turn can supply the result even if a foreign completion arrives first
+ok 35 - only the expected judge turn can supply the result even if a foreign completion arrives first
+  ---
+  duration_ms: 318.3524
+  type: 'test'
+  ...
+# Subtest: truncated tool output cannot be used to infer either terminal decision
+ok 36 - truncated tool output cannot be used to infer either terminal decision
+  ---
+  duration_ms: 687.3466
+  type: 'test'
+  ...
+# Subtest: an uncertain judge turn start terminates the old connection before entering recovery
+ok 37 - an uncertain judge turn start terminates the old connection before entering recovery
+  ---
+  duration_ms: 314.6201
+  type: 'test'
+  ...
+# Subtest: connection failure during a judge result wait preserves the actual error and ends the old call
+ok 38 - connection failure during a judge result wait preserves the actual error and ends the old call
+  ---
+  duration_ms: 420.7519
+  type: 'test'
+  ...
+# Subtest: DONE requires the fixed argv independent check in the explicit worker sandbox
+ok 39 - DONE requires the fixed argv independent check in the explicit worker sandbox
+  ---
+  duration_ms: 636.4251
+  type: 'test'
+  ...
+# Subtest: T04 nonzero independent output reaches the original worker and only the repaired check can finish
+ok 40 - T04 nonzero independent output reaches the original worker and only the repaired check can finish
+  ---
+  duration_ms: 1001.7856
+  type: 'test'
+  ...
+# Subtest: server-side verification timeout returns its actual error to the worker without losing the healthy connection
+ok 41 - server-side verification timeout returns its actual error to the worker without losing the healthy connection
+  ---
+  duration_ms: 982.4365
+  type: 'test'
+  ...
+# Subtest: missing independent stdout or stderr cannot manufacture a successful DONE
+ok 42 - missing independent stdout or stderr cannot manufacture a successful DONE
+  ---
+  duration_ms: 643.1257
+  type: 'test'
+  ...
+# Subtest: protected changes before checking refuse DONE and give the original worker exact restoration evidence
+ok 43 - protected changes before checking refuse DONE and give the original worker exact restoration evidence
+  ---
+  duration_ms: 651.141
+  type: 'test'
+  ...
+# Subtest: a missing protected verifier is refused until the original worker restores it
+ok 44 - a missing protected verifier is refused until the original worker restores it
+  ---
+  duration_ms: 652.0984
+  type: 'test'
+  ...
+# Subtest: a protected change during a successful check invalidates it and requires restoration before DONE
+ok 45 - a protected change during a successful check invalidates it and requires restoration before DONE
+  ---
+  duration_ms: 956.9558
+  type: 'test'
+  ...
+# Subtest: resume retains the original protected baseline and saved argv after the input file and verifier change
+ok 46 - resume retains the original protected baseline and saved argv after the input file and verifier change
+  ---
+  duration_ms: 1086.0098
+  type: 'test'
+  ...
+# Subtest: PAUSED is durable before independent cancellation and a late successful check cannot set DONE
+ok 47 - PAUSED is durable before independent cancellation and a late successful check cannot set DONE
+  ---
+  duration_ms: 423.5167
+  type: 'test'
+  ...
+# Subtest: a hung independent call ends its owned server and resumes the exact idle worker before sending failure evidence
+ok 48 - a hung independent call ends its owned server and resumes the exact idle worker before sending failure evidence
+  ---
+  duration_ms: 1596.6079
+  type: 'test'
+  ...
+1..48
+# tests 48
+# suites 0
+# pass 48
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 12019.4144

@@ -1,0 +1,91 @@
+{
+  "input": {
+    "snapshot_id": "55aae13d-2555-4ceb-9b58-b9dc0f8c3642",
+    "task_id": "baseline-resume",
+    "task_version": 3,
+    "worker_thread_id": "worker-from-server",
+    "worker_turn_id": "turn-2-from-server",
+    "task": {
+      "schema_version": 1,
+      "task_id": "baseline-resume",
+      "workspace": "C:\\Users\\will\\.codex\\worktrees\\s2-redo-ticket27\\needs-forever\\runs\\ticket27\\baseline-resume-1793469945081\\workspace",
+      "goal": "Complete A1.",
+      "acceptance": [
+        {
+          "id": "A1",
+          "text": "Independent check passes."
+        }
+      ],
+      "authorization": "Local workspace only.",
+      "limits": {
+        "max_worker_turns": null,
+        "max_minutes": null
+      },
+      "verify": {
+        "argv": [
+          "C:\\Program Files\\nodejs\\node.exe",
+          "verify.mjs",
+          "literal;argument"
+        ],
+        "timeout_seconds": 2,
+        "protected_files": [
+          "verify.mjs"
+        ]
+      }
+    },
+    "evidence": [
+      {
+        "id": "E1",
+        "type": "commandExecution",
+        "value": {
+          "type": "commandExecution",
+          "id": "check",
+          "command": "check",
+          "status": "completed",
+          "exitCode": 0,
+          "aggregatedOutput": "A1 checked."
+        },
+        "source": {
+          "event_id": "66b12379-7182-4a1e-a369-dbcd45c8571f",
+          "thread_id": "worker-from-server",
+          "turn_id": "turn-2-from-server",
+          "item_id": "check"
+        }
+      },
+      {
+        "id": "E2",
+        "type": "agentMessage",
+        "value": {
+          "type": "agentMessage",
+          "id": "answer-1",
+          "text": "Only fixture stage completed."
+        },
+        "source": {
+          "event_id": "66b12379-7182-4a1e-a369-dbcd45c8571f",
+          "thread_id": "worker-from-server",
+          "turn_id": "turn-2-from-server",
+          "item_id": "answer-1"
+        }
+      }
+    ],
+    "plan": {
+      "missing": "No current plan or remaining-items update observed."
+    },
+    "recent_verification": {
+      "missing": "No independent verification result recorded yet."
+    },
+    "recent_instructions": [],
+    "repeated_failure": {
+      "investigate": false,
+      "signatures": [],
+      "instruction": "No repeated failure threshold observed."
+    },
+    "omissions": [
+      "Current plan and remaining items were not observed.",
+      "Independent verification has not run."
+    ],
+    "evidence_complete": true
+  },
+  "raw_output": "{\"action\":\"DONE\",\"reason\":\"A1 evidence checked.\",\"evidence_ids\":[\"E1\",\"E2\"],\"next_message\":\"\",\"external\":null}",
+  "validation": "valid"
+}

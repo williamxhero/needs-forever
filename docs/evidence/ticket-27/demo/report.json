@@ -1,0 +1,43 @@
+{
+  "mode": "simulated",
+  "verdict": "PASS",
+  "directory": "C:\\Users\\will\\.codex\\worktrees\\s2-redo-ticket27\\needs-forever\\docs\\evidence\\ticket-27\\demo",
+  "command": [
+    "C:\\Program Files\\nodejs\\node.exe",
+    "C:\\Users\\will\\.codex\\worktrees\\s2-redo-ticket27\\needs-forever\\dist\\src\\cli.js",
+    "start",
+    "--task",
+    "C:\\Users\\will\\.codex\\worktrees\\s2-redo-ticket27\\needs-forever\\docs\\evidence\\ticket-27\\demo\\task.json",
+    "--state",
+    "C:\\Users\\will\\.codex\\worktrees\\s2-redo-ticket27\\needs-forever\\docs\\evidence\\ticket-27\\demo\\state.json",
+    "--test-fixture",
+    "C:\\Users\\will\\.codex\\worktrees\\s2-redo-ticket27\\needs-forever\\docs\\evidence\\ticket-27\\demo\\fixture.json"
+  ],
+  "worker_thread_id": "worker-from-server",
+  "worker_turns": 3,
+  "decisions": [
+    "CONTINUE",
+    "CONTINUE",
+    "DONE"
+  ],
+  "independent_verification": {
+    "event_id": "68d7234c-73cd-4f10-8d93-84f764335f62",
+    "at": "2026-10-31T18:06:08.703Z",
+    "type": "verification_result",
+    "task_id": "s2-demo-1793469968240",
+    "task_version": 1,
+    "mode": "simulated",
+    "argv": [
+      "C:\\Program Files\\nodejs\\node.exe",
+      "verify.mjs"
+    ],
+    "exitCode": 0,
+    "stdout": "All three independent stage checks PASS; the failed first route was attempted.\n",
+    "stderr": "",
+    "protected_before": [],
+    "protected_after": [],
+    "passed": true
+  },
+  "actual_local_subprocesses": "Deliberately failing route and the protected fixed-argv verifier ran as actual Node subprocesses inside the simulated JSONL boundary.",
+  "limits": "Worker/judge protocol and decisions are simulated; replacement server does not enforce the real Codex sandbox. This does not satisfy live T01-T05."
+}

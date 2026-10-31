@@ -7,6 +7,7 @@ import { resolve, delimiter, join } from 'node:path';
 import type { InitializeParams } from './protocol/generated/InitializeParams.js';
 import type { ConfigReadParams } from './protocol/generated/v2/ConfigReadParams.js';
 import { record } from './types.js';
+import { redact } from './redact.js';
 
 export const PROTOCOL_VERSION = 'codex-cli 0.166.0';
 export const disabledFeatures = ['apps', 'plugins', 'hooks', 'multi_agent', 'browser_use', 'computer_use', 'memories'];
@@ -48,7 +49,10 @@ export class Rpc {
           const request = this.pending.get(message.id);
           if (!request) return;
           this.pending.delete(message.id);
-          if (message.error) request.reject(new Error(`app-server RPC failed (${record(message.error).code ?? 'unknown'}).`));
+          if (message.error) {
+            const error = record(message.error);
+            request.reject(new Error(`app-server RPC failed (${error.code ?? 'unknown'}): ${String(redact(error.message ?? 'Unknown error.'))}`));
+          }
           else request.resolve(message.result);
         } else if (typeof message.method === 'string') {
           this.notifications.push({ method: message.method, params: message.params });

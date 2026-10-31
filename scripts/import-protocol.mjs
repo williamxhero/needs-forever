@@ -21,5 +21,5 @@ function copy(file) {
   mkdirSync(dirname(output), { recursive: true });
   writeFileSync(output, contents);
 }
-for (const file of ['InitializeParams.ts', 'InitializeResponse.ts', 'v2/ThreadStartParams.ts', 'v2/ThreadStartResponse.ts', 'v2/ThreadResumeParams.ts', 'v2/ThreadResumeResponse.ts', 'v2/TurnStartParams.ts', 'v2/TurnStartResponse.ts', 'v2/TurnStartedNotification.ts', 'v2/TurnCompletedNotification.ts', 'v2/ConfigReadParams.ts', 'v2/ConfigReadResponse.ts', 'v2/ThreadArchiveParams.ts', 'v2/ThreadArchiveResponse.ts', 'v2/TurnInterruptParams.ts', 'v2/TurnInterruptResponse.ts']) copy(file);
+for (const file of ['InitializeParams.ts', 'InitializeResponse.ts', 'v2/ThreadStartParams.ts', 'v2/ThreadStartResponse.ts', 'v2/ThreadResumeParams.ts', 'v2/ThreadResumeResponse.ts', 'v2/TurnStartParams.ts', 'v2/TurnStartResponse.ts', 'v2/TurnStartedNotification.ts', 'v2/TurnCompletedNotification.ts', 'v2/ConfigReadParams.ts', 'v2/ConfigReadResponse.ts', 'v2/ThreadArchiveParams.ts', 'v2/ThreadArchiveResponse.ts', 'v2/TurnInterruptParams.ts', 'v2/TurnInterruptResponse.ts', 'v2/CommandExecParams.ts', 'v2/CommandExecResponse.ts', 'v2/CommandExecTerminateParams.ts', 'v2/CommandExecTerminateResponse.ts']) copy(file);
 console.log(`Imported ${visited.size} generated type files; only .js import extensions normalized for NodeNext.`);

@@ -1,0 +1,147 @@
+{
+  "input": {
+    "snapshot_id": "5eafed39-318a-4763-b2de-6577f6f8b97d",
+    "task_id": "hung-verification",
+    "task_version": 1,
+    "worker_thread_id": "worker-from-server",
+    "worker_turn_id": "turn-2-from-server",
+    "task": {
+      "schema_version": 1,
+      "task_id": "hung-verification",
+      "workspace": "C:\\Users\\will\\.codex\\worktrees\\s2-redo-ticket27\\needs-forever\\runs\\ticket27\\hung-verification-1793469946591\\workspace",
+      "goal": "Complete A1.",
+      "acceptance": [
+        {
+          "id": "A1",
+          "text": "Independent check passes."
+        }
+      ],
+      "authorization": "Local workspace only.",
+      "limits": {
+        "max_worker_turns": null,
+        "max_minutes": null
+      },
+      "verify": {
+        "argv": [
+          "C:\\Program Files\\nodejs\\node.exe",
+          "verify.mjs",
+          "literal;argument"
+        ],
+        "timeout_seconds": 0.05,
+        "protected_files": [
+          "verify.mjs"
+        ]
+      }
+    },
+    "evidence": [
+      {
+        "id": "E1",
+        "type": "commandExecution",
+        "value": {
+          "type": "commandExecution",
+          "id": "check",
+          "command": "check",
+          "status": "completed",
+          "exitCode": 0,
+          "aggregatedOutput": "A1 checked."
+        },
+        "source": {
+          "event_id": "70c19d4d-9dd8-4720-9458-433f1b2377f5",
+          "thread_id": "worker-from-server",
+          "turn_id": "turn-2-from-server",
+          "item_id": "check"
+        }
+      },
+      {
+        "id": "E2",
+        "type": "agentMessage",
+        "value": {
+          "type": "agentMessage",
+          "id": "answer-1",
+          "text": "Only fixture stage completed."
+        },
+        "source": {
+          "event_id": "70c19d4d-9dd8-4720-9458-433f1b2377f5",
+          "thread_id": "worker-from-server",
+          "turn_id": "turn-2-from-server",
+          "item_id": "answer-1"
+        }
+      },
+      {
+        "id": "E3",
+        "type": "verification_result",
+        "value": {
+          "event_id": "3b133d97-d925-42ce-bd1d-cb3afcaa6515",
+          "at": "2026-10-31T18:05:48.144Z",
+          "type": "verification_result",
+          "task_id": "hung-verification",
+          "task_version": 1,
+          "mode": "simulated",
+          "argv": [
+            "C:\\Program Files\\nodejs\\node.exe",
+            "verify.mjs",
+            "literal;argument"
+          ],
+          "exitCode": null,
+          "stdout": "",
+          "stderr": "Independent verification supervisor timeout; command did not settle within its timeout plus 1 second grace.",
+          "timed_out": true,
+          "protected_before": [],
+          "protected_after": [],
+          "passed": false
+        },
+        "source": {
+          "event_id": "3b133d97-d925-42ce-bd1d-cb3afcaa6515"
+        }
+      }
+    ],
+    "plan": {
+      "missing": "No current plan or remaining-items update observed."
+    },
+    "recent_verification": {
+      "event_id": "3b133d97-d925-42ce-bd1d-cb3afcaa6515",
+      "at": "2026-10-31T18:05:48.144Z",
+      "type": "verification_result",
+      "task_id": "hung-verification",
+      "task_version": 1,
+      "mode": "simulated",
+      "argv": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "verify.mjs",
+        "literal;argument"
+      ],
+      "exitCode": null,
+      "stdout": "",
+      "stderr": "Independent verification supervisor timeout; command did not settle within its timeout plus 1 second grace.",
+      "timed_out": true,
+      "protected_before": [],
+      "protected_after": [],
+      "passed": false
+    },
+    "recent_instructions": [
+      {
+        "delivery_id": "e9024026-a721-4f94-bc40-01825e08ccc6",
+        "message": "[supervisor:e9024026-a721-4f94-bc40-01825e08ccc6]\nIndependent verification failed. Repair the task and restore any changed protected files to their original content; never change the fixed verification command. Evidence: {\"argv\":[\"C:\\\\Program Files\\\\nodejs\\\\node.exe\",\"verify.mjs\",\"literal;argument\"],\"exitCode\":null,\"stdout\":\"\",\"stderr\":\"Independent verification supervisor timeout; command did not settle within its timeout plus 1 second grace.\",\"timed_out\":true,\"protected_before\":[],\"protected_after\":[],\"passed\":false}. Original protected contents (base64): []",
+        "turn_id": "turn-2-from-server",
+        "result": {
+          "event_id": "70c19d4d-9dd8-4720-9458-433f1b2377f5",
+          "status": "completed",
+          "replies": [
+            "Only fixture stage completed."
+          ]
+        }
+      }
+    ],
+    "repeated_failure": {
+      "investigate": false,
+      "signatures": [],
+      "instruction": "No repeated failure threshold observed."
+    },
+    "omissions": [
+      "Current plan and remaining items were not observed."
+    ],
+    "evidence_complete": true
+  },
+  "raw_output": "{\"action\":\"DONE\",\"reason\":\"A1 evidence checked.\",\"evidence_ids\":[\"E1\",\"E2\",\"E3\"],\"next_message\":\"\",\"external\":null}",
+  "validation": "valid"
+}

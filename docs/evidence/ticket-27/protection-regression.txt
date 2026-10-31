@@ -1,0 +1,17 @@
+✔ DONE requires the fixed argv independent check in the explicit worker sandbox (670.3192ms)
+✔ T04 nonzero independent output reaches the original worker and only the repaired check can finish (932.2212ms)
+✔ server-side verification timeout returns its actual error to the worker without losing the healthy connection (921.9233ms)
+✔ missing independent stdout or stderr cannot manufacture a successful DONE (580.9174ms)
+✔ protected changes before checking refuse DONE and give the original worker exact restoration evidence (606.3892ms)
+✔ a missing protected verifier is refused until the original worker restores it (624.1114ms)
+✔ a protected change during a successful check invalidates it and requires restoration before DONE (922.783ms)
+✔ resume retains the original protected baseline and saved argv after the input file and verifier change (1029.1589ms)
+✔ PAUSED is durable before independent cancellation and a late successful check cannot set DONE (409.1719ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 6765.7117

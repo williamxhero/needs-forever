@@ -1,0 +1,64 @@
+
+> codex-supervisor@0.1.0 test
+> npm run build && node --test "dist/test/*.test.js"
+
+
+> codex-supervisor@0.1.0 build
+> tsc
+
+✔ start preserves the task and server identities; status reads WAIT_EXTERNAL without launching a server (399.6857ms)
+✔ start rejects a server policy granting writes outside the configured workspace before running a turn (288.9875ms)
+✔ a second CLI cannot supervise the same task through another state file (401.4294ms)
+✔ credential-shaped tool output is redacted before becoming a saved judge input (304.692ms)
+✔ inherited MCP names are disabled before creating any worker, including names with dots or quotes (313.6555ms)
+✔ the foreground CLI displays the worker reply and the supervisor waiting reason (311.2114ms)
+✔ server-provided turn identities cannot place snapshot evidence outside the snapshot directory (289.6937ms)
+✔ two early finishes continue the same worker then persist stable simulated DONE with prepared deliveries (329.7217ms)
+✔ a correlated started turn progresses to DONE even when turn/start never returns a response (303.1516ms)
+✔ started/completed before response and duplicate/foreign/stale events cannot add work (380.876ms)
+✔ unknown turn/start outcome preserves the sent delivery in RECOVERING without resending (311.3771ms)
+✔ failed worker terminal never reaches the fixed DONE judge (312.8437ms)
+✔ a late failure for an already confirmed old delivery cannot cancel the next worker (409.1397ms)
+✔ judge input is saved while its result is pending and duplicate terminal events do not start another judge (822.6594ms)
+✔ T08 simulated worker pause is saved before interrupting its owned turn (476.0905ms)
+✔ T08 simulated delayed judge success cannot overwrite durable PAUSED (566.4374ms)
+✔ T08 simulated verification is interrupted after PAUSED and cannot mark DONE (401.0832ms)
+✔ explicit resume uses saved task and worker identity, and DONE cannot reopen (714.1434ms)
+✔ cumulative turn limit pauses before another send and resume requires an increased or removed limit (695.12ms)
+✔ ACTIVE time is checkpointed while waiting and the explicit total-time limit pauses a running worker (1600.8546ms)
+✔ explicit resume preserves an unknown sent delivery and never blindly replays it (462.4217ms)
+✔ resume reviews the saved completed worker turn without adding another worker round (1243.2575ms)
+✔ explicit resume reclaims only a dead supervisor lock and preserves checkpointed time after a crash (942.7095ms)
+✔ ACTIVE resume rejects changed goal or authorization before altering the saved contract (478.4438ms)
+✔ real judge boundary continues the original worker then completes with fresh archived read-only judges (351.1967ms)
+✔ judge outputs with unknown fields, references or illegal action combinations never finish the task (1946.7638ms)
+✔ worker claims alone cannot prove DONE or an external dependency (636.1219ms)
+✔ bounded snapshots preserve the contract, real sources, recent instructions and failures while explicitly omitting large output (356.6048ms)
+✔ streamed completed items supply worker evidence and judge JSON when terminal turns have no items (318.2424ms)
+✔ a timed out judge terminates the owned connection without a second judge or inferred completion (520.1089ms)
+✔ T06 WAIT_EXTERNAL cites an actual failed route, stays idle and notifies once despite duplicates (369.7076ms)
+✔ fences, appended text and a second JSON object are rejected with the exact raw output retained (901.1404ms)
+✔ judge policy expansion prevents its turn and archive failure cannot invalidate an otherwise valid decision (660.1461ms)
+✔ PAUSED wins over a real judge that is in flight and the owned judge connection terminates (512.2934ms)
+✔ only the expected judge turn can supply the result even if a foreign completion arrives first (307.4755ms)
+✔ truncated tool output cannot be used to infer either terminal decision (663.6925ms)
+✔ an uncertain judge turn start terminates the old connection before entering recovery (310.4465ms)
+✔ connection failure during a judge result wait preserves the actual error and ends the old call (432.6413ms)
+✔ DONE requires the fixed argv independent check in the explicit worker sandbox (646.0452ms)
+✔ T04 nonzero independent output reaches the original worker and only the repaired check can finish (985.9295ms)
+✔ server-side verification timeout returns its actual error to the worker without losing the healthy connection (983.9257ms)
+✔ missing independent stdout or stderr cannot manufacture a successful DONE (627.9812ms)
+✔ protected changes before checking refuse DONE and give the original worker exact restoration evidence (645.9356ms)
+✔ a missing protected verifier is refused until the original worker restores it (650.9655ms)
+✔ a protected change during a successful check invalidates it and requires restoration before DONE (1006.0256ms)
+✔ resume retains the original protected baseline and saved argv after the input file and verifier change (1143.4091ms)
+✔ PAUSED is durable before independent cancellation and a late successful check cannot set DONE (426.6146ms)
+✔ a hung independent call ends its owned server and resumes the exact idle worker before sending failure evidence (1644.7952ms)
+ℹ tests 48
+ℹ suites 0
+ℹ pass 48
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 12832.6001

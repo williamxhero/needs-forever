@@ -1,0 +1,46 @@
+{
+  "mode": "simulated",
+  "codex_version": "codex-cli 0.166.0 (fixture protocol)",
+  "system": "win32 10.0.26300",
+  "node": "v24.19.0",
+  "command": [
+    "C:\\Program Files\\nodejs\\node.exe",
+    "--test",
+    "--test-reporter=tap",
+    "dist/test/cli.test.js",
+    "dist/test/judge-cli.test.js",
+    "dist/test/verification-cli.test.js"
+  ],
+  "started_at": "2026-10-31T18:05:39.429Z",
+  "finished_at": "2026-10-31T18:05:51.602Z",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "tests": 48,
+  "passed": 48,
+  "samples": [
+    "baseline-resume-1793469945081",
+    "fixed-argv-1793469939556",
+    "hung-verification-1793469946591",
+    "malformed-result-1793469942177",
+    "nonzero-1793469940193",
+    "pause-independent-1793469946167",
+    "protected-before-1793469942820",
+    "protected-during-1793469944124",
+    "protected-missing-1793469943472",
+    "server-timeout-1793469941195"
+  ],
+  "live": "not_run; actual model acceptance T01-T05 is a coordinating S2 gate",
+  "coverage": [
+    "S1 regression",
+    "#26 judge regression",
+    "T04 nonzero repair",
+    "fixed argv and explicit sandbox",
+    "protected baseline before worker",
+    "before/during/missing protection",
+    "resume keeps baseline and saved argv",
+    "PAUSED wins",
+    "actual timeout RPC response",
+    "hung command owned-server termination and exact idle-worker resume",
+    "malformed verification result rejected"
+  ]
+}

@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "task_id": "fixed-argv",
+  "task_version": 1,
+  "task": {
+    "schema_version": 1,
+    "task_id": "fixed-argv",
+    "workspace": "C:\\Users\\will\\.codex\\worktrees\\s2-redo-ticket27\\needs-forever\\runs\\ticket27\\fixed-argv-1793469939556\\workspace",
+    "goal": "Complete A1.",
+    "acceptance": [
+      {
+        "id": "A1",
+        "text": "Independent check passes."
+      }
+    ],
+    "authorization": "Local workspace only.",
+    "limits": {
+      "max_worker_turns": null,
+      "max_minutes": null
+    },
+    "verify": {
+      "argv": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "verify.mjs",
+        "literal;argument"
+      ],
+      "timeout_seconds": 2,
+      "protected_files": [
+        "verify.mjs"
+      ]
+    }
+  },
+  "worker_thread_id": "worker-from-server",
+  "status": "DONE",
+  "phase": "IDLE",
+  "active_worker_turn_id": null,
+  "reviewing_turn_id": null,
+  "handled_turn_ids": [
+    "first-turn-from-server"
+  ],
+  "pending_action": null,
+  "retry": {
+    "kind": null,
+    "attempt": 0,
+    "next_at": null
+  },
+  "last_decision": {
+    "action": "DONE",
+    "reason": "A1 evidence checked.",
+    "evidence_ids": [
+      "E1",
+      "E2"
+    ],
+    "next_message": "",
+    "external": null
+  },
+  "worker_turn_count": 1,
+  "elapsed_active_seconds": 0.537,
+  "updated_at": "2026-10-31T18:05:40.170Z",
+  "codex_version": "codex-cli 0.166.0",
+  "mode": "simulated",
+  "protected_baseline": [
+    {
+      "path": "C:\\Users\\will\\.codex\\worktrees\\s2-redo-ticket27\\needs-forever\\runs\\ticket27\\fixed-argv-1793469939556\\workspace\\verify.mjs",
+      "sha256": "299f433cdcdf629aa39a94fad5fb2b0d11217a3c741f0d3ac11aa16dfb0b1e55",
+      "content_base64": "Y29uc29sZS5sb2coJ2luZGVwZW5kZW50IGFjY2VwdGFuY2UnKTsK"
+    }
+  ],
+  "judge_thread_ids": [
+    "judge-1"
+  ]
+}

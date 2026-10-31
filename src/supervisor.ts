@@ -5,6 +5,8 @@ import type { ThreadStartResponse } from './protocol/generated/v2/ThreadStartRes
 import type { ThreadResumeParams } from './protocol/generated/v2/ThreadResumeParams.js';
 import type { TurnStartParams } from './protocol/generated/v2/TurnStartParams.js';
 import type { TurnStartResponse } from './protocol/generated/v2/TurnStartResponse.js';
+import type { CommandExecParams } from './protocol/generated/v2/CommandExecParams.js';
+import type { CommandExecResponse } from './protocol/generated/v2/CommandExecResponse.js';
 import type { State, Snapshot } from './types.js';
 import { record, text } from './types.js';
 import { Store } from './store.js';
@@ -61,8 +63,9 @@ export class Supervisor {
   private enqueue(message: (typeof this.incoming)[number]): void { this.incoming.push(message); this.wake?.(); }
   private async pump(rpc: Rpc): Promise<void> {
     try {
-      while (this.state.status === 'ACTIVE') {
+      while (this.state.status === 'ACTIVE' && rpc === this.rpc) {
         const notification = await rpc.next();
+        if (rpc !== this.rpc) return;
         if (this.fixture && notification.method === 'supervisor/test/pause') { this.pause(); continue; }
         const params = notification.params && typeof notification.params === 'object' ? record(notification.params) : {};
         if (params.threadId === this.state.worker_thread_id && ['item/completed', 'turn/completed', 'turn/plan/updated'].includes(notification.method)) this.store.event(this.state, 'worker_evidence', { role: 'worker', thread_id: params.threadId, method: notification.method, params });
@@ -71,10 +74,38 @@ export class Supervisor {
         this.enqueue({ kind: 'notification', ...notification });
       }
     } catch (error) {
+      if (rpc !== this.rpc) return;
       const failure = error instanceof Error ? error : new Error('Connection failed.');
       this.judge.connectionFailed?.(failure);
       this.enqueue({ kind: 'failure', error: failure });
     }
+  }
+  private async restoreAfterVerification(argv: string[], old: Rpc): Promise<void> {
+    // This is a known, idle-worker verification cancellation, not ambiguous
+    // turn recovery. No worker turn is replayed or inferred from history.
+    this.rpc = undefined;
+    await old.close();
+    this.store.event(this.state, 'verification_terminated', { via: 'owned_app_server_exit', server_process_id: old.processId, reason: 'Stable 0.166.0 cannot independently terminate buffered command/exec.' });
+    if (this.state.status !== 'ACTIVE') return;
+    const connection = await connect(argv, this.state.task.workspace, this.abort.signal);
+    this.rpc = connection.rpc;
+    const params: ThreadResumeParams = { threadId: this.state.worker_thread_id!, cwd: this.state.task.workspace, approvalPolicy: 'never', sandbox: 'workspace-write', excludeTurns: false };
+    const resumed = await this.rpc.request<ThreadStartResponse>('thread/resume', params);
+    if (resumed.thread.id !== this.state.worker_thread_id) throw new Error('Verification recovery changed worker identity.');
+    this.validateWorker(resumed);
+    if (resumed.thread.turns.some((turn) => turn.status === 'inProgress')) throw new Error('Verification recovery found an unexpected active worker turn; no send performed.');
+    this.judge.bind?.(this.rpc, (type, details) => {
+      if (type === 'judge_created' && typeof details.thread_id === 'string') { (this.state.judge_thread_ids ??= []).push(details.thread_id); this.save(); }
+      this.store.event(this.state, type, { role: 'judge', ...details });
+    });
+    this.store.event(this.state, 'verification_worker_restored', { thread_id: this.state.worker_thread_id, server_process_id: this.rpc.processId });
+    void this.pump(this.rpc);
+  }
+  private validateWorker(created: ThreadStartResponse): void {
+    if (created.approvalPolicy !== 'never' || created.sandbox.type !== 'workspaceWrite' || created.sandbox.networkAccess !== false || created.sandbox.excludeTmpdirEnvVar !== true || created.sandbox.excludeSlashTmp !== true || resolve(created.cwd) !== this.state.task.workspace || created.sandbox.writableRoots.some((root) => {
+      const suffix = relative(this.state.task.workspace, root);
+      return !isAbsolute(root) || isAbsolute(suffix) || suffix === '..' || suffix.startsWith(`..\\`) || suffix.startsWith('../');
+    })) throw new Error('Worker sandbox/approval policy verification failed.');
   }
   private displayOutput(item: Record<string, unknown>, turnId: string): void {
     const identity = `${turnId}/${String(item.id)}`;
@@ -98,6 +129,7 @@ export class Supervisor {
     if (completed) this.enqueue({ kind: 'notification', method: 'turn/completed', params: completed.raw });
   }
   async start(argv: string[], resume = false): Promise<void> {
+    this.store.protect(this.state);
     this.activeCheckpoint = Date.now();
     this.save();
     const checkpoint = setInterval(() => {
@@ -122,10 +154,7 @@ export class Supervisor {
       const resumeParams: ThreadResumeParams = { ...params, threadId: this.state.worker_thread_id!, excludeTurns: false };
       const created = await this.rpc.request<ThreadStartResponse>(resume ? 'thread/resume' : 'thread/start', resume ? resumeParams : params);
       if (this.state.status !== 'ACTIVE') return;
-      if (created.approvalPolicy !== 'never' || created.sandbox.type !== 'workspaceWrite' || created.sandbox.networkAccess !== false || created.sandbox.excludeTmpdirEnvVar !== true || created.sandbox.excludeSlashTmp !== true || resolve(created.cwd) !== this.state.task.workspace || created.sandbox.writableRoots.some((root) => {
-        const suffix = relative(this.state.task.workspace, root);
-        return !isAbsolute(root) || isAbsolute(suffix) || suffix === '..' || suffix.startsWith(`..\\`) || suffix.startsWith('../');
-      })) throw new Error('Worker sandbox/approval policy verification failed.');
+      this.validateWorker(created);
       if (resume && created.thread.id !== this.state.worker_thread_id) throw new Error('Resumed worker identity mismatch.');
       this.state.worker_thread_id = text(created.thread.id, 'worker thread id');
       this.store.event(this.state, resume ? 'worker_resumed' : 'worker_created', { role: 'worker', thread_id: this.state.worker_thread_id });
@@ -207,18 +236,58 @@ export class Supervisor {
         } else {
           if (decision.action !== 'DONE' && (decision.action !== 'WAIT_EXTERNAL' || !decision.external)) throw new Error('Invalid fixed judge decision.');
           if (decision.action === 'DONE' && this.state.task.verify) {
-            if (!this.fixture?.simulate_verification) throw new Error('Independent verification is delivered by S2; fixture DONE cannot bypass configured verify.');
-            this.state.phase = 'VERIFY';
-            this.save();
-            this.store.event(this.state, 'fixture_verification_started', { worker_turn_id: event.turn_id });
-            try {
-              await this.rpc.request('command/exec', { command: this.state.task.verify.argv, cwd: this.state.task.workspace, timeoutMs: this.state.task.verify.timeout_seconds * 1000 });
-            } catch (error) { if (this.state.status === 'ACTIVE') throw error; }
-            if (this.state.status !== 'ACTIVE' || this.state.task_version !== snapshot.task_version || this.state.active_worker_turn_id !== null) {
-              this.store.event(this.state, 'stale_verification_result_ignored');
-              continue;
+            if (!this.fixture?.simulate_verification) {
+              this.state.phase = 'VERIFY';
+              this.save();
+              const before = this.store.protectedChanges(this.state);
+              const verify = this.state.task.verify;
+              let result: { exitCode: number | null; stdout: string; stderr: string; timed_out?: boolean };
+              if (before.length) result = { exitCode: null, stdout: '', stderr: 'Protected files changed before verification.' };
+              else {
+                const watchdog = new Error('Independent verification supervisor timeout; command did not settle within its timeout plus 1 second grace.');
+                let timer: ReturnType<typeof setTimeout> | undefined;
+                const executingRpc = this.rpc;
+                try {
+                  const command: CommandExecParams = {
+                    command: verify.argv, cwd: this.state.task.workspace, timeoutMs: verify.timeout_seconds * 1000,
+                    sandboxPolicy: { type: 'workspaceWrite', writableRoots: [this.state.task.workspace], networkAccess: false, excludeTmpdirEnvVar: true, excludeSlashTmp: true },
+                  };
+                  result = await Promise.race([executingRpc.request<CommandExecResponse>('command/exec', command), new Promise<never>((_resolve, reject) => { timer = setTimeout(() => reject(watchdog), verify.timeout_seconds * 1000 + 1000); })]);
+                } catch (error) {
+                  const message = error instanceof Error ? error.message : 'Unknown independent verification failure.';
+                  if (error === watchdog) await this.restoreAfterVerification(argv, executingRpc);
+                  else if (this.state.status === 'ACTIVE' && !message.includes('sandbox error: command timed out')) throw error;
+                  result = { exitCode: null, stdout: '', stderr: message, timed_out: error === watchdog || message.includes('sandbox error: command timed out') };
+                } finally { if (timer) clearTimeout(timer); }
+                if (!result || (result.exitCode !== null && !Number.isInteger(result.exitCode)) || typeof result.stdout !== 'string' || typeof result.stderr !== 'string') throw new Error('Invalid independent verification response; exitCode/stdout/stderr are required.');
+              }
+              if (this.state.status !== 'ACTIVE' || this.state.task_version !== snapshot.task_version || this.state.active_worker_turn_id !== null) {
+                this.store.event(this.state, 'stale_verification_result_ignored');
+                continue;
+              }
+              const after = this.store.protectedChanges(this.state);
+              const passed = result.exitCode === 0 && !before.length && !after.length;
+              const evidence = { argv: verify.argv, ...result, protected_before: before, protected_after: after, passed };
+              this.store.event(this.state, 'verification_result', evidence);
+              if (!passed) {
+                const changed = new Set([...before, ...after].map((file) => file.path));
+                const restore = (this.state.protected_baseline ?? []).filter((file) => changed.has(file.path));
+                this.sendNext(`Independent verification failed. Repair the task and restore any changed protected files to their original content; never change the fixed verification command. Evidence: ${JSON.stringify(redact(evidence))}. Original protected contents (base64): ${JSON.stringify(restore)}`, event.turn_id);
+                continue;
+              }
+            } else {
+              this.state.phase = 'VERIFY';
+              this.save();
+              this.store.event(this.state, 'fixture_verification_started', { worker_turn_id: event.turn_id });
+              try {
+                await this.rpc.request('command/exec', { command: this.state.task.verify.argv, cwd: this.state.task.workspace, timeoutMs: this.state.task.verify.timeout_seconds * 1000 });
+              } catch (error) { if (this.state.status === 'ACTIVE') throw error; }
+              if (this.state.status !== 'ACTIVE' || this.state.task_version !== snapshot.task_version || this.state.active_worker_turn_id !== null) {
+                this.store.event(this.state, 'stale_verification_result_ignored');
+                continue;
+              }
+              throw new Error('S1 verification fixture only tests cancellation; real acceptance is S2.');
             }
-            throw new Error('S1 verification fixture only tests cancellation; real acceptance is S2.');
           }
           this.accrue();
           this.state.status = decision.action;
