@@ -40,15 +40,15 @@ SKILL.md and following their procedures, not by claiming an unavailable tool cal
 | Fixed argv verifier in worker sandbox with timeout; failure returns to original worker | #27 | `docs/evidence/ticket-27/`, `docs/delivery/ticket27-merger.json` | PASS simulated at `3a52285`; actual Node verifier in simulated transport |
 | Protected baseline before worker, preserved on resume, pre/post verifier checks | #27 | Original baseline/argv survive resume; pre/post tamper cases | PASS simulated |
 | Before/during verifier tamper, missing file, nonzero, timeout, pause/late success | #27 | Ten public CLI verification cases; installed runtime timeout/cancel probes in `docs/evidence/s2-protocol/` | PASS simulated product cases; real runtime probes are capabilities only |
-| T13 ordinary defaults, authorization denial, unsupported cancellation and judge request failure | #28 | Pending | not_run |
-| T01/T02 live: one/two premature finishes trigger same-worker confirmed starts | #28 | Pending | not_run |
-| T03 live: failed route followed by materially different successful route | #28 | Pending | not_run |
-| T04 live: actual judge DONE rejected by real independent verifier, followed by repair | #28 | Pending | not_run |
-| T05 live: complete goal and verifier PASS persist stable DONE | #28 | Pending | not_run |
+| T13 ordinary defaults, authorization denial, unsupported cancellation and judge request failure | #28 | `docs/evidence/ticket-28/final/gate-evidence.md`, 49-test TAP | PASS simulated |
+| T01/T02 live: one/two premature finishes trigger same-worker confirmed starts | #28 | `docs/delivery/ticket28-merger.json` live attempt IDs | not_run_to_completion: judge remained in progress |
+| T03 live: failed route followed by materially different successful route | #28 | `docs/delivery/ticket28-merger.json` live attempt | not_run_to_completion |
+| T04 live: actual judge DONE rejected by real independent verifier, followed by repair | #28 | `docs/delivery/ticket28-merger.json` live attempt | not_run_to_completion |
+| T05 live: complete goal and verifier PASS persist stable DONE | #28 | `docs/delivery/ticket28-merger.json` live attempt | not_run_to_completion |
 | Reproducible three-stage demo with protected verifier; full S1 regression | #27/#28 | `scripts/prepare-s2-demo.mjs`, `scripts/run-s2-simulated-demo.mjs`; #27 merger 48/48 including S1 24/24 | PASS simulated; live pending #28 |
-| Independent review and findings resolved | S2 exit | Pending | not_run |
+| Independent review and findings resolved | S2 exit | Pending | not_run: live exit gate incomplete |
 | Main ancestry, clean worktrees, safe cleanup, push and equality | S2 delivery | Pending | not_run |
-| Completion records exact readback and CLOSED/completed; total todo updated | S2 delivery | Pending | not_run |
+| Completion records exact readback and CLOSED/completed; total todo updated | S2 delivery | Pending | not_run: #21 remains open |
 
 Complete retries/reconnect/history reconciliation and live T08/T11 remain S3.
 Their absence cannot be reported as S2 evidence or used to close total #19.

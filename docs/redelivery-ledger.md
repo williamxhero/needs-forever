@@ -193,3 +193,15 @@ live T01-T05 S2 exit evidence. The #27 demo uses actual Node route/verifier
 subprocesses but simulated AI/protocol; it is not live acceptance. All S2 tickets
 and #21 stay OPEN until the entire SPEC delivery gate is satisfied. S3 remains
 unstarted.
+
+Ticket #28 implementation was integrated at `5683ea572316bcc0b55e74b0a974b6f666daed22`,
+with merger receipt `c57d017733fdf52a0c432bc2f99b388c61df4b0d`. The independent
+merger ran `npm run build` and `npm test`: 49/49 simulated tests passed, including
+T13 request handling, T06 wait and T08 pause regressions. A real Codex 0.166.0
+attempt created worker `01a19330-d158-7660-955f-17be8f069972`, completed the first
+stage, and created judge `01a19331-7bbc-7471-b978-b488a6f45f38`; the judge did not
+complete within the bounded observation window and was interrupted. Therefore
+T01-T05 are `not_run_to_completion`, not passed. Raw live evidence is preserved at
+`.scratch/new-workflow/evidence/ticket28-raw/ticket28-live` (10 files, 53,669
+bytes). #28 and #21 remain open; no main merge, push, cleanup, or S3 start is
+authorized by the completion gate.
