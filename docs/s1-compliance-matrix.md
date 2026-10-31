@@ -5,10 +5,10 @@ Earlier implementation tests are not evidence for this delivery.
 
 | Required behavior | Ticket | Acceptance evidence | Current result |
 | --- | --- | --- | --- |
-| Public start/status and schema version 1 task snapshot | #23 | CLI process with simulated JSONL server; saved original contract | not_run |
-| Exact installed protocol, initialization, matched request IDs | #23 | Generated stable types and fake-server wire audit; record installed version | not_run |
-| Per-process isolation and explicit worker sandbox/approval | #23 | Effective configuration plus returned worker policy checks | not_run |
-| Atomic state, append-only events, snapshots, summary, task lock | #23 | Public output files and concurrent CLI process | not_run |
+| Public start/status and schema version 1 task snapshot | #23 | `docs/evidence/ticket-23/`, independent receipt `docs/delivery/ticket23-merger.json` | PASS simulated at `7671cd2` |
+| Exact installed protocol, initialization, matched request IDs | #23 | Codex 0.166.0 generated types compared by merger; recorded fixture wire trace | PASS provenance and simulated wire audit |
+| Per-process isolation and explicit worker sandbox/approval | #23 | Effective-config no-model live preflight; returned worker policy and rejection of expanded sandbox in CLI fixture | PASS simulated worker; no-model live config probe only |
+| Atomic state, append-only events, snapshots, summary, task lock | #23 | Captured public output files, concurrent CLI exclusion, Windows rename correction; merger rerun | PASS simulated at `7671cd2` |
 | T01 same-worker continuation | #24 | Confirmed next turn from actual fake-server response/event | not_run |
 | T02 two consecutive premature completions | #24 | Two decisions and two distinct confirmed turns, one worker ID | not_run |
 | Pure fixed rules and one sendNext path | #24 | Source inspection plus public continuation evidence | not_run |
