@@ -14,7 +14,7 @@
     "worker_turns": 3,
     "verifier_exit_code": 0,
     "verifier_passed": true,
-    "t04_controlled_verifier": "first exit 41 then pass exit 0; worker-side injection evidence only, supervisor-mediated first-DONE rejection not claimed",
+    "t04_controlled_verifier": "PASS: supervisor DONE -> fixed verifier exit 41 -> same-worker repair.flag feedback -> judge DONE -> fixed verifier exit 0",
     "reason": "After the local-work continuation gate was clarified, the real worker completed all three stages on one thread; the real judge returned DONE and the fixed independent verifier passed. Earlier invalid and WAIT_EXTERNAL runs remain preserved as negative evidence."
   },
   "claims": ["No live completion or verifier pass is claimed."]
