@@ -1,0 +1,17 @@
+{
+  "ticket": 28,
+  "mode": "mixed",
+  "simulated": {"command": "npm test", "expected_tests": 49, "passed_tests": 49, "verdict": "PASS"},
+  "live": {
+    "codex_version": "codex-cli 0.166.0",
+    "workspace": "runs/ticket28-live/workspace",
+    "worker_thread_id": "01a19330-d158-7660-955f-17be8f069972",
+    "worker_turn_id": "01a19330-d24f-7082-ae39-502db62295ed",
+    "judge_thread_id": "01a19331-7bbc-7471-b978-b488a6f45f38",
+    "worker_stage_1": "observed",
+    "judge_stage_1": "not_completed_within_observation_window",
+    "t01_t05": "not_run_to_completion",
+    "reason": "The real judge turn remained in progress during the bounded live run; the process was interrupted to avoid an unbounded wait."
+  },
+  "claims": ["No live completion or verifier pass is claimed."]
+}

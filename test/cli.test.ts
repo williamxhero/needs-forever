@@ -34,6 +34,20 @@ function setup(name: string, options: Record<string, unknown> = {}) {
   return { directory, workspace, trace, scenario, fixture, taskFile, stateFile, argv: ['start', '--task', taskFile, '--state', stateFile, '--test-fixture', fixture] };
 }
 
+test('server requests preserve string ids and receive deterministic refusals', () => {
+  const fixture = setup(`server-requests-${Date.now()}`, { server_requests: [
+    { id: 'approval-string-id', method: 'item/commandExecution/requestApproval', params: { approvalId: 'approval-1' } },
+    { id: 73, method: 'item/permissions/requestApproval', params: {} },
+    { id: 'input-id', method: 'item/tool/requestUserInput', params: { questions: [{ id: 'choice', options: [{ label: 'first', description: 'first' }, { label: 'second', description: 'second' }] }] } },
+  ] });
+  const result = run(fixture.argv);
+  assert.equal(result.status, 0, result.stderr);
+  const responses = readFileSync(fixture.trace, 'utf8').trim().split('\n').map((line) => JSON.parse(line).message).filter((message) => message && !message.method && ('result' in message));
+  assert.ok(responses.some((message) => message.id === 'approval-string-id' && message.result.decision === 'decline'));
+  assert.ok(responses.some((message) => message.id === 73 && message.result.scope === 'turn' && Object.keys(message.result.permissions).length === 0));
+  assert.ok(responses.some((message) => message.id === 'input-id' && message.result.answers.choice.answers[0] === 'first'));
+});
+
 test('start preserves the task and server identities; status reads WAIT_EXTERNAL without launching a server', () => {
   const directory = resolve('runs/ticket23', `initial-${Date.now()}`);
   const workspace = resolve(directory, 'workspace');

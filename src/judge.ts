@@ -1,7 +1,7 @@
 import type { Decision, Snapshot } from './types.js';
 import { setTimeout as delay } from 'node:timers/promises';
 import { resolve } from 'node:path';
-import type { Rpc } from './transport.js';
+import { RpcServerError, type Rpc } from './transport.js';
 import type { ThreadStartParams } from './protocol/generated/v2/ThreadStartParams.js';
 import type { ThreadStartResponse } from './protocol/generated/v2/ThreadStartResponse.js';
 import type { TurnStartParams } from './protocol/generated/v2/TurnStartParams.js';
@@ -17,6 +17,7 @@ export interface Judge {
   bind?(rpc: Rpc, event: (type: string, details: Record<string, unknown>) => void): void;
   observe?(method: string, params: unknown): void;
   connectionFailed?(error: Error): void;
+  serverRequest?(method: string, params: unknown): Promise<unknown>;
   readonly rawOutput?: string;
 }
 
@@ -70,6 +71,12 @@ export class AppServerJudge implements Judge {
   get rawOutput(): string { return this.raw; }
   bind(rpc: Rpc, event: (type: string, details: Record<string, unknown>) => void): void { this.rpc = rpc; this.event = event; }
   connectionFailed(error: Error): void { this.terminal?.reject(error); }
+  async serverRequest(method: string, params: unknown): Promise<unknown> {
+    this.event('judge_server_request_refused', { method, params });
+    this.terminal?.reject(new Error(`Judge server request refused: ${method}`));
+    if (knownRequest(method)) return refusalFor(method, params);
+    throw new RpcServerError(-32601, 'Method not found.');
+  }
   observe(method: string, params: unknown): void {
     if (!['turn/completed', 'item/completed'].includes(method) || !this.terminal) return;
     const data = record(params);
@@ -156,6 +163,19 @@ export class AppServerJudge implements Judge {
       this.expectedTurn = undefined;
     }
   }
+}
+
+function refusalFor(method: string, params: unknown): unknown {
+  if (method === 'item/commandExecution/requestApproval' || method === 'item/fileChange/requestApproval') return { decision: 'decline' };
+  if (method === 'item/permissions/requestApproval') return { permissions: {}, scope: 'turn' };
+  if (method === 'execCommandApproval' || method === 'applyPatchApproval') return { decision: 'abort' };
+  if (method === 'mcpServer/elicitation/request') return { action: 'cancel', content: null, _meta: null };
+  if (method === 'item/tool/call') return { contentItems: [], success: false };
+  if (method === 'item/tool/requestUserInput') return { answers: {} };
+  return { answers: {} };
+}
+function knownRequest(method: string): boolean {
+  return ['item/commandExecution/requestApproval', 'item/fileChange/requestApproval', 'item/permissions/requestApproval', 'execCommandApproval', 'applyPatchApproval', 'mcpServer/elicitation/request', 'item/tool/call', 'item/tool/requestUserInput'].includes(method);
 }
 
 export class FixtureJudge implements Judge {

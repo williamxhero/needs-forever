@@ -11,6 +11,9 @@ import { redact } from './redact.js';
 
 export const PROTOCOL_VERSION = 'codex-cli 0.166.0';
 export const disabledFeatures = ['apps', 'plugins', 'hooks', 'multi_agent', 'browser_use', 'computer_use', 'memories'];
+export class RpcServerError extends Error {
+  constructor(readonly code: number, message: string) { super(message); }
+}
 export function codexCommand(): string[] {
   if (process.platform === 'win32') {
     // Use the native executable; do not put task data through cmd.exe or PowerShell.
@@ -35,6 +38,7 @@ export class Rpc {
   private failure: Error | undefined;
   private closing: Promise<void> | undefined;
   private readonly onAbort = () => { void this.close(); };
+  private requestHandler: ((id: string | number, method: string, params: unknown) => Promise<unknown>) | undefined;
   constructor(argv: string[], cwd: string, overrides: string[], private readonly signal?: AbortSignal) {
     signal?.throwIfAborted();
     const [executable, ...arguments_] = argv;
@@ -54,6 +58,15 @@ export class Rpc {
             request.reject(new Error(`app-server RPC failed (${error.code ?? 'unknown'}): ${String(redact(error.message ?? 'Unknown error.'))}`));
           }
           else request.resolve(message.result);
+        } else if (typeof message.method === 'string' && (typeof message.id === 'string' || typeof message.id === 'number')) {
+          const id = message.id;
+          const handler = this.requestHandler;
+          if (!handler) this.respond(id, undefined, { code: -32601, message: 'No server request handler.' });
+          else void handler(id, message.method, message.params).then((result) => this.respond(id, result)).catch((error: unknown) => {
+            const messageText = error instanceof Error ? error.message : 'Server request rejected.';
+            const code = error instanceof RpcServerError ? error.code : -32000;
+            this.respond(id, undefined, { code, message: String(redact(messageText)) });
+          });
         } else if (typeof message.method === 'string') {
           this.notifications.push({ method: message.method, params: message.params });
           this.wake?.();
@@ -64,6 +77,12 @@ export class Rpc {
     this.child.on('exit', (code) => this.fail(new Error(`app-server exited (${code}). Recovery remains an S3 responsibility.`)));
     this.child.stdin.on('error', () => this.fail(new Error('app-server input connection closed.')));
     signal?.addEventListener('abort', this.onAbort, { once: true });
+  }
+  setRequestHandler(handler: (id: string | number, method: string, params: unknown) => Promise<unknown>): void { this.requestHandler = handler; }
+  private respond(id: string | number, result?: unknown, error?: { code: number; message: string }): void {
+    if (this.child.exitCode !== null || this.child.signalCode !== null) return;
+    const response = error ? { id, error } : { id, result };
+    try { this.child.stdin.write(`${JSON.stringify(response)}\n`); } catch { /* exit path */ }
   }
   get processId(): number | undefined { return this.child.pid; }
   private fail(error: Error): void {

@@ -12,7 +12,7 @@ import { record, text } from './types.js';
 import { Store } from './store.js';
 import type { Judge } from './judge.js';
 import { normalize, selectAction, reachedLimits, type WorkerEvent } from './rules.js';
-import { connect, type Rpc } from './transport.js';
+import { connect, RpcServerError, type Rpc } from './transport.js';
 import { redact } from './redact.js';
 import { buildSnapshot } from './snapshot.js';
 
@@ -61,6 +61,40 @@ export class Supervisor {
     this.state.pending_action = null;
   }
   private enqueue(message: (typeof this.incoming)[number]): void { this.incoming.push(message); this.wake?.(); }
+  private async handleServerRequest(method: string, params: unknown): Promise<unknown> {
+    const data = params && typeof params === 'object' ? record(params) : {};
+    const threadId = typeof data.threadId === 'string' ? data.threadId : undefined;
+    this.store.event(this.state, 'server_request', { method, thread_id: threadId ?? null, params: redact(params) });
+    const answer = (value: unknown): unknown => { this.store.event(this.state, 'server_request_answered', { method, thread_id: threadId ?? null, answer: redact(value) }); return value; };
+    if (threadId && (this.state.judge_thread_ids ?? []).includes(threadId)) {
+      if (this.judge.serverRequest) return this.judge.serverRequest(method, params);
+      throw new RpcServerError(-32601, 'Judge request handler unavailable.');
+    }
+    if (method === 'item/commandExecution/requestApproval' || method === 'item/fileChange/requestApproval') return answer({ decision: 'decline' });
+    if (method === 'item/permissions/requestApproval') return answer({ permissions: {}, scope: 'turn' });
+    if (method === 'execCommandApproval' || method === 'applyPatchApproval') return answer({ decision: 'abort' });
+    if (method === 'mcpServer/elicitation/request') return answer({ action: 'cancel', content: null, _meta: null });
+    if (method === 'item/tool/call') return answer({ contentItems: [], success: false });
+    if (method === 'item/tool/requestUserInput') {
+      const answers: Record<string, { answers: string[] }> = {};
+      for (const value of Array.isArray(data.questions) ? data.questions : []) {
+        if (!value || typeof value !== 'object') continue;
+        const question = record(value);
+        const id = typeof question.id === 'string' ? question.id : undefined;
+        if (!id || question.isSecret === true) continue;
+        const options = Array.isArray(question.options) ? question.options : [];
+        const first = options.find((option) => option && typeof option === 'object' && typeof record(option).label === 'string');
+        answers[id] = { answers: first ? [String(record(first).label)] : [] };
+      }
+      return answer({ answers });
+    }
+    if (threadId && this.state.active_worker_turn_id && threadId === this.state.worker_thread_id) {
+      void this.rpc?.request('turn/interrupt', { threadId, turnId: this.state.active_worker_turn_id }).catch(() => {});
+      this.store.event(this.state, 'unknown_server_request', { method, thread_id: threadId, action: 'interrupt_requested' });
+    }
+    throw new RpcServerError(-32601, 'Method not found.');
+  }
+  private bindRpc(rpc: Rpc): Rpc { this.rpc = rpc; rpc.setRequestHandler((_id, method, params) => this.handleServerRequest(method, params)); return rpc; }
   private async pump(rpc: Rpc): Promise<void> {
     try {
       while (this.state.status === 'ACTIVE' && rpc === this.rpc) {
@@ -88,18 +122,18 @@ export class Supervisor {
     this.store.event(this.state, 'verification_terminated', { via: 'owned_app_server_exit', server_process_id: old.processId, reason: 'Stable 0.166.0 cannot independently terminate buffered command/exec.' });
     if (this.state.status !== 'ACTIVE') return;
     const connection = await connect(argv, this.state.task.workspace, this.abort.signal);
-    this.rpc = connection.rpc;
+    const rpc = this.bindRpc(connection.rpc);
     const params: ThreadResumeParams = { threadId: this.state.worker_thread_id!, cwd: this.state.task.workspace, approvalPolicy: 'never', sandbox: 'workspace-write', excludeTurns: false };
-    const resumed = await this.rpc.request<ThreadStartResponse>('thread/resume', params);
+    const resumed = await rpc.request<ThreadStartResponse>('thread/resume', params);
     if (resumed.thread.id !== this.state.worker_thread_id) throw new Error('Verification recovery changed worker identity.');
     this.validateWorker(resumed);
     if (resumed.thread.turns.some((turn) => turn.status === 'inProgress')) throw new Error('Verification recovery found an unexpected active worker turn; no send performed.');
-    this.judge.bind?.(this.rpc, (type, details) => {
+    this.judge.bind?.(rpc, (type, details) => {
       if (type === 'judge_created' && typeof details.thread_id === 'string') { (this.state.judge_thread_ids ??= []).push(details.thread_id); this.save(); }
       this.store.event(this.state, type, { role: 'judge', ...details });
     });
-    this.store.event(this.state, 'verification_worker_restored', { thread_id: this.state.worker_thread_id, server_process_id: this.rpc.processId });
-    void this.pump(this.rpc);
+    this.store.event(this.state, 'verification_worker_restored', { thread_id: this.state.worker_thread_id, server_process_id: rpc.processId });
+    void this.pump(rpc);
   }
   private validateWorker(created: ThreadStartResponse): void {
     if (created.approvalPolicy !== 'never' || created.sandbox.type !== 'workspaceWrite' || created.sandbox.networkAccess !== false || created.sandbox.excludeTmpdirEnvVar !== true || created.sandbox.excludeSlashTmp !== true || resolve(created.cwd) !== this.state.task.workspace || created.sandbox.writableRoots.some((root) => {
@@ -142,23 +176,23 @@ export class Supervisor {
       if (resume && this.state.pending_action?.stage === 'sent') throw new Error('Unknown sent delivery retained; S3 reconciliation required before any resend.');
       if (resume && !this.state.worker_thread_id) throw new Error('Resume requires the saved worker thread identity; S3 recovery required.');
       const connection = await connect(argv, this.state.task.workspace, this.abort.signal);
-      this.rpc = connection.rpc;
-      this.judge.bind?.(this.rpc, (type, details) => {
+      const rpc = this.bindRpc(connection.rpc);
+      this.judge.bind?.(rpc, (type, details) => {
         if (type === 'judge_created' && typeof details.thread_id === 'string') { (this.state.judge_thread_ids ??= []).push(details.thread_id); this.save(); }
         this.store.event(this.state, type, { role: 'judge', ...details });
       });
       if (this.state.status !== 'ACTIVE') return;
       this.state.codex_version = connection.version;
-      this.store.event(this.state, 'connection_verified', { codex_version: connection.version, disabled_mcp: connection.disabled_mcp, server_process_id: this.rpc.processId });
+      this.store.event(this.state, 'connection_verified', { codex_version: connection.version, disabled_mcp: connection.disabled_mcp, server_process_id: rpc.processId });
       const params: ThreadStartParams = { cwd: this.state.task.workspace, approvalPolicy: 'never', sandbox: 'workspace-write', ephemeral: false };
       const resumeParams: ThreadResumeParams = { ...params, threadId: this.state.worker_thread_id!, excludeTurns: false };
-      const created = await this.rpc.request<ThreadStartResponse>(resume ? 'thread/resume' : 'thread/start', resume ? resumeParams : params);
+      const created = await rpc.request<ThreadStartResponse>(resume ? 'thread/resume' : 'thread/start', resume ? resumeParams : params);
       if (this.state.status !== 'ACTIVE') return;
       this.validateWorker(created);
       if (resume && created.thread.id !== this.state.worker_thread_id) throw new Error('Resumed worker identity mismatch.');
       this.state.worker_thread_id = text(created.thread.id, 'worker thread id');
       this.store.event(this.state, resume ? 'worker_resumed' : 'worker_created', { role: 'worker', thread_id: this.state.worker_thread_id });
-      void this.pump(this.rpc);
+      void this.pump(rpc);
       const knownTurnId = this.state.active_worker_turn_id ?? this.state.reviewing_turn_id;
       if (resume && knownTurnId) {
         const known = created.thread.turns.find((turn) => turn.id === knownTurnId);
@@ -247,6 +281,7 @@ export class Supervisor {
                 const watchdog = new Error('Independent verification supervisor timeout; command did not settle within its timeout plus 1 second grace.');
                 let timer: ReturnType<typeof setTimeout> | undefined;
                 const executingRpc = this.rpc;
+                if (!executingRpc) throw new Error('Verification requires an active app-server connection.');
                 try {
                   const command: CommandExecParams = {
                     command: verify.argv, cwd: this.state.task.workspace, timeoutMs: verify.timeout_seconds * 1000,
@@ -280,6 +315,7 @@ export class Supervisor {
               this.save();
               this.store.event(this.state, 'fixture_verification_started', { worker_turn_id: event.turn_id });
               try {
+                if (!this.rpc) throw new Error('Verification requires an active app-server connection.');
                 await this.rpc.request('command/exec', { command: this.state.task.verify.argv, cwd: this.state.task.workspace, timeoutMs: this.state.task.verify.timeout_seconds * 1000 });
               } catch (error) { if (this.state.status === 'ACTIVE') throw error; }
               if (this.state.status !== 'ACTIVE' || this.state.task_version !== snapshot.task_version || this.state.active_worker_turn_id !== null) {

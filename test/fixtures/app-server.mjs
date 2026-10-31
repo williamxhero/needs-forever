@@ -26,6 +26,7 @@ const lines = createInterface({ input: process.stdin });
 for await (const line of lines) {
   const message = JSON.parse(line);
   trace({ kind: 'request', pid: process.pid, message });
+  if (!message.method && ('result' in message || 'error' in message)) continue;
   if (message.method === 'initialize') {
     send({ id: message.id, result: { userAgent: 'codex-cli/0.166.0', platformFamily: 'windows', platformOs: 'windows' } });
   } else if (message.method === 'initialized') {
@@ -96,12 +97,14 @@ for await (const line of lines) {
       if (!scenario.real_judge) send({ method: 'turn/completed', params: { threadId: message.params.threadId, turn: { id: 'first-turn-from-server', status: 'completed', items: [] } } });
     }
     send({ method: 'turn/started', params: { threadId: message.params.threadId, turn: { id: turnId, status: 'inProgress', items: [] } } });
+    (scenario.server_requests ?? []).forEach((request, index) => setTimeout(() => send({ id: request.id ?? `server-request-${turns}-${index}`, method: request.method, params: { ...(request.params ?? {}), threadId: message.params.threadId, turnId } }), index * 15));
     send({ method: 'item/started', params: { threadId: message.params.threadId, turnId, item: { type: 'userMessage', id: `input-${turns}`, clientId: message.params.clientUserMessageId, content: message.params.input } } });
     if (scenario.pause_after_ms !== undefined) setTimeout(() => send({ method: 'supervisor/test/pause', params: {} }), scenario.pause_after_ms);
     if (!scenario.hold_worker) {
       const completed = { method: 'turn/completed', params: { threadId: message.params.threadId, turn: { id: turnId, status: scenario.terminal_status ?? 'completed', items: [...scenario.tool_items ?? [], ...commandItems, { type: 'agentMessage', id: 'answer-1', text: scenario.answer ?? 'Only fixture stage completed.' }] } } };
       if (scenario.stream_items) { for (const item of completed.params.turn.items) send({ method: 'item/completed', params: { threadId: message.params.threadId, turnId, item } }); completed.params.turn.items = []; }
       if (scenario.late_error_first && turns > 1) setTimeout(() => send(completed), 80);
+      else if (scenario.server_requests?.length) setTimeout(() => send(completed), 120);
       else send(completed);
       if (scenario.duplicate_events) { send(completed); send(completed); }
     }

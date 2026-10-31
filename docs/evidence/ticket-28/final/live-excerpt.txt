@@ -1,0 +1,7 @@
+codex_version=codex-cli 0.166.0
+worker_thread_id=01a19330-d158-7660-955f-17be8f069972
+worker_turn_id=01a19330-d24f-7082-ae39-502db62295ed
+judge_thread_id=01a19331-7bbc-7471-b978-b488a6f45f38
+worker evidence: unavailable-route.mjs exit code 23; route-attempted.txt preserved; stage1.json exact
+judge evidence: judge_created recorded; no terminal judge result within bounded observation window
+verdict: T01-T05 not_run_to_completion; no live DONE claim
