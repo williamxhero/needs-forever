@@ -26,6 +26,8 @@ test('judge prompt states the terminal next_message contract', () => {
   assert.match(judgeInstructions, /Only CONTINUE may have a nonempty next_message/);
   assert.match(judgeInstructions, /If any original acceptance item is incomplete and the authorization covers local workspace work, you MUST choose CONTINUE/);
   assert.match(judgeInstructions, /WAIT_EXTERNAL is allowed only when the snapshot contains a concrete, necessary external condition/);
+  assert.match(judgeInstructions, /configured verifier is a supervisor-owned gate executed after DONE/);
+  assert.match(judgeInstructions, /result is not required in the judge snapshot/);
 });
 
 test('real judge boundary continues the original worker then completes with fresh archived read-only judges', () => {

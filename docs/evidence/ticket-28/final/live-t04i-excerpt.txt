@@ -1,0 +1,14 @@
+codex_version=codex-cli 0.166.0
+worker_thread_id=01a19372-3578-7813-9fd8-192f769c8d80
+first_judge_thread_id=01a19372-9625-7f51-af85-e766c3996cd9
+first_judge_decision=DONE
+first_verification_argv=[C:\\Program Files\\nodejs\\node.exe, verify.mjs]
+first_verification_exitCode=41
+first_verification_stderr=INJECTED_FIRST_VERIFICATION_FAILURE: create repair.flag only after this evidence returns to the worker.
+failure_feedback_delivery=fbed4f45-3629-46df-b4d9-c64d247988ed
+same_worker_repair=repair.flag created after supervisor feedback
+second_judge_decision=DONE
+second_verification_exitCode=0
+second_verification_stdout=T04 controlled verifier PASS after worker repair.flag.
+protected_before=[] protected_after=[] passed=true
+final_state=DONE; worker_turn_count=2

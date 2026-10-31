@@ -43,9 +43,9 @@ SKILL.md and following their procedures, not by claiming an unavailable tool cal
 | T13 ordinary defaults, authorization denial, unsupported cancellation and judge request failure | #28 | `docs/evidence/ticket-28/final/gate-evidence.md`, 49-test TAP | PASS simulated |
 | T01/T02 live: one/two premature finishes trigger same-worker confirmed starts | #28 | `docs/delivery/ticket28-merger.json` live attempt IDs | not_run_to_completion: judge remained in progress |
 | T03 live: failed route followed by materially different successful route | #28 | `docs/delivery/ticket28-merger.json` live attempt | not_run_to_completion |
-| T04 live: actual judge DONE rejected by real independent verifier, followed by repair | #28 | `docs/delivery/ticket28-merger.json` live attempt | not_run_to_completion |
-| T05 live: complete goal and verifier PASS persist stable DONE | #28 | `docs/delivery/ticket28-merger.json` live attempt | not_run_to_completion |
-| Reproducible three-stage demo with protected verifier; full S1 regression | #27/#28 | `scripts/prepare-s2-demo.mjs`, `scripts/run-s2-simulated-demo.mjs`; #27 merger 48/48 including S1 24/24 | PASS simulated; live pending #28 |
+| T04 live: actual judge DONE rejected by real independent verifier, followed by repair | #28 | `docs/evidence/ticket-28/final/live-t04i-excerpt.txt`; raw `.scratch/new-workflow/evidence/ticket28-raw/ticket28-live-t04i` | PASS live: exit 41 -> same-worker repair.flag -> exit 0 -> DONE |
+| T05 live: complete goal and verifier PASS persist stable DONE | #28 | `docs/evidence/ticket-28/final/live-local-gate-excerpt.txt`, `live-t04i-excerpt.txt` | PASS live |
+| Reproducible three-stage demo with protected verifier; full S1 regression | #27/#28 | `scripts/prepare-s2-demo.mjs`, `scripts/prepare-s2-live-t04.mjs`; live raw t04i; #27 merger 48/48 including S1 24/24 | PASS simulated and live |
 | Independent review and findings resolved | S2 exit | Pending | not_run: live exit gate incomplete |
 | Main ancestry, clean worktrees, safe cleanup, push and equality | S2 delivery | Pending | not_run |
 | Completion records exact readback and CLOSED/completed; total todo updated | S2 delivery | Pending | not_run: #21 remains open |
