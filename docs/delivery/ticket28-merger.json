@@ -2,11 +2,11 @@
   "current_spec": 21,
   "ticket": 28,
   "mechanism": "Loaded installed implement-spec-to-done and implement-spec SKILL.md files; independent merger stage",
-  "integrated_at": "2026-10-31T18:26:52.2903354Z",
+  "integrated_at": "2026-10-31T18:32:34.2623836Z",
   "branch": "spec/21-s2-redo",
-  "before": "5828e21569815c87fc2f32e53c18705ee80b5389",
-  "commit": "5683ea572316bcc0b55e74b0a974b6f666daed22",
-  "merge": "git merge --ff-only ticket/28-redo",
+  "before": "2102514aa3dcafa733b04c85adef6c90f897cec6",
+  "commit": "359024037558f97f29da9ee9a9b29c6f65ed1bcb",
+  "merge": "git merge --no-ff --no-edit ticket/28-redo",
   "ancestry": "PASS",
   "build": {
     "exit_code": 0,
@@ -22,21 +22,37 @@
     "mode": "simulated"
   },
   "live": {
-    "t01_t05": "not_run_to_completion",
+    "claim": "No live DONE or WAIT_EXTERNAL acceptance",
+    "second_bounded": {
+      "result": "WAIT_EXTERNAL with nonempty next_message rejected; state RECOVERING",
+      "worker_thread_id": "01a19336-1d40-7191-916f-65b0898ab13b",
+      "worker_turn_id": "01a19336-1e4c-7270-9b7d-3c4afd74d24b",
+      "judge_thread_id": "01a19336-e55b-7fd1-b472-bf51681b90e5",
+      "judge_turn_id": "01a19336-e5ef-7381-b52b-e4caa18689cc"
+    },
+    "first_bounded": {
+      "result": "judge did not complete within observation window; interrupted",
+      "worker_thread_id": "01a19330-d158-7660-955f-17be8f069972",
+      "worker_turn_id": "01a19330-d24f-7082-ae39-502db62295ed",
+      "judge_thread_id": "01a19331-7bbc-7471-b978-b488a6f45f38"
+    },
     "codex_version": "codex-cli 0.166.0",
-    "worker_turn_id": "01a19330-d24f-7082-ae39-502db62295ed",
-    "reason": "Real judge remained in progress during bounded observation; interrupted; no live DONE claim",
-    "judge_thread_id": "01a19331-7bbc-7471-b978-b488a6f45f38",
-    "worker_thread_id": "01a19330-d158-7660-955f-17be8f069972",
-    "stage1": "observed"
+    "t01_t05": "not_run_to_completion"
   },
   "diff_check": "PASS: git diff --check de23e6a..HEAD",
   "source_worktree_clean": true,
   "integration_worktree_clean": true,
   "raw_backup": {
-    "files": 10,
-    "bytes": 53669,
-    "path": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\new-workflow\\evidence\\ticket28-raw\\ticket28-live"
+    "previous": {
+      "path": ".scratch/new-workflow/evidence/ticket28-raw/ticket28-live",
+      "bytes": 53669,
+      "files": 10
+    },
+    "second": {
+      "path": ".scratch/new-workflow/evidence/ticket28-raw/ticket28-live-300",
+      "bytes": 63968,
+      "files": 9
+    }
   },
   "spec_hashes": {
     "codex_supervisor": "74444ECF532919C1D48BC3081FC27253C5E921E4D7BC15A8A2ABA10ECF8B9F00",
@@ -44,7 +60,7 @@
   },
   "limitations": [
     "All 49 automated tests simulated fixture boundary; no live T01-T05 completion",
-    "Live attempt observed worker stage1 and judge creation only; bounded interruption",
-    "No main/push/Issue closure/archive performed"
+    "Two bounded live runs observed worker/judge behavior but neither completed T01-T05; strict invalid result entered RECOVERING",
+    "No main/push/Issue closure/archive"
   ]
 }
