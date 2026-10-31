@@ -100,6 +100,7 @@ async function main(): Promise<void> {
     const supervisorOptions = fixture ? {
       simulate_verification: fixture.simulate_verification === true,
       recovery_enabled: fixture.recovery_enabled === true,
+      real_judge: fixture.real_judge === true,
       ...(recoveryDelays === undefined ? {} : { recovery_delays_ms: recoveryDelays as number[] }),
     } : undefined;
     const supervisor = new Supervisor(state, store, judge, supervisorOptions);

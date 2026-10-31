@@ -26,9 +26,43 @@ export class Supervisor {
   private activeCheckpoint = 0;
   private cancellation: Promise<void> | undefined;
   private readonly abort = new AbortController();
-  constructor(private readonly state: State, private readonly store: Store, private readonly judge: Judge, private readonly fixture?: { simulate_verification?: boolean; recovery_enabled?: boolean; recovery_delays_ms?: number[] }) {}
+  constructor(private readonly state: State, private readonly store: Store, private readonly judge: Judge, private readonly fixture?: { simulate_verification?: boolean; recovery_enabled?: boolean; recovery_delays_ms?: number[]; real_judge?: boolean }) {}
 
-  private async judgeWithRecovery(snapshot: Snapshot): Promise<import('./types.js').Decision | null> {
+  private async scheduleRecovery(error: unknown): Promise<boolean> {
+    const classification = classifyRecoveryError(error);
+    this.state.recovery_failures = recordRecoveryFailure(this.state.recovery_failures as import('./recovery.js').RecoveryFailure[] | undefined ?? [], error);
+    if (classification.wait_external) {
+      const resumeWhen = classification.resume_when ?? 'Resolve the external condition, then explicitly resume the task.';
+      this.state.last_error = classification.message;
+      this.state.recovery_condition = { kind: classification.kind, message: classification.message, resume_when: resumeWhen };
+      this.state.status = 'WAIT_EXTERNAL';
+      this.state.phase = 'IDLE';
+      this.state.reviewing_turn_id = null;
+      this.state.pending_action = null;
+      this.state.retry = { kind: null, attempt: 0, next_at: null };
+      this.save();
+      this.store.event(this.state, 'external_wait_required', { kind: classification.kind, error: classification.message, resume_when: resumeWhen });
+      console.log(`WAIT_EXTERNAL: ${classification.message}; resume when ${resumeWhen}`);
+      return false;
+    }
+    const attempt = this.state.retry.attempt + 1;
+    const configured = this.fixture?.recovery_delays_ms;
+    const backoff = nextBackoff(attempt);
+    const delayMs = configured?.[Math.min(attempt - 1, configured.length - 1)] ?? backoff.delay_seconds * 1000;
+    const nextAt = new Date(Date.now() + delayMs).toISOString();
+    this.state.last_error = classification.message;
+    this.state.phase = 'RECOVERING';
+    this.state.retry = { kind: classification.kind, attempt, next_at: nextAt };
+    const latest = this.state.recovery_failures.at(-1)!;
+    this.store.event(this.state, 'recovery_retry_scheduled', { kind: classification.kind, error: classification.message, attempt, next_at: nextAt, delay_seconds: delayMs / 1000, instruction: latest.instruction });
+    this.save();
+    console.log(`RECOVERING: ${classification.kind}; attempt ${attempt}; retry at ${nextAt}; ${latest.instruction}`);
+    await new Promise<void>((resolve_) => setTimeout(resolve_, delayMs));
+    if (this.state.status !== 'ACTIVE' || this.abort.signal.aborted) return false;
+    return true;
+  }
+
+  private async judgeWithRecovery(snapshot: Snapshot, argv: string[]): Promise<import('./types.js').Decision | null> {
     const enabled = this.fixture?.recovery_enabled === true || this.fixture?.recovery_delays_ms !== undefined || this.fixture === undefined;
     while (this.state.status === 'ACTIVE') {
       try {
@@ -42,44 +76,18 @@ export class Supervisor {
           return null;
         }
         if (!enabled) throw error;
-        const classification = classifyRecoveryError(error);
         if (this.judge.rawOutput !== undefined) this.store.snapshot(snapshot, this.judge.rawOutput, 'invalid');
-        this.state.recovery_failures = recordRecoveryFailure(this.state.recovery_failures as import('./recovery.js').RecoveryFailure[] | undefined ?? [], error);
-        if (classification.wait_external) {
-          const resumeWhen = classification.resume_when ?? 'Resolve the external condition, then explicitly resume the task.';
-          this.state.last_error = classification.message;
-          this.state.recovery_condition = { kind: classification.kind, message: classification.message, resume_when: resumeWhen };
-          this.state.status = 'WAIT_EXTERNAL';
-          this.state.phase = 'IDLE';
-          this.state.reviewing_turn_id = null;
-          this.state.pending_action = null;
-          this.state.retry = { kind: null, attempt: 0, next_at: null };
-          this.save();
-          this.store.event(this.state, 'external_wait_required', { kind: classification.kind, error: classification.message, resume_when: resumeWhen });
-          console.log(`WAIT_EXTERNAL: ${classification.message}; resume when ${resumeWhen}`);
-          return null;
+        if (!(await this.scheduleRecovery(error))) return null;
+        if (this.fixture?.real_judge === true || this.fixture === undefined) {
+          while (this.state.status === 'ACTIVE') {
+            try {
+              await this.reconnectAndReconcile(argv);
+              break;
+            } catch (reconnectError) {
+              if (!(await this.scheduleRecovery(reconnectError))) return null;
+            }
+          }
         }
-        const attempt = this.state.retry.attempt + 1;
-        const configured = this.fixture?.recovery_delays_ms;
-        const backoff = nextBackoff(attempt);
-        const delayMs = configured?.[Math.min(attempt - 1, configured.length - 1)] ?? backoff.delay_seconds * 1000;
-        const nextAt = new Date(Date.now() + delayMs).toISOString();
-        this.state.last_error = classification.message;
-        this.state.phase = 'RECOVERING';
-        this.state.retry = { kind: classification.kind, attempt, next_at: nextAt };
-        const latest = this.state.recovery_failures.at(-1)!;
-        this.store.event(this.state, 'recovery_retry_scheduled', {
-          kind: classification.kind,
-          error: classification.message,
-          attempt,
-          next_at: nextAt,
-          delay_seconds: delayMs / 1000,
-          instruction: latest.instruction,
-        });
-        this.save();
-        console.log(`RECOVERING: ${classification.kind}; attempt ${attempt}; retry at ${nextAt}; ${latest.instruction}`);
-        await new Promise<void>((resolve_) => setTimeout(resolve_, delayMs));
-        if (this.state.status !== 'ACTIVE' || this.abort.signal.aborted) return null;
         this.state.phase = 'JUDGE';
         this.save();
       }
@@ -155,6 +163,57 @@ export class Supervisor {
     throw new RpcServerError(-32601, 'Method not found.');
   }
   private bindRpc(rpc: Rpc): Rpc { this.rpc = rpc; rpc.setRequestHandler((_id, method, params) => this.handleServerRequest(method, params)); return rpc; }
+  private bindJudge(rpc: Rpc): void {
+    this.judge.bind?.(rpc, (type, details) => {
+      if (type === 'judge_created' && typeof details.thread_id === 'string') { (this.state.judge_thread_ids ??= []).push(details.thread_id); this.save(); }
+      this.store.event(this.state, type, { role: 'judge', ...details });
+    });
+  }
+  private async reconcileWorkerHistory(resumed: ThreadStartResponse): Promise<void> {
+    const pending = this.state.pending_action;
+    const turns = resumed.thread.turns;
+    if (!pending || pending.stage !== 'sent') {
+      const active = this.state.active_worker_turn_id;
+      if (!active) return;
+      const matchingActive = turns.find((turn) => turn.id === active);
+      if (!matchingActive) throw new Error('Saved active worker turn is absent from resume history; no resend performed.');
+      this.store.event(this.state, 'worker_history_reconciled', { turn_id: active, status: matchingActive.status });
+      if (matchingActive.status === 'completed') this.enqueue({ kind: 'notification', method: 'turn/completed', params: { threadId: this.state.worker_thread_id, turn: matchingActive } });
+      return;
+    }
+    const matching = turns.find((turn) => Array.isArray(turn.items) && turn.items.some((item) => item.type === 'userMessage' && item.clientId === pending.delivery_id));
+    if (!matching) {
+      const message = pending.message.replace(/^\[supervisor:[^\]]+\]\n/, '');
+      this.state.pending_action = null;
+      this.state.active_worker_turn_id = null;
+      this.state.reviewing_turn_id = null;
+      this.state.phase = 'WORKER';
+      this.save();
+      this.store.event(this.state, 'send_reconciled_absent', { delivery_id: pending.delivery_id, action: 'resend_after_history_check' });
+      this.sendNext(message, pending.source_turn_id);
+      return;
+    }
+    this.confirm(matching.id, pending.delivery_id, this.state.task_version, 'history');
+    this.store.event(this.state, 'send_reconciled_present', { delivery_id: pending.delivery_id, turn_id: matching.id, status: matching.status });
+    if (matching.status === 'completed') this.enqueue({ kind: 'notification', method: 'turn/completed', params: { threadId: this.state.worker_thread_id, turn: matching } });
+  }
+  private async reconnectAndReconcile(argv: string[]): Promise<void> {
+    const old = this.rpc;
+    this.rpc = undefined;
+    await old?.close();
+    if (this.state.status !== 'ACTIVE') return;
+    const connection = await connect(argv, this.state.task.workspace, this.abort.signal);
+    const rpc = this.bindRpc(connection.rpc);
+    this.bindJudge(rpc);
+    const params: ThreadResumeParams = { threadId: this.state.worker_thread_id!, cwd: this.state.task.workspace, approvalPolicy: 'never', sandbox: 'workspace-write', excludeTurns: false };
+    const resumed = await rpc.request<ThreadStartResponse>('thread/resume', params);
+    if (resumed.thread.id !== this.state.worker_thread_id) throw new Error('Recovery changed worker identity.');
+    this.validateWorker(resumed);
+    this.state.codex_version = connection.version;
+    this.store.event(this.state, 'connection_reconnected', { thread_id: this.state.worker_thread_id, server_process_id: rpc.processId, codex_version: connection.version });
+    await this.reconcileWorkerHistory(resumed);
+    void this.pump(rpc);
+  }
   private async pump(rpc: Rpc): Promise<void> {
     try {
       while (this.state.status === 'ACTIVE' && rpc === this.rpc) {
@@ -237,10 +296,7 @@ export class Supervisor {
       if (resume && !this.state.worker_thread_id) throw new Error('Resume requires the saved worker thread identity; S3 recovery required.');
       const connection = await connect(argv, this.state.task.workspace, this.abort.signal);
       const rpc = this.bindRpc(connection.rpc);
-      this.judge.bind?.(rpc, (type, details) => {
-        if (type === 'judge_created' && typeof details.thread_id === 'string') { (this.state.judge_thread_ids ??= []).push(details.thread_id); this.save(); }
-        this.store.event(this.state, type, { role: 'judge', ...details });
-      });
+      this.bindJudge(rpc);
       if (this.state.status !== 'ACTIVE') return;
       this.state.codex_version = connection.version;
       this.store.event(this.state, 'connection_verified', { codex_version: connection.version, disabled_mcp: connection.disabled_mcp, server_process_id: rpc.processId });
@@ -275,7 +331,21 @@ export class Supervisor {
             this.store.event(this.state, 'stale_send_result_ignored', { delivery_id: incoming.delivery, error: incoming.error.message });
             continue;
           }
-          throw incoming.error;
+          const enabled = this.fixture?.recovery_enabled === true || this.fixture?.recovery_delays_ms !== undefined || this.fixture === undefined;
+          if (!enabled || !this.state.worker_thread_id) throw incoming.error;
+          let recoveryError: unknown = incoming.error;
+          while (this.state.status === 'ACTIVE') {
+            if (!(await this.scheduleRecovery(recoveryError))) break;
+            try {
+              await this.reconnectAndReconcile(argv);
+              this.state.phase = 'WORKER';
+              this.save();
+              break;
+            } catch (error) {
+              recoveryError = error;
+            }
+          }
+          continue;
         }
         if (incoming.kind === 'response') {
           this.confirm(incoming.turn, incoming.delivery, incoming.version, 'response');
@@ -311,7 +381,7 @@ export class Supervisor {
         this.store.snapshot(snapshot, null);
         let decision;
         try {
-          decision = await this.judgeWithRecovery(snapshot);
+          decision = await this.judgeWithRecovery(snapshot, argv);
           if (this.judge.rawOutput !== undefined && decision === null && this.state.status === 'ACTIVE') this.store.snapshot(snapshot, this.judge.rawOutput, 'invalid');
         } catch (error) {
           if (this.state.status !== 'ACTIVE') { this.store.event(this.state, 'stale_judge_result_ignored', { snapshot_id: snapshot.snapshot_id }); continue; }

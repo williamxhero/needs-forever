@@ -69,7 +69,8 @@ for await (const line of lines) {
       if (scenario.wrong_judge_turn) send({ method: 'turn/completed', params: { threadId: message.params.threadId, turn: { id: 'unrelated-judge-turn', status: 'completed', items: [{ ...judgeItem, text: '{"action":"DONE"}' }] } } });
       if (scenario.stream_items) send({ method: 'item/completed', params: { threadId: message.params.threadId, turnId, item: judgeItem } });
       const finishJudge = () => send({ method: 'turn/completed', params: { threadId: message.params.threadId, turn: { id: turnId, status: 'completed', items: scenario.stream_items ? [] : [judgeItem] } } });
-      if (!scenario.hold_judge) { if (scenario.judge_delay_ms) setTimeout(finishJudge, scenario.judge_delay_ms); else finishJudge(); }
+      const holdThisJudge = scenario.hold_judge || (scenario.hold_judge_once && judges === 1);
+      if (!holdThisJudge) { if (scenario.judge_delay_ms) setTimeout(finishJudge, scenario.judge_delay_ms); else finishJudge(); }
       continue;
     }
     turns++;
@@ -85,7 +86,13 @@ for await (const line of lines) {
     }
     const turnId = scenario.turn_id ?? (turns === 1 ? 'first-turn-from-server' : `turn-${turns}-from-server`);
     if (scenario.state_file) trace({ kind: 'checkpoint_at_send', state: JSON.parse(readFileSync(scenario.state_file, 'utf8')) });
-    if (scenario.disconnect_on_send) process.exit(0);
+    if (scenario.disconnect_on_send || (scenario.disconnect_on_send_once && !scenario.disconnect_consumed)) {
+      if (scenario.disconnect_on_send_once) {
+        scenario.disconnect_consumed = true;
+        writeFileSync(process.argv[2], JSON.stringify(scenario));
+      }
+      process.exit(0);
+    }
     const response = () => send({ id: message.id, result: { turn: { id: turnId, status: 'inProgress', items: [] } } });
     if (scenario.late_error_first && turns === 1) setTimeout(() => send({ id: message.id, error: { code: -32000, message: 'Late obsolete request failure after actual start.' } }), 10);
     else if (!scenario.response_order) response();
