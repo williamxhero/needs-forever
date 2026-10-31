@@ -1,0 +1,50 @@
+{
+  "current_spec": 21,
+  "ticket": 28,
+  "mechanism": "Loaded installed implement-spec-to-done and implement-spec SKILL.md files; independent merger stage",
+  "integrated_at": "2026-10-31T18:26:52.2903354Z",
+  "branch": "spec/21-s2-redo",
+  "before": "5828e21569815c87fc2f32e53c18705ee80b5389",
+  "commit": "5683ea572316bcc0b55e74b0a974b6f666daed22",
+  "merge": "git merge --ff-only ticket/28-redo",
+  "ancestry": "PASS",
+  "build": {
+    "exit_code": 0,
+    "command": "npm run build"
+  },
+  "tests": {
+    "live": "not_run_to_completion",
+    "command": "npm test",
+    "failed": 0,
+    "passed": 49,
+    "exit_code": 0,
+    "report": "docs/evidence/ticket-28/final/report.json",
+    "mode": "simulated"
+  },
+  "live": {
+    "t01_t05": "not_run_to_completion",
+    "codex_version": "codex-cli 0.166.0",
+    "worker_turn_id": "01a19330-d24f-7082-ae39-502db62295ed",
+    "reason": "Real judge remained in progress during bounded observation; interrupted; no live DONE claim",
+    "judge_thread_id": "01a19331-7bbc-7471-b978-b488a6f45f38",
+    "worker_thread_id": "01a19330-d158-7660-955f-17be8f069972",
+    "stage1": "observed"
+  },
+  "diff_check": "PASS: git diff --check de23e6a..HEAD",
+  "source_worktree_clean": true,
+  "integration_worktree_clean": true,
+  "raw_backup": {
+    "files": 10,
+    "bytes": 53669,
+    "path": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\new-workflow\\evidence\\ticket28-raw\\ticket28-live"
+  },
+  "spec_hashes": {
+    "codex_supervisor": "74444ECF532919C1D48BC3081FC27253C5E921E4D7BC15A8A2ABA10ECF8B9F00",
+    "verification": "D3BD138C3BE2D409FFC8CDF0956858EC86BF7BEF03980149CCEE24B4F9F58D1"
+  },
+  "limitations": [
+    "All 49 automated tests simulated fixture boundary; no live T01-T05 completion",
+    "Live attempt observed worker stage1 and judge creation only; bounded interruption",
+    "No main/push/Issue closure/archive performed"
+  ]
+}
