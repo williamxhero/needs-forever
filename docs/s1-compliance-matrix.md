@@ -13,15 +13,15 @@ Earlier implementation tests are not evidence for this delivery.
 | T02 two consecutive premature completions | #24 | Two CONTINUE decisions and three server-confirmed turns in one worker | PASS simulated |
 | Pure fixed rules and one sendNext path | #24 | Rules/controller source plus public continuation evidence | PASS simulated; S3 error recovery pending |
 | Prepared before sending; correlation ID; confirmed turn ID | #24 | Fixture checks persisted full action before wire send; started+clientId also works without response | PASS simulated |
-| T05 stable DONE, no re-opening | #24/#25 | Repeated terminal notification after fixed valid DONE; explicit resume refusal remains #25 | PASS simulated duplicates; resume not_run |
-| T07 in-flight/already-handled dedupe, stale/foreign events | #24/#25 | Duplicate/out-of-order/foreign injections and late old-delivery failure; pause-version gate remains #25 | PASS simulated notifications; pause not_run |
-| Unknown delivery retained, no blind resend | #24/#25 | Lost start response preserves sent action and RECOVERING, one wire send; checkpoint resume remains #25 | PASS simulated disconnect; resume not_run |
-| T08 pause during worker, fixed judge, verification fixture | #25 | Three simulated CLI runs, cancellation and late-result assertions | not_run |
-| Exact original worker ID/task on explicit resume | #25 | Modified input source ignored unless --task is explicit | not_run |
-| Task version, ACTIVE and expected-turn asynchronous gates | #25 | Late judge, verification, recovery and send confirmation injections | not_run |
-| Cumulative explicit limits; no default total limits | #25 | Restart with preserved totals; user_limit requires raised limit | not_run |
-| Run instructions, task example, protocol test entry, sample artifacts | #23–#25 | Reproducible commands and retained red/green/acceptance output | not_run |
-| Independent Standards and Spec reviews, findings resolved | S1 exit | Separate reviewer reports against baseline `5d640e5` | not_run |
+| T05 stable DONE, no re-opening | #24/#25 | Repeated terminal notification and explicit resume refusal | PASS simulated |
+| T07 in-flight/already-handled dedupe, stale/foreign events | #24/#25 | Duplicate/out-of-order/foreign injections, old-delivery failure and late judge | PASS simulated |
+| Unknown delivery retained, no blind resend | #24/#25 | Lost response and explicit resume retain sent action in RECOVERING | PASS simulated; full reconciliation remains S3 |
+| T08 pause during worker, fixed judge, verification fixture | #25 | CLI suite and actual Windows PTY Ctrl+C at `5fa39fc`, `docs/evidence/s1-pty-final/` | PASS simulated backend with real OS signal |
+| Exact original worker ID/task on explicit resume | #25 | Modified input source ignored unless --task is explicit; DONE refusal | PASS simulated |
+| Task version, ACTIVE and expected-turn asynchronous gates | #25 | Late judge/verification/send guards and ACTIVE replacement rejection | PASS simulated |
+| Cumulative explicit limits; no default total limits | #25 | Cross-restart totals, raised-limit admission and ACTIVE time checkpoints | PASS simulated |
+| Run instructions, task example, protocol test entry, sample artifacts | #23–#25 | README, examples and six retained sample runs; 24/24 final suite at `6094b40` | PASS |
+| Independent Standards and Spec reviews, findings resolved | S1 exit | `docs/delivery/s1-review.md`; both independent rechecks of `6094b40` | PASS, zero remaining findings |
 | Main merge, safe cleanup, push, remote equality | S1 delivery | Commit IDs, ancestry checks, clean worktrees, ls-remote equality | not_run |
 
 The S1 exit gate requires every row to be satisfied, with simulated results

@@ -46,5 +46,20 @@ Count: 2 P2 findings. Worst within this axis: stale resume can reopen DONE.
 
 ## Resolution
 
-Pending. S1 remains current and OPEN; no main merge, cleanup, push or closure is
-permitted until these findings and the remaining delivery gate are resolved.
+All findings resolved in `6094b4081e49d3f87ae0dbd2c9ec350c02c107ba`.
+The original independent reviewers rechecked that commit read-only and confirmed
+zero remaining Standards findings and zero remaining Spec findings.
+
+Resume now rereads authoritative state under the task lock, validates DONE,
+identity and limits there, and requires durable PAUSED before changing goal or
+authorization. The race correction is established by source reasoning; the narrow
+race was not dynamically reproduced. Actual public CLI RED/GREEN evidence for
+the contract-replacement guard is in `docs/evidence/s1-review-fixes/`.
+`rules.reachedLimits` centralizes the repeated policy without changing the
+running-round time-limit semantics.
+
+An independent merger rebuilt and ran the complete exit suite at the fix commit:
+24/24 simulated tests and all 13 report checks PASS; the baseline range diff check
+also passed. Neither reviewer substituted their source review for the merger's
+test run. S1 acceptance is satisfied; main merge, cleanup, push and tracker
+closure are separate remaining delivery operations.

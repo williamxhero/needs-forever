@@ -1,0 +1,49 @@
+{
+  "current_spec": 20,
+  "stage": "independent-review-fixes merger",
+  "mechanism": "Loaded installed implement-spec-to-done SKILL.md and executed merger stage",
+  "integrated_at": "2026-10-31T17:12:24.7513828Z",
+  "branch": "spec/20-s1-redo",
+  "before": "1e5b1abd49d0d43168510ec55f00bb85ef7e5aa1",
+  "commit": "6094b4081e49d3f87ae0dbd2c9ec350c02c107ba",
+  "merge": "git merge --ff-only fix/20-s1-review",
+  "ancestry": "PASS",
+  "build": {
+    "command": "npm run build",
+    "exit_code": 0
+  },
+  "verification": {
+    "checks": "All13 report checks PASS",
+    "report": "runs/ticket25/reviewfix-merger-final/report.json",
+    "passed": 24,
+    "mode": "simulated",
+    "command": "node scripts/run-s1-exit.mjs runs/ticket25/reviewfix-merger-final",
+    "failed": 0,
+    "exit_code": 0
+  },
+  "diff_check": "PASS: git diff --check 5d640e5..HEAD",
+  "source_worktree_clean": true,
+  "integration_worktree_clean": true,
+  "samples": {
+    "files": 48,
+    "directories": 6,
+    "normalized_mismatches": 0
+  },
+  "preserved_runs": {
+    "path": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\new-workflow\\evidence\\s1-review-fix-raw\\runs",
+    "bytes": 7727801,
+    "files": 2866,
+    "prior_backups_preserved": true
+  },
+  "reviewfixes": [
+    "Resume rereads and validates authoritative checkpoint under task lock",
+    "ACTIVE goal/authorization changes rejected before mutation; actual public CLI RED/GREEN artifacts retained",
+    "Shared pure cumulative-limit calculation with equivalent policy"
+  ],
+  "limits": [
+    "Stale checkpoint race corrected by source reasoning; no deterministic dynamic reproduction claimed",
+    "No new PTY probe; pause/cancel unchanged, parent has candidate-specific 5fa39fc evidence",
+    "Independent reviewers handle final re-review; merger does not substitute their verdict"
+  ],
+  "no_main_push_cleanup_or_issue_close": true
+}

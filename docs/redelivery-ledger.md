@@ -73,7 +73,7 @@ simulated, live, and not_run.
 | --- | --- | --- | --- |
 | #23 | Start a task and query durable execution state | None | Integrated; S1 delivery gate pending |
 | #24 | Same-thread continuation, confirmed sending, stable terminal state | #23 | Integrated; S1 delivery gate pending |
-| #25 | Pause, explicit resume, cumulative limits and S1 exit acceptance | #24 | In progress |
+| #25 | Pause, explicit resume, cumulative limits and S1 exit acceptance | #24 | Integrated; S1 delivery gate pending |
 
 All three tickets are native sub-issues of #20, carry `ready-for-agent`, and
 have native blocked-by relationships. Published bodies were uploaded from UTF-8
@@ -127,7 +127,21 @@ checkpoint while retrying the same rename for at most five seconds with jitter.
 The process holding the file was not identified; complete elimination of
 Windows sharing contention is not claimed.
 
-Ticket #25 starts from that verified tip in its own managed worktree and branch
-`ticket/25-redo`. Earlier test counts and live probes are not reused as fresh
-acceptance passes. No S1, S2, S3, or total SPEC is complete; no implementation
-Issue has been closed.
+Ticket #25 was integrated at `5fa39fc5466f56371facb0ae09c332cbdcdf3644`.
+Independent exit acceptance passed 23/23 simulated tests. Actual Windows PTY
+Ctrl+C probes covered WORKER, JUDGE and VERIFY on that candidate; all saved
+PAUSED before cancellation and released the owned process and lock. Their
+backend is simulated, not a live AI or verifier. Evidence: `docs/evidence/s1-pty-final/`.
+
+Independent Standards and Spec reviews then found repeated limit policy and two
+resume contract issues. One implementer fixed all findings in `6094b40`;
+independent reviewers confirmed zero unresolved findings, and the merger rebuilt
+and ran the full exit acceptance: 24/24 simulated tests, all 13 checks PASS.
+See `docs/delivery/s1-review.md` and `docs/evidence/s1-review-fixes/`. Raw runs
+are preserved under `.scratch/new-workflow/evidence/s1-review-fix-raw/runs`.
+The resume race fix is supported by source analysis, not an invented dynamic RED.
+
+Current stage: S1 acceptance passed, delivery operations pending. No S1, S2, S3,
+or total SPEC is complete yet; no implementation Issue has been closed. S2 must
+remain unstarted until main merge, safe cleanup, push, remote equality and S1
+tracker closure are verified. Delivery receipts will record the actual transition.
