@@ -89,3 +89,30 @@ test('real judge timeout closes the old app-server, reconnects the worker and re
   assert.match(events, /judge_timeout/);
   assert.match(events, /connection_reconnected/);
 });
+
+test('three identical judge failures appear in the next judge snapshot as an investigation instruction', () => {
+  const invalid = '{"action":"DONE"}';
+  const run = fixture('repeated-judge-failures', {
+    real_judge: true,
+    tool_items: [{ type: 'commandExecution', id: 'check', command: 'check', status: 'completed', exitCode: 0, aggregatedOutput: 'A1 passes.' }],
+    judge_outputs: [invalid, invalid, invalid, JSON.stringify({ action: 'DONE', reason: 'Accepted after investigation.', evidence_ids: ['E1'], next_message: '', external: null })],
+  });
+  const result = run.run();
+  assert.equal(result.status, 0, result.stderr);
+  const judgeInputs = readFileSync(run.trace, 'utf8').trim().split('\n').map((line) => JSON.parse(line))
+    .filter((entry) => entry.message?.method === 'turn/start' && entry.message.params.threadId.startsWith('judge-'))
+    .map((entry) => JSON.parse(entry.message.params.input[0].text));
+  const investigated = judgeInputs.find((input) => input.repeated_failure?.investigate === true);
+  assert.ok(investigated, 'No judge snapshot carried the repeated-failure gate.');
+  assert.match(investigated.repeated_failure.instruction, /different hypothesis|distinguishing check|different route/i);
+});
+
+test('transient initial app-server startup failure uses the same recovery backoff before creating the worker', () => {
+  const run = fixture('initial-connect-recovery', { fail_startup_once: true });
+  const result = run.run();
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(json(run.state).status, 'DONE');
+  const events = readFileSync(resolve(run.directory, 'events.jsonl'), 'utf8');
+  assert.match(events, /"type":"recovery_retry_scheduled"/);
+  assert.match(events, /service_unavailable/);
+});

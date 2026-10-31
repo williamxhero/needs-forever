@@ -74,7 +74,7 @@ export class Rpc {
       } catch { this.fail(new Error('Invalid app-server JSONL response.')); }
     });
     this.child.on('error', () => this.fail(new Error('Unable to start app-server.')));
-    this.child.on('exit', (code) => this.fail(new Error(`app-server exited (${code}). Recovery remains an S3 responsibility.`)));
+    this.child.on('exit', (code) => this.fail(new Error(`app-server exited (${code}). Supervisor recovery will reconcile the saved worker history before retrying.`)));
     this.child.stdin.on('error', () => this.fail(new Error('app-server input connection closed.')));
     signal?.addEventListener('abort', this.onAbort, { once: true });
   }

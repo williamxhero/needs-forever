@@ -10,6 +10,11 @@ if (process.argv.includes('--version')) {
   console.log('codex-cli 0.166.0');
   process.exit(0);
 }
+if (scenario.fail_startup_once && !scenario.startup_consumed) {
+  scenario.startup_consumed = true;
+  writeFileSync(process.argv[2], JSON.stringify(scenario));
+  process.exit(1);
+}
 // 0.166.0 -c dotted override paths split literal dots; quoting a segment does
 // not implement TOML quoted-key semantics. Such a path creates an invalid server.
 if (process.argv.some((value) => value.startsWith('mcp_servers."'))) {

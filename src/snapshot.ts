@@ -44,13 +44,22 @@ export function buildSnapshot(state: State, workerTurnId: string, events: Record
     failures.set(signature, turns);
   }
   const repeated = [...failures.entries()].filter(([, turns]) => turns.size >= 3).map(([signature, turns]) => ({ signature, count: turns.size }));
+  const repeatedRecovery = (state.recovery_failures ?? [])
+    .filter((failure) => failure.count >= 3)
+    .map((failure) => ({ signature: failure.signature, count: failure.count, kind: failure.kind, message: failure.message }));
+  const repeatedSignatures = [...repeated, ...repeatedRecovery];
+  const recoveryInstruction = [...(state.recovery_failures ?? [])].findLast((failure) => failure.count >= 3)?.instruction;
   const snapshot: Snapshot = {
     snapshot_id: randomUUID(), task_id: state.task_id, task_version: state.task_version, worker_thread_id: state.worker_thread_id!, worker_turn_id: workerTurnId,
     task: redact(state.task) as State['task'], evidence: [],
     plan: plans ? { observed: clip(plans, 1800), remaining: Array.isArray(plans) ? clip(plans.filter((entry) => object(entry).status !== 'completed'), 1800) : 'See observed worker plan; not independently verified.' } : { missing: 'No current plan or remaining-items update observed.' },
     recent_verification: verification ? clip(verification, 1800) : { missing: 'No independent verification result recorded yet.' },
     recent_instructions: instructions,
-    repeated_failure: { investigate: repeated.length > 0, signatures: repeated, instruction: repeated.length ? 'Investigate a different hypothesis or use a materially different verifiable route; retries alone never justify WAIT_EXTERNAL.' : 'No repeated failure threshold observed.' },
+    repeated_failure: {
+      investigate: repeatedSignatures.length > 0,
+      signatures: repeatedSignatures,
+      instruction: recoveryInstruction ?? (repeated.length ? 'Investigate a different hypothesis or use a materially different verifiable route; retries alone never justify WAIT_EXTERNAL.' : 'No repeated failure threshold observed.'),
+    },
     omissions: [], evidence_complete: true,
   };
   if (!plans) snapshot.omissions!.push('Current plan and remaining items were not observed.');

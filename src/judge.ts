@@ -198,6 +198,6 @@ export class FixtureJudge implements Judge {
 
 export class UnavailableJudge implements Judge {
   async judge(_snapshot: Snapshot): Promise<Decision> {
-    throw new Error('Real judge is not implemented in S1. Use --test-fixture only for simulated acceptance; S2 supplies the live judge.');
+    throw new Error('Real judge is unavailable without an app-server connection. Use --test-fixture only for deterministic acceptance.');
   }
 }

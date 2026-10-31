@@ -257,7 +257,7 @@ test('unknown turn/start outcome preserves the sent delivery in RECOVERING witho
   assert.equal(trace.filter((entry) => entry.kind === 'request' && entry.message.method === 'turn/start').length, 1);
   const events = readFileSync(resolve(fixture.directory, 'events.jsonl'), 'utf8');
   assert.doesNotMatch(events, /"type":"send_confirmed"/);
-  assert.match(events, /S3 not implemented; no resend performed/);
+  assert.match(events, /No resend performed until connection and delivery history reconciliation completes/);
 });
 
 test('failed worker terminal never reaches the fixed DONE judge', () => {
@@ -426,17 +426,21 @@ test('ACTIVE time is checkpointed while waiting and the explicit total-time limi
 });
 
 test('explicit resume preserves an unknown sent delivery and never blindly replays it', () => {
-  const fixture = setup('unknown-resume', { disconnect_on_send: true });
+  const fixture = setup('unknown-resume', { disconnect_on_send_once: true });
   assert.equal(run(fixture.argv).status, 1);
   const pending = json(fixture.stateFile).pending_action;
   const resumed = run(['resume', '--state', fixture.stateFile, '--test-fixture', fixture.fixture]);
-  assert.equal(resumed.status, 1);
+  assert.equal(resumed.status, 0, resumed.stderr);
   const state = json(fixture.stateFile);
-  assert.equal(state.phase, 'RECOVERING');
-  assert.equal(state.pending_action.delivery_id, pending.delivery_id);
+  assert.equal(state.status, 'WAIT_EXTERNAL');
+  assert.equal(state.phase, 'IDLE');
+  assert.equal(state.pending_action, null);
   assert.equal(state.task_version, 2);
+  const events = readFileSync(resolve(fixture.directory, 'events.jsonl'), 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+  assert.equal(events.filter((event) => event.type === 'send_reconciled_absent' && event.delivery_id === pending.delivery_id).length, 1);
+  assert.equal(events.filter((event) => event.type === 'send_confirmed').length, 1);
   const trace = readFileSync(fixture.trace, 'utf8').trim().split('\n').map((line) => JSON.parse(line));
-  assert.equal(trace.filter((entry) => entry.message?.method === 'turn/start').length, 1);
+  assert.equal(trace.filter((entry) => entry.message?.method === 'turn/start').length, 2);
 });
 
 test('resume reviews the saved completed worker turn without adding another worker round', () => {

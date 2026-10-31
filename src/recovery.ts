@@ -51,8 +51,8 @@ export function classifyRecoveryError(error: unknown): RecoveryClassification {
   if (/\b429\b|too many requests|rate limit|rate-limit/.test(lower)) {
     return { kind: 'rate_limit', recoverable: true, wait_external: false, message };
   }
-  if (/econnreset|econnrefused|enotfound|network|socket|connection (?:closed|reset|lost)|app-server exited|service unavailable|temporarily unavailable|\b503\b|\b502\b|\b504\b/.test(lower)) {
-    return { kind: /app-server|service unavailable|\b50[234]\b/.test(lower) ? 'service_unavailable' : 'network', recoverable: true, wait_external: false, message };
+  if (/econnreset|econnrefused|enotfound|network|socket|connection (?:closed|reset|lost)|app-server exited|service unavailable|temporarily unavailable|unable to start app-server|\b503\b|\b502\b|\b504\b/.test(lower)) {
+    return { kind: /app-server|service unavailable|unable to start app-server|\b50[234]\b/.test(lower) ? 'service_unavailable' : 'network', recoverable: true, wait_external: false, message };
   }
   // Unknown failures are diagnosed and retried. They must not silently become
   // WAIT_EXTERNAL solely because the retry count increased.
