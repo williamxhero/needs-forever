@@ -76,5 +76,6 @@
     "All 50 automated tests simulated fixture boundary; no live T01-T05 completion",
     "Third bounded live run reached valid WAIT_EXTERNAL but isolated workspace writes to stage2/final failed; T01-T05 remain not_run_to_completion",
     "No main/push/Issue closure/archive"
-  ]
+  ],
+  "post_merge_head": "ebde666cbd4c131187a45b1ea4cb3a3732f3f366"
 }
