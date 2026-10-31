@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "task_id": "ticket31-t08-verification",
+  "task_version": 2,
+  "task": {
+    "schema_version": 1,
+    "task_id": "ticket31-t08-verification",
+    "workspace": "D:\\WILL\\TOOLS\\needs-forever\\runs\\ticket31-live-test3\\verify\\workspace",
+    "goal": "Write verification.txt with the exact text verification-ok, then stop.",
+    "acceptance": [
+      {
+        "id": "A1",
+        "text": "verification.txt contains verification-ok."
+      }
+    ],
+    "authorization": "Use only this local workspace. No network, credentials, or external side effects. All listed work is authorized.",
+    "limits": {
+      "max_worker_turns": null,
+      "max_minutes": null
+    },
+    "verify": {
+      "argv": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "D:\\WILL\\TOOLS\\needs-forever\\runs\\ticket31-live-test3\\verify\\slow-verify.mjs"
+      ],
+      "timeout_seconds": 90,
+      "protected_files": []
+    }
+  },
+  "worker_thread_id": "01a193f9-c3ee-7761-97d7-46231932e8fc",
+  "status": "PAUSED",
+  "phase": "IDLE",
+  "active_worker_turn_id": null,
+  "reviewing_turn_id": null,
+  "handled_turn_ids": [
+    "01a193f9-c4eb-7193-96e4-3f2423545a28"
+  ],
+  "pending_action": null,
+  "retry": {
+    "kind": null,
+    "attempt": 0,
+    "next_at": null
+  },
+  "last_decision": {
+    "action": "DONE",
+    "evidence_ids": [
+      "E4"
+    ],
+    "external": null,
+    "next_message": "",
+    "reason": "E4 independently records successful creation and readback of verification.txt containing exactly verification-ok."
+  },
+  "worker_turn_count": 1,
+  "elapsed_active_seconds": 47.932999999999936,
+  "updated_at": "2026-10-31T22:00:29.169Z",
+  "codex_version": "codex-cli 0.166.0",
+  "mode": "live",
+  "protected_baseline": [],
+  "judge_thread_ids": [
+    "01a193fa-2056-7192-a41a-eb6cc34bf0b2"
+  ],
+  "pause_reason": "user"
+}

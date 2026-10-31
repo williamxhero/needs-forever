@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "task_id": "ticket31-t08-verification",
+  "workspace": "D:\\WILL\\TOOLS\\needs-forever\\runs\\ticket31-live-test3\\verify\\workspace",
+  "goal": "Write verification.txt with the exact text verification-ok, then stop.",
+  "acceptance": [
+    {
+      "id": "A1",
+      "text": "verification.txt contains verification-ok."
+    }
+  ],
+  "authorization": "Use only this local workspace. No network, credentials, or external side effects. All listed work is authorized.",
+  "verify": {
+    "argv": [
+      "C:\\Program Files\\nodejs\\node.exe",
+      "D:\\WILL\\TOOLS\\needs-forever\\runs\\ticket31-live-test3\\verify\\slow-verify.mjs"
+    ],
+    "timeout_seconds": 90,
+    "protected_files": []
+  },
+  "limits": {
+    "max_worker_turns": null,
+    "max_minutes": null
+  }
+}

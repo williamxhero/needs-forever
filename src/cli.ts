@@ -108,8 +108,15 @@ async function main(): Promise<void> {
     } : undefined;
     const supervisor = new Supervisor(state, store, judge, supervisorOptions);
     const pause = () => supervisor.pause();
+    // A foreground console delivers Ctrl+C as SIGINT.  When the CLI is driven
+    // from a process harness (including Windows where child.kill('SIGINT') can
+    // terminate the child without running JavaScript handlers), the same byte
+    // is accepted on stdin so the durable pause path is exercised before the
+    // owned calls are cancelled.
+    const onStdin = (chunk: Buffer | string) => { if (String(chunk).includes('\u0003')) pause(); };
     process.on('SIGINT', pause);
-    try { await supervisor.start(commandArgv, !!saved); } finally { process.off('SIGINT', pause); }
+    process.stdin.on('data', onStdin);
+    try { await supervisor.start(commandArgv, !!saved); } finally { process.off('SIGINT', pause); process.stdin.off('data', onStdin); process.stdin.pause(); }
   } finally { store.release(); }
 }
 main().catch((error: unknown) => { console.error(error instanceof Error ? error.message : 'Supervisor failed.'); process.exitCode = 1; });

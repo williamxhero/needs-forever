@@ -1,0 +1,131 @@
+{
+  "input": {
+    "snapshot_id": "91a45182-44b3-47e6-ba32-9cf137441b87",
+    "task_id": "ticket31-t11-exit",
+    "task_version": 1,
+    "worker_thread_id": "01a19403-8c16-77c3-a8a3-c8a1e298784c",
+    "worker_turn_id": "01a19403-8d14-7a51-a933-a4781692bb63",
+    "task": {
+      "schema_version": 1,
+      "task_id": "ticket31-t11-exit",
+      "workspace": "D:\\WILL\\TOOLS\\needs-forever\\runs\\ticket31-live-test8\\workspace",
+      "goal": "Write exit.txt with the exact text exit-ok, then stop.",
+      "acceptance": [
+        {
+          "id": "A1",
+          "text": "exit.txt contains exit-ok."
+        }
+      ],
+      "authorization": "Use only this local workspace. No network, credentials, or external side effects. All listed work is authorized.",
+      "limits": {
+        "max_worker_turns": null,
+        "max_minutes": null
+      },
+      "verify": {
+        "argv": [
+          "C:\\Program Files\\nodejs\\node.exe",
+          "D:\\WILL\\TOOLS\\needs-forever\\runs\\ticket31-live-test8\\workspace\\verify-exit.mjs"
+        ],
+        "timeout_seconds": 20,
+        "protected_files": [
+          "verify-exit.mjs"
+        ]
+      }
+    },
+    "evidence": [
+      {
+        "id": "E1",
+        "type": "commandExecution",
+        "value": {
+          "type": "commandExecution",
+          "id": "exec-918e483b-a283-4710-87b3-77003a168d7a",
+          "pluginId": null,
+          "scriptPath": null,
+          "command": "\"C:\\\\Users\\\\will\\\\.cache\\\\codex-runtimes\\\\codex-primary-runtime\\\\dependencies\\\\native\\\\powershell\\\\pwsh.exe\" -Command \"Set-Content -LiteralPath .\\\\exit.txt -Value 'exit-ok' -NoNewline; & 'C:\\\\Program Files\\\\nodejs\\\\node.exe' .\\\\verify-exit.mjs\"",
+          "cwd": "D:\\WILL\\TOOLS\\needs-forever\\runs\\ticket31-live-test8\\workspace",
+          "processId": "42098",
+          "source": "unifiedExecStartup",
+          "status": "completed",
+          "commandActions": [
+            {
+              "type": "unknown",
+              "command": "Set-Content -LiteralPath .\\exit.txt -Value 'exit-ok' -NoNewline; & 'C:\\Program Files\\nodejs\\node.exe' .\\verify-exit.mjs"
+            }
+          ],
+          "aggregatedOutput": "T11 app-server exit verifier PASS\n",
+          "exitCode": 0,
+          "durationMs": 272,
+          "startedAtMs": 1793484632533,
+          "completedAtMs": 1793484632806
+        },
+        "source": {
+          "event_id": "f10c996f-3b8d-446a-88bd-cec2ea646577",
+          "thread_id": "01a19403-8c16-77c3-a8a3-c8a1e298784c",
+          "turn_id": "01a19403-8d14-7a51-a933-a4781692bb63",
+          "item_id": "exec-918e483b-a283-4710-87b3-77003a168d7a"
+        }
+      },
+      {
+        "id": "E2",
+        "type": "agentMessage",
+        "value": {
+          "type": "agentMessage",
+          "id": "msg_0c9d4616da86cb43016ae66755ebe08191b6d86f4f9a463a28",
+          "text": "I’ll write the requested marker file in the workspace, then run the provided verifier.",
+          "phase": "commentary",
+          "memoryCitation": null,
+          "delivery": null,
+          "questions": null,
+          "startedAtMs": 1793484629938,
+          "completedAtMs": 1793484630510
+        },
+        "source": {
+          "event_id": "294fa340-cef6-412d-a28d-b277ab1ba4a5",
+          "thread_id": "01a19403-8c16-77c3-a8a3-c8a1e298784c",
+          "turn_id": "01a19403-8d14-7a51-a933-a4781692bb63",
+          "item_id": "msg_0c9d4616da86cb43016ae66755ebe08191b6d86f4f9a463a28"
+        }
+      },
+      {
+        "id": "E3",
+        "type": "agentMessage",
+        "value": {
+          "type": "agentMessage",
+          "id": "msg_0c9d4616da86cb43016ae6675a83488191bd4badc9ecff3a66",
+          "text": "Created `exit.txt` with exact text `exit-ok`. Verifier passed.",
+          "phase": "final_answer",
+          "memoryCitation": null,
+          "delivery": null,
+          "questions": null,
+          "startedAtMs": 1793484634628,
+          "completedAtMs": 1793484634856
+        },
+        "source": {
+          "event_id": "77be6258-e616-41b3-8be4-77fc85f77d91",
+          "thread_id": "01a19403-8c16-77c3-a8a3-c8a1e298784c",
+          "turn_id": "01a19403-8d14-7a51-a933-a4781692bb63",
+          "item_id": "msg_0c9d4616da86cb43016ae6675a83488191bd4badc9ecff3a66"
+        }
+      }
+    ],
+    "plan": {
+      "missing": "No current plan or remaining-items update observed."
+    },
+    "recent_verification": {
+      "missing": "No independent verification result recorded yet."
+    },
+    "recent_instructions": [],
+    "repeated_failure": {
+      "investigate": false,
+      "signatures": [],
+      "instruction": "No repeated failure threshold observed."
+    },
+    "omissions": [
+      "Current plan and remaining items were not observed.",
+      "Independent verification has not run."
+    ],
+    "evidence_complete": true
+  },
+  "raw_output": "{\"action\":\"DONE\",\"evidence_ids\":[\"E1\"],\"external\":null,\"next_message\":\"\",\"reason\":\"E1 shows exit.txt was written with exact text exit-ok and the provided verifier passed.\"}",
+  "validation": "valid"
+}

@@ -1,0 +1,163 @@
+{
+  "input": {
+    "snapshot_id": "fb221f71-e2c3-4213-b202-b3d648fb5498",
+    "task_id": "ticket31-pty-verify",
+    "task_version": 1,
+    "worker_thread_id": "01a1940c-beef-7293-9536-85f2dec76e91",
+    "worker_turn_id": "01a1940c-bff9-7b81-b955-db5e6c778603",
+    "task": {
+      "schema_version": 1,
+      "task_id": "ticket31-pty-verify",
+      "workspace": "D:\\WILL\\TOOLS\\needs-forever\\runs\\ticket31-pty-verify\\workspace",
+      "goal": "Write verification.txt with the exact text verification-ok, then stop.",
+      "acceptance": [
+        {
+          "id": "A1",
+          "text": "verification.txt contains verification-ok."
+        }
+      ],
+      "authorization": "Use only this local workspace. No network or external side effects.",
+      "limits": {
+        "max_worker_turns": null,
+        "max_minutes": null
+      },
+      "verify": {
+        "argv": [
+          "C:\\Program Files\\nodejs\\node.exe",
+          "D:\\WILL\\TOOLS\\needs-forever\\runs\\ticket31-pty-verify\\workspace\\slow-verify.mjs"
+        ],
+        "timeout_seconds": 90,
+        "protected_files": [
+          "slow-verify.mjs"
+        ]
+      }
+    },
+    "evidence": [
+      {
+        "id": "E1",
+        "type": "commandExecution",
+        "value": {
+          "type": "commandExecution",
+          "id": "exec-3628a15f-1772-4e34-99bb-cc6a28e6de34",
+          "pluginId": null,
+          "scriptPath": null,
+          "command": "\"C:\\\\Users\\\\will\\\\.cache\\\\codex-runtimes\\\\codex-primary-runtime\\\\dependencies\\\\native\\\\powershell\\\\pwsh.exe\" -Command \"Set-Content -LiteralPath 'verification.txt' -Value 'verification-ok' -NoNewline -Encoding utf8; \"'$bytes = [System.IO.File]::ReadAllBytes((Join-Path (Get-Location) '\"'verification.txt')); [System.Text.Encoding]::UTF8.GetString(\"'$bytes); if ([System.Text.Encoding]::UTF8.GetString($bytes) -ne '\"'verification-ok') { exit 1 }\"",
+          "cwd": "D:\\WILL\\TOOLS\\needs-forever\\runs\\ticket31-pty-verify\\workspace",
+          "processId": "90415",
+          "source": "unifiedExecStartup",
+          "status": "failed",
+          "commandActions": [
+            {
+              "type": "unknown",
+              "command": "Set-Content -LiteralPath 'verification.txt' -Value 'verification-ok' -NoNewline -Encoding utf8; $bytes = [System.IO.File]::ReadAllBytes((Join-Path (Get-Location) 'verification.txt')); [System.Text.Encoding]::UTF8.GetString($bytes); if ([System.Text.Encoding]::UTF8.GetString($bytes) -ne 'verification-ok') { exit 1 }"
+            }
+          ],
+          "aggregatedOutput": "InvalidOperation: \r\nLine |\r\n   2 |  �� oding utf8; $bytes = [System.IO.File]::ReadAllBytes((Join-Path (Get-L ��\r\n     |                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n     | Cannot invoke method. Method invocation is supported only on core types in this language mode.\r\nInvalidOperation: \r\nLine |\r\n   2 |  �� cation.txt')); [System.Text.Encoding]::UTF8.GetString($bytes); if ([S ��\r\n     |                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n     | Cannot invoke method. Method invocation is supported only on core types in this language mode.\r\nInvalidOperation: \r\nLine |\r\n   2 |  �� bytes); if ([System.Text.Encoding]::UTF8.GetString($bytes) -ne 'verif ��\r\n     |                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n     | Cannot invoke method. Method invocation is supported only on core types in this language mode.\r\n",
+          "exitCode": 1,
+          "durationMs": 311,
+          "startedAtMs": 1793485236680,
+          "completedAtMs": 1793485236992
+        },
+        "source": {
+          "event_id": "a408f6e6-b25c-421f-b821-b4c3c419dd88",
+          "thread_id": "01a1940c-beef-7293-9536-85f2dec76e91",
+          "turn_id": "01a1940c-bff9-7b81-b955-db5e6c778603",
+          "item_id": "exec-3628a15f-1772-4e34-99bb-cc6a28e6de34"
+        }
+      },
+      {
+        "id": "E2",
+        "type": "commandExecution",
+        "value": {
+          "type": "commandExecution",
+          "id": "exec-d7866585-69e1-467f-ac99-0fd19f89600a",
+          "pluginId": null,
+          "scriptPath": null,
+          "command": "\"C:\\\\Users\\\\will\\\\.cache\\\\codex-runtimes\\\\codex-primary-runtime\\\\dependencies\\\\native\\\\powershell\\\\pwsh.exe\" -Command \"Get-Content -LiteralPath 'verification.txt' -Raw; if ((Get-Content -LiteralPath 'verification.txt' -Raw) -ne 'verification-ok') { exit 1 }\"",
+          "cwd": "D:\\WILL\\TOOLS\\needs-forever\\runs\\ticket31-pty-verify\\workspace",
+          "processId": "32963",
+          "source": "unifiedExecStartup",
+          "status": "completed",
+          "commandActions": [
+            {
+              "type": "unknown",
+              "command": "Get-Content -LiteralPath 'verification.txt' -Raw; if ((Get-Content -LiteralPath 'verification.txt' -Raw) -ne 'verification-ok') { exit 1 }"
+            }
+          ],
+          "aggregatedOutput": "verification-ok\r\n",
+          "exitCode": 0,
+          "durationMs": 219,
+          "startedAtMs": 1793485241508,
+          "completedAtMs": 1793485241728
+        },
+        "source": {
+          "event_id": "09d2b9b4-eaef-49cd-85e3-856943fc14b0",
+          "thread_id": "01a1940c-beef-7293-9536-85f2dec76e91",
+          "turn_id": "01a1940c-bff9-7b81-b955-db5e6c778603",
+          "item_id": "exec-d7866585-69e1-467f-ac99-0fd19f89600a"
+        }
+      },
+      {
+        "id": "E3",
+        "type": "agentMessage",
+        "value": {
+          "type": "agentMessage",
+          "id": "msg_0ca28f67458a24e8016ae669b1b9488191b68dbafef3c6d1cc",
+          "text": "I’ll write the required file in the local workspace, then verify its exact contents.",
+          "phase": "commentary",
+          "memoryCitation": null,
+          "delivery": null,
+          "questions": null,
+          "startedAtMs": 1793485233739,
+          "completedAtMs": 1793485234217
+        },
+        "source": {
+          "event_id": "f5cb8f44-b55a-422d-860e-7ed4deeb5979",
+          "thread_id": "01a1940c-beef-7293-9536-85f2dec76e91",
+          "turn_id": "01a1940c-bff9-7b81-b955-db5e6c778603",
+          "item_id": "msg_0ca28f67458a24e8016ae669b1b9488191b68dbafef3c6d1cc"
+        }
+      },
+      {
+        "id": "E4",
+        "type": "agentMessage",
+        "value": {
+          "type": "agentMessage",
+          "id": "msg_0ca28f67458a24e8016ae669bd0c448191bc14180661541551",
+          "text": "Created `verification.txt` with the exact text `verification-ok` and verified it.",
+          "phase": "final_answer",
+          "memoryCitation": null,
+          "delivery": null,
+          "questions": null,
+          "startedAtMs": 1793485245088,
+          "completedAtMs": 1793485245353
+        },
+        "source": {
+          "event_id": "0fb88caa-f110-4186-b499-6ed18742236b",
+          "thread_id": "01a1940c-beef-7293-9536-85f2dec76e91",
+          "turn_id": "01a1940c-bff9-7b81-b955-db5e6c778603",
+          "item_id": "msg_0ca28f67458a24e8016ae669bd0c448191bc14180661541551"
+        }
+      }
+    ],
+    "plan": {
+      "missing": "No current plan or remaining-items update observed."
+    },
+    "recent_verification": {
+      "missing": "No independent verification result recorded yet."
+    },
+    "recent_instructions": [],
+    "repeated_failure": {
+      "investigate": false,
+      "signatures": [],
+      "instruction": "No repeated failure threshold observed."
+    },
+    "omissions": [
+      "Current plan and remaining items were not observed.",
+      "Independent verification has not run."
+    ],
+    "evidence_complete": true
+  },
+  "raw_output": "{\"action\":\"DONE\",\"evidence_ids\":[\"E2\"],\"external\":null,\"next_message\":\"\",\"reason\":\"E2 independently confirms verification.txt contains exactly verification-ok and exits successfully.\"}",
+  "validation": "valid"
+}

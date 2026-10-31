@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "task_id": "ticket31-pty-worker",
+  "task_version": 2,
+  "task": {
+    "schema_version": 1,
+    "task_id": "ticket31-pty-worker",
+    "workspace": "D:\\WILL\\TOOLS\\needs-forever\\runs\\ticket31-pty-worker\\workspace",
+    "goal": "Run a local Node command that waits for 60 seconds, then write worker.txt with the exact text worker-ok.",
+    "acceptance": [
+      {
+        "id": "A1",
+        "text": "worker.txt contains worker-ok."
+      }
+    ],
+    "authorization": "Use only this local workspace. No network or external side effects.",
+    "limits": {
+      "max_worker_turns": null,
+      "max_minutes": null
+    }
+  },
+  "worker_thread_id": "01a1940b-4511-7d30-a7bd-4171d6cd51e1",
+  "status": "PAUSED",
+  "phase": "IDLE",
+  "active_worker_turn_id": "01a1940b-4600-7603-9ed0-1761f8e19080",
+  "reviewing_turn_id": null,
+  "handled_turn_ids": [],
+  "pending_action": null,
+  "retry": {
+    "kind": null,
+    "attempt": 0,
+    "next_at": null
+  },
+  "last_decision": null,
+  "worker_turn_count": 1,
+  "elapsed_active_seconds": 20.883000000000013,
+  "updated_at": "2026-10-31T22:19:09.268Z",
+  "codex_version": "codex-cli 0.166.0",
+  "mode": "live",
+  "pause_reason": "user"
+}

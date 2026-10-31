@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "task_id": "ticket31-t08-judge",
+  "workspace": "D:\\WILL\\TOOLS\\needs-forever\\runs\\ticket31-live-test3\\judge\\workspace",
+  "goal": "Write judge.txt with the exact text judge-ok, then stop.",
+  "acceptance": [
+    {
+      "id": "A1",
+      "text": "judge.txt contains judge-ok."
+    }
+  ],
+  "authorization": "Use only this local workspace. No network, credentials, or external side effects. All listed work is authorized.",
+  "limits": {
+    "max_worker_turns": null,
+    "max_minutes": null
+  }
+}

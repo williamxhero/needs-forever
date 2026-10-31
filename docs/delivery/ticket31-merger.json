@@ -1,0 +1,40 @@
+{
+  "ticket": 31,
+  "spec": 22,
+  "branch": "spec/22-s3",
+  "status": "ready_for_issue_closure",
+  "commit": "c38c3cd",
+  "implementation": {
+    "files": [
+      "src/cli.ts",
+      "scripts/run-ticket31-live.mjs",
+      "docs/evidence/ticket-31/README.md",
+      "docs/evidence/ticket-31/final/matrix.md",
+      "docs/evidence/ticket-31/final/report.json"
+    ],
+    "behavior": [
+      "Windows foreground Ctrl+C control byte enters the durable pause path before owned call cancellation.",
+      "Live worker, judge and verification pause windows are reproducible and persist PAUSED before cancellation.",
+      "Live native app-server exit after a persisted worker turn reconnects the same worker and reaches DONE.",
+      "T01-T15 matrix distinguishes reused live, current live, controlled and simulated evidence."
+    ]
+  },
+  "validation": {
+    "npm_test": "69/69 PASS",
+    "npm_build": "PASS",
+    "git_diff_check": "PASS",
+    "live_t08": "PASS: worker/judge/verification states are PAUSED with incremented task_version",
+    "live_t11": "PASS: one native app-server exit, one reconnect, same worker ID, final DONE",
+    "negative_evidence": "native server killed before first persisted turn produced an empty rollout and was retained as non-pass evidence"
+  },
+  "reviews": {
+    "spec": "PASS",
+    "standards": "PASS"
+  },
+  "delivery_gates": {
+    "main_merge": "pending",
+    "worktree_cleanup": "pending",
+    "push_and_remote_parity": "pending",
+    "issue_closure": "pending"
+  }
+}

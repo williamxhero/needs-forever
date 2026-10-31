@@ -1,0 +1,185 @@
+{
+  "input": {
+    "snapshot_id": "71c9eb5d-043e-454e-9728-bb65238e0433",
+    "task_id": "ticket31-pty-judge",
+    "task_version": 1,
+    "worker_thread_id": "01a1940b-c4fe-7a00-9401-3ff6b28417dc",
+    "worker_turn_id": "01a1940b-c5ee-7b31-8081-75d81bfbf04e",
+    "task": {
+      "schema_version": 1,
+      "task_id": "ticket31-pty-judge",
+      "workspace": "D:\\WILL\\TOOLS\\needs-forever\\runs\\ticket31-pty-judge\\workspace",
+      "goal": "Write judge.txt with the exact text judge-ok, then stop.",
+      "acceptance": [
+        {
+          "id": "A1",
+          "text": "judge.txt contains judge-ok."
+        }
+      ],
+      "authorization": "Use only this local workspace. No network or external side effects.",
+      "limits": {
+        "max_worker_turns": null,
+        "max_minutes": null
+      }
+    },
+    "evidence": [
+      {
+        "id": "E1",
+        "type": "commandExecution",
+        "value": {
+          "type": "commandExecution",
+          "id": "exec-5e100766-cd24-45ff-8ebd-e1bdef4a2241",
+          "pluginId": null,
+          "scriptPath": null,
+          "command": "\"C:\\\\Users\\\\will\\\\.cache\\\\codex-runtimes\\\\codex-primary-runtime\\\\dependencies\\\\native\\\\powershell\\\\pwsh.exe\" -NoProfile -Command \"[System.IO.File]::WriteAllText((Join-Path (Get-Location) 'judge.txt'), 'judge-ok', (New-Object System.Text.UTF8Encoding(\"'$false))); $b=[System.IO.File]::ReadAllBytes((Join-Path (Get-Location) '\"'judge.txt')); \"'$t=[System.IO.File]::ReadAllText((Join-Path (Get-Location) '\"'judge.txt')); Write-Output \\\"text=\"'$t bytes=$($b.Length)\"'",
+          "cwd": "D:\\WILL\\TOOLS\\needs-forever\\runs\\ticket31-pty-judge\\workspace",
+          "processId": "80602",
+          "source": "unifiedExecStartup",
+          "status": "completed",
+          "commandActions": [
+            {
+              "type": "unknown",
+              "command": "[System.IO.File]::WriteAllText((Join-Path (Get-Location) 'judge.txt'), 'judge-ok', (New-Object System.Text.UTF8Encoding($false))); $b=[System.IO.File]::ReadAllBytes((Join-Path (Get-Location) 'judge.txt')); $t=[System.IO.File]::ReadAllText((Join-Path (Get-Location) 'judge.txt')); Write-Output \"text=$t bytes=$($b.Length)\""
+            }
+          ],
+          "aggregatedOutput": "New-Object: \r\nLine |\r\n   2 |  �� t'), 'judge-ok', (New-Object System.Text.UTF8Encoding($false))); $b=[ ��\r\n     |                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n     | Cannot create type. Only core types are supported in this language mode.\r\nInvalidOperation: \r\nLine |\r\n   2 |  �� ($false))); $b=[System.IO.File]::ReadAllBytes((Join-Path (Get-Locatio ��\r\n     |                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n     | Cannot invoke method. Method invocation is supported only on core types in this language mode.\r\nInvalidOperation: \r\nLine |\r\n   2 |  �� dge.txt')); $t=[System.IO.File]::ReadAllText((Join-Path (Get-Location ��\r\n     |                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n     | Cannot invoke method. Method invocation is supported only on core types in this language mode.\r\ntext= bytes=0\r\n",
+          "exitCode": 0,
+          "durationMs": 359,
+          "startedAtMs": 1793485170642,
+          "completedAtMs": 1793485171002
+        },
+        "source": {
+          "event_id": "138a087b-c475-4f75-966f-ea20aedf4f31",
+          "thread_id": "01a1940b-c4fe-7a00-9401-3ff6b28417dc",
+          "turn_id": "01a1940b-c5ee-7b31-8081-75d81bfbf04e",
+          "item_id": "exec-5e100766-cd24-45ff-8ebd-e1bdef4a2241"
+        }
+      },
+      {
+        "id": "E2",
+        "type": "commandExecution",
+        "value": {
+          "type": "commandExecution",
+          "id": "exec-f8488cf3-36aa-43c8-b255-4cb2ff2a0bc0",
+          "pluginId": null,
+          "scriptPath": null,
+          "command": "\"C:\\\\Users\\\\will\\\\.cache\\\\codex-runtimes\\\\codex-primary-runtime\\\\dependencies\\\\native\\\\powershell\\\\pwsh.exe\" -NoProfile -Command \"Set-Content -LiteralPath .\\\\judge.txt -Value 'judge-ok' -NoNewline -Encoding utf8; Get-Content -LiteralPath .\\\\judge.txt -Raw\"",
+          "cwd": "D:\\WILL\\TOOLS\\needs-forever\\runs\\ticket31-pty-judge\\workspace",
+          "processId": "27429",
+          "source": "unifiedExecStartup",
+          "status": "completed",
+          "commandActions": [
+            {
+              "type": "unknown",
+              "command": "Set-Content -LiteralPath .\\judge.txt -Value 'judge-ok' -NoNewline -Encoding utf8; Get-Content -LiteralPath .\\judge.txt -Raw"
+            }
+          ],
+          "aggregatedOutput": "judge-ok\r\n",
+          "exitCode": 0,
+          "durationMs": 263,
+          "startedAtMs": 1793485176247,
+          "completedAtMs": 1793485176515
+        },
+        "source": {
+          "event_id": "f4e9e0ed-0daa-4e0b-a270-fba42893d7a0",
+          "thread_id": "01a1940b-c4fe-7a00-9401-3ff6b28417dc",
+          "turn_id": "01a1940b-c5ee-7b31-8081-75d81bfbf04e",
+          "item_id": "exec-f8488cf3-36aa-43c8-b255-4cb2ff2a0bc0"
+        }
+      },
+      {
+        "id": "E3",
+        "type": "commandExecution",
+        "value": {
+          "type": "commandExecution",
+          "id": "exec-b902a918-3dd3-4a98-b14e-7de174d739be",
+          "pluginId": null,
+          "scriptPath": null,
+          "command": "\"C:\\\\Users\\\\will\\\\.cache\\\\codex-runtimes\\\\codex-primary-runtime\\\\dependencies\\\\native\\\\powershell\\\\pwsh.exe\" -NoProfile -Command \"Get-Item .\\\\judge.txt | Select-Object Name,Length; Format-Hex -LiteralPath .\\\\judge.txt\"",
+          "cwd": "D:\\WILL\\TOOLS\\needs-forever\\runs\\ticket31-pty-judge\\workspace",
+          "processId": "32221",
+          "source": "unifiedExecStartup",
+          "status": "completed",
+          "commandActions": [
+            {
+              "type": "unknown",
+              "command": "Get-Item .\\judge.txt | Select-Object Name,Length; Format-Hex -LiteralPath .\\judge.txt"
+            }
+          ],
+          "aggregatedOutput": "\r\nName      Length\r\n----      ------\r\njudge.txt      8\r\n               1\r\n\r\n",
+          "exitCode": 0,
+          "durationMs": 272,
+          "startedAtMs": 1793485181205,
+          "completedAtMs": 1793485181477
+        },
+        "source": {
+          "event_id": "77104615-2906-4ed6-8641-936b5a320b87",
+          "thread_id": "01a1940b-c4fe-7a00-9401-3ff6b28417dc",
+          "turn_id": "01a1940b-c5ee-7b31-8081-75d81bfbf04e",
+          "item_id": "exec-b902a918-3dd3-4a98-b14e-7de174d739be"
+        }
+      },
+      {
+        "id": "E4",
+        "type": "agentMessage",
+        "value": {
+          "type": "agentMessage",
+          "id": "msg_082b595a01598bc1016ae6696f45e081918eead141eac49b10",
+          "text": "I’ll create `judge.txt` in the active workspace with the exact required contents, then verify it.",
+          "phase": "commentary",
+          "memoryCitation": null,
+          "delivery": null,
+          "questions": null,
+          "startedAtMs": 1793485167282,
+          "completedAtMs": 1793485167872
+        },
+        "source": {
+          "event_id": "fc7e4f10-8b41-4314-8a24-15baa65d4637",
+          "thread_id": "01a1940b-c4fe-7a00-9401-3ff6b28417dc",
+          "turn_id": "01a1940b-c5ee-7b31-8081-75d81bfbf04e",
+          "item_id": "msg_082b595a01598bc1016ae6696f45e081918eead141eac49b10"
+        }
+      },
+      {
+        "id": "E5",
+        "type": "agentMessage",
+        "value": {
+          "type": "agentMessage",
+          "id": "msg_082b595a01598bc1016ae6697fd2cc819199962273d8701b6d",
+          "text": "Created `judge.txt` with the exact text `judge-ok`.",
+          "phase": "final_answer",
+          "memoryCitation": null,
+          "delivery": null,
+          "questions": null,
+          "startedAtMs": 1793485183865,
+          "completedAtMs": 1793485184144
+        },
+        "source": {
+          "event_id": "3f47fc5a-6959-4db2-a65b-c14d8d13a540",
+          "thread_id": "01a1940b-c4fe-7a00-9401-3ff6b28417dc",
+          "turn_id": "01a1940b-c5ee-7b31-8081-75d81bfbf04e",
+          "item_id": "msg_082b595a01598bc1016ae6697fd2cc819199962273d8701b6d"
+        }
+      }
+    ],
+    "plan": {
+      "missing": "No current plan or remaining-items update observed."
+    },
+    "recent_verification": {
+      "missing": "No independent verification result recorded yet."
+    },
+    "recent_instructions": [],
+    "repeated_failure": {
+      "investigate": false,
+      "signatures": [],
+      "instruction": "No repeated failure threshold observed."
+    },
+    "omissions": [
+      "Current plan and remaining items were not observed.",
+      "Independent verification has not run."
+    ],
+    "evidence_complete": true
+  },
+  "raw_output": null,
+  "validation": "pending"
+}

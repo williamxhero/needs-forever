@@ -1,0 +1,15 @@
+{
+  "label": "worker-pause",
+  "phase": "WORKER",
+  "status": "PAUSED",
+  "task_version": 2,
+  "active_worker_turn_id": "01a193f9-20fb-7ba2-8ea0-54af87956a0e",
+  "reviewing_turn_id": null,
+  "process_shutdown": "forced",
+  "stdout": "PAUSED: user\n",
+  "stderr": "",
+  "events": [
+    "paused",
+    "owned_calls_cancelled"
+  ]
+}

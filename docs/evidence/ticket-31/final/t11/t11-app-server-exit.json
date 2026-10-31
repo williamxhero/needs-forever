@@ -1,0 +1,10 @@
+{
+  "label": "app-server-exit",
+  "status": "DONE",
+  "worker_thread_id": "01a1940e-c55e-7871-9c19-1cad5d63f270",
+  "old_server_process_id": 41160,
+  "reconnects": 1,
+  "process_shutdown": "exited",
+  "stdout": "worker: I’ll write the authorized `exit.txt` in the workspace, then run the provided verification script.\nworker: Created `exit.txt` with the exact text `exit-ok`. Verification passed.\nRECOVERING: service_unavailable; attempt 1; retry at 2026-10-31T22:22:53.210Z; Retry the same authorized operation after the scheduled backoff and record the resulting evidence.\nDONE (live): E1 shows exit.txt was written with exact text exit-ok and the provided verifier passed.\n",
+  "stderr": ""
+}

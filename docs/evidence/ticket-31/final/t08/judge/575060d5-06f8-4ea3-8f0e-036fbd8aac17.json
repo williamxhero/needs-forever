@@ -1,0 +1,121 @@
+{
+  "input": {
+    "snapshot_id": "575060d5-06f8-4ea3-8f0e-036fbd8aac17",
+    "task_id": "ticket31-t08-judge",
+    "task_version": 1,
+    "worker_thread_id": "01a193f9-5f47-7d23-9ae0-ea35984c31f2",
+    "worker_turn_id": "01a193f9-6029-77b3-9f5e-2d0594ceecde",
+    "task": {
+      "schema_version": 1,
+      "task_id": "ticket31-t08-judge",
+      "workspace": "D:\\WILL\\TOOLS\\needs-forever\\runs\\ticket31-live-test3\\judge\\workspace",
+      "goal": "Write judge.txt with the exact text judge-ok, then stop.",
+      "acceptance": [
+        {
+          "id": "A1",
+          "text": "judge.txt contains judge-ok."
+        }
+      ],
+      "authorization": "Use only this local workspace. No network, credentials, or external side effects. All listed work is authorized.",
+      "limits": {
+        "max_worker_turns": null,
+        "max_minutes": null
+      }
+    },
+    "evidence": [
+      {
+        "id": "E1",
+        "type": "commandExecution",
+        "value": {
+          "type": "commandExecution",
+          "id": "exec-842c7d6a-f688-4bc2-b949-afe4d0972229",
+          "pluginId": null,
+          "scriptPath": null,
+          "command": "\"C:\\\\Users\\\\will\\\\.cache\\\\codex-runtimes\\\\codex-primary-runtime\\\\dependencies\\\\native\\\\powershell\\\\pwsh.exe\" -Command \"Set-Content -LiteralPath 'judge.txt' -Value 'judge-ok' -NoNewline; Get-Content -Raw -LiteralPath 'judge.txt'\"",
+          "cwd": "D:\\WILL\\TOOLS\\needs-forever\\runs\\ticket31-live-test3\\judge\\workspace",
+          "processId": "18326",
+          "source": "unifiedExecStartup",
+          "status": "completed",
+          "commandActions": [
+            {
+              "type": "unknown",
+              "command": "Set-Content -LiteralPath 'judge.txt' -Value 'judge-ok' -NoNewline; Get-Content -Raw -LiteralPath 'judge.txt'"
+            }
+          ],
+          "aggregatedOutput": "judge-ok\r\n",
+          "exitCode": 0,
+          "durationMs": 246,
+          "startedAtMs": 1793483962151,
+          "completedAtMs": 1793483962398
+        },
+        "source": {
+          "event_id": "30d2efd8-e762-4cdb-b7d1-f5e91fafe961",
+          "thread_id": "01a193f9-5f47-7d23-9ae0-ea35984c31f2",
+          "turn_id": "01a193f9-6029-77b3-9f5e-2d0594ceecde",
+          "item_id": "exec-842c7d6a-f688-4bc2-b949-afe4d0972229"
+        }
+      },
+      {
+        "id": "E2",
+        "type": "agentMessage",
+        "value": {
+          "type": "agentMessage",
+          "id": "msg_0a28d612def5751f016ae664b7f27881919a524c25af184d76",
+          "text": "I’ll create `judge.txt` in the active workspace with the exact required text and verify its contents.",
+          "phase": "commentary",
+          "memoryCitation": null,
+          "delivery": null,
+          "questions": null,
+          "startedAtMs": 1793483959954,
+          "completedAtMs": 1793483960561
+        },
+        "source": {
+          "event_id": "6bfe5fe9-7f49-460e-acae-0dfefc3a7a3e",
+          "thread_id": "01a193f9-5f47-7d23-9ae0-ea35984c31f2",
+          "turn_id": "01a193f9-6029-77b3-9f5e-2d0594ceecde",
+          "item_id": "msg_0a28d612def5751f016ae664b7f27881919a524c25af184d76"
+        }
+      },
+      {
+        "id": "E3",
+        "type": "agentMessage",
+        "value": {
+          "type": "agentMessage",
+          "id": "msg_0a28d612def5751f016ae664bd9f6c81919aba3e2b9a61582a",
+          "text": "Created `judge.txt` containing exactly `judge-ok`.",
+          "phase": "final_answer",
+          "memoryCitation": null,
+          "delivery": null,
+          "questions": null,
+          "startedAtMs": 1793483965681,
+          "completedAtMs": 1793483965966
+        },
+        "source": {
+          "event_id": "c90245c8-aa03-4050-9dab-335c2a758e22",
+          "thread_id": "01a193f9-5f47-7d23-9ae0-ea35984c31f2",
+          "turn_id": "01a193f9-6029-77b3-9f5e-2d0594ceecde",
+          "item_id": "msg_0a28d612def5751f016ae664bd9f6c81919aba3e2b9a61582a"
+        }
+      }
+    ],
+    "plan": {
+      "missing": "No current plan or remaining-items update observed."
+    },
+    "recent_verification": {
+      "missing": "No independent verification result recorded yet."
+    },
+    "recent_instructions": [],
+    "repeated_failure": {
+      "investigate": false,
+      "signatures": [],
+      "instruction": "No repeated failure threshold observed."
+    },
+    "omissions": [
+      "Current plan and remaining items were not observed.",
+      "Independent verification has not run."
+    ],
+    "evidence_complete": true
+  },
+  "raw_output": null,
+  "validation": "pending"
+}

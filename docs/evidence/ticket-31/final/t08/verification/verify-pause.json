@@ -1,0 +1,16 @@
+{
+  "label": "verification-pause",
+  "phase": "VERIFY",
+  "status": "PAUSED",
+  "task_version": 2,
+  "active_worker_turn_id": null,
+  "reviewing_turn_id": null,
+  "process_shutdown": "forced",
+  "stdout": "worker: I’ll write `verification.txt` in the workspace with the exact required text, then verify its contents locally.\nworker: Created `verification.txt` containing exactly `verification-ok`.\nPAUSED: user\n",
+  "stderr": "",
+  "events": [
+    "paused",
+    "stale_verification_result_ignored",
+    "owned_calls_cancelled"
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "acceptance": [
+    {
+      "id": "A1",
+      "text": "worker.txt contains worker-ok."
+    }
+  ],
+  "workspace": "D:\\WILL\\TOOLS\\needs-forever\\runs\\ticket31-pty-worker\\workspace",
+  "schema_version": 1,
+  "authorization": "Use only this local workspace. No network or external side effects.",
+  "limits": {
+    "max_minutes": null,
+    "max_worker_turns": null
+  },
+  "goal": "Run a local Node command that waits for 60 seconds, then write worker.txt with the exact text worker-ok.",
+  "task_id": "ticket31-pty-worker"
+}

@@ -1,0 +1,27 @@
+{
+  "workspace": "D:\\WILL\\TOOLS\\needs-forever\\runs\\ticket31-pty-verify\\workspace",
+  "authorization": "Use only this local workspace. No network or external side effects.",
+  "limits": {
+    "max_minutes": null,
+    "max_worker_turns": null
+  },
+  "goal": "Write verification.txt with the exact text verification-ok, then stop.",
+  "acceptance": [
+    {
+      "id": "A1",
+      "text": "verification.txt contains verification-ok."
+    }
+  ],
+  "verify": {
+    "argv": [
+      "C:\\Program Files\\nodejs\\node.exe",
+      "D:\\WILL\\TOOLS\\needs-forever\\runs\\ticket31-pty-verify\\workspace\\slow-verify.mjs"
+    ],
+    "timeout_seconds": 90,
+    "protected_files": [
+      "slow-verify.mjs"
+    ]
+  },
+  "schema_version": 1,
+  "task_id": "ticket31-pty-verify"
+}

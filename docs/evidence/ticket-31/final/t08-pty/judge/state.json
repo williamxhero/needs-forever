@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "task_id": "ticket31-pty-judge",
+  "task_version": 2,
+  "task": {
+    "schema_version": 1,
+    "task_id": "ticket31-pty-judge",
+    "workspace": "D:\\WILL\\TOOLS\\needs-forever\\runs\\ticket31-pty-judge\\workspace",
+    "goal": "Write judge.txt with the exact text judge-ok, then stop.",
+    "acceptance": [
+      {
+        "id": "A1",
+        "text": "judge.txt contains judge-ok."
+      }
+    ],
+    "authorization": "Use only this local workspace. No network or external side effects.",
+    "limits": {
+      "max_worker_turns": null,
+      "max_minutes": null
+    }
+  },
+  "worker_thread_id": "01a1940b-c4fe-7a00-9401-3ff6b28417dc",
+  "status": "PAUSED",
+  "phase": "IDLE",
+  "active_worker_turn_id": null,
+  "reviewing_turn_id": "01a1940b-c5ee-7b31-8081-75d81bfbf04e",
+  "handled_turn_ids": [],
+  "pending_action": null,
+  "retry": {
+    "kind": null,
+    "attempt": 0,
+    "next_at": null
+  },
+  "last_decision": null,
+  "worker_turn_count": 1,
+  "elapsed_active_seconds": 52.171,
+  "updated_at": "2026-10-31T22:20:13.316Z",
+  "codex_version": "codex-cli 0.166.0",
+  "mode": "live",
+  "judge_thread_ids": [
+    "01a1940c-1cf8-7ee3-8693-41f7401e385b"
+  ],
+  "pause_reason": "user"
+}

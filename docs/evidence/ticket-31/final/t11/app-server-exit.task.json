@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "task_id": "ticket31-t11-exit",
+  "workspace": "D:\\WILL\\TOOLS\\needs-forever\\runs\\ticket31-live-test10\\workspace",
+  "goal": "Write exit.txt with the exact text exit-ok, then stop.",
+  "acceptance": [
+    {
+      "id": "A1",
+      "text": "exit.txt contains exit-ok."
+    }
+  ],
+  "authorization": "Use only this local workspace. No network, credentials, or external side effects. All listed work is authorized.",
+  "verify": {
+    "argv": [
+      "C:\\Program Files\\nodejs\\node.exe",
+      "D:\\WILL\\TOOLS\\needs-forever\\runs\\ticket31-live-test10\\workspace\\verify-exit.mjs"
+    ],
+    "timeout_seconds": 20,
+    "protected_files": [
+      "verify-exit.mjs"
+    ]
+  },
+  "limits": {
+    "max_worker_turns": null,
+    "max_minutes": null
+  }
+}

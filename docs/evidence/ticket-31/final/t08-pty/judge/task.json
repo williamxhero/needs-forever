@@ -1,0 +1,17 @@
+{
+  "limits": {
+    "max_minutes": null,
+    "max_worker_turns": null
+  },
+  "authorization": "Use only this local workspace. No network or external side effects.",
+  "acceptance": [
+    {
+      "text": "judge.txt contains judge-ok.",
+      "id": "A1"
+    }
+  ],
+  "task_id": "ticket31-pty-judge",
+  "schema_version": 1,
+  "workspace": "D:\\WILL\\TOOLS\\needs-forever\\runs\\ticket31-pty-judge\\workspace",
+  "goal": "Write judge.txt with the exact text judge-ok, then stop."
+}

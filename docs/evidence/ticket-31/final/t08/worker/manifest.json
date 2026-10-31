@@ -1,0 +1,15 @@
+{
+  "mode": "live-process-boundary",
+  "started_at": "2026-10-31T21:58:59.165Z",
+  "system": "win32 10.0.26300",
+  "node": "v24.19.0",
+  "phases": [
+    "worker",
+    "judge",
+    "verification"
+  ],
+  "t11": [
+    "thread-unload-simulated-by-controlled-notification",
+    "app-server-exit-live-process"
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "label": "judge-pause",
+  "phase": "JUDGE",
+  "status": "PAUSED",
+  "task_version": 2,
+  "active_worker_turn_id": null,
+  "reviewing_turn_id": "01a193f9-6029-77b3-9f5e-2d0594ceecde",
+  "process_shutdown": "forced",
+  "stdout": "worker: I’ll create `judge.txt` in the active workspace with the exact required text and verify its contents.\nworker: Created `judge.txt` containing exactly `judge-ok`.\nPAUSED: user\n",
+  "stderr": "",
+  "events": [
+    "paused",
+    "owned_calls_cancelled",
+    "stale_judge_result_ignored"
+  ]
+}

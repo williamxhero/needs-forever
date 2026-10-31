@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "task_id": "ticket31-t11-exit",
+  "task_version": 1,
+  "task": {
+    "schema_version": 1,
+    "task_id": "ticket31-t11-exit",
+    "workspace": "D:\\WILL\\TOOLS\\needs-forever\\runs\\ticket31-live-test10\\workspace",
+    "goal": "Write exit.txt with the exact text exit-ok, then stop.",
+    "acceptance": [
+      {
+        "id": "A1",
+        "text": "exit.txt contains exit-ok."
+      }
+    ],
+    "authorization": "Use only this local workspace. No network, credentials, or external side effects. All listed work is authorized.",
+    "limits": {
+      "max_worker_turns": null,
+      "max_minutes": null
+    },
+    "verify": {
+      "argv": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "D:\\WILL\\TOOLS\\needs-forever\\runs\\ticket31-live-test10\\workspace\\verify-exit.mjs"
+      ],
+      "timeout_seconds": 20,
+      "protected_files": [
+        "verify-exit.mjs"
+      ]
+    }
+  },
+  "worker_thread_id": "01a1940e-c55e-7871-9c19-1cad5d63f270",
+  "status": "DONE",
+  "phase": "IDLE",
+  "active_worker_turn_id": null,
+  "reviewing_turn_id": null,
+  "handled_turn_ids": [
+    "01a1940e-c647-7100-b873-775e7dc65661"
+  ],
+  "pending_action": null,
+  "retry": {
+    "kind": null,
+    "attempt": 0,
+    "next_at": null
+  },
+  "last_decision": {
+    "action": "DONE",
+    "evidence_ids": [
+      "E1"
+    ],
+    "external": null,
+    "next_message": "",
+    "reason": "E1 shows exit.txt was written with exact text exit-ok and the provided verifier passed."
+  },
+  "worker_turn_count": 1,
+  "elapsed_active_seconds": 22.866000000000025,
+  "updated_at": "2026-10-31T22:23:00.696Z",
+  "codex_version": "codex-cli 0.166.0",
+  "mode": "live",
+  "protected_baseline": [
+    {
+      "path": "D:\\WILL\\TOOLS\\needs-forever\\runs\\ticket31-live-test10\\workspace\\verify-exit.mjs",
+      "sha256": "4f33fde8c440aeb5a393b77e2b384564281a65e6947ffa6b623a6dfd428cbb77",
+      "content_base64": "aW1wb3J0IHsgcmVhZEZpbGVTeW5jIH0gZnJvbSAnbm9kZTpmcyc7CmlmIChyZWFkRmlsZVN5bmMoJ2V4aXQudHh0JywgJ3V0ZjgnKSAhPT0gJ2V4aXQtb2snKSBwcm9jZXNzLmV4aXQoMSk7CmNvbnNvbGUubG9nKCdUMTEgYXBwLXNlcnZlciBleGl0IHZlcmlmaWVyIFBBU1MnKTsK"
+    }
+  ],
+  "judge_thread_ids": [
+    "01a1940e-ea42-7f42-ae21-ce68f6e9efad",
+    "01a1940f-0274-7071-b366-b9f7e9cf102e"
+  ],
+  "recovery_failures": [
+    {
+      "signature": "service_unavailable:app-server exited (#). supervisor recovery will reconcile the saved worker history before retrying.",
+      "kind": "service_unavailable",
+      "count": 1,
+      "message": "app-server exited (1). Supervisor recovery will reconcile the saved worker history before retrying.",
+      "instruction": "Retry the same authorized operation after the scheduled backoff and record the resulting evidence.",
+      "at": "2026-10-31T22:22:48.209Z"
+    }
+  ],
+  "last_error": "app-server exited (1). Supervisor recovery will reconcile the saved worker history before retrying."
+}
