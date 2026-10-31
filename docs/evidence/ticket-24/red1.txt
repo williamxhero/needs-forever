@@ -28,10 +28,10 @@
 test at dist\test\cli.test.js:160:1
 ✖ two early finishes continue the same worker then persist stable simulated DONE with prepared deliveries (280.2435ms)
   AssertionError [ERR_ASSERTION]: Ticket #23 accepts only explicit WAIT_EXTERNAL fixtures; continuation/completion gates are delivered by #24.
-  
-  
+
+
   1 !== 0
-  
+
       at TestContext.<anonymous> (file:///C:/Users/will/.codex/worktrees/s1-redo-ticket24/needs-forever/dist/test/cli.test.js:172:12)
       at Test.runInAsyncScope (node:async_hooks:227:14)
       at Test.run (node:internal/test_runner/test:1382:25)

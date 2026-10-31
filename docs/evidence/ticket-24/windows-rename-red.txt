@@ -34,7 +34,7 @@
 test at dist\test\cli.test.js:84:1
 ✖ a second CLI cannot supervise the same task through another state file (1325.8663ms)
   AssertionError [ERR_ASSERTION]: EPERM: operation not permitted, rename 'C:\Users\will\.codex\worktrees\s1-redo-ticket24\needs-forever\runs\ticket23\exclusive-task-1793464392149\state.json.7254d27e-2398-46a1-b17e-794b6d735d12.tmp' -> 'C:\Users\will\.codex\worktrees\s1-redo-ticket24\needs-forever\runs\ticket23\exclusive-task-1793464392149\state.json'
-  
+
       at TestContext.<anonymous> (file:///C:/Users/will/.codex/worktrees/s1-redo-ticket24/needs-forever/dist/test/cli.test.js:98:20)
       at async Test.run (node:internal/test_runner/test:1389:7)
       at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {

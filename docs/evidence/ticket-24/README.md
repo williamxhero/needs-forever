@@ -4,6 +4,8 @@ Scope: current S1 #20 only. The public seam is the real CLI subprocess connected
 
 Three observed red/green slices are retained without reconstructing failures afterward:
 
+Tracked `.txt` evidence is normalized to UTF-8 without BOM and LF line endings, with trailing whitespace removed from each line for Git diff checks. Diagnostic text, paths and results are preserved. Exact pre-normalization byte copies remain in the root workspace at `.scratch/new-workflow/ticket24-raw-text/`; the original sample also remains in the run directory identified below.
+
 1. `red1.txt`: two early finishes failed because ticket #23 accepted only WAIT_EXTERNAL. `green1.txt`: all eight then-current tests passed after ordered fixed decisions, same-thread continuation and complete persisted messages were added.
 2. `red2.txt`: started-without-response remained blocked until the fixture server exited. `green2.txt`: the target passed after request results and notifications entered one queue; empty-items started events are confirmed only with a separate matching userMessage.clientId.
 3. `red3.txt`: a late failure from an already confirmed old delivery incorrectly cancelled the next worker. `green3.txt`: the target passed after stale delivery/version failure results were ignored.

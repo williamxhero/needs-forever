@@ -13,10 +13,10 @@
 test at dist\test\cli.test.js:257:1
 ✖ a late failure for an already confirmed old delivery cannot cancel the next worker (314.8864ms)
   AssertionError [ERR_ASSERTION]: app-server RPC failed (-32000).
-  
-  
+
+
   1 !== 0
-  
+
       at TestContext.<anonymous> (file:///C:/Users/will/.codex/worktrees/s1-redo-ticket24/needs-forever/dist/test/cli.test.js:266:12)
       at Test.runInAsyncScope (node:async_hooks:227:14)
       at Test.run (node:internal/test_runner/test:1382:25)

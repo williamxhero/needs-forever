@@ -34,7 +34,7 @@
 test at dist\test\cli.test.js:270:1
 ✖ judge input is saved while its result is pending and duplicate terminal events do not start another judge (1335.5593ms)
   AssertionError [ERR_ASSERTION]: EPERM: operation not permitted, rename 'C:\Users\will\.codex\worktrees\s1-redo-ticket24\needs-forever\runs\ticket23\pending-judge-1793464449778\state.json.4706cd6a-71b6-4fa9-a96a-fc4a879f70ee.tmp' -> 'C:\Users\will\.codex\worktrees\s1-redo-ticket24\needs-forever\runs\ticket23\pending-judge-1793464449778\state.json'
-  
+
       at TestContext.<anonymous> (file:///C:/Users/will/.codex/worktrees/s1-redo-ticket24/needs-forever/dist/test/cli.test.js:293:20)
       at async Test.run (node:internal/test_runner/test:1389:7)
       at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
