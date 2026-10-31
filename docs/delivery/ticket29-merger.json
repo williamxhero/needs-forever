@@ -1,0 +1,42 @@
+{
+  "current_spec": 22,
+  "ticket": 29,
+  "mechanism": "Loaded implement-spec-to-done and executed the ticket implementation, merger, and independent review stages",
+  "integrated_at": "2026-10-31T21:28:09Z",
+  "branch": "spec/22-s3",
+  "before": "bbc13e9",
+  "commit": "ef60b81",
+  "merge": "git cherry-pick c9a4ddb followed by the resume recovery fix",
+  "ancestry": "PASS",
+  "build": {
+    "command": "npm run build",
+    "exit_code": 0
+  },
+  "tests": {
+    "command": "npm test",
+    "exit_code": 0,
+    "failed": 0,
+    "passed": 66,
+    "mode": "simulated"
+  },
+  "reviews": {
+    "standards": "PASS",
+    "spec": "PASS",
+    "head": "ef60b81"
+  },
+  "diff_check": "PASS: git diff --check origin/main...HEAD",
+  "source_worktree_clean": true,
+  "integration_worktree_clean": true,
+  "implemented": [
+    "Recoverable worker, judge, connection-start, and transport failures use shared classification and 5/15/60/300 second backoff without an attempt-count stop.",
+    "Worker live and historical completed, inProgress, interrupted, and failed states are reconciled without blind resend; failed and interrupted states create a fresh continuation on the same worker thread.",
+    "Judge timeout and invalid output terminate the old judge connection before a fresh judge retry; repeated failures inject a materially different investigation instruction.",
+    "Pause cancels recovery timers and stale asynchronous results cannot resume a paused task.",
+    "Quota and authentication failures persist WAIT_EXTERNAL evidence; explicit resume reconciles failed history before continuing."
+  ],
+  "limitations": [
+    "Automated acceptance uses the deterministic app-server fixture transport; it is simulated evidence, not a claim of live production validation.",
+    "No main merge was performed; this receipt covers the S3 integration branch only.",
+    "#29 remains unpushed and open until this delivery record is reviewed and published."
+  ]
+}
