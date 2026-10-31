@@ -1,0 +1,82 @@
+{
+  "date": "2026-10-31",
+  "timezone": "Asia/Singapore",
+  "encoding": "UTF-8 without BOM",
+  "line_endings": "CRLF",
+  "body_readback": "exact",
+  "native_relationships_verified": true,
+  "tickets": [
+    {
+      "number": 23,
+      "url": "https://github.com/williamxhero/needs-forever/issues/23",
+      "rest_id": 6136541816,
+      "parent": 20,
+      "blocked_by": null,
+      "body_sha256": "9dc094ae8119dbfb1a07576fb8659ea6e6dc89cd581e7e8013c027553c8bc4c4"
+    },
+    {
+      "number": 24,
+      "url": "https://github.com/williamxhero/needs-forever/issues/24",
+      "rest_id": 6136548220,
+      "parent": 20,
+      "blocked_by": 23,
+      "body_sha256": "97335203a2114355d07a7527a51f310c34de9b774c33f7f92a1644e56c251dbe"
+    },
+    {
+      "number": 25,
+      "url": "https://github.com/williamxhero/needs-forever/issues/25",
+      "rest_id": 6136552235,
+      "parent": 20,
+      "blocked_by": 24,
+      "body_sha256": "0c34bfe665ff66ff8d43eaaa8321b0375ddd9ce5deb0140bcc9c1c0001cb8ec6"
+    },
+    {
+      "number": 26,
+      "rest_id": 6136629924,
+      "parent": 21,
+      "blocked_by": 25,
+      "url": "https://github.com/williamxhero/needs-forever/issues/26",
+      "body_sha256": "c861cb3dd6c3841f469ff8181e32ec2ad8d3ea52ae5b2213128871c5cb868fd7"
+    },
+    {
+      "number": 27,
+      "rest_id": 6136632892,
+      "parent": 21,
+      "blocked_by": 26,
+      "url": "https://github.com/williamxhero/needs-forever/issues/27",
+      "body_sha256": "d747b9e242c24a220095bedf4499d4a0e1d12ab0e84c14bf0ddc2a7a4e7973d2"
+    },
+    {
+      "number": 28,
+      "rest_id": 6136650225,
+      "parent": 21,
+      "blocked_by": 27,
+      "url": "https://github.com/williamxhero/needs-forever/issues/28",
+      "body_sha256": "de98f6107b3d3f7452e72620c04e74040e2fadd78ca8a00ec5cda46887dcc8ee"
+    },
+    {
+      "number": 29,
+      "rest_id": 6136651996,
+      "parent": 22,
+      "blocked_by": 28,
+      "url": "https://github.com/williamxhero/needs-forever/issues/29",
+      "body_sha256": "a7a8756100a5fe32610ae9b3ab06d4f99c55828a00c85ca718055b1869fa1970"
+    },
+    {
+      "number": 30,
+      "rest_id": 6136653710,
+      "parent": 22,
+      "blocked_by": 29,
+      "url": "https://github.com/williamxhero/needs-forever/issues/30",
+      "body_sha256": "b52b054b748c8239fa123be2196d3e6f4fe50354e101f8583315cbf3df73f55c"
+    },
+    {
+      "number": 31,
+      "rest_id": 6136655562,
+      "parent": 22,
+      "blocked_by": 30,
+      "url": "https://github.com/williamxhero/needs-forever/issues/31",
+      "body_sha256": "7a6a91d23f560633a18b7dee4b6f2c6d179797a6c799d4cdad474533b87d4c88"
+    }
+  ]
+}

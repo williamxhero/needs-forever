@@ -50,6 +50,27 @@ have native blocked-by relationships. Published bodies were uploaded from UTF-8
 without BOM files and compared exactly after readback, including GitHub's CRLF
 line endings. Publication receipts are retained under ignored `.scratch/redo`.
 
+## Approved future ticket graph
+
+| SPEC | Ticket | Behavior | Blocked by | Status |
+| --- | --- | --- | --- | --- |
+| #21 / S2 | #26 | Fresh read-only judge, actual evidence, strict decision schema | #25 | Not started |
+| #21 / S2 | #27 | Fixed independent verification and protected files | #26 | Not started |
+| #21 / S2 | #28 | Deterministic requests and complete real S2 demonstration | #27 | Not started |
+| #22 / S3 | #29 | Shared errors, unlimited backoff and repeat-failure diagnosis | #28 | Not started |
+| #22 / S3 | #30 | Original-thread history reconciliation and safe recovery | #29 | Not started |
+| #22 / S3 | #31 | Actual fault injection, complete acceptance and delivery | #30 | Not started |
+
+Every future ticket was published from a UTF-8 without BOM body file, compared
+exactly on readback, assigned `ready-for-agent`, attached to its native parent,
+and checked for its native blocked-by relationship. Advance publication does
+not authorize bypassing the previous SPEC's delivery gate.
+
+During publication, GitHub REST reads returned repeated `EOF` with the default
+HTTP transport. Repeating a read with process-local `GODEBUG=http2client=0`
+succeeded. Publication resumed from existing receipts and completed without
+duplicate issues. No persistent GitHub or system configuration was changed.
+
 ## Current verification
 
 Repository identity and origin were checked from the project directory:
