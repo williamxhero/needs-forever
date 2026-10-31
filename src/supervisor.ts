@@ -3,6 +3,7 @@ import { isAbsolute, relative, resolve } from 'node:path';
 import type { ThreadStartParams } from './protocol/generated/v2/ThreadStartParams.js';
 import type { ThreadStartResponse } from './protocol/generated/v2/ThreadStartResponse.js';
 import type { ThreadResumeParams } from './protocol/generated/v2/ThreadResumeParams.js';
+import type { ThreadResumeResponse } from './protocol/generated/v2/ThreadResumeResponse.js';
 import type { TurnStartParams } from './protocol/generated/v2/TurnStartParams.js';
 import type { TurnStartResponse } from './protocol/generated/v2/TurnStartResponse.js';
 import type { CommandExecParams } from './protocol/generated/v2/CommandExecParams.js';
@@ -18,16 +19,19 @@ import { buildSnapshot } from './snapshot.js';
 import { classifyRecoveryError, nextBackoff, recordRecoveryFailure } from './recovery.js';
 import { setTimeout as delay } from 'node:timers/promises';
 
+type TurnsListResponse = { data: Array<import('./protocol/generated/v2/Turn.js').Turn>; nextCursor: string | null };
+
 export class Supervisor {
   private rpc: Rpc | undefined;
   private readonly incoming: ({ kind: 'notification'; method: string; params: unknown } | { kind: 'response'; delivery: string; version: number; turn: string } | { kind: 'failure'; error: Error; delivery?: string; version?: number })[] = [];
   private wake: (() => void) | undefined;
   private readonly candidates = new Map<string, { started: boolean; client_id?: string; completed?: WorkerEvent }>();
   private readonly displayedOutputs = new Set<string>();
+  private reconcileInFlight = false;
   private activeCheckpoint = 0;
   private cancellation: Promise<void> | undefined;
   private readonly abort = new AbortController();
-  constructor(private readonly state: State, private readonly store: Store, private readonly judge: Judge, private readonly fixture?: { simulate_verification?: boolean; recovery_enabled?: boolean; recovery_delays_ms?: number[]; real_judge?: boolean }) {}
+  constructor(private readonly state: State, private readonly store: Store, private readonly judge: Judge, private readonly fixture?: { simulate_verification?: boolean; recovery_enabled?: boolean; recovery_delays_ms?: number[]; real_judge?: boolean; reconcile_interval_ms?: number }) {}
 
   private async scheduleRecovery(error: unknown): Promise<boolean> {
     const classification = classifyRecoveryError(error);
@@ -239,6 +243,33 @@ export class Supervisor {
       this.continueAfterTerminal(pending, matching, error);
     }
   }
+  private async hydrateWorkerTurns(rpc: Rpc, resumed: ThreadResumeResponse): Promise<ThreadResumeResponse> {
+    const cursor = resumed.turnsBackwardsCursor;
+    if (resumed.thread.turns.length || !cursor) return resumed;
+    const turns = [...resumed.thread.turns];
+    let nextCursor: string | null = cursor;
+    while (nextCursor) {
+      const page: TurnsListResponse = await rpc.request<TurnsListResponse>('thread/turns/list', { threadId: this.state.worker_thread_id, cursor: nextCursor, sortDirection: 'desc', limit: 100, itemsView: 'full' });
+      if (!Array.isArray(page.data) || (page.nextCursor !== null && typeof page.nextCursor !== 'string')) throw new Error('Invalid paginated worker history response.');
+      turns.push(...page.data);
+      nextCursor = page.nextCursor;
+    }
+    return { ...resumed, thread: { ...resumed.thread, turns } };
+  }
+  private async reconcileOnce(): Promise<void> {
+    if (this.reconcileInFlight || this.state.status !== 'ACTIVE' || !this.rpc || !this.state.worker_thread_id || this.state.reviewing_turn_id) return;
+    this.reconcileInFlight = true;
+    try {
+      const params: ThreadResumeParams = { threadId: this.state.worker_thread_id, cwd: this.state.task.workspace, approvalPolicy: 'never', sandbox: 'workspace-write', excludeTurns: false };
+      const resumed = await this.hydrateWorkerTurns(this.rpc, await this.rpc.request<ThreadResumeResponse>('thread/resume', params));
+      if (this.state.status !== 'ACTIVE' || resumed.thread.id !== this.state.worker_thread_id) return;
+      this.validateWorker(resumed);
+      this.store.event(this.state, 'worker_history_reconciled_periodic', { thread_id: this.state.worker_thread_id, turns: resumed.thread.turns.length });
+      await this.reconcileWorkerHistory(resumed);
+    } finally {
+      this.reconcileInFlight = false;
+    }
+  }
   private recordFailedHistory(turn: { id: string; error?: { message?: string } | null }): Error {
     const message = turn.error?.message ?? `Worker turn ${turn.id} failed without an error message.`;
     this.state.last_error = message;
@@ -275,7 +306,7 @@ export class Supervisor {
     const rpc = this.bindRpc(connection.rpc);
     this.bindJudge(rpc);
     const params: ThreadResumeParams = { threadId: this.state.worker_thread_id!, cwd: this.state.task.workspace, approvalPolicy: 'never', sandbox: 'workspace-write', excludeTurns: false };
-    const resumed = await rpc.request<ThreadStartResponse>('thread/resume', params);
+    const resumed = await this.hydrateWorkerTurns(rpc, await rpc.request<ThreadResumeResponse>('thread/resume', params));
     if (this.state.status !== 'ACTIVE') return;
     if (resumed.thread.id !== this.state.worker_thread_id) throw new Error('Recovery changed worker identity.');
     this.validateWorker(resumed);
@@ -292,6 +323,11 @@ export class Supervisor {
         if (rpc !== this.rpc) return;
         if (this.fixture && notification.method === 'supervisor/test/pause') { this.pause(); continue; }
         const params = notification.params && typeof notification.params === 'object' ? record(notification.params) : {};
+        if (params.threadId === this.state.worker_thread_id && ['thread/closed', 'thread/notLoaded', 'thread/unloaded'].includes(notification.method)) {
+          this.store.event(this.state, 'worker_thread_unavailable', { thread_id: params.threadId, method: notification.method });
+          this.enqueue({ kind: 'failure', error: new Error(`Worker thread ${notification.method}; recovery will resume the saved worker identity.`) });
+          continue;
+        }
         if (params.threadId === this.state.worker_thread_id && ['item/completed', 'turn/completed', 'turn/plan/updated'].includes(notification.method)) this.store.event(this.state, 'worker_evidence', { role: 'worker', thread_id: params.threadId, method: notification.method, params });
         if (params.threadId === this.state.worker_thread_id && notification.method === 'item/completed') this.displayOutput(record(redact(params.item)), String(params.turnId));
         this.judge.observe?.(notification.method, notification.params);
@@ -314,7 +350,7 @@ export class Supervisor {
     const connection = await connect(argv, this.state.task.workspace, this.abort.signal);
     const rpc = this.bindRpc(connection.rpc);
     const params: ThreadResumeParams = { threadId: this.state.worker_thread_id!, cwd: this.state.task.workspace, approvalPolicy: 'never', sandbox: 'workspace-write', excludeTurns: false };
-    const resumed = await rpc.request<ThreadStartResponse>('thread/resume', params);
+    const resumed = await this.hydrateWorkerTurns(rpc, await rpc.request<ThreadResumeResponse>('thread/resume', params));
     if (resumed.thread.id !== this.state.worker_thread_id) throw new Error('Verification recovery changed worker identity.');
     this.validateWorker(resumed);
     if (resumed.thread.turns.some((turn) => turn.status === 'inProgress')) throw new Error('Verification recovery found an unexpected active worker turn; no send performed.');
@@ -356,11 +392,17 @@ export class Supervisor {
     this.store.protect(this.state);
     this.activeCheckpoint = Date.now();
     this.save();
+    let lastReconcileAt = Date.now();
+    const reconcileIntervalMs = this.fixture?.reconcile_interval_ms ?? 30_000;
     const checkpoint = setInterval(() => {
       if (this.state.status !== 'ACTIVE') return;
       this.accrue();
       if (reachedLimits(this.state.task.limits, this.state).time) this.pause('user_limit');
       else this.save();
+      if (this.state.status === 'ACTIVE' && Date.now() - lastReconcileAt >= reconcileIntervalMs) {
+        lastReconcileAt = Date.now();
+        void this.reconcileOnce().catch((error: unknown) => this.enqueue({ kind: 'failure', error: error instanceof Error ? error : new Error('Periodic worker reconciliation failed.') }));
+      }
     }, 100);
     try {
       if (resume && !this.state.worker_thread_id) throw new Error('Resume requires the saved worker thread identity; explicit recovery cannot proceed.');
@@ -376,7 +418,9 @@ export class Supervisor {
       this.save();
       const params: ThreadStartParams = { cwd: this.state.task.workspace, approvalPolicy: 'never', sandbox: 'workspace-write', ephemeral: false };
       const resumeParams: ThreadResumeParams = { ...params, threadId: this.state.worker_thread_id!, excludeTurns: false };
-      const created = await rpc.request<ThreadStartResponse>(resume ? 'thread/resume' : 'thread/start', resume ? resumeParams : params);
+      const created = resume
+        ? await this.hydrateWorkerTurns(rpc, await rpc.request<ThreadResumeResponse>('thread/resume', resumeParams))
+        : await rpc.request<ThreadStartResponse>('thread/start', params);
       if (this.state.status !== 'ACTIVE') return;
       this.validateWorker(created);
       if (resume && created.thread.id !== this.state.worker_thread_id) throw new Error('Resumed worker identity mismatch.');

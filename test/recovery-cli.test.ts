@@ -128,6 +128,39 @@ test('worker quota failure waits externally and explicit resume reconciles the f
   assert.match(events, /worker_history_failed_continuation/);
 });
 
+test('periodic reconcile hydrates paginated history and compensates a missed completion once', () => {
+  const run = fixture('periodic-paginated-reconcile', {
+    hold_worker: true,
+    reconcile_interval_ms: 20,
+    turns_backwards_cursor: '0',
+    turn_pages: [{ data: [{ id: 'first-turn-from-server', status: 'completed', items: [] }], nextCursor: null }],
+  });
+  const result = run.run();
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(json(run.state).status, 'DONE');
+  const protocol = readFileSync(run.trace, 'utf8');
+  assert.match(protocol, /"method":"thread\/turns\/list"/);
+  const events = readFileSync(resolve(run.directory, 'events.jsonl'), 'utf8');
+  assert.equal((events.match(/"type":"decision"/g) ?? []).length, 1);
+  assert.equal((events.match(/"type":"send_confirmed"/g) ?? []).length, 1);
+});
+
+test('thread closed notification reconnects the saved worker and follows recovered history', () => {
+  const run = fixture('thread-closed-recovery', {
+    hold_worker: true,
+    thread_closed_after_ms: 10,
+    resume_turns: [{ id: 'first-turn-from-server', status: 'completed', items: [] }],
+  });
+  const result = run.run();
+  assert.equal(result.status, 0, result.stderr);
+  const state = json(run.state);
+  assert.equal(state.status, 'DONE');
+  assert.equal(state.worker_thread_id, 'worker-from-server');
+  const events = readFileSync(resolve(run.directory, 'events.jsonl'), 'utf8');
+  assert.match(events, /worker_thread_unavailable/);
+  assert.match(events, /connection_reconnected/);
+});
+
 test('real judge timeout closes the old app-server, reconnects the worker and retries with a fresh judge', () => {
   const run = fixture('real-judge-timeout-recovery', {
     real_judge: true,

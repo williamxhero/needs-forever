@@ -53,11 +53,17 @@ for await (const line of lines) {
     const judge = message.params.sandbox === 'read-only';
     const threadId = judge ? `judge-${++judges}` : 'worker-from-server';
     if (judge) judgeThreads.add(threadId);
+    const historyTurns = scenario.reconcile_turns ?? scenario.resume_turns ?? [];
     send({ id: message.id, result: {
-      thread: { id: threadId, turns: message.method === 'thread/resume' ? scenario.resume_turns ?? [] : [] }, cwd: message.params.cwd,
+      thread: { id: threadId, turns: message.method === 'thread/resume' ? historyTurns : [] }, cwd: message.params.cwd,
       approvalPolicy: scenario.approval_policy ?? 'never',
       sandbox: judge ? scenario.judge_sandbox ?? { type: 'readOnly', networkAccess: false } : scenario.sandbox ?? { type: 'workspaceWrite', writableRoots: [], networkAccess: false, excludeTmpdirEnvVar: true, excludeSlashTmp: true },
+      ...(message.method === 'thread/resume' && scenario.turns_backwards_cursor ? { turnsBackwardsCursor: scenario.turns_backwards_cursor } : {}),
     } });
+  } else if (message.method === 'thread/turns/list') {
+    const pageIndex = Number(message.params.cursor ?? 0);
+    const page = scenario.turn_pages?.[pageIndex] ?? { data: scenario.resume_turns ?? [], nextCursor: null };
+    send({ id: message.id, result: { data: page.data ?? [], nextCursor: page.nextCursor ?? null, backwardsCursor: page.backwardsCursor ?? null } });
   } else if (message.method === 'thread/archive') {
     send(scenario.archive_failure ? { id: message.id, error: { code: -32000, message: 'Archive fixture failure' } } : { id: message.id, result: {} });
   } else if (message.method === 'turn/start') {
@@ -110,6 +116,7 @@ for await (const line of lines) {
       if (!scenario.real_judge) send({ method: 'turn/completed', params: { threadId: message.params.threadId, turn: { id: 'first-turn-from-server', status: 'completed', items: [] } } });
     }
     send({ method: 'turn/started', params: { threadId: message.params.threadId, turn: { id: turnId, status: 'inProgress', items: [] } } });
+    if (scenario.thread_closed_after_ms !== undefined) setTimeout(() => send({ method: 'thread/closed', params: { threadId: message.params.threadId } }), scenario.thread_closed_after_ms);
     (scenario.server_requests ?? []).forEach((request, index) => setTimeout(() => send({ id: request.id ?? `server-request-${turns}-${index}`, method: request.method, params: { ...(request.params ?? {}), threadId: message.params.threadId, turnId } }), index * 15));
     send({ method: 'item/started', params: { threadId: message.params.threadId, turnId, item: { type: 'userMessage', id: `input-${turns}`, clientId: message.params.clientUserMessageId, content: message.params.input } } });
     if (scenario.pause_after_ms !== undefined) setTimeout(() => send({ method: 'supervisor/test/pause', params: {} }), scenario.pause_after_ms);

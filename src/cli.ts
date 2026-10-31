@@ -97,11 +97,14 @@ async function main(): Promise<void> {
     const judge = fixture && fixture.real_judge !== true ? new FixtureJudge(fixture.judge as Decision | Decision[], judgeDelay, fixture.judge_ignores_cancellation === true, Array.isArray(fixture.judge_failures) ? fixture.judge_failures : undefined) : new AppServerJudge(judgeTimeout);
     const recoveryDelays = fixture?.recovery_delays_ms;
     if (recoveryDelays !== undefined && (!Array.isArray(recoveryDelays) || recoveryDelays.some((value) => typeof value !== 'number' || !Number.isFinite(value) || value < 0))) throw new Error('Fixture recovery_delays_ms must be a nonnegative number array.');
+    const reconcileInterval = fixture?.reconcile_interval_ms;
+    if (reconcileInterval !== undefined && (typeof reconcileInterval !== 'number' || !Number.isFinite(reconcileInterval) || reconcileInterval <= 0)) throw new Error('Fixture reconcile_interval_ms must be positive.');
     const supervisorOptions = fixture ? {
       simulate_verification: fixture.simulate_verification === true,
       recovery_enabled: fixture.recovery_enabled === true,
       real_judge: fixture.real_judge === true,
       ...(recoveryDelays === undefined ? {} : { recovery_delays_ms: recoveryDelays as number[] }),
+      ...(reconcileInterval === undefined ? {} : { reconcile_interval_ms: reconcileInterval }),
     } : undefined;
     const supervisor = new Supervisor(state, store, judge, supervisorOptions);
     const pause = () => supervisor.pause();
