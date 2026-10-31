@@ -1,0 +1,48 @@
+{
+  "input": {
+    "snapshot_id": "7707a3fb-085f-4b64-a2b4-fe863fb130ca",
+    "task_id": "pause-judge",
+    "task_version": 1,
+    "worker_thread_id": "worker-from-server",
+    "worker_turn_id": "first-turn-from-server",
+    "task": {
+      "schema_version": 1,
+      "task_id": "pause-judge",
+      "workspace": "C:\\Users\\will\\.codex\\worktrees\\s1-redo-ticket25\\needs-forever\\runs\\ticket23\\pause-judge-1793466551305\\workspace",
+      "goal": "Complete the goal.",
+      "acceptance": [
+        {
+          "id": "A1",
+          "text": "Accepted result."
+        }
+      ],
+      "authorization": "Local work only.",
+      "limits": {
+        "max_worker_turns": null,
+        "max_minutes": null
+      }
+    },
+    "evidence": [
+      {
+        "id": "E1",
+        "type": "worker_terminal",
+        "value": {
+          "threadId": "worker-from-server",
+          "turn": {
+            "id": "first-turn-from-server",
+            "status": "completed",
+            "items": [
+              {
+                "type": "agentMessage",
+                "id": "answer-1",
+                "text": "Only fixture stage completed."
+              }
+            ]
+          }
+        }
+      }
+    ]
+  },
+  "raw_output": null,
+  "validation": "pending"
+}

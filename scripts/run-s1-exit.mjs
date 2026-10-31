@@ -20,6 +20,7 @@ const checks = {
   original_worker_resume: ['explicit resume uses', 'resume reviews the saved'],
   prepared_before_send: ['two early finishes'], unknown_send_guard: ['unknown turn/start outcome', 'explicit resume preserves an unknown'],
   cumulative_crash_checkpoint: ['explicit resume reclaims'],
+  resume_contract_guard: ['ACTIVE resume rejects changed'],
 };
 const report = {
   mode: 'simulated', created_at: new Date().toISOString(), codex_protocol_baseline: 'codex-cli 0.166.0',

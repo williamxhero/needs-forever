@@ -5,6 +5,7 @@ import { Store } from './store.js';
 import { FixtureJudge, UnavailableJudge } from './judge.js';
 import { Supervisor } from './supervisor.js';
 import { codexCommand } from './transport.js';
+import { reachedLimits } from './rules.js';
 import { record, text } from './types.js';
 import type { Decision, State, Task } from './types.js';
 
@@ -49,15 +50,27 @@ async function main(): Promise<void> {
     return;
   }
   if (command !== 'start' && command !== 'resume') throw new Error('Usage: codex-supervisor start --task FILE [--state FILE] [--test-fixture FILE] | resume --state FILE [--task FILE] [--test-fixture FILE] | status --state FILE.');
-  const saved = command === 'resume' ? new Store(resolve(text(flags.get('--state'), '--state'))).read() : undefined;
-  if (saved && (saved.schema_version !== 1 || saved.status === 'DONE')) throw new Error('DONE cannot resume; saved state must use schema_version 1.');
-  const task = flags.has('--task') ? taskInput(readJson(resolve(flags.get('--task')!))) : saved ? taskInput(saved.task) : taskInput(undefined);
-  if (saved && (saved.task_id !== task.task_id || resolve(saved.task.workspace) !== task.workspace)) throw new Error('Explicit --task cannot change task_id or workspace.');
-  if (saved && ((task.limits.max_worker_turns !== null && saved.worker_turn_count >= task.limits.max_worker_turns) || (task.limits.max_minutes !== null && saved.elapsed_active_seconds >= task.limits.max_minutes * 60))) throw new Error('Cumulative user_limit reached; raise or remove the limit through explicit --task before resume.');
-  const stateFile = resolve(flags.get('--state') ?? resolve('runs', task.task_id, 'state.json'));
+  // Before exclusivity, a resume checkpoint supplies only the lock identity.
+  // Another owner may still update its status, contract or counters.
+  const initial = command === 'resume' ? new Store(resolve(text(flags.get('--state'), '--state'))).read() : undefined;
+  const initialTask = initial ? record(initial.task) : undefined;
+  const startingTask = command === 'start' ? taskInput(readJson(resolve(text(flags.get('--task'), '--task')))) : undefined;
+  const identity = initial ? { task_id: text(initial.task_id, 'task_id'), workspace: resolve(text(initialTask!.workspace, 'workspace')) } : startingTask!;
+  const stateFile = resolve(flags.get('--state') ?? resolve('runs', identity.task_id, 'state.json'));
   const store = new Store(stateFile);
-  store.lock(task, !!saved);
+  store.lock(identity, command === 'resume');
   try {
+    const saved = command === 'resume' ? store.read() : undefined;
+    if (saved && (saved.schema_version !== 1 || saved.status === 'DONE')) throw new Error('DONE cannot resume; saved state must use schema_version 1.');
+    const savedTask = saved ? taskInput(saved.task) : undefined;
+    if (saved && (saved.task_id !== identity.task_id || savedTask!.task_id !== identity.task_id || savedTask!.workspace !== identity.workspace)) throw new Error('Saved task identity changed before the supervisor lock was acquired.');
+    const task = saved && flags.has('--task') ? taskInput(readJson(resolve(flags.get('--task')!))) : savedTask ?? startingTask!;
+    if (saved && (saved.task_id !== task.task_id || savedTask!.workspace !== task.workspace)) throw new Error('Explicit --task cannot change task_id or workspace.');
+    if (saved && saved.status !== 'PAUSED' && (task.goal !== savedTask!.goal || task.authorization !== savedTask!.authorization)) throw new Error('Changing goal or authorization requires a durable PAUSED checkpoint first.');
+    if (saved) {
+      const limits = reachedLimits(task.limits, saved);
+      if (limits.turns || limits.time) throw new Error('Cumulative user_limit reached; raise or remove the limit through explicit --task before resume.');
+    }
     if (!saved && existsSync(stateFile)) throw new Error('Task state already exists; start cannot overwrite an existing task.');
     const fixturePath = flags.get('--test-fixture');
     const fixture = fixturePath ? record(readJson(resolve(fixturePath))) : undefined;

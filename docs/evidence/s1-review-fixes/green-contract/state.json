@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "task_id": "active-contract-change",
+  "task_version": 1,
+  "task": {
+    "schema_version": 1,
+    "task_id": "active-contract-change",
+    "workspace": "C:\\Users\\will\\.codex\\worktrees\\s1-redo-ticket25\\needs-forever\\runs\\ticket23\\active-contract-change-1793466557129\\workspace",
+    "goal": "Complete the goal.",
+    "acceptance": [
+      {
+        "id": "A1",
+        "text": "Accepted result."
+      }
+    ],
+    "authorization": "Local work only.",
+    "limits": {
+      "max_worker_turns": null,
+      "max_minutes": null
+    }
+  },
+  "worker_thread_id": "worker-from-server",
+  "status": "ACTIVE",
+  "phase": "RECOVERING",
+  "active_worker_turn_id": null,
+  "reviewing_turn_id": null,
+  "handled_turn_ids": [],
+  "pending_action": {
+    "delivery_id": "e8d3e61e-c272-4c8b-932e-77b46054de1c",
+    "source_turn_id": null,
+    "task_version": 1,
+    "message": "[supervisor:e8d3e61e-c272-4c8b-932e-77b46054de1c]\n{\"schema_version\":1,\"task_id\":\"active-contract-change\",\"workspace\":\"C:\\\\Users\\\\will\\\\.codex\\\\worktrees\\\\s1-redo-ticket25\\\\needs-forever\\\\runs\\\\ticket23\\\\active-contract-change-1793466557129\\\\workspace\",\"goal\":\"Complete the goal.\",\"acceptance\":[{\"id\":\"A1\",\"text\":\"Accepted result.\"}],\"authorization\":\"Local work only.\",\"limits\":{\"max_worker_turns\":null,\"max_minutes\":null}}",
+    "stage": "sent",
+    "target_turn_id": null
+  },
+  "retry": {
+    "kind": null,
+    "attempt": 0,
+    "next_at": null
+  },
+  "last_decision": null,
+  "worker_turn_count": 0,
+  "elapsed_active_seconds": 0.20400000000000001,
+  "updated_at": "2026-10-31T17:09:17.400Z",
+  "codex_version": "codex-cli 0.166.0",
+  "mode": "simulated",
+  "last_error": "app-server exited (0). Recovery remains an S3 responsibility."
+}

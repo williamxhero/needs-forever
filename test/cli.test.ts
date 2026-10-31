@@ -467,3 +467,19 @@ test('explicit resume reclaims only a dead supervisor lock and preserves checkpo
   assert.equal(state.worker_turn_count, 1);
   assert.ok(state.elapsed_active_seconds >= checkpoint.elapsed_active_seconds);
 });
+
+test('ACTIVE resume rejects changed goal or authorization before altering the saved contract', () => {
+  const fixture = setup('active-contract-change', { disconnect_on_send: true });
+  assert.equal(run(fixture.argv).status, 1);
+  const checkpoint = readFileSync(fixture.stateFile, 'utf8');
+  const trace = readFileSync(fixture.trace, 'utf8');
+  const original = json(fixture.taskFile);
+  for (const replacement of [{ ...original, goal: 'A different goal.' }, { ...original, authorization: 'Reduced permissions.' }]) {
+    writeFileSync(fixture.taskFile, JSON.stringify(replacement));
+    const resumed = run(['resume', '--state', fixture.stateFile, '--task', fixture.taskFile, '--test-fixture', fixture.fixture]);
+    assert.equal(resumed.status, 1);
+    assert.match(resumed.stderr, /durable PAUSED/);
+    assert.equal(readFileSync(fixture.stateFile, 'utf8'), checkpoint);
+    assert.equal(readFileSync(fixture.trace, 'utf8'), trace);
+  }
+});

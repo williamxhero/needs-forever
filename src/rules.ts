@@ -1,5 +1,12 @@
 import { record, text } from './types.js';
-import type { State } from './types.js';
+import type { State, Task } from './types.js';
+
+export function reachedLimits(limits: Task['limits'], usage: Pick<State, 'worker_turn_count' | 'elapsed_active_seconds'>): { turns: boolean; time: boolean } {
+  return {
+    turns: limits.max_worker_turns !== null && usage.worker_turn_count >= limits.max_worker_turns,
+    time: limits.max_minutes !== null && usage.elapsed_active_seconds >= limits.max_minutes * 60,
+  };
+}
 
 export interface WorkerEvent { type: 'started' | 'completed' | 'input'; thread_id: string; turn_id: string; status: string; client_id?: string; raw: unknown }
 export function normalize(method: string, params: unknown): WorkerEvent | null {

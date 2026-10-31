@@ -1,0 +1,56 @@
+{
+  "input": {
+    "snapshot_id": "c83bdc75-2fdf-4ef2-a95f-a8d9b829cf6f",
+    "task_id": "continue-twice",
+    "task_version": 1,
+    "worker_thread_id": "worker-from-server",
+    "worker_turn_id": "turn-2-from-server",
+    "task": {
+      "schema_version": 1,
+      "task_id": "continue-twice",
+      "workspace": "C:\\Users\\will\\.codex\\worktrees\\s1-redo-ticket25\\needs-forever\\runs\\ticket23\\continue-twice-1793466547539\\workspace",
+      "goal": "Complete the goal.",
+      "acceptance": [
+        {
+          "id": "A1",
+          "text": "Accepted result."
+        }
+      ],
+      "authorization": "Local work only.",
+      "limits": {
+        "max_worker_turns": null,
+        "max_minutes": null
+      }
+    },
+    "evidence": [
+      {
+        "id": "E1",
+        "type": "worker_terminal",
+        "value": {
+          "threadId": "worker-from-server",
+          "turn": {
+            "id": "turn-2-from-server",
+            "status": "completed",
+            "items": [
+              {
+                "type": "agentMessage",
+                "id": "answer-1",
+                "text": "Only fixture stage completed."
+              }
+            ]
+          }
+        }
+      }
+    ]
+  },
+  "raw_output": {
+    "action": "CONTINUE",
+    "reason": "Stage three remains.",
+    "evidence_ids": [
+      "E1"
+    ],
+    "next_message": "Build stage three.",
+    "external": null
+  },
+  "validation": "fixture-only"
+}

@@ -37,6 +37,8 @@ Ctrl+C first saves `PAUSED`, increments the task version, records ACTIVE time an
 
 `resume --state FILE` uses the saved task contract and original worker ID. It never rereads the original input file implicitly. Explicit `--task FILE` can update the contract while preserving task ID and workspace. Resume increments the version and retains cumulative worker turns and ACTIVE seconds. DONE cannot reopen. ACTIVE time is checkpointed every 100 ms while the process runs; a crash can lose the unfinished checkpoint interval. A live lock prevents resume; explicit resume can reclaim a matching task/state lock only after proving its recorded PID is absent. It never kills another supervisor. An ambiguous or unprovable lock remains an error.
 
+Resume rereads and validates the checkpoint after acquiring the task lock; the earlier read supplies only its lock identity. Changing the goal or authorization requires an already persisted PAUSED checkpoint. A limits-only update can resume an ACTIVE checkpoint under the existing safeguards.
+
 `max_worker_turns` stops before sending a round beyond the configured total. `max_minutes` stops at the cumulative ACTIVE duration, including judge/recovery time while this process runs. Reaching either limit saves `PAUSED/user_limit`; resume requires an explicit raised/removed limit. Both default to `null`.
 
 Resume can review a known completed turn or continue observing a known in-progress turn returned by `thread/resume`. An interrupted known turn permits a fresh input. Unknown sent deliveries and absent saved turns remain `ACTIVE/RECOVERING` with an explicit S3 reconciliation error and no resend. Full reconnect, paginated history reconciliation and crash windows remain S3 scope.

@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "task_id": "active-contract-change",
+  "task_version": 2,
+  "task": {
+    "schema_version": 1,
+    "task_id": "active-contract-change",
+    "workspace": "C:\\Users\\will\\.codex\\worktrees\\s1-redo-ticket25\\needs-forever\\runs\\ticket23\\active-contract-change-1793466406963\\workspace",
+    "goal": "A different goal.",
+    "acceptance": [
+      {
+        "id": "A1",
+        "text": "Accepted result."
+      }
+    ],
+    "authorization": "Local work only.",
+    "limits": {
+      "max_worker_turns": null,
+      "max_minutes": null
+    }
+  },
+  "worker_thread_id": "worker-from-server",
+  "status": "ACTIVE",
+  "phase": "RECOVERING",
+  "active_worker_turn_id": null,
+  "reviewing_turn_id": null,
+  "handled_turn_ids": [],
+  "pending_action": {
+    "delivery_id": "2935d46a-5745-47e5-9a0b-377d62a582e8",
+    "source_turn_id": null,
+    "task_version": 1,
+    "message": "[supervisor:2935d46a-5745-47e5-9a0b-377d62a582e8]\n{\"schema_version\":1,\"task_id\":\"active-contract-change\",\"workspace\":\"C:\\\\Users\\\\will\\\\.codex\\\\worktrees\\\\s1-redo-ticket25\\\\needs-forever\\\\runs\\\\ticket23\\\\active-contract-change-1793466406963\\\\workspace\",\"goal\":\"Complete the goal.\",\"acceptance\":[{\"id\":\"A1\",\"text\":\"Accepted result.\"}],\"authorization\":\"Local work only.\",\"limits\":{\"max_worker_turns\":null,\"max_minutes\":null}}",
+    "stage": "sent",
+    "target_turn_id": null
+  },
+  "retry": {
+    "kind": null,
+    "attempt": 0,
+    "next_at": null
+  },
+  "last_decision": null,
+  "worker_turn_count": 0,
+  "elapsed_active_seconds": 0.21500000000000002,
+  "updated_at": "2026-10-31T17:06:47.329Z",
+  "codex_version": "codex-cli 0.166.0",
+  "mode": "simulated",
+  "last_error": "Unknown sent delivery retained; S3 reconciliation required before any resend."
+}

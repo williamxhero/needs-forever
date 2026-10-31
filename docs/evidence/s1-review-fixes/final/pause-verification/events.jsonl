@@ -1,0 +1,14 @@
+{"at":"2026-10-31T17:09:12.104Z","type":"connection_verified","task_id":"pause-verification","task_version":1,"mode":"simulated","codex_version":"codex-cli 0.166.0","disabled_mcp":[],"server_process_id":29260}
+{"at":"2026-10-31T17:09:12.105Z","type":"worker_created","task_id":"pause-verification","task_version":1,"mode":"simulated","role":"worker","thread_id":"worker-from-server"}
+{"at":"2026-10-31T17:09:12.107Z","type":"send_prepared","task_id":"pause-verification","task_version":1,"mode":"simulated","delivery_id":"d10c9fba-ec63-405f-afdf-551ca71dcee4"}
+{"at":"2026-10-31T17:09:12.108Z","type":"send_attempted","task_id":"pause-verification","task_version":1,"mode":"simulated","delivery_id":"d10c9fba-ec63-405f-afdf-551ca71dcee4"}
+{"at":"2026-10-31T17:09:12.111Z","type":"send_confirmed","task_id":"pause-verification","task_version":1,"mode":"simulated","role":"worker","thread_id":"worker-from-server","turn_id":"first-turn-from-server","delivery_id":"d10c9fba-ec63-405f-afdf-551ca71dcee4","via":"response"}
+{"at":"2026-10-31T17:09:12.111Z","type":"worker_started","task_id":"pause-verification","task_version":1,"mode":"simulated","role":"worker","thread_id":"worker-from-server","turn_id":"first-turn-from-server","status":"inProgress","action":"observe"}
+{"at":"2026-10-31T17:09:12.112Z","type":"worker_input","task_id":"pause-verification","task_version":1,"mode":"simulated","role":"worker","thread_id":"worker-from-server","turn_id":"first-turn-from-server","status":"input","action":"observe"}
+{"at":"2026-10-31T17:09:12.112Z","type":"worker_completed","task_id":"pause-verification","task_version":1,"mode":"simulated","role":"worker","thread_id":"worker-from-server","turn_id":"first-turn-from-server","status":"completed","action":"judge"}
+{"at":"2026-10-31T17:09:12.113Z","type":"worker_output","task_id":"pause-verification","task_version":1,"mode":"simulated","role":"worker","thread_id":"worker-from-server","turn_id":"first-turn-from-server","text":"Only fixture stage completed."}
+{"at":"2026-10-31T17:09:12.115Z","type":"decision","task_id":"pause-verification","task_version":1,"mode":"simulated","role":"judge","thread_id":"worker-from-server","turn_id":"first-turn-from-server","decision":{"action":"DONE","reason":"Fixed fixture success.","evidence_ids":["E1"],"next_message":"","external":null}}
+{"at":"2026-10-31T17:09:12.117Z","type":"fixture_verification_started","task_id":"pause-verification","task_version":1,"mode":"simulated","worker_turn_id":"first-turn-from-server"}
+{"at":"2026-10-31T17:09:12.220Z","type":"paused","task_id":"pause-verification","task_version":2,"mode":"simulated","reason":"user","active_turn_id":null}
+{"at":"2026-10-31T17:09:12.221Z","type":"owned_calls_cancelled","task_id":"pause-verification","task_version":2,"mode":"simulated"}
+{"at":"2026-10-31T17:09:12.227Z","type":"stale_verification_result_ignored","task_id":"pause-verification","task_version":2,"mode":"simulated"}

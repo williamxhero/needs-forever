@@ -1,0 +1,12 @@
+{"at":"2026-10-31T17:09:11.562Z","type":"connection_verified","task_id":"pause-judge","task_version":1,"mode":"simulated","codex_version":"codex-cli 0.166.0","disabled_mcp":[],"server_process_id":24492}
+{"at":"2026-10-31T17:09:11.563Z","type":"worker_created","task_id":"pause-judge","task_version":1,"mode":"simulated","role":"worker","thread_id":"worker-from-server"}
+{"at":"2026-10-31T17:09:11.565Z","type":"send_prepared","task_id":"pause-judge","task_version":1,"mode":"simulated","delivery_id":"e5389c26-d08d-46ae-8dab-63aff8fbc6b1"}
+{"at":"2026-10-31T17:09:11.566Z","type":"send_attempted","task_id":"pause-judge","task_version":1,"mode":"simulated","delivery_id":"e5389c26-d08d-46ae-8dab-63aff8fbc6b1"}
+{"at":"2026-10-31T17:09:11.568Z","type":"send_confirmed","task_id":"pause-judge","task_version":1,"mode":"simulated","role":"worker","thread_id":"worker-from-server","turn_id":"first-turn-from-server","delivery_id":"e5389c26-d08d-46ae-8dab-63aff8fbc6b1","via":"response"}
+{"at":"2026-10-31T17:09:11.569Z","type":"worker_started","task_id":"pause-judge","task_version":1,"mode":"simulated","role":"worker","thread_id":"worker-from-server","turn_id":"first-turn-from-server","status":"inProgress","action":"observe"}
+{"at":"2026-10-31T17:09:11.569Z","type":"worker_input","task_id":"pause-judge","task_version":1,"mode":"simulated","role":"worker","thread_id":"worker-from-server","turn_id":"first-turn-from-server","status":"input","action":"observe"}
+{"at":"2026-10-31T17:09:11.569Z","type":"worker_completed","task_id":"pause-judge","task_version":1,"mode":"simulated","role":"worker","thread_id":"worker-from-server","turn_id":"first-turn-from-server","status":"completed","action":"judge"}
+{"at":"2026-10-31T17:09:11.569Z","type":"worker_output","task_id":"pause-judge","task_version":1,"mode":"simulated","role":"worker","thread_id":"worker-from-server","turn_id":"first-turn-from-server","text":"Only fixture stage completed."}
+{"at":"2026-10-31T17:09:11.658Z","type":"paused","task_id":"pause-judge","task_version":2,"mode":"simulated","reason":"user","active_turn_id":null}
+{"at":"2026-10-31T17:09:11.660Z","type":"owned_calls_cancelled","task_id":"pause-judge","task_version":2,"mode":"simulated"}
+{"at":"2026-10-31T17:09:11.828Z","type":"stale_judge_result_ignored","task_id":"pause-judge","task_version":2,"mode":"simulated","snapshot_id":"7707a3fb-085f-4b64-a2b4-fe863fb130ca"}

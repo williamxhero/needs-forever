@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "task_id": "pause-judge",
+  "task_version": 2,
+  "task": {
+    "schema_version": 1,
+    "task_id": "pause-judge",
+    "workspace": "C:\\Users\\will\\.codex\\worktrees\\s1-redo-ticket25\\needs-forever\\runs\\ticket23\\pause-judge-1793466551305\\workspace",
+    "goal": "Complete the goal.",
+    "acceptance": [
+      {
+        "id": "A1",
+        "text": "Accepted result."
+      }
+    ],
+    "authorization": "Local work only.",
+    "limits": {
+      "max_worker_turns": null,
+      "max_minutes": null
+    }
+  },
+  "worker_thread_id": "worker-from-server",
+  "status": "PAUSED",
+  "phase": "IDLE",
+  "active_worker_turn_id": null,
+  "reviewing_turn_id": "first-turn-from-server",
+  "handled_turn_ids": [],
+  "pending_action": null,
+  "retry": {
+    "kind": null,
+    "attempt": 0,
+    "next_at": null
+  },
+  "last_decision": null,
+  "worker_turn_count": 1,
+  "elapsed_active_seconds": 0.28700000000000003,
+  "updated_at": "2026-10-31T17:09:11.829Z",
+  "codex_version": "codex-cli 0.166.0",
+  "mode": "simulated",
+  "pause_reason": "user"
+}

@@ -1,0 +1,50 @@
+{
+  "input": {
+    "snapshot_id": "51779901-4636-4d36-b812-8e99a0619bb6",
+    "task_id": "crash-resume",
+    "task_version": 2,
+    "worker_thread_id": "worker-from-server",
+    "worker_turn_id": "first-turn-from-server",
+    "task": {
+      "schema_version": 1,
+      "task_id": "crash-resume",
+      "workspace": "C:\\Users\\will\\.codex\\worktrees\\s1-redo-ticket25\\needs-forever\\runs\\ticket23\\crash-resume-1793466556270\\workspace",
+      "goal": "Complete the goal.",
+      "acceptance": [
+        {
+          "id": "A1",
+          "text": "Accepted result."
+        }
+      ],
+      "authorization": "Local work only.",
+      "limits": {
+        "max_worker_turns": null,
+        "max_minutes": null
+      }
+    },
+    "evidence": [
+      {
+        "id": "E1",
+        "type": "worker_terminal",
+        "value": {
+          "threadId": "worker-from-server",
+          "turn": {
+            "id": "first-turn-from-server",
+            "status": "completed",
+            "items": []
+          }
+        }
+      }
+    ]
+  },
+  "raw_output": {
+    "action": "DONE",
+    "reason": "Recovered fixture history.",
+    "evidence_ids": [
+      "E1"
+    ],
+    "next_message": "",
+    "external": null
+  },
+  "validation": "fixture-only"
+}

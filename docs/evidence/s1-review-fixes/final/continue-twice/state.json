@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "task_id": "continue-twice",
+  "task_version": 1,
+  "task": {
+    "schema_version": 1,
+    "task_id": "continue-twice",
+    "workspace": "C:\\Users\\will\\.codex\\worktrees\\s1-redo-ticket25\\needs-forever\\runs\\ticket23\\continue-twice-1793466547539\\workspace",
+    "goal": "Complete the goal.",
+    "acceptance": [
+      {
+        "id": "A1",
+        "text": "Accepted result."
+      }
+    ],
+    "authorization": "Local work only.",
+    "limits": {
+      "max_worker_turns": null,
+      "max_minutes": null
+    }
+  },
+  "worker_thread_id": "worker-from-server",
+  "status": "DONE",
+  "phase": "IDLE",
+  "active_worker_turn_id": null,
+  "reviewing_turn_id": null,
+  "handled_turn_ids": [
+    "first-turn-from-server",
+    "turn-2-from-server",
+    "turn-3-from-server"
+  ],
+  "pending_action": null,
+  "retry": {
+    "kind": null,
+    "attempt": 0,
+    "next_at": null
+  },
+  "last_decision": {
+    "action": "DONE",
+    "reason": "All fixture stages are complete.",
+    "evidence_ids": [
+      "E1"
+    ],
+    "next_message": "",
+    "external": null
+  },
+  "worker_turn_count": 3,
+  "elapsed_active_seconds": 0.28400000000000003,
+  "updated_at": "2026-10-31T17:09:07.889Z",
+  "codex_version": "codex-cli 0.166.0",
+  "mode": "simulated"
+}

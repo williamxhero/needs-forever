@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "task_id": "pause-verification",
+  "task_version": 2,
+  "task": {
+    "schema_version": 1,
+    "task_id": "pause-verification",
+    "workspace": "C:\\Users\\will\\.codex\\worktrees\\s1-redo-ticket25\\needs-forever\\runs\\ticket23\\pause-verification-1793466551846\\workspace",
+    "goal": "Complete the goal.",
+    "acceptance": [
+      {
+        "id": "A1",
+        "text": "Accepted result."
+      }
+    ],
+    "authorization": "Local work only.",
+    "limits": {
+      "max_worker_turns": null,
+      "max_minutes": null
+    },
+    "verify": {
+      "argv": [
+        "fixture-verification"
+      ],
+      "timeout_seconds": 10,
+      "protected_files": []
+    }
+  },
+  "worker_thread_id": "worker-from-server",
+  "status": "PAUSED",
+  "phase": "IDLE",
+  "active_worker_turn_id": null,
+  "reviewing_turn_id": null,
+  "handled_turn_ids": [
+    "first-turn-from-server"
+  ],
+  "pending_action": null,
+  "retry": {
+    "kind": null,
+    "attempt": 0,
+    "next_at": null
+  },
+  "last_decision": {
+    "action": "DONE",
+    "reason": "Fixed fixture success.",
+    "evidence_ids": [
+      "E1"
+    ],
+    "next_message": "",
+    "external": null
+  },
+  "worker_turn_count": 1,
+  "elapsed_active_seconds": 0.3,
+  "updated_at": "2026-10-31T17:09:12.228Z",
+  "codex_version": "codex-cli 0.166.0",
+  "mode": "simulated",
+  "pause_reason": "user"
+}

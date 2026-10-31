@@ -9,7 +9,7 @@ export class Store {
   readonly directory: string;
   private readonly locks: { fd: number; path: string; token: string }[] = [];
   constructor(readonly path: string) { this.directory = dirname(path); }
-  lock(task: Task, recover = false): void {
+  lock(task: Pick<Task, 'task_id' | 'workspace'>, recover = false): void {
     mkdirSync(this.directory, { recursive: true });
     const canonicalWorkspace = realpathSync(task.workspace);
     const identity = JSON.stringify([process.platform === 'win32' ? canonicalWorkspace.toLowerCase() : canonicalWorkspace, task.task_id]);

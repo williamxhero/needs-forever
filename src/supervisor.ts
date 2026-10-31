@@ -9,7 +9,7 @@ import type { State, Snapshot } from './types.js';
 import { record, text } from './types.js';
 import { Store } from './store.js';
 import type { Judge } from './judge.js';
-import { normalize, selectAction, type WorkerEvent } from './rules.js';
+import { normalize, selectAction, reachedLimits, type WorkerEvent } from './rules.js';
 import { connect, type Rpc } from './transport.js';
 import { redact } from './redact.js';
 
@@ -86,7 +86,7 @@ export class Supervisor {
     const checkpoint = setInterval(() => {
       if (this.state.status !== 'ACTIVE') return;
       this.accrue();
-      if (this.state.task.limits.max_minutes !== null && this.state.elapsed_active_seconds >= this.state.task.limits.max_minutes * 60) this.pause('user_limit');
+      if (reachedLimits(this.state.task.limits, this.state).time) this.pause('user_limit');
       else this.save();
     }, 100);
     try {
@@ -227,7 +227,8 @@ export class Supervisor {
   private sendNext(message: string, sourceTurn: string | null): void {
     if (this.state.status !== 'ACTIVE' || this.state.active_worker_turn_id || this.state.reviewing_turn_id) throw new Error('Cannot send while a worker or judge is active.');
     this.accrue();
-    if ((this.state.task.limits.max_worker_turns !== null && this.state.worker_turn_count >= this.state.task.limits.max_worker_turns) || (this.state.task.limits.max_minutes !== null && this.state.elapsed_active_seconds >= this.state.task.limits.max_minutes * 60)) { this.pause('user_limit'); return; }
+    const limits = reachedLimits(this.state.task.limits, this.state);
+    if (limits.turns || limits.time) { this.pause('user_limit'); return; }
     const deliveryId = randomUUID();
     const fullMessage = `[supervisor:${deliveryId}]\n${message}`;
     this.state.pending_action = { delivery_id: deliveryId, source_turn_id: sourceTurn, task_version: this.state.task_version, message: fullMessage, stage: 'prepared', target_turn_id: null };
