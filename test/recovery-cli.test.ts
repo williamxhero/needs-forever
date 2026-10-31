@@ -132,6 +132,7 @@ test('periodic reconcile hydrates paginated history and compensates a missed com
   const run = fixture('periodic-paginated-reconcile', {
     hold_worker: true,
     reconcile_interval_ms: 20,
+    reconcile_turns: [{ id: 'newer-unrelated-turn', status: 'completed', items: [] }],
     turns_backwards_cursor: '0',
     turn_pages: [{ data: [{ id: 'first-turn-from-server', status: 'completed', items: [] }], nextCursor: null }],
   });

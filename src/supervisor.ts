@@ -245,13 +245,16 @@ export class Supervisor {
   }
   private async hydrateWorkerTurns(rpc: Rpc, resumed: ThreadResumeResponse): Promise<ThreadResumeResponse> {
     const cursor = resumed.turnsBackwardsCursor;
-    if (resumed.thread.turns.length || !cursor) return resumed;
+    if (!cursor) return resumed;
     const turns = [...resumed.thread.turns];
     let nextCursor: string | null = cursor;
+    const seenCursors = new Set<string>();
     while (nextCursor) {
+      if (seenCursors.has(nextCursor)) throw new Error('Paginated worker history cursor repeated.');
+      seenCursors.add(nextCursor);
       const page: TurnsListResponse = await rpc.request<TurnsListResponse>('thread/turns/list', { threadId: this.state.worker_thread_id, cursor: nextCursor, sortDirection: 'desc', limit: 100, itemsView: 'full' });
       if (!Array.isArray(page.data) || (page.nextCursor !== null && typeof page.nextCursor !== 'string')) throw new Error('Invalid paginated worker history response.');
-      turns.push(...page.data);
+      for (const turn of page.data) if (!turns.some((known) => known.id === turn.id)) turns.push(turn);
       nextCursor = page.nextCursor;
     }
     return { ...resumed, thread: { ...resumed.thread, turns } };
