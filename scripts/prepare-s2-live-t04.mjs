@@ -1,0 +1,12 @@
+import { readFileSync, writeFileSync } from 'node:fs';
+const root = process.argv[2];
+const workspace = `${root}/workspace`;
+const verify = `import assert from 'node:assert/strict';\nimport { existsSync, readFileSync } from 'node:fs';\nif (!existsSync('repair.flag')) { console.error('INJECTED_FIRST_VERIFICATION_FAILURE: create repair.flag only after this evidence returns to the worker.'); process.exitCode = 41; }\nelse {\n  const read = (name) => JSON.parse(readFileSync(name, 'utf8'));\n  assert.equal(readFileSync('route-attempted.txt', 'utf8'), 'required-first-route-failed');\n  assert.deepEqual(read('stage1.json'), { stage: 1, value: 'alpha' });\n  assert.deepEqual(read('stage2.json'), { stage: 2, value: 'alpha-beta' });\n  assert.deepEqual(read('final.json'), { stage: 3, value: 'alpha-beta-gamma' });\n  console.log('T04 controlled verifier PASS after worker repair.flag.');\n}`;
+writeFileSync(`${workspace}/verify.mjs`, verify);
+const taskFile = `${root}/task.json`;
+const task = JSON.parse(readFileSync(taskFile, 'utf8'));
+task.goal = 'Complete the three authorized stages in this isolated workspace: run unavailable-route.mjs and preserve its failed marker, write exact stage1.json, stage2.json, and final.json. Preserve all prior files and do not modify verify.mjs or unavailable-route.mjs.';
+task.acceptance = [{ id: 'A1', text: 'The failed route marker exists and stage1.json, stage2.json, and final.json contain their exact required values.' }];
+task.authorization += ' The worker MUST NOT execute verify.mjs; the supervisor alone runs the fixed verifier. After the supervisor returns independent verification failure evidence, create the requested local repair.flag and continue; do not create repair.flag before that feedback and do not modify verify.mjs.';
+writeFileSync(taskFile, `${JSON.stringify(task, null, 2)}\n`);
+console.log(JSON.stringify({ root, workspace, taskFile, verifier: 'first invocation exit 7; subsequent invocation validates all stages' }));

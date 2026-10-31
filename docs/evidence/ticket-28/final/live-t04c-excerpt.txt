@@ -1,0 +1,5 @@
+codex_version=codex-cli 0.166.0
+worker_thread_id=see runs/ticket28-live-t04c/state.json
+controlled verifier: first execution exitCode=41, stderr/stdout reported INJECTED_FIRST_VERIFICATION_FAILURE; repair.flag then created; second execution exitCode=0
+protected files unchanged; final fixed verifier PASS
+note: the live worker performed the injected verifier calls itself before the supervisor's DONE verification boundary, so this is controlled verifier evidence but not a claim of supervisor-mediated first-DONE rejection.
