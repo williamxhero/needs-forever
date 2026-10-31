@@ -178,7 +178,18 @@ The complete source `runs/ticket26` was backed up: 1220 files, 7,804,606 bytes.
 Source/root were clean and the baseline range diff check passed. Receipt:
 `docs/delivery/ticket26-merger.json`. Live AI acceptance remains not_run.
 
-Ticket #27 now starts in its own managed worktree from verified S2 integration.
-Its scope is fixed independent verification, protected baselines and failure
-feedback; #28 request handling/live exit remains unstarted. All S2 tickets and
-#21 stay OPEN until the entire SPEC delivery gate is satisfied.
+Ticket #27 was independently integrated at `3a5228571e4683644e358e0966a5b524bb77acca`;
+merger receipt commit is `03bc0a9398a678df72008dc61d3936fb472003b5`.
+The merger rebuilt and ran 48/48 simulated tests, including ten verifier cases,
+audited 119 generated protocol files and 97 samples without unexplained byte
+differences, and reran the captured demo's actual Node verifier successfully.
+Original ignored runs were backed up: 405 files / 1,581,119 bytes for ticket27,
+and 18 files / 85,443 bytes for its demo. Range diff check and both worktree
+cleanliness checks passed. See `docs/delivery/ticket27-merger.json`.
+
+Ticket #28 now starts in its own managed worktree from `03bc0a9`, after #27's
+independent integration. Its scope is deterministic request handling and actual
+live T01-T05 S2 exit evidence. The #27 demo uses actual Node route/verifier
+subprocesses but simulated AI/protocol; it is not live acceptance. All S2 tickets
+and #21 stay OPEN until the entire SPEC delivery gate is satisfied. S3 remains
+unstarted.
