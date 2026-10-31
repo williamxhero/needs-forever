@@ -217,3 +217,7 @@ stage2/final in the isolated workspace. Worker and judge IDs, event sequences,
 snapshots and raw outputs are retained in the ticket evidence and ignored raw
 backups. This proves protocol refusal and valid waiting behavior, but does not
 prove T01-T05. #28 and #21 remain OPEN; S2 cannot enter main delivery or S3.
+
+## T04 live gate completed
+
+The fresh isolated run `runs/ticket28-live-t04i` supplied the required supervisor-mediated sequence: the real judge returned `DONE`, the fixed verifier exited 41 with `INJECTED_FIRST_VERIFICATION_FAILURE`, the failure evidence was sent to the same worker, the worker created `repair.flag`, the judge returned `DONE` again, and the fixed verifier exited 0. The final state is `DONE` with unchanged protected files. Raw evidence is backed up under `.scratch/new-workflow/evidence/ticket28-raw/ticket28-live-t04i`; the concise receipt is `docs/evidence/ticket-28/final/live-t04i-excerpt.txt`.

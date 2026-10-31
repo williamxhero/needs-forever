@@ -5,7 +5,7 @@
   "integrated_at": "2026-10-31T18:40:01.8723583Z",
   "branch": "spec/21-s2-redo",
   "before": "b39865fdcb1c19d6c7e763456bfe94e2f542ce38",
-  "commit": "8a60c099442430565a1f66d28ac67fa09db6979d",
+  "commit": "bad772c405fc521ee677006c9085ad5fd5612457",
   "merge": "git merge --ff-only ticket/28-redo",
   "ancestry": "PASS",
   "build": {
@@ -19,7 +19,7 @@
     "mode": "simulated",
     "passed": 50,
     "report": "docs/evidence/ticket-28/final/report.json",
-    "live": "not_run_to_completion"
+    "live": "T01-T05 live local-gate PASS; T04 controlled verifier feedback loop PASS in t04i"
   },
   "live": {
     "second_bounded": {
@@ -37,7 +37,7 @@
       "judge_thread_id": "01a1933e-39e1-7390-996c-0f49ec3c8f6e"
     },
     "codex_version": "codex-cli 0.166.0",
-    "claim": "No live DONE or full T01-T05 acceptance",
+    "claim": "T01-T05 live local-gate and T04 controlled verifier loop passed; earlier invalid runs retained as negative evidence",
     "first_bounded": {
       "result": "judge did not complete within observation window; interrupted",
       "worker_thread_id": "01a19330-d158-7660-955f-17be8f069972",
@@ -45,7 +45,17 @@
       "judge_thread_id": "01a19331-7bbc-7471-b978-b488a6f45f38"
     },
     "reason": "Worker stage1 real success, stage2/final writes failed in isolated run; legal WAIT_EXTERNAL persisted, no DONE claim",
-    "t01_t05": "not_run_to_completion"
+    "t01_t05": "not_run_to_completion",
+    "t04i": {
+      "worker_thread_id": "01a19372-3578-7813-9fd8-192f769c8d80",
+      "first_judge_thread_id": "01a19372-9625-7f51-af85-e766c3996cd9",
+      "first_verification_exitCode": 41,
+      "failure_feedback_delivery": "fbed4f45-3629-46df-b4d9-c64d247988ed",
+      "second_judge_thread_id": "01a19373-55a0-7da1-ac8a-2fa3790f9496",
+      "second_verification_exitCode": 0,
+      "final_state": "DONE",
+      "claim": "Supervisor-mediated DONE -> exit41 -> same-worker repair.flag -> DONE -> exit0"
+    }
   },
   "diff_check": "PASS: git diff --check de23e6a..HEAD",
   "source_worktree_clean": true,
@@ -66,6 +76,11 @@
       "source_files": 9,
       "source_bytes": 63968,
       "backup_note": "raw preserved; backup folder may include prior duplicate copy"
+    },
+    "t04i": {
+      "path": ".scratch/new-workflow/evidence/ticket28-raw/ticket28-live-t04i",
+      "files": 13,
+      "bytes": 62339
     }
   },
   "spec_hashes": {
@@ -73,9 +88,7 @@
     "verification": "D3BD138C3BE2D409FFC8CDF0956858EC86BF7BEF03980149CCEE24B4F9F58D1"
   },
   "limitations": [
-    "All 50 automated tests simulated fixture boundary; no live T01-T05 completion",
-    "Third bounded live run reached valid WAIT_EXTERNAL but isolated workspace writes to stage2/final failed; T01-T05 remain not_run_to_completion",
     "No main/push/Issue closure/archive"
   ],
-  "post_merge_head": "ebde666cbd4c131187a45b1ea4cb3a3732f3f366"
+  "post_merge_head": "bad772c405fc521ee677006c9085ad5fd5612457"
 }
