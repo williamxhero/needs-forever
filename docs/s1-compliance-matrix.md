@@ -9,13 +9,13 @@ Earlier implementation tests are not evidence for this delivery.
 | Exact installed protocol, initialization, matched request IDs | #23 | Codex 0.166.0 generated types compared by merger; recorded fixture wire trace | PASS provenance and simulated wire audit |
 | Per-process isolation and explicit worker sandbox/approval | #23 | Effective-config no-model live preflight; returned worker policy and rejection of expanded sandbox in CLI fixture | PASS simulated worker; no-model live config probe only |
 | Atomic state, append-only events, snapshots, summary, task lock | #23 | Captured public output files, concurrent CLI exclusion, Windows rename correction; merger rerun | PASS simulated at `7671cd2` |
-| T01 same-worker continuation | #24 | Confirmed next turn from actual fake-server response/event | not_run |
-| T02 two consecutive premature completions | #24 | Two decisions and two distinct confirmed turns, one worker ID | not_run |
-| Pure fixed rules and one sendNext path | #24 | Source inspection plus public continuation evidence | not_run |
-| Prepared before sending; correlation ID; confirmed turn ID | #24 | Protocol boundary inspects already persisted action | not_run |
-| T05 stable DONE, no re-opening | #24 | Repeated terminal notification after fixed valid DONE | not_run |
-| T07 in-flight/already-handled dedupe, stale/foreign events | #24 | Fake-server duplicate, out-of-order and foreign-thread injections | not_run |
-| Unknown delivery retained, no blind resend | #24/#25 | Lost start response and checkpoint resume; no duplicate turn/start | not_run |
+| T01 same-worker continuation | #24 | `docs/evidence/ticket-24/`, independent receipt `docs/delivery/ticket24-merger.json` | PASS simulated |
+| T02 two consecutive premature completions | #24 | Two CONTINUE decisions and three server-confirmed turns in one worker | PASS simulated |
+| Pure fixed rules and one sendNext path | #24 | Rules/controller source plus public continuation evidence | PASS simulated; S3 error recovery pending |
+| Prepared before sending; correlation ID; confirmed turn ID | #24 | Fixture checks persisted full action before wire send; started+clientId also works without response | PASS simulated |
+| T05 stable DONE, no re-opening | #24/#25 | Repeated terminal notification after fixed valid DONE; explicit resume refusal remains #25 | PASS simulated duplicates; resume not_run |
+| T07 in-flight/already-handled dedupe, stale/foreign events | #24/#25 | Duplicate/out-of-order/foreign injections and late old-delivery failure; pause-version gate remains #25 | PASS simulated notifications; pause not_run |
+| Unknown delivery retained, no blind resend | #24/#25 | Lost start response preserves sent action and RECOVERING, one wire send; checkpoint resume remains #25 | PASS simulated disconnect; resume not_run |
 | T08 pause during worker, fixed judge, verification fixture | #25 | Three simulated CLI runs, cancellation and late-result assertions | not_run |
 | Exact original worker ID/task on explicit resume | #25 | Modified input source ignored unless --task is explicit | not_run |
 | Task version, ACTIVE and expected-turn asynchronous gates | #25 | Late judge, verification, recovery and send confirmation injections | not_run |

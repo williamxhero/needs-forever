@@ -1,0 +1,42 @@
+{
+  "current_spec": 20,
+  "ticket": 24,
+  "mechanism": "Loaded installed implement-spec-to-done SKILL.md and executed merger stage",
+  "integrated_at": "2026-10-31T16:38:46.1356683Z",
+  "branch": "spec/20-s1-redo",
+  "before": "dc22d41017a93c4422c89ef4f34ce07bea0238f9",
+  "tested_commit": "b7a9a3a7bb27952e956831320d392747ba757fa5",
+  "commit": "b03b49eccfb942e31da5af2ce11b082aaf364477",
+  "merge": "git merge --ff-only ticket/24-redo",
+  "ancestry": "PASS",
+  "npm_test": {
+    "subsequent_commit": "Evidence LF/trailing-whitespace normalization and explanatory README only; runtime/tests unchanged",
+    "exit_code": 0,
+    "mode": "simulated",
+    "failed": 0,
+    "passed": 14
+  },
+  "diff_check": "PASS: git diff --check dc22d41..HEAD",
+  "source_worktree_clean": true,
+  "integration_worktree_clean": true,
+  "sample_hashes": {
+    "files": 14,
+    "source": "runs/ticket24/demo-1793464356278",
+    "mismatches": 0
+  },
+  "preserved_runs": {
+    "ticket24_bytes": 29704,
+    "path": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\new-workflow\\evidence\\ticket24-raw",
+    "ticket24_files": 14,
+    "ticket23_test_bytes": 779967,
+    "ticket23_test_files": 611,
+    "original_CRLF_logs": "tracked-evidence-before-whitespace-fix"
+  },
+  "resolved_gate_failure": "Initial range diffcheck returned 2 for CRLF/trailing whitespace in evidence logs; implementer b03b49e normalized logs, range gate now passes",
+  "limitations": [
+    "Windows EPERM holding process not identified; five-second jitter retry preserves old checkpoint, permanent denial remains failure",
+    "S1 ticket25 pause/resume/cumulative-limit gate still pending",
+    "S2 real judge and verification and S3 recovery remain unverified"
+  ],
+  "no_main_push_cleanup_or_issue_close": true
+}

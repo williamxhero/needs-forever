@@ -72,8 +72,8 @@ simulated, live, and not_run.
 | Ticket | Behavior | Blocked by | Status |
 | --- | --- | --- | --- |
 | #23 | Start a task and query durable execution state | None | Integrated; S1 delivery gate pending |
-| #24 | Same-thread continuation, confirmed sending, stable terminal state | #23 | In progress |
-| #25 | Pause, explicit resume, cumulative limits and S1 exit acceptance | #24 | Not started |
+| #24 | Same-thread continuation, confirmed sending, stable terminal state | #23 | Integrated; S1 delivery gate pending |
+| #25 | Pause, explicit resume, cumulative limits and S1 exit acceptance | #24 | In progress |
 
 All three tickets are native sub-issues of #20, carry `ready-for-agent`, and
 have native blocked-by relationships. Published bodies were uploaded from UTF-8
@@ -114,7 +114,20 @@ files were copied to `.scratch/new-workflow/evidence/ticket23-raw/ticket23`
 before any future worktree cleanup. Tracked evidence is under
 `docs/evidence/ticket-23/`.
 
-Ticket #24 starts from that verified integration tip in its own managed
-worktree and branch `ticket/24-redo`. #25 remains unstarted. Earlier test counts
-and live probes are not reused as fresh acceptance passes. No S1, S2, S3, or
-total SPEC is complete; no implementation Issue has been closed.
+Ticket #24 was independently merged at
+`b03b49eccfb942e31da5af2ce11b082aaf364477`. The merger ran 14/14 simulated
+tests on runtime commit `b7a9a3a`; the final commit only normalizes evidence
+text and documents that normalization. The first range diff check failed on
+CRLF/trailing whitespace in recorded logs; after that correction,
+`git diff --check dc22d41..HEAD` passed. Both worktrees were clean and all
+14 representative sample files matched the source demo. Raw runs and the
+original log bytes are preserved under `.scratch/new-workflow/evidence/`.
+Windows rename contention recurred; the implementation preserves the prior
+checkpoint while retrying the same rename for at most five seconds with jitter.
+The process holding the file was not identified; complete elimination of
+Windows sharing contention is not claimed.
+
+Ticket #25 starts from that verified tip in its own managed worktree and branch
+`ticket/25-redo`. Earlier test counts and live probes are not reused as fresh
+acceptance passes. No S1, S2, S3, or total SPEC is complete; no implementation
+Issue has been closed.

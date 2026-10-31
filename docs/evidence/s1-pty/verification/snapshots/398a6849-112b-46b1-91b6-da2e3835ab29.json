@@ -1,0 +1,63 @@
+{
+  "input": {
+    "snapshot_id": "398a6849-112b-46b1-91b6-da2e3835ab29",
+    "task_id": "pty-verification",
+    "task_version": 1,
+    "worker_thread_id": "worker-from-server",
+    "worker_turn_id": "first-turn-from-server",
+    "task": {
+      "schema_version": 1,
+      "task_id": "pty-verification",
+      "workspace": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\new-workflow\\pty\\verification\\workspace",
+      "goal": "Check manual Ctrl+C at a simulated boundary.",
+      "acceptance": [
+        {
+          "id": "A1",
+          "text": "PAUSED wins before cancellation."
+        }
+      ],
+      "authorization": "Only the isolated fixture.",
+      "limits": {
+        "max_worker_turns": null,
+        "max_minutes": null
+      },
+      "verify": {
+        "argv": [
+          "fixture-verification"
+        ],
+        "timeout_seconds": 180,
+        "protected_files": []
+      }
+    },
+    "evidence": [
+      {
+        "id": "E1",
+        "type": "worker_terminal",
+        "value": {
+          "threadId": "worker-from-server",
+          "turn": {
+            "id": "first-turn-from-server",
+            "status": "completed",
+            "items": [
+              {
+                "type": "agentMessage",
+                "id": "answer-1",
+                "text": "Only fixture stage completed."
+              }
+            ]
+          }
+        }
+      }
+    ]
+  },
+  "raw_output": {
+    "action": "DONE",
+    "reason": "Fixed simulated success.",
+    "evidence_ids": [
+      "E1"
+    ],
+    "next_message": "",
+    "external": null
+  },
+  "validation": "fixture-only"
+}

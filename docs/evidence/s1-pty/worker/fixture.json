@@ -1,0 +1,18 @@
+{
+  "app_server_argv": [
+    "C:\\Program Files\\nodejs\\node.exe",
+    "C:\\Users\\will\\.codex\\worktrees\\s1-redo-ticket25\\needs-forever\\test\\fixtures\\app-server.mjs",
+    "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\new-workflow\\pty\\worker\\scenario.json"
+  ],
+  "judge_delay_ms": 0,
+  "simulate_verification": false,
+  "judge": {
+    "action": "DONE",
+    "reason": "Fixed simulated success.",
+    "evidence_ids": [
+      "E1"
+    ],
+    "next_message": "",
+    "external": null
+  }
+}

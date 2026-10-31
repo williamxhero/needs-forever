@@ -1,0 +1,48 @@
+{
+  "input": {
+    "snapshot_id": "518a241e-6bf7-4e14-a1c5-c8c727ee1fb1",
+    "task_id": "pty-judge",
+    "task_version": 1,
+    "worker_thread_id": "worker-from-server",
+    "worker_turn_id": "first-turn-from-server",
+    "task": {
+      "schema_version": 1,
+      "task_id": "pty-judge",
+      "workspace": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\new-workflow\\pty\\judge\\workspace",
+      "goal": "Check manual Ctrl+C at a simulated boundary.",
+      "acceptance": [
+        {
+          "id": "A1",
+          "text": "PAUSED wins before cancellation."
+        }
+      ],
+      "authorization": "Only the isolated fixture.",
+      "limits": {
+        "max_worker_turns": null,
+        "max_minutes": null
+      }
+    },
+    "evidence": [
+      {
+        "id": "E1",
+        "type": "worker_terminal",
+        "value": {
+          "threadId": "worker-from-server",
+          "turn": {
+            "id": "first-turn-from-server",
+            "status": "completed",
+            "items": [
+              {
+                "type": "agentMessage",
+                "id": "answer-1",
+                "text": "Only fixture stage completed."
+              }
+            ]
+          }
+        }
+      }
+    ]
+  },
+  "raw_output": null,
+  "validation": "pending"
+}
