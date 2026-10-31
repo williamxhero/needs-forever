@@ -1,0 +1,52 @@
+{
+  "kind": "environment-capability-only",
+  "at": "2026-10-31T17:23:27.227Z",
+  "workspace": "C:\\Users\\will\\AppData\\Local\\Temp\\needs-forever-s2-exec-BuR971",
+  "node": "C:\\Program Files\\nodejs\\node.exe",
+  "baseline": {
+    "exitCode": 7,
+    "stdout": "S2_BUFFERED_OK\n",
+    "stderr": "S2_STDERR_OK\n"
+  },
+  "cancellation": {
+    "terminate": {
+      "error": "app-server RPC failed (-32600)."
+    },
+    "final": {
+      "error": "post-terminate command observation timeout"
+    },
+    "fallback": "close owned app-server"
+  },
+  "app_server_exit": {
+    "exitCode": null,
+    "signalCode": "SIGTERM",
+    "pid": 33688,
+    "still_alive": false,
+    "os_error": "ESRCH"
+  },
+  "raw_command_responses": [
+    {
+      "id": 3,
+      "result": {
+        "exitCode": 7,
+        "stdout": "S2_BUFFERED_OK\n",
+        "stderr": "S2_STDERR_OK\n"
+      }
+    },
+    {
+      "error": {
+        "code": -32600,
+        "message": "command/exec/write, command/exec/terminate, and command/exec/resize are not supported for windows sandbox processes"
+      },
+      "id": 5
+    }
+  ],
+  "version": "codex-cli 0.166.0",
+  "disabled_mcp": [
+    "node_repl",
+    "openaiDeveloperDocs",
+    "mempalace",
+    "mobile-mcp"
+  ],
+  "app_server_pid": 33688
+}

@@ -1,0 +1,37 @@
+{
+  "kind": "environment-capability-only",
+  "at": "2026-10-31T17:24:34.642Z",
+  "workspace": "C:\\Users\\will\\AppData\\Local\\Temp\\needs-forever-s2-cancel-a84sYh",
+  "version": "codex-cli 0.166.0",
+  "disabled_mcp": [
+    "openaiDeveloperDocs",
+    "node_repl",
+    "mempalace",
+    "mobile-mcp"
+  ],
+  "server_pid": 31064,
+  "raw": [
+    {
+      "error": {
+        "code": -32600,
+        "message": "command/exec/write, command/exec/terminate, and command/exec/resize are not supported for windows sandbox processes"
+      },
+      "id": 4
+    }
+  ],
+  "command_pid": 35336,
+  "command_running_before_terminate": true,
+  "terminate": {
+    "error": "app-server RPC failed (-32600)."
+  },
+  "command_running_after_terminate": true,
+  "server_exit": {
+    "exitCode": null,
+    "signalCode": "SIGTERM",
+    "alive": false
+  },
+  "command_alive_after_owned_server_close": false,
+  "original_rpc_after_close": {
+    "error": "app-server exited (null). Recovery remains an S3 responsibility."
+  }
+}
