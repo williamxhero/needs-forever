@@ -94,8 +94,15 @@ async function main(): Promise<void> {
     if (typeof judgeDelay !== 'number' || !Number.isFinite(judgeDelay) || judgeDelay < 0) throw new Error('Fixture judge_delay_ms must be a nonnegative number.');
     const judgeTimeout = fixture?.judge_timeout_ms ?? 120_000;
     if (typeof judgeTimeout !== 'number' || !Number.isFinite(judgeTimeout) || judgeTimeout <= 0) throw new Error('Fixture judge_timeout_ms must be positive.');
-    const judge = fixture && fixture.real_judge !== true ? new FixtureJudge(fixture.judge as Decision | Decision[], judgeDelay, fixture.judge_ignores_cancellation === true) : new AppServerJudge(judgeTimeout);
-    const supervisor = new Supervisor(state, store, judge, fixture ? { simulate_verification: fixture.simulate_verification === true } : undefined);
+    const judge = fixture && fixture.real_judge !== true ? new FixtureJudge(fixture.judge as Decision | Decision[], judgeDelay, fixture.judge_ignores_cancellation === true, Array.isArray(fixture.judge_failures) ? fixture.judge_failures : undefined) : new AppServerJudge(judgeTimeout);
+    const recoveryDelays = fixture?.recovery_delays_ms;
+    if (recoveryDelays !== undefined && (!Array.isArray(recoveryDelays) || recoveryDelays.some((value) => typeof value !== 'number' || !Number.isFinite(value) || value < 0))) throw new Error('Fixture recovery_delays_ms must be a nonnegative number array.');
+    const supervisorOptions = fixture ? {
+      simulate_verification: fixture.simulate_verification === true,
+      recovery_enabled: fixture.recovery_enabled === true,
+      ...(recoveryDelays === undefined ? {} : { recovery_delays_ms: recoveryDelays as number[] }),
+    } : undefined;
+    const supervisor = new Supervisor(state, store, judge, supervisorOptions);
     const pause = () => supervisor.pause();
     process.on('SIGINT', pause);
     try { await supervisor.start(commandArgv, !!saved); } finally { process.off('SIGINT', pause); }

@@ -46,6 +46,8 @@ export interface State {
   pause_reason?: 'user' | 'user_limit';
   judge_thread_ids?: string[];
   protected_baseline?: { path: string; sha256: string; content_base64: string }[];
+  recovery_failures?: { signature: string; kind: string; count: number; message: string; instruction: string; at: string }[];
+  recovery_condition?: { kind: string; message: string; resume_when: string };
 }
 export interface Snapshot {
   snapshot_id: string;

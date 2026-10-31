@@ -15,6 +15,7 @@ import { normalize, selectAction, reachedLimits, type WorkerEvent } from './rule
 import { connect, RpcServerError, type Rpc } from './transport.js';
 import { redact } from './redact.js';
 import { buildSnapshot } from './snapshot.js';
+import { classifyRecoveryError, nextBackoff, recordRecoveryFailure } from './recovery.js';
 
 export class Supervisor {
   private rpc: Rpc | undefined;
@@ -25,7 +26,66 @@ export class Supervisor {
   private activeCheckpoint = 0;
   private cancellation: Promise<void> | undefined;
   private readonly abort = new AbortController();
-  constructor(private readonly state: State, private readonly store: Store, private readonly judge: Judge, private readonly fixture?: { simulate_verification?: boolean }) {}
+  constructor(private readonly state: State, private readonly store: Store, private readonly judge: Judge, private readonly fixture?: { simulate_verification?: boolean; recovery_enabled?: boolean; recovery_delays_ms?: number[] }) {}
+
+  private async judgeWithRecovery(snapshot: Snapshot): Promise<import('./types.js').Decision | null> {
+    const enabled = this.fixture?.recovery_enabled === true || this.fixture?.recovery_delays_ms !== undefined || this.fixture === undefined;
+    while (this.state.status === 'ACTIVE') {
+      try {
+        const decision = await this.judge.judge(snapshot, this.abort.signal);
+        this.state.retry = { kind: null, attempt: 0, next_at: null };
+        this.save();
+        return decision;
+      } catch (error) {
+        if (this.state.status !== 'ACTIVE') {
+          this.store.event(this.state, 'stale_judge_result_ignored', { snapshot_id: snapshot.snapshot_id });
+          return null;
+        }
+        if (!enabled) throw error;
+        const classification = classifyRecoveryError(error);
+        if (this.judge.rawOutput !== undefined) this.store.snapshot(snapshot, this.judge.rawOutput, 'invalid');
+        this.state.recovery_failures = recordRecoveryFailure(this.state.recovery_failures as import('./recovery.js').RecoveryFailure[] | undefined ?? [], error);
+        if (classification.wait_external) {
+          const resumeWhen = classification.resume_when ?? 'Resolve the external condition, then explicitly resume the task.';
+          this.state.last_error = classification.message;
+          this.state.recovery_condition = { kind: classification.kind, message: classification.message, resume_when: resumeWhen };
+          this.state.status = 'WAIT_EXTERNAL';
+          this.state.phase = 'IDLE';
+          this.state.reviewing_turn_id = null;
+          this.state.pending_action = null;
+          this.state.retry = { kind: null, attempt: 0, next_at: null };
+          this.save();
+          this.store.event(this.state, 'external_wait_required', { kind: classification.kind, error: classification.message, resume_when: resumeWhen });
+          console.log(`WAIT_EXTERNAL: ${classification.message}; resume when ${resumeWhen}`);
+          return null;
+        }
+        const attempt = this.state.retry.attempt + 1;
+        const configured = this.fixture?.recovery_delays_ms;
+        const backoff = nextBackoff(attempt);
+        const delayMs = configured?.[Math.min(attempt - 1, configured.length - 1)] ?? backoff.delay_seconds * 1000;
+        const nextAt = new Date(Date.now() + delayMs).toISOString();
+        this.state.last_error = classification.message;
+        this.state.phase = 'RECOVERING';
+        this.state.retry = { kind: classification.kind, attempt, next_at: nextAt };
+        const latest = this.state.recovery_failures.at(-1)!;
+        this.store.event(this.state, 'recovery_retry_scheduled', {
+          kind: classification.kind,
+          error: classification.message,
+          attempt,
+          next_at: nextAt,
+          delay_seconds: delayMs / 1000,
+          instruction: latest.instruction,
+        });
+        this.save();
+        console.log(`RECOVERING: ${classification.kind}; attempt ${attempt}; retry at ${nextAt}; ${latest.instruction}`);
+        await new Promise<void>((resolve_) => setTimeout(resolve_, delayMs));
+        if (this.state.status !== 'ACTIVE' || this.abort.signal.aborted) return null;
+        this.state.phase = 'JUDGE';
+        this.save();
+      }
+    }
+    return null;
+  }
   private accrue(): void {
     const now = Date.now();
     if (this.activeCheckpoint && this.state.status === 'ACTIVE') this.state.elapsed_active_seconds += (now - this.activeCheckpoint) / 1000;
@@ -250,12 +310,15 @@ export class Supervisor {
         const snapshot: Snapshot = this.judge.rawOutput === undefined ? { snapshot_id: randomUUID(), task_id: this.state.task_id, task_version: this.state.task_version, worker_thread_id: this.state.worker_thread_id!, worker_turn_id: event.turn_id, task: this.state.task, evidence: [{ id: 'E1', type: 'worker_terminal', value: redact(event.raw) }] } : buildSnapshot(this.state, event.turn_id, this.store.events());
         this.store.snapshot(snapshot, null);
         let decision;
-        try { decision = await this.judge.judge(snapshot, this.abort.signal); }
-        catch (error) {
+        try {
+          decision = await this.judgeWithRecovery(snapshot);
+          if (this.judge.rawOutput !== undefined && decision === null && this.state.status === 'ACTIVE') this.store.snapshot(snapshot, this.judge.rawOutput, 'invalid');
+        } catch (error) {
           if (this.state.status !== 'ACTIVE') { this.store.event(this.state, 'stale_judge_result_ignored', { snapshot_id: snapshot.snapshot_id }); continue; }
           if (this.judge.rawOutput !== undefined) this.store.snapshot(snapshot, this.judge.rawOutput, 'invalid');
           throw error;
         }
+        if (decision === null) continue;
         if (this.state.status !== 'ACTIVE' || this.state.task_version !== snapshot.task_version || this.state.reviewing_turn_id !== event.turn_id || this.state.active_worker_turn_id !== null) {
           this.store.event(this.state, 'stale_judge_result_ignored', { snapshot_id: snapshot.snapshot_id });
           continue;
@@ -336,9 +399,18 @@ export class Supervisor {
       }
     } catch (error) {
       if (this.state.status !== 'ACTIVE') return;
-      this.state.last_error = error instanceof Error ? error.message : 'Unknown supervisor failure.';
+      const classification = classifyRecoveryError(error);
+      this.state.last_error = classification.message;
       this.state.phase = 'RECOVERING';
-      this.store.event(this.state, 'recovery_required', { error: this.state.last_error, pending_action: this.state.pending_action, reconciliation: 'S3 not implemented; no resend performed' });
+      this.state.retry = { kind: classification.kind, attempt: this.state.retry.attempt + 1, next_at: null };
+      this.store.event(this.state, 'recovery_required', {
+        kind: classification.kind,
+        recoverable: classification.recoverable,
+        wait_external: classification.wait_external,
+        error: this.state.last_error,
+        pending_action: this.state.pending_action,
+        reconciliation: 'S3 not implemented; no resend performed. Connection or delivery recovery requires an explicit resume/reconcile path before any resend.',
+      });
       this.save();
       throw error;
     } finally {

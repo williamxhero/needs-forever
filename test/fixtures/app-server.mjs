@@ -64,7 +64,8 @@ for await (const line of lines) {
       const snapshot = JSON.parse(message.params.input[0].text);
       const action = scenario.judge_actions?.[judges - 1] ?? 'DONE';
       const decision = { action, reason: 'A1 evidence checked.', evidence_ids: snapshot.evidence.map((entry) => entry.id), next_message: action === 'CONTINUE' ? 'Check the remaining acceptance result.' : '', external: action === 'WAIT_EXTERNAL' ? { missing: 'Required credential.', attempted: ['Checked local credentials.'], why_no_other_work: 'The only remaining item requires the credential.', resume_when: 'User supplies credential.' } : null };
-      const judgeItem = { type: 'agentMessage', id: 'judge-output', text: scenario.judge_output ?? JSON.stringify(decision), phase: 'final_answer' };
+      const judgeOutput = scenario.judge_outputs?.[judges - 1] ?? scenario.judge_output;
+      const judgeItem = { type: 'agentMessage', id: 'judge-output', text: judgeOutput ?? JSON.stringify(decision), phase: 'final_answer' };
       if (scenario.wrong_judge_turn) send({ method: 'turn/completed', params: { threadId: message.params.threadId, turn: { id: 'unrelated-judge-turn', status: 'completed', items: [{ ...judgeItem, text: '{"action":"DONE"}' }] } } });
       if (scenario.stream_items) send({ method: 'item/completed', params: { threadId: message.params.threadId, turnId, item: judgeItem } });
       const finishJudge = () => send({ method: 'turn/completed', params: { threadId: message.params.threadId, turn: { id: turnId, status: 'completed', items: scenario.stream_items ? [] : [judgeItem] } } });

@@ -180,9 +180,16 @@ function knownRequest(method: string): boolean {
 
 export class FixtureJudge implements Judge {
   private index = 0;
-  constructor(private readonly decision: Decision | Decision[], private readonly delayMs = 0, private readonly ignoreCancellation = false) {}
+  private failureIndex = 0;
+  constructor(private readonly decision: Decision | Decision[], private readonly delayMs = 0, private readonly ignoreCancellation = false, private readonly failures: unknown[] | undefined = undefined) {}
   async judge(_snapshot: Snapshot, signal?: AbortSignal): Promise<Decision> {
     if (this.delayMs) await delay(this.delayMs, undefined, signal && !this.ignoreCancellation ? { signal } : undefined);
+    const failure = this.failures?.[this.failureIndex++];
+    if (failure !== undefined) {
+      if (typeof failure === 'string') throw new Error(failure);
+      if (failure && typeof failure === 'object' && typeof (failure as { message?: unknown }).message === 'string') throw new Error((failure as { message: string }).message);
+      throw new Error('Fixture judge failure.');
+    }
     const result = Array.isArray(this.decision) ? this.decision[this.index++] : this.decision;
     if (!result) throw new Error('Fixed judge fixture exhausted; no completion is inferred.');
     return structuredClone(result);
