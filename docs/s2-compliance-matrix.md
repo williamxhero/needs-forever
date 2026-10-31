@@ -31,12 +31,12 @@ SKILL.md and following their procedures, not by claiming an unavailable tool cal
 
 | Requirement | Owner | Evidence | Result |
 | --- | --- | --- | --- |
-| Stable installed outputSchema; single strict JSON; valid evidence IDs and action combinations | #26 | Pending | not_run |
-| Default 24,000-character bounded snapshot; original contract preserved; missing evidence marked | #26 | Pending | not_run |
-| New isolated readOnly/never judge per review; worker idle; one call; archive IDs | #26 | Pending | not_run |
-| Worker self-report/insufficient evidence cannot produce DONE/WAIT | #26 | Pending | not_run |
-| T06 evidence-supported external wait; no late wake or repeated notification | #26/#28 | Pending | not_run |
-| ACTIVE/version/expected-turn gates; cancelled call ends before another judge | #26–#28 | Pending | not_run |
+| Stable installed outputSchema; single strict JSON; valid evidence IDs and action combinations | #26 | `docs/evidence/ticket-26/`, `docs/delivery/ticket26-merger.json` | PASS simulated at `c0af536` |
+| Default 24,000-character bounded snapshot; original contract preserved; missing evidence marked | #26 | Contract/priority/source/truncation public CLI cases | PASS simulated |
+| New isolated readOnly/never judge per review; worker idle; one call; archive IDs | #26 | Two real implementation judge invocations through simulated JSONL; 114 installed generated types audited | PASS simulated; live pending #28 |
+| Worker self-report/insufficient evidence cannot produce DONE/WAIT | #26 | Self-report-only and truncated evidence rejection cases | PASS simulated |
+| T06 evidence-supported external wait; no late wake or repeated notification | #26/#28 | Captured external-wait run, duplicates and single notification | PASS simulated #26; request-related checks pending #28 |
+| ACTIVE/version/expected-turn gates; cancelled call ends before another judge | #26–#28 | Timeout, lost turn/start outcome, connection exit, expected judge turn and PAUSED checks | PASS simulated judge; verifier/request pending |
 | Fixed argv verifier in worker sandbox with timeout; failure returns to original worker | #27 | Pending | not_run |
 | Protected baseline before worker, preserved on resume, pre/post verifier checks | #27 | Pending | not_run |
 | Before/during verifier tamper, missing file, nonzero, timeout, pause/late success | #27 | Pending | not_run |

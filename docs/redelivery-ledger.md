@@ -168,3 +168,17 @@ Each ticket uses its own worktree, public CLI TDD and an independent merger.
 S2 exit includes live T01-T05, protected verification and request handling,
 followed by independent reviews and the complete delivery/closure gate. No S3
 decomposition or implementation may begin until #21 is delivered and CLOSED.
+
+Ticket #26 was independently integrated at `c0af5367b736081f361b7ea8caa6efcb829f4ac1`.
+Merger rebuilt and ran 38/38 simulated CLI tests (24 S1 and 14 judge cases),
+checked 114 generated protocol files against installed 0.166.0 (only `.js`
+imports differ), and audited six sample runs. Of 33 sample files, 32 match
+byte-for-byte; one summary has documented trailing-whitespace normalization.
+The complete source `runs/ticket26` was backed up: 1220 files, 7,804,606 bytes.
+Source/root were clean and the baseline range diff check passed. Receipt:
+`docs/delivery/ticket26-merger.json`. Live AI acceptance remains not_run.
+
+Ticket #27 now starts in its own managed worktree from verified S2 integration.
+Its scope is fixed independent verification, protected baselines and failure
+feedback; #28 request handling/live exit remains unstarted. All S2 tickets and
+#21 stay OPEN until the entire SPEC delivery gate is satisfied.
