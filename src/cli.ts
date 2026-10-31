@@ -65,7 +65,9 @@ async function main(): Promise<void> {
       console.log('SIMULATED: app-server and judge fixtures are active.');
     } else commandArgv = argv();
     const state: State = { schema_version: 1, task_id: task.task_id, task_version: 1, task, worker_thread_id: null, status: 'ACTIVE', phase: 'WORKER', active_worker_turn_id: null, reviewing_turn_id: null, handled_turn_ids: [], pending_action: null, retry: { kind: null, attempt: 0, next_at: null }, last_decision: null, worker_turn_count: 0, elapsed_active_seconds: 0, updated_at: new Date().toISOString(), codex_version: null, mode: fixture ? 'simulated' : 'live' };
-    const judge = fixture ? new FixtureJudge(fixture.judge as Decision) : new UnavailableJudge();
+    const judgeDelay = fixture?.judge_delay_ms ?? 0;
+    if (typeof judgeDelay !== 'number' || !Number.isFinite(judgeDelay) || judgeDelay < 0) throw new Error('Fixture judge_delay_ms must be a nonnegative number.');
+    const judge = fixture ? new FixtureJudge(fixture.judge as Decision | Decision[], judgeDelay) : new UnavailableJudge();
     await new Supervisor(state, store, judge).start(commandArgv);
   } finally { store.release(); }
 }

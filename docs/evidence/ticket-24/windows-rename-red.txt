@@ -1,0 +1,47 @@
+
+> codex-supervisor@0.1.0 test
+> npm run build && node --test "dist/test/*.test.js"
+
+
+> codex-supervisor@0.1.0 build
+> tsc
+
+✔ start preserves the task and server identities; status reads WAIT_EXTERNAL without launching a server (400.9387ms)
+✔ start rejects a server policy granting writes outside the configured workspace before running a turn (293.3861ms)
+✖ a second CLI cannot supervise the same task through another state file (1325.8663ms)
+✔ credential-shaped tool output is redacted before becoming a saved judge input (275.4296ms)
+✔ inherited MCP names are disabled before creating any worker, including names with dots or quotes (296.4504ms)
+✔ the foreground CLI displays the worker reply and the supervisor waiting reason (299.5959ms)
+✔ server-provided turn identities cannot place snapshot evidence outside the snapshot directory (268.9704ms)
+✔ two early finishes continue the same worker then persist stable simulated DONE with prepared deliveries (292.5842ms)
+✔ a correlated started turn progresses to DONE even when turn/start never returns a response (283.1583ms)
+✔ started/completed before response and duplicate/foreign/stale events cannot add work (441.2618ms)
+✔ unknown turn/start outcome preserves the sent delivery in RECOVERING without resending (284.7763ms)
+✔ failed worker terminal never reaches the fixed DONE judge (303.6641ms)
+✔ a late failure for an already confirmed old delivery cannot cancel the next worker (384.2043ms)
+✔ judge input is saved while its result is pending and duplicate terminal events do not start another judge (803.1243ms)
+ℹ tests 14
+ℹ suites 0
+ℹ pass 13
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 6027.1744
+
+✖ failing tests:
+
+test at dist\test\cli.test.js:84:1
+✖ a second CLI cannot supervise the same task through another state file (1325.8663ms)
+  AssertionError [ERR_ASSERTION]: EPERM: operation not permitted, rename 'C:\Users\will\.codex\worktrees\s1-redo-ticket24\needs-forever\runs\ticket23\exclusive-task-1793464392149\state.json.7254d27e-2398-46a1-b17e-794b6d735d12.tmp' -> 'C:\Users\will\.codex\worktrees\s1-redo-ticket24\needs-forever\runs\ticket23\exclusive-task-1793464392149\state.json'
+  
+      at TestContext.<anonymous> (file:///C:/Users/will/.codex/worktrees/s1-redo-ticket24/needs-forever/dist/test/cli.test.js:98:20)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }

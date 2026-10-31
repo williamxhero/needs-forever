@@ -1,0 +1,50 @@
+
+> codex-supervisor@0.1.0 test
+> npm run build && node --test "dist/test/*.test.js"
+
+
+> codex-supervisor@0.1.0 build
+> tsc
+
+✔ start preserves the task and server identities; status reads WAIT_EXTERNAL without launching a server (341.2066ms)
+✔ start rejects a server policy granting writes outside the configured workspace before running a turn (307.4748ms)
+✔ a second CLI cannot supervise the same task through another state file (358.2669ms)
+✔ credential-shaped tool output is redacted before becoming a saved judge input (280.767ms)
+✔ inherited MCP names are disabled before creating any worker, including names with dots or quotes (281.0677ms)
+✔ the foreground CLI displays the worker reply and the supervisor waiting reason (284.2304ms)
+✔ server-provided turn identities cannot place snapshot evidence outside the snapshot directory (275.6856ms)
+✔ two early finishes continue the same worker then persist stable simulated DONE with prepared deliveries (309.5902ms)
+✖ a correlated started turn progresses to DONE even when turn/start never returns a response (1282.7675ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 8
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3794.9996
+
+✖ failing tests:
+
+test at dist\test\cli.test.js:194:1
+✖ a correlated started turn progresses to DONE even when turn/start never returns a response (1282.7675ms)
+  AssertionError [ERR_ASSERTION]: app-server exited (0). Recovery remains an S3 responsibility.
+  
+  
+  1 !== 0
+  
+      at TestContext.<anonymous> (file:///C:/Users/will/.codex/worktrees/s1-redo-ticket24/needs-forever/dist/test/cli.test.js:200:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

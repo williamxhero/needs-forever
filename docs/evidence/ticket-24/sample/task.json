@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "task_id": "s1-continuation-demonstration",
+  "workspace": "C:\\Users\\will\\.codex\\worktrees\\s1-redo-ticket24\\needs-forever\\runs\\ticket24\\demo-1793464356278\\workspace",
+  "goal": "Complete all three fixture stages in the same worker.",
+  "acceptance": [
+    {
+      "id": "A1",
+      "text": "Two early finishes each cause a confirmed new turn, then fixed DONE."
+    }
+  ],
+  "authorization": "Only this isolated simulated workspace may be changed."
+}

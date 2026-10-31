@@ -1,0 +1,7 @@
+{
+  "trace": "C:\\Users\\will\\.codex\\worktrees\\s1-redo-ticket24\\needs-forever\\runs\\ticket24\\demo-1793464356278\\protocol.jsonl",
+  "state_file": "C:\\Users\\will\\.codex\\worktrees\\s1-redo-ticket24\\needs-forever\\runs\\ticket24\\demo-1793464356278\\state.json",
+  "response_order": "after-completed",
+  "duplicate_events": true,
+  "answer": "This simulated turn finished one stage."
+}

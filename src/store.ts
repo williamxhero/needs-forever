@@ -41,13 +41,15 @@ export class Store {
     writeFileSync(temporary, `${JSON.stringify(state, null, 2)}\n`, 'utf8');
     // Windows readers/indexers may briefly deny replacement. Keep the old
     // checkpoint intact and retry the same atomic rename; never unlink it.
-    const deadline = Date.now() + 1_000;
+    const deadline = Date.now() + 5_000;
     while (true) {
       try { renameSync(temporary, this.path); break; }
       catch (error) {
         const code = (error as NodeJS.ErrnoException).code;
         if (process.platform !== 'win32' || !['EPERM', 'EACCES', 'EBUSY'].includes(code ?? '') || Date.now() >= deadline) throw error;
-        Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 20);
+        // Avoid phase-locking retries with another process polling status at a
+        // fixed interval. Windows readers/indexers can outlive a short probe.
+        Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 10 + Math.floor(Math.random() * 40));
       }
     }
     const summary = `# ${state.task_id}\n\n${state.task.goal}\n\nStatus: ${state.status}; phase: ${state.phase}; mode: ${state.mode}\n\nLast decision: ${state.last_decision?.action ?? 'none'}\n\n${state.last_decision?.reason ?? ''}\n\n${state.last_decision?.external?.missing ?? ''}\n\n${state.last_decision?.external?.resume_when ?? ''}\n\n${state.last_error ?? ''}\n`;
@@ -60,6 +62,6 @@ export class Store {
     const directory = resolve(this.directory, 'snapshots');
     mkdirSync(directory, { recursive: true });
     // Snapshot identity is generated locally, never an arbitrary external pathname.
-    writeFileSync(resolve(directory, `${snapshot.snapshot_id}.json`), `${JSON.stringify({ input: snapshot, raw_output: result, validation: 'fixture-only' }, null, 2)}\n`, 'utf8');
+    writeFileSync(resolve(directory, `${snapshot.snapshot_id}.json`), `${JSON.stringify({ input: snapshot, raw_output: result, validation: result === null ? 'pending' : 'fixture-only' }, null, 2)}\n`, 'utf8');
   }
 }

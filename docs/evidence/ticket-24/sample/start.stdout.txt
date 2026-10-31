@@ -1,0 +1,5 @@
+SIMULATED: app-server and judge fixtures are active.
+worker: This simulated turn finished one stage.
+worker: This simulated turn finished one stage.
+worker: This simulated turn finished one stage.
+DONE (simulated): All fixed fixture stages are complete.

@@ -1,0 +1,49 @@
+
+> codex-supervisor@0.1.0 test
+> npm run build && node --test "dist/test/*.test.js"
+
+
+> codex-supervisor@0.1.0 build
+> tsc
+
+✔ start preserves the task and server identities; status reads WAIT_EXTERNAL without launching a server (349.1857ms)
+✔ start rejects a server policy granting writes outside the configured workspace before running a turn (274.3657ms)
+✔ a second CLI cannot supervise the same task through another state file (356.0791ms)
+✔ credential-shaped tool output is redacted before becoming a saved judge input (286.9013ms)
+✔ inherited MCP names are disabled before creating any worker, including names with dots or quotes (281.4336ms)
+✔ the foreground CLI displays the worker reply and the supervisor waiting reason (285.4385ms)
+✔ server-provided turn identities cannot place snapshot evidence outside the snapshot directory (271.7813ms)
+✖ two early finishes continue the same worker then persist stable simulated DONE with prepared deliveries (280.2435ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 7
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2454.764
+
+✖ failing tests:
+
+test at dist\test\cli.test.js:160:1
+✖ two early finishes continue the same worker then persist stable simulated DONE with prepared deliveries (280.2435ms)
+  AssertionError [ERR_ASSERTION]: Ticket #23 accepts only explicit WAIT_EXTERNAL fixtures; continuation/completion gates are delivered by #24.
+  
+  
+  1 !== 0
+  
+      at TestContext.<anonymous> (file:///C:/Users/will/.codex/worktrees/s1-redo-ticket24/needs-forever/dist/test/cli.test.js:172:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

@@ -15,6 +15,7 @@ if (process.argv.some((value) => value.startsWith('mcp_servers."'))) {
   process.exit(1);
 }
 let initialized = false;
+let turns = 0;
 const send = (message) => process.stdout.write(`${JSON.stringify(message)}\n`);
 const lines = createInterface({ input: process.stdin });
 for await (const line of lines) {
@@ -44,12 +45,31 @@ for await (const line of lines) {
       sandbox: scenario.sandbox ?? { type: 'workspaceWrite', writableRoots: [], networkAccess: false, excludeTmpdirEnvVar: true, excludeSlashTmp: true },
     } });
   } else if (message.method === 'turn/start') {
-    const turnId = scenario.turn_id ?? 'first-turn-from-server';
-    send({ id: message.id, result: { turn: { id: turnId, status: 'inProgress', items: [] } } });
-    send({ method: 'turn/started', params: { threadId: message.params.threadId, turn: { id: turnId, status: 'inProgress', items: [] } } });
-    if (!scenario.hold_worker) {
-      send({ method: 'turn/completed', params: { threadId: message.params.threadId, turn: { id: turnId, status: 'completed', items: [{ type: 'agentMessage', id: 'answer-1', text: scenario.answer ?? 'Only fixture stage completed.' }] } } });
+    turns++;
+    const turnId = scenario.turn_id ?? (turns === 1 ? 'first-turn-from-server' : `turn-${turns}-from-server`);
+    if (scenario.state_file) trace({ kind: 'checkpoint_at_send', state: JSON.parse(readFileSync(scenario.state_file, 'utf8')) });
+    if (scenario.disconnect_on_send) process.exit(0);
+    const response = () => send({ id: message.id, result: { turn: { id: turnId, status: 'inProgress', items: [] } } });
+    if (scenario.late_error_first && turns === 1) setTimeout(() => send({ id: message.id, error: { code: -32000, message: 'Late obsolete request failure after actual start.' } }), 10);
+    else if (!scenario.response_order) response();
+    if (scenario.duplicate_events) {
+      send({ method: 'turn/started', params: { threadId: 'foreign-thread', turn: { id: 'foreign-turn', status: 'inProgress', items: [] } } });
+      send({ method: 'turn/completed', params: { threadId: 'foreign-thread', turn: { id: 'foreign-turn', status: 'completed', items: [] } } });
+      // A same-thread unrelated started/input pair must not confirm this delivery.
+      send({ method: 'turn/started', params: { threadId: message.params.threadId, turn: { id: 'unrelated-turn', status: 'inProgress', items: [] } } });
+      send({ method: 'item/started', params: { threadId: message.params.threadId, turnId: 'unrelated-turn', item: { type: 'userMessage', id: 'old-input', clientId: 'obsolete-delivery', content: [] } } });
+      send({ method: 'turn/completed', params: { threadId: message.params.threadId, turn: { id: 'first-turn-from-server', status: 'completed', items: [] } } });
     }
+    send({ method: 'turn/started', params: { threadId: message.params.threadId, turn: { id: turnId, status: 'inProgress', items: [] } } });
+    send({ method: 'item/started', params: { threadId: message.params.threadId, turnId, item: { type: 'userMessage', id: `input-${turns}`, clientId: message.params.clientUserMessageId, content: message.params.input } } });
+    if (!scenario.hold_worker) {
+      const completed = { method: 'turn/completed', params: { threadId: message.params.threadId, turn: { id: turnId, status: scenario.terminal_status ?? 'completed', items: [{ type: 'agentMessage', id: 'answer-1', text: scenario.answer ?? 'Only fixture stage completed.' }] } } };
+      if (scenario.late_error_first && turns > 1) setTimeout(() => send(completed), 80);
+      else send(completed);
+      if (scenario.duplicate_events) { send(completed); send(completed); }
+    }
+    if (scenario.response_order === 'after-completed') setTimeout(response, 30);
+    if (scenario.response_order === 'missing') setTimeout(() => process.exit(0), 1000);
   } else {
     send({ id: message.id, error: { code: -32601, message: 'Not supported by fixture' } });
   }

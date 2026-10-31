@@ -156,3 +156,151 @@ test('server-provided turn identities cannot place snapshot evidence outside the
   assert.equal(files.length, 1);
   assert.equal(json(resolve(fixture.directory, 'snapshots', files[0]!)).input.worker_turn_id, '../escaped');
 });
+
+test('two early finishes continue the same worker then persist stable simulated DONE with prepared deliveries', () => {
+  const fixture = setup('continue-twice');
+  const scenario = json(fixture.scenario);
+  writeFileSync(fixture.scenario, JSON.stringify({ ...scenario, state_file: fixture.stateFile }));
+  const config = json(fixture.fixture);
+  config.judge = [
+    { action: 'CONTINUE', reason: 'Stage two remains.', evidence_ids: ['E1'], next_message: 'Build stage two.', external: null },
+    { action: 'CONTINUE', reason: 'Stage three remains.', evidence_ids: ['E1'], next_message: 'Build stage three.', external: null },
+    { action: 'DONE', reason: 'All fixture stages are complete.', evidence_ids: ['E1'], next_message: '', external: null },
+  ];
+  writeFileSync(fixture.fixture, JSON.stringify(config));
+  const started = run(fixture.argv);
+  assert.equal(started.status, 0, started.stderr);
+  const state = json(fixture.stateFile);
+  assert.equal(state.status, 'DONE');
+  assert.equal(state.worker_turn_count, 3);
+  assert.deepEqual(state.handled_turn_ids, ['first-turn-from-server', 'turn-2-from-server', 'turn-3-from-server']);
+  const trace = readFileSync(fixture.trace, 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+  const sends = trace.filter((entry) => entry.kind === 'request' && entry.message.method === 'turn/start');
+  assert.equal(sends.length, 3);
+  assert.ok(sends.every((entry) => entry.message.params.threadId === 'worker-from-server'));
+  const saved = trace.filter((entry) => entry.kind === 'checkpoint_at_send').map((entry) => entry.state);
+  assert.equal(saved.length, 3);
+  saved.forEach((checkpoint, index) => {
+    const pending = checkpoint.pending_action;
+    assert.equal(pending.stage, 'sent');
+    assert.equal(pending.target_turn_id, null);
+    assert.equal(pending.message, sends[index].message.params.input[0].text);
+    assert.match(pending.message, new RegExp(pending.delivery_id));
+  });
+  const events = readFileSync(resolve(fixture.directory, 'events.jsonl'), 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+  assert.equal(events.filter((entry) => entry.type === 'send_confirmed').length, 3);
+  assert.equal(readdirSync(resolve(fixture.directory, 'snapshots')).length, 3);
+});
+
+test('a correlated started turn progresses to DONE even when turn/start never returns a response', () => {
+  const fixture = setup('started-without-response', { response_order: 'missing' });
+  const config = json(fixture.fixture);
+  config.judge = { action: 'DONE', reason: 'Fixed fixture acceptance.', evidence_ids: ['E1'], next_message: '', external: null };
+  writeFileSync(fixture.fixture, JSON.stringify(config));
+  const started = run(fixture.argv);
+  assert.equal(started.status, 0, started.stderr);
+  const state = json(fixture.stateFile);
+  assert.equal(state.status, 'DONE');
+  assert.equal(state.worker_turn_count, 1);
+});
+
+test('started/completed before response and duplicate/foreign/stale events cannot add work', () => {
+  const fixture = setup('reordered-duplicates', { response_order: 'after-completed', duplicate_events: true });
+  const config = json(fixture.fixture);
+  config.judge = [
+    { action: 'CONTINUE', reason: 'Another stage remains.', evidence_ids: ['E1'], next_message: 'Finish the next stage.', external: null },
+    { action: 'DONE', reason: 'Fixed fixture complete.', evidence_ids: ['E1'], next_message: '', external: null },
+  ];
+  writeFileSync(fixture.fixture, JSON.stringify(config));
+  const started = run(fixture.argv);
+  assert.equal(started.status, 0, started.stderr);
+  const state = json(fixture.stateFile);
+  assert.equal(state.status, 'DONE');
+  assert.equal(state.worker_turn_count, 2);
+  assert.deepEqual(state.handled_turn_ids, ['first-turn-from-server', 'turn-2-from-server']);
+  const events = readFileSync(resolve(fixture.directory, 'events.jsonl'), 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+  const confirmed = events.filter((entry) => entry.type === 'send_confirmed');
+  assert.deepEqual(confirmed.map((entry) => entry.turn_id), ['first-turn-from-server', 'turn-2-from-server']);
+  assert.ok(confirmed.every((entry) => entry.via === 'started+clientId'));
+  assert.equal(events.filter((entry) => entry.type === 'decision').length, 2);
+  assert.equal(readdirSync(resolve(fixture.directory, 'snapshots')).length, 2);
+  const before = readFileSync(fixture.trace, 'utf8');
+  assert.equal(run(['status', '--state', fixture.stateFile]).status, 0);
+  assert.equal(readFileSync(fixture.trace, 'utf8'), before);
+});
+
+test('unknown turn/start outcome preserves the sent delivery in RECOVERING without resending', () => {
+  const fixture = setup('unknown-delivery', { disconnect_on_send: true });
+  const started = run(fixture.argv);
+  assert.equal(started.status, 1);
+  const state = json(fixture.stateFile);
+  assert.equal(state.status, 'ACTIVE');
+  assert.equal(state.phase, 'RECOVERING');
+  assert.equal(state.worker_turn_count, 0);
+  assert.equal(state.pending_action.stage, 'sent');
+  assert.equal(state.pending_action.target_turn_id, null);
+  const trace = readFileSync(fixture.trace, 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+  assert.equal(trace.filter((entry) => entry.kind === 'request' && entry.message.method === 'turn/start').length, 1);
+  const events = readFileSync(resolve(fixture.directory, 'events.jsonl'), 'utf8');
+  assert.doesNotMatch(events, /"type":"send_confirmed"/);
+  assert.match(events, /S3 not implemented; no resend performed/);
+});
+
+test('failed worker terminal never reaches the fixed DONE judge', () => {
+  const fixture = setup('failed-terminal', { terminal_status: 'failed' });
+  const config = json(fixture.fixture);
+  config.judge = { action: 'DONE', reason: 'Must not be used.', evidence_ids: ['E1'], next_message: '', external: null };
+  writeFileSync(fixture.fixture, JSON.stringify(config));
+  const started = run(fixture.argv);
+  assert.equal(started.status, 1);
+  assert.match(started.stderr, /Worker terminal status failed/);
+  assert.equal(json(fixture.stateFile).phase, 'RECOVERING');
+  assert.equal(json(fixture.stateFile).last_decision, null);
+  assert.equal(existsSync(resolve(fixture.directory, 'snapshots')), false);
+});
+
+test('a late failure for an already confirmed old delivery cannot cancel the next worker', () => {
+  const fixture = setup('obsolete-response', { late_error_first: true });
+  const config = json(fixture.fixture);
+  config.judge = [
+    { action: 'CONTINUE', reason: 'Next fixture stage remains.', evidence_ids: ['E1'], next_message: 'Build next stage.', external: null },
+    { action: 'DONE', reason: 'Fixed fixture complete.', evidence_ids: ['E1'], next_message: '', external: null },
+  ];
+  writeFileSync(fixture.fixture, JSON.stringify(config));
+  const started = run(fixture.argv);
+  assert.equal(started.status, 0, started.stderr);
+  assert.equal(json(fixture.stateFile).status, 'DONE');
+  assert.equal(json(fixture.stateFile).worker_turn_count, 2);
+});
+
+test('judge input is saved while its result is pending and duplicate terminal events do not start another judge', async () => {
+  const fixture = setup('pending-judge', { duplicate_events: true });
+  const config = json(fixture.fixture);
+  config.judge_delay_ms = 500;
+  config.judge = { action: 'DONE', reason: 'Fixed fixture complete.', evidence_ids: ['E1'], next_message: '', external: null };
+  writeFileSync(fixture.fixture, JSON.stringify(config));
+  const child = spawn(process.execPath, [cli, ...fixture.argv], { stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
+  const exited = once(child, 'exit');
+  let stderr = '';
+  child.stderr.on('data', (chunk) => { stderr += String(chunk); });
+  try {
+    const deadline = Date.now() + 10_000;
+    while (true) {
+      try {
+        const state = json(fixture.stateFile);
+        const input = json(snapshotFile(fixture.directory));
+        if (state.phase === 'JUDGE' && input.raw_output === null) {
+          assert.equal(input.validation, 'pending');
+          assert.equal(input.input.worker_turn_id, state.reviewing_turn_id);
+          break;
+        }
+      } catch {}
+      assert.ok(Date.now() < deadline && child.exitCode === null, stderr || 'Judge did not expose its saved input.');
+      await delay(10);
+    }
+    const [code] = await exited;
+    assert.equal(code, 0, stderr);
+    assert.equal(json(fixture.stateFile).status, 'DONE');
+    assert.equal(readdirSync(resolve(fixture.directory, 'snapshots')).length, 1);
+  } finally { if (child.exitCode === null) { child.kill('SIGKILL'); await exited; } }
+});
