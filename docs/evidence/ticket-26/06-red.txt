@@ -1,0 +1,30 @@
+✖ a timed out judge terminates the owned connection without a second judge or inferred completion (15022.4148ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 15103.0516
+
+✖ failing tests:
+
+test at dist\test\judge-cli.test.js:112:1
+✖ a timed out judge terminates the owned connection without a second judge or inferred completion (15022.4148ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+  null !== 1
+
+      at TestContext.<anonymous> (file:///C:/Users/will/.codex/worktrees/s2-redo-ticket26/needs-forever/dist/test/judge-cli.test.js:116:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.start (node:internal/test_runner/test:1242:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

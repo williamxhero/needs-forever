@@ -1,0 +1,31 @@
+✖ real judge boundary continues the original worker then completes with fresh archived read-only judges (298.426ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 372.4498
+
+✖ failing tests:
+
+test at dist\test\judge-cli.test.js:21:1
+✖ real judge boundary continues the original worker then completes with fresh archived read-only judges (298.426ms)
+  AssertionError [ERR_ASSERTION]: Fixed judge fixture exhausted; no completion is inferred.
+
+
+  1 !== 0
+
+      at TestContext.<anonymous> (file:///C:/Users/will/.codex/worktrees/s2-redo-ticket26/needs-forever/dist/test/judge-cli.test.js:24:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.start (node:internal/test_runner/test:1242:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

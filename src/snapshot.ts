@@ -1,0 +1,85 @@
+import { randomUUID } from 'node:crypto';
+import type { Snapshot, State } from './types.js';
+import { record } from './types.js';
+import { redact } from './redact.js';
+
+const MAX_CHARS = 24_000;
+function object(value: unknown): Record<string, unknown> { return value && typeof value === 'object' && !Array.isArray(value) ? record(value) : {}; }
+function clip(value: unknown, max: number): unknown {
+  if (typeof value === 'string') return value.length <= max ? value : `${value.slice(0, max)} [TRUNCATED: ${value.length - max} chars]`;
+  if (Array.isArray(value)) return value.map((entry) => clip(entry, max));
+  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, clip(entry, max)]));
+  return value;
+}
+function items(event: Record<string, unknown>): Record<string, unknown>[] {
+  const params = object(event.params);
+  if (event.method === 'item/completed') return [object(params.item)];
+  const turn = object(params.turn);
+  return Array.isArray(turn.items) ? turn.items.map(object) : [];
+}
+function turnId(event: Record<string, unknown>): unknown { const params = object(event.params); return params.turnId ?? object(params.turn).id; }
+
+// The sources are the persisted protocol events, never inferred model claims.
+export function buildSnapshot(state: State, workerTurnId: string, events: Record<string, unknown>[]): Snapshot {
+  const workerEvents = events.filter((entry) => entry.type === 'worker_evidence' && entry.thread_id === state.worker_thread_id);
+  const current = workerEvents.filter((entry) => turnId(entry) === workerTurnId);
+  const observed = new Map<string, { item: Record<string, unknown>; event: Record<string, unknown> }>();
+  for (const event of current) for (const item of items(event)) if (typeof item.id === 'string') observed.set(item.id, { item, event });
+  const latestPlan = current.findLast((entry) => entry.method === 'turn/plan/updated');
+  const planItem = [...observed.values()].findLast((entry) => entry.item.type === 'plan');
+  const plans = latestPlan ? object(latestPlan.params).plan : planItem?.item.text;
+  const verification = events.findLast((entry) => ['verification_result', 'verification_passed', 'verification_failed', 'protected_file_changed'].includes(String(entry.type)));
+  const instructions = events.filter((entry) => entry.type === 'send_prepared' && entry.source_turn_id).slice(-2).map((entry) => {
+    const confirmation = events.find((event) => event.type === 'send_confirmed' && event.delivery_id === entry.delivery_id);
+    const result = workerEvents.findLast((event) => event.method === 'turn/completed' && turnId(event) === confirmation?.turn_id);
+    const replies = new Map<string, unknown>();
+    for (const event of workerEvents.filter((event) => turnId(event) === confirmation?.turn_id)) for (const item of items(event)) if (item.type === 'agentMessage') replies.set(String(item.id), item.text);
+    return { delivery_id: entry.delivery_id, message: clip(entry.message, 1500), turn_id: confirmation?.turn_id ?? null, result: result ? { event_id: result.event_id, status: object(object(result.params).turn).status, replies: clip([...replies.values()], 600) } : { missing: 'Worker terminal result not observed.' } };
+  });
+  const failures = new Map<string, Set<string>>();
+  for (const event of workerEvents) for (const item of items(event)) if (item.type === 'commandExecution' && (item.status === 'failed' || (typeof item.exitCode === 'number' && item.exitCode !== 0))) {
+    const signature = JSON.stringify([item.command, item.exitCode]);
+    const turns = failures.get(signature) ?? new Set<string>();
+    turns.add(String(turnId(event)));
+    failures.set(signature, turns);
+  }
+  const repeated = [...failures.entries()].filter(([, turns]) => turns.size >= 3).map(([signature, turns]) => ({ signature, count: turns.size }));
+  const snapshot: Snapshot = {
+    snapshot_id: randomUUID(), task_id: state.task_id, task_version: state.task_version, worker_thread_id: state.worker_thread_id!, worker_turn_id: workerTurnId,
+    task: redact(state.task) as State['task'], evidence: [],
+    plan: plans ? { observed: clip(plans, 1800), remaining: Array.isArray(plans) ? clip(plans.filter((entry) => object(entry).status !== 'completed'), 1800) : 'See observed worker plan; not independently verified.' } : { missing: 'No current plan or remaining-items update observed.' },
+    recent_verification: verification ? clip(verification, 1800) : { missing: 'No independent verification result recorded yet.' },
+    recent_instructions: instructions,
+    repeated_failure: { investigate: repeated.length > 0, signatures: repeated, instruction: repeated.length ? 'Investigate a different hypothesis or use a materially different verifiable route; retries alone never justify WAIT_EXTERNAL.' : 'No repeated failure threshold observed.' },
+    omissions: [], evidence_complete: true,
+  };
+  if (!plans) snapshot.omissions!.push('Current plan and remaining items were not observed.');
+  if (!verification) snapshot.omissions!.push('Independent verification has not run.');
+  if (JSON.stringify(snapshot).length > MAX_CHARS - 1800) throw new Error('Task contract and mandatory snapshot metadata exceed the 24000-character budget; goal, acceptance and authorization were not truncated.');
+  const candidates = [...observed.values()].sort((left, right) => {
+    const priority = (item: Record<string, unknown>) => item.type === 'commandExecution' && (item.status === 'failed' || (typeof item.exitCode === 'number' && item.exitCode !== 0)) ? 0 : item.type === 'fileChange' ? 1 : item.type === 'commandExecution' ? 2 : 3;
+    return priority(left.item) - priority(right.item);
+  });
+  let omitted = 0;
+  for (const { item, event } of candidates) {
+    if (!['commandExecution', 'fileChange', 'functionCallOutput', 'agentMessage', 'plan'].includes(String(item.type))) continue;
+    const entry: Snapshot['evidence'][number] = { id: `E${snapshot.evidence.length + 1}`, type: String(item.type), value: item, source: { event_id: String(event.event_id), thread_id: state.worker_thread_id!, turn_id: workerTurnId, item_id: String(item.id) } };
+    snapshot.evidence.push(entry);
+    if (JSON.stringify(snapshot).length > MAX_CHARS - 600) {
+      snapshot.evidence_complete = false;
+      snapshot.omissions!.push(`${entry.id}: item payload truncated; full record is at source.event_id.`);
+      for (const limit of [1800, 600, 160]) {
+        entry.value = clip(item, limit);
+        if (JSON.stringify(snapshot).length <= MAX_CHARS - 600) break;
+      }
+      if (JSON.stringify(snapshot).length > MAX_CHARS - 600) { snapshot.evidence.pop(); snapshot.omissions!.pop(); omitted++; }
+    }
+  }
+  if (verification) {
+    const entry = { id: `E${snapshot.evidence.length + 1}`, type: 'verification_result', value: clip(verification, 1800), source: { event_id: String(verification.event_id) } };
+    snapshot.evidence.push(entry);
+    if (JSON.stringify(snapshot).length > MAX_CHARS - 600) { snapshot.evidence.pop(); omitted++; snapshot.evidence_complete = false; }
+  }
+  if (omitted) snapshot.omissions!.push(`${omitted} additional items omitted for budget; gather concise evidence before a terminal decision.`);
+  return snapshot;
+}

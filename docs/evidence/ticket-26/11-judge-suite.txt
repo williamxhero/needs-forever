@@ -1,0 +1,20 @@
+✔ real judge boundary continues the original worker then completes with fresh archived read-only judges (309.9482ms)
+✔ judge outputs with unknown fields, references or illegal action combinations never finish the task (1747.8467ms)
+✔ worker claims alone cannot prove DONE or an external dependency (555.3305ms)
+✔ bounded snapshots preserve the contract, real sources, recent instructions and failures while explicitly omitting large output (333.4491ms)
+✔ streamed completed items supply worker evidence and judge JSON when terminal turns have no items (289.2851ms)
+✔ a timed out judge terminates the owned connection without a second judge or inferred completion (473.4426ms)
+✔ T06 WAIT_EXTERNAL cites an actual failed route, stays idle and notifies once despite duplicates (361.8031ms)
+✔ fences, appended text and a second JSON object are rejected with the exact raw output retained (858.5235ms)
+✔ judge policy expansion prevents its turn and archive failure cannot invalidate an otherwise valid decision (621.0201ms)
+✔ PAUSED wins over a real judge that is in flight and the owned judge connection terminates (476.5829ms)
+✔ only the expected judge turn can supply the result even if a foreign completion arrives first (285.8464ms)
+✔ truncated tool output cannot be used to infer either terminal decision (580.1744ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 12
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 6968.1284

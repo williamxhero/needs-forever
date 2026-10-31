@@ -1,0 +1,42 @@
+✔ real judge boundary continues the original worker then completes with fresh archived read-only judges (317.4022ms)
+✔ judge outputs with unknown fields, references or illegal action combinations never finish the task (1728.8314ms)
+✔ worker claims alone cannot prove DONE or an external dependency (564.2815ms)
+✔ bounded snapshots preserve the contract, real sources, recent instructions and failures while explicitly omitting large output (333.2084ms)
+✔ streamed completed items supply worker evidence and judge JSON when terminal turns have no items (298.2039ms)
+✔ a timed out judge terminates the owned connection without a second judge or inferred completion (508.4829ms)
+✖ T06 WAIT_EXTERNAL cites an actual failed route, stays idle and notifies once despite duplicates (281.3502ms)
+✔ fences, appended text and a second JSON object are rejected with the exact raw output retained (861.4959ms)
+✔ judge policy expansion prevents its turn and archive failure cannot invalidate an otherwise valid decision (568.776ms)
+✔ PAUSED wins over a real judge that is in flight and the owned judge connection terminates (475.9505ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 9
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 6010.9678
+
+✖ failing tests:
+
+test at dist\test\judge-cli.test.js:125:1
+✖ T06 WAIT_EXTERNAL cites an actual failed route, stays idle and notifies once despite duplicates (281.3502ms)
+  AssertionError [ERR_ASSERTION]: DONE/WAIT_EXTERNAL require evidence.
+
+
+  1 !== 0
+
+      at TestContext.<anonymous> (file:///C:/Users/will/.codex/worktrees/s2-redo-ticket26/needs-forever/dist/test/judge-cli.test.js:128:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

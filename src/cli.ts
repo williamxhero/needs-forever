@@ -2,7 +2,7 @@
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { isAbsolute, resolve } from 'node:path';
 import { Store } from './store.js';
-import { FixtureJudge, UnavailableJudge } from './judge.js';
+import { FixtureJudge, AppServerJudge } from './judge.js';
 import { Supervisor } from './supervisor.js';
 import { codexCommand } from './transport.js';
 import { reachedLimits } from './rules.js';
@@ -92,7 +92,9 @@ async function main(): Promise<void> {
     }
     const judgeDelay = fixture?.judge_delay_ms ?? 0;
     if (typeof judgeDelay !== 'number' || !Number.isFinite(judgeDelay) || judgeDelay < 0) throw new Error('Fixture judge_delay_ms must be a nonnegative number.');
-    const judge = fixture ? new FixtureJudge(fixture.judge as Decision | Decision[], judgeDelay, fixture.judge_ignores_cancellation === true) : new UnavailableJudge();
+    const judgeTimeout = fixture?.judge_timeout_ms ?? 120_000;
+    if (typeof judgeTimeout !== 'number' || !Number.isFinite(judgeTimeout) || judgeTimeout <= 0) throw new Error('Fixture judge_timeout_ms must be positive.');
+    const judge = fixture && fixture.real_judge !== true ? new FixtureJudge(fixture.judge as Decision | Decision[], judgeDelay, fixture.judge_ignores_cancellation === true) : new AppServerJudge(judgeTimeout);
     const supervisor = new Supervisor(state, store, judge, fixture ? { simulate_verification: fixture.simulate_verification === true } : undefined);
     const pause = () => supervisor.pause();
     process.on('SIGINT', pause);

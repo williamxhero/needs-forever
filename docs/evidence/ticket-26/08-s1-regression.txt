@@ -1,0 +1,32 @@
+✔ start preserves the task and server identities; status reads WAIT_EXTERNAL without launching a server (368.5775ms)
+✔ start rejects a server policy granting writes outside the configured workspace before running a turn (266.0979ms)
+✔ a second CLI cannot supervise the same task through another state file (363.5603ms)
+✔ credential-shaped tool output is redacted before becoming a saved judge input (276.2707ms)
+✔ inherited MCP names are disabled before creating any worker, including names with dots or quotes (264.3342ms)
+✔ the foreground CLI displays the worker reply and the supervisor waiting reason (292.0593ms)
+✔ server-provided turn identities cannot place snapshot evidence outside the snapshot directory (280.4098ms)
+✔ two early finishes continue the same worker then persist stable simulated DONE with prepared deliveries (299.3498ms)
+✔ a correlated started turn progresses to DONE even when turn/start never returns a response (265.4754ms)
+✔ started/completed before response and duplicate/foreign/stale events cannot add work (361.2872ms)
+✔ unknown turn/start outcome preserves the sent delivery in RECOVERING without resending (269.1341ms)
+✔ failed worker terminal never reaches the fixed DONE judge (275.3557ms)
+✔ a late failure for an already confirmed old delivery cannot cancel the next worker (364.4117ms)
+✔ judge input is saved while its result is pending and duplicate terminal events do not start another judge (831.953ms)
+✔ T08 simulated worker pause is saved before interrupting its owned turn (472.1525ms)
+✔ T08 simulated delayed judge success cannot overwrite durable PAUSED (533.5905ms)
+✔ T08 simulated verification is interrupted after PAUSED and cannot mark DONE (395.7935ms)
+✔ explicit resume uses saved task and worker identity, and DONE cannot reopen (627.1201ms)
+✔ cumulative turn limit pauses before another send and resume requires an increased or removed limit (649.4337ms)
+✔ ACTIVE time is checkpointed while waiting and the explicit total-time limit pauses a running worker (1474.978ms)
+✔ explicit resume preserves an unknown sent delivery and never blindly replays it (353.8626ms)
+✔ resume reviews the saved completed worker turn without adding another worker round (710.4562ms)
+✔ explicit resume reclaims only a dead supervisor lock and preserves checkpointed time after a crash (816.0142ms)
+✔ ACTIVE resume rejects changed goal or authorization before altering the saved contract (428.751ms)
+ℹ tests 24
+ℹ suites 0
+ℹ pass 24
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 11313.8758

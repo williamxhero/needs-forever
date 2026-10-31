@@ -1,0 +1,30 @@
+✖ judge outputs with unknown fields, references or illegal action combinations never finish the task (349.4552ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 423.1694
+
+✖ failing tests:
+
+test at dist\test\judge-cli.test.js:37:1
+✖ judge outputs with unknown fields, references or illegal action combinations never finish the task (349.4552ms)
+  AssertionError [ERR_ASSERTION]: Illegal output accepted: {"action":"DONE","reason":"A1 checked.","evidence_ids":["E1"],"next_message":"","external":null,"extra":"Unrecognized instruction."}
+
+  0 !== 1
+
+      at TestContext.<anonymous> (file:///C:/Users/will/.codex/worktrees/s2-redo-ticket26/needs-forever/dist/test/judge-cli.test.js:50:16)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.start (node:internal/test_runner/test:1242:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

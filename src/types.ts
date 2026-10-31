@@ -44,6 +44,7 @@ export interface State {
   mode: 'live' | 'simulated';
   last_error?: string;
   pause_reason?: 'user' | 'user_limit';
+  judge_thread_ids?: string[];
 }
 export interface Snapshot {
   snapshot_id: string;
@@ -52,7 +53,13 @@ export interface Snapshot {
   worker_thread_id: string;
   worker_turn_id: string;
   task: Task;
-  evidence: { id: string; type: string; value: unknown }[];
+  evidence: { id: string; type: string; value: unknown; source?: { event_id: string; thread_id?: string; turn_id?: string; item_id?: string } }[];
+  plan?: unknown;
+  recent_verification?: unknown;
+  recent_instructions?: unknown[];
+  repeated_failure?: unknown;
+  omissions?: string[];
+  evidence_complete?: boolean;
 }
 
 export function record(value: unknown): Record<string, unknown> {

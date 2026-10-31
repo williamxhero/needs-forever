@@ -32,7 +32,7 @@ export class Rpc {
   private notifications: { method: string; params: unknown }[] = [];
   private wake: (() => void) | undefined;
   private failure: Error | undefined;
-  private closed = false;
+  private closing: Promise<void> | undefined;
   private readonly onAbort = () => { void this.close(); };
   constructor(argv: string[], cwd: string, overrides: string[], private readonly signal?: AbortSignal) {
     signal?.throwIfAborted();
@@ -85,9 +85,11 @@ export class Rpc {
     }
     return this.notifications.shift()!;
   }
-  async close(): Promise<void> {
-    if (this.closed) return;
-    this.closed = true;
+  close(): Promise<void> {
+    this.closing ??= this.closeChild();
+    return this.closing;
+  }
+  private async closeChild(): Promise<void> {
     this.signal?.removeEventListener('abort', this.onAbort);
     if (this.child.exitCode !== null || this.child.signalCode !== null) return;
     const exited = once(this.child, 'exit');

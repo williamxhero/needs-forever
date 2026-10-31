@@ -1,0 +1,31 @@
+✖ streamed completed items supply worker evidence and judge JSON when terminal turns have no items (301.8944ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 371.6991
+
+✖ failing tests:
+
+test at dist\test\judge-cli.test.js:100:1
+✖ streamed completed items supply worker evidence and judge JSON when terminal turns have no items (301.8944ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /Only fixture stage completed/. Input:
+
+  'SIMULATED: app-server and judge fixtures are active.\n' +
+    'DONE (simulated): A1 evidence checked.\n'
+
+      at TestContext.<anonymous> (file:///C:/Users/will/.codex/worktrees/s2-redo-ticket26/needs-forever/dist/test/judge-cli.test.js:106:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.start (node:internal/test_runner/test:1242:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'SIMULATED: app-server and judge fixtures are active.\nDONE (simulated): A1 evidence checked.\n',
+    expected: /Only fixture stage completed/,
+    operator: 'match',
+    diff: 'simple'
+  }

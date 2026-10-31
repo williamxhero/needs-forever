@@ -1,0 +1,9 @@
+✔ only the expected judge turn can supply the result even if a foreign completion arrives first (281.9912ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 354.2152

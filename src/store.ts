@@ -71,12 +71,13 @@ export class Store {
     writeFileSync(resolve(this.directory, 'summary.md'), `${summary.trimEnd()}\n`, 'utf8');
   }
   event(state: State, type: string, details: Record<string, unknown> = {}): void {
-    appendFileSync(resolve(this.directory, 'events.jsonl'), `${JSON.stringify(redact({ at: new Date().toISOString(), type, task_id: state.task_id, task_version: state.task_version, mode: state.mode, ...details }))}\n`, 'utf8');
+    appendFileSync(resolve(this.directory, 'events.jsonl'), `${JSON.stringify(redact({ event_id: randomUUID(), at: new Date().toISOString(), type, task_id: state.task_id, task_version: state.task_version, mode: state.mode, ...details }))}\n`, 'utf8');
   }
-  snapshot(snapshot: Snapshot, result: unknown): void {
+  events(): Record<string, unknown>[] { return readFileSync(resolve(this.directory, 'events.jsonl'), 'utf8').trim().split('\n').filter(Boolean).map((line) => JSON.parse(line)); }
+  snapshot(snapshot: Snapshot, result: unknown, validation = result === null ? 'pending' : 'fixture-only'): void {
     const directory = resolve(this.directory, 'snapshots');
     mkdirSync(directory, { recursive: true });
     // Snapshot identity is generated locally, never an arbitrary external pathname.
-    writeFileSync(resolve(directory, `${snapshot.snapshot_id}.json`), `${JSON.stringify({ input: snapshot, raw_output: result, validation: result === null ? 'pending' : 'fixture-only' }, null, 2)}\n`, 'utf8');
+    writeFileSync(resolve(directory, `${snapshot.snapshot_id}.json`), `${JSON.stringify(redact({ input: snapshot, raw_output: result, validation }), null, 2)}\n`, 'utf8');
   }
 }

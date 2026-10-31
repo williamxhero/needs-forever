@@ -1,0 +1,9 @@
+✔ streamed completed items supply worker evidence and judge JSON when terminal turns have no items (354.541ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 423.1257

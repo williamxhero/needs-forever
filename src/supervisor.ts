@@ -12,12 +12,14 @@ import type { Judge } from './judge.js';
 import { normalize, selectAction, reachedLimits, type WorkerEvent } from './rules.js';
 import { connect, type Rpc } from './transport.js';
 import { redact } from './redact.js';
+import { buildSnapshot } from './snapshot.js';
 
 export class Supervisor {
   private rpc: Rpc | undefined;
   private readonly incoming: ({ kind: 'notification'; method: string; params: unknown } | { kind: 'response'; delivery: string; version: number; turn: string } | { kind: 'failure'; error: Error; delivery?: string; version?: number })[] = [];
   private wake: (() => void) | undefined;
   private readonly candidates = new Map<string, { started: boolean; client_id?: string; completed?: WorkerEvent }>();
+  private readonly displayedOutputs = new Set<string>();
   private activeCheckpoint = 0;
   private cancellation: Promise<void> | undefined;
   private readonly abort = new AbortController();
@@ -62,9 +64,24 @@ export class Supervisor {
       while (this.state.status === 'ACTIVE') {
         const notification = await rpc.next();
         if (this.fixture && notification.method === 'supervisor/test/pause') { this.pause(); continue; }
+        const params = notification.params && typeof notification.params === 'object' ? record(notification.params) : {};
+        if (params.threadId === this.state.worker_thread_id && ['item/completed', 'turn/completed', 'turn/plan/updated'].includes(notification.method)) this.store.event(this.state, 'worker_evidence', { role: 'worker', thread_id: params.threadId, method: notification.method, params });
+        if (params.threadId === this.state.worker_thread_id && notification.method === 'item/completed') this.displayOutput(record(redact(params.item)), String(params.turnId));
+        this.judge.observe?.(notification.method, notification.params);
         this.enqueue({ kind: 'notification', ...notification });
       }
-    } catch (error) { this.enqueue({ kind: 'failure', error: error instanceof Error ? error : new Error('Connection failed.') }); }
+    } catch (error) {
+      const failure = error instanceof Error ? error : new Error('Connection failed.');
+      this.judge.connectionFailed?.(failure);
+      this.enqueue({ kind: 'failure', error: failure });
+    }
+  }
+  private displayOutput(item: Record<string, unknown>, turnId: string): void {
+    const identity = `${turnId}/${String(item.id)}`;
+    if (item.type !== 'agentMessage' || typeof item.text !== 'string' || this.displayedOutputs.has(identity)) return;
+    this.displayedOutputs.add(identity);
+    console.log(`worker: ${item.text}`);
+    this.store.event(this.state, 'worker_output', { role: 'worker', thread_id: this.state.worker_thread_id, turn_id: turnId, text: item.text });
   }
   private confirm(turnId: string, delivery: string, version: number, via: string): void {
     const pending = this.state.pending_action;
@@ -94,6 +111,10 @@ export class Supervisor {
       if (resume && !this.state.worker_thread_id) throw new Error('Resume requires the saved worker thread identity; S3 recovery required.');
       const connection = await connect(argv, this.state.task.workspace, this.abort.signal);
       this.rpc = connection.rpc;
+      this.judge.bind?.(this.rpc, (type, details) => {
+        if (type === 'judge_created' && typeof details.thread_id === 'string') { (this.state.judge_thread_ids ??= []).push(details.thread_id); this.save(); }
+        this.store.event(this.state, type, { role: 'judge', ...details });
+      });
       if (this.state.status !== 'ACTIVE') return;
       this.state.codex_version = connection.version;
       this.store.event(this.state, 'connection_verified', { codex_version: connection.version, disabled_mcp: connection.disabled_mcp, server_process_id: this.rpc.processId });
@@ -157,32 +178,30 @@ export class Supervisor {
         const turn = record(record(redact(event.raw)).turn);
         if (Array.isArray(turn.items)) for (const value of turn.items) {
           const item = record(value);
-          if (item.type === 'agentMessage' && typeof item.text === 'string') {
-            console.log(`worker: ${item.text}`);
-            this.store.event(this.state, 'worker_output', { role: 'worker', thread_id: event.thread_id, turn_id: event.turn_id, text: item.text });
-          }
+          this.displayOutput(item, event.turn_id);
         }
         this.state.phase = 'JUDGE';
         this.state.active_worker_turn_id = null;
         this.state.reviewing_turn_id = event.turn_id;
         this.save();
-        const snapshot: Snapshot = { snapshot_id: randomUUID(), task_id: this.state.task_id, task_version: this.state.task_version, worker_thread_id: this.state.worker_thread_id!, worker_turn_id: event.turn_id, task: this.state.task, evidence: [{ id: 'E1', type: 'worker_terminal', value: redact(event.raw) }] };
+        const snapshot: Snapshot = this.judge.rawOutput === undefined ? { snapshot_id: randomUUID(), task_id: this.state.task_id, task_version: this.state.task_version, worker_thread_id: this.state.worker_thread_id!, worker_turn_id: event.turn_id, task: this.state.task, evidence: [{ id: 'E1', type: 'worker_terminal', value: redact(event.raw) }] } : buildSnapshot(this.state, event.turn_id, this.store.events());
         this.store.snapshot(snapshot, null);
         let decision;
         try { decision = await this.judge.judge(snapshot, this.abort.signal); }
         catch (error) {
           if (this.state.status !== 'ACTIVE') { this.store.event(this.state, 'stale_judge_result_ignored', { snapshot_id: snapshot.snapshot_id }); continue; }
+          if (this.judge.rawOutput !== undefined) this.store.snapshot(snapshot, this.judge.rawOutput, 'invalid');
           throw error;
         }
         if (this.state.status !== 'ACTIVE' || this.state.task_version !== snapshot.task_version || this.state.reviewing_turn_id !== event.turn_id || this.state.active_worker_turn_id !== null) {
           this.store.event(this.state, 'stale_judge_result_ignored', { snapshot_id: snapshot.snapshot_id });
           continue;
         }
-        this.store.snapshot(snapshot, decision);
+        this.store.snapshot(snapshot, this.judge.rawOutput ?? decision, this.judge.rawOutput === undefined ? 'fixture-only' : 'valid');
         this.state.last_decision = decision;
         this.state.handled_turn_ids.push(event.turn_id);
         this.state.reviewing_turn_id = null;
-        this.store.event(this.state, 'decision', { role: 'judge', thread_id: this.state.worker_thread_id, turn_id: event.turn_id, decision });
+        this.store.event(this.state, 'decision', { role: 'judge', thread_id: this.judge.rawOutput === undefined ? null : this.state.judge_thread_ids?.at(-1), worker_thread_id: this.state.worker_thread_id, worker_turn_id: event.turn_id, snapshot_id: snapshot.snapshot_id, decision });
         if (decision.action === 'CONTINUE') {
           this.sendNext(text(decision.next_message, 'next_message'), event.turn_id);
         } else {
@@ -205,8 +224,9 @@ export class Supervisor {
           this.state.status = decision.action;
           this.state.phase = 'IDLE';
           this.state.pending_action = null;
+          this.state.retry = { kind: null, attempt: 0, next_at: null };
           this.save();
-          console.log(decision.action === 'DONE' ? `DONE (simulated): ${decision.reason}` : `WAIT_EXTERNAL: ${decision.external!.missing}; resume when ${decision.external!.resume_when}`);
+          console.log(decision.action === 'DONE' ? `DONE (${this.state.mode}): ${decision.reason}` : `WAIT_EXTERNAL: ${decision.external!.missing}; resume when ${decision.external!.resume_when}`);
         }
       }
     } catch (error) {
@@ -234,7 +254,7 @@ export class Supervisor {
     this.state.pending_action = { delivery_id: deliveryId, source_turn_id: sourceTurn, task_version: this.state.task_version, message: fullMessage, stage: 'prepared', target_turn_id: null };
     this.state.phase = 'WORKER';
     this.save();
-    this.store.event(this.state, 'send_prepared', { delivery_id: deliveryId });
+    this.store.event(this.state, 'send_prepared', { delivery_id: deliveryId, source_turn_id: sourceTurn, message: fullMessage });
     const params: TurnStartParams = { threadId: this.state.worker_thread_id!, clientUserMessageId: deliveryId, input: [{ type: 'text', text: fullMessage, text_elements: [] }] };
     this.state.pending_action.stage = 'sent';
     this.save();
