@@ -1,0 +1,43 @@
+{
+  "current_spec": 20,
+  "ticket": 23,
+  "mechanism": "Loaded installed implement-spec-to-done SKILL.md and executed merger stage",
+  "integrated_at": "2026-10-31T16:22:04.1326890Z",
+  "branch": "spec/20-s1-redo",
+  "before": "9da9c24252f00008d0e3a48a9464e848ed6eb28d",
+  "commit": "7671cd2e3805507f190db2962b0ff1dea14b53de",
+  "merge": "git merge --ff-only ticket/23-redo",
+  "ancestry": "PASS",
+  "npm_test": {
+    "exit_code": 0,
+    "failed": 0,
+    "mode": "simulated",
+    "passed": 7
+  },
+  "diff_check": "PASS: git diff --check 9da9c24..HEAD",
+  "source_worktree_clean": true,
+  "integration_worktree_clean": true,
+  "sample_hashes": {
+    "files": 12,
+    "mismatches": 0
+  },
+  "generated_protocol": {
+    "files": 105,
+    "source": "C:\\Users\\will\\AppData\\Local\\Temp\\needs-forever-protocol-01660",
+    "normalization": "Only .js import suffixes",
+    "mismatches": 0
+  },
+  "preserved_runs": {
+    "files": 624,
+    "path": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\new-workflow\\evidence\\ticket23-raw\\ticket23",
+    "bytes": 659198
+  },
+  "pending": [
+    "Ticket 24: consume started/completed before turn/start response; confirm matched started without response",
+    "Ticket 24: continuation, dedupe, DONE and asynchronous guards",
+    "Ticket 25: pause/resume, stale lock reclamation, cumulative limits",
+    "S2: real judge and policy, independent verifier",
+    "S3: retries and history reconciliation"
+  ],
+  "no_main_push_cleanup_or_issue_close": true
+}
