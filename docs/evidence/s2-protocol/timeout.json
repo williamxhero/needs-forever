@@ -1,0 +1,85 @@
+{
+  "kind": "environment-capability-only",
+  "at": "2026-10-31T17:52:33.615Z",
+  "workspace": "C:\\Users\\will\\AppData\\Local\\Temp\\needs-forever-s2-timeout-cSjaLl",
+  "raw": [
+    {
+      "error": {
+        "code": -32603,
+        "message": "exec failed: sandbox error: command timed out"
+      },
+      "id": 3
+    },
+    {
+      "id": 4,
+      "result": {
+        "exitCode": 0,
+        "stdout": "S2_AFTER_TIMEOUT_OK\n",
+        "stderr": ""
+      }
+    },
+    {
+      "error": {
+        "code": -32603,
+        "message": "exec failed: sandbox error: command timed out"
+      },
+      "id": 5
+    },
+    {
+      "id": 6,
+      "result": {
+        "exitCode": 0,
+        "stdout": "S2_AFTER_TIMEOUT_OK\n",
+        "stderr": ""
+      }
+    }
+  ],
+  "cases": [
+    {
+      "timeoutMs": 100,
+      "script_expected_duration_ms": 60000,
+      "error": "app-server RPC failed (-32603).",
+      "elapsed_ms": 157,
+      "command_pid": 38920,
+      "child_alive_after_response": false,
+      "server_alive_after_timeout": true,
+      "followup": {
+        "exitCode": 0,
+        "stdout": "S2_AFTER_TIMEOUT_OK\n",
+        "stderr": ""
+      },
+      "followup_elapsed_ms": 89,
+      "same_server_pid": 8584
+    },
+    {
+      "timeoutMs": 300,
+      "script_expected_duration_ms": 60000,
+      "error": "app-server RPC failed (-32603).",
+      "elapsed_ms": 350,
+      "command_pid": 10608,
+      "child_alive_after_response": false,
+      "server_alive_after_timeout": true,
+      "followup": {
+        "exitCode": 0,
+        "stdout": "S2_AFTER_TIMEOUT_OK\n",
+        "stderr": ""
+      },
+      "followup_elapsed_ms": 86,
+      "same_server_pid": 8584
+    }
+  ],
+  "version": "codex-cli 0.166.0",
+  "disabled_mcp": [
+    "node_repl",
+    "openaiDeveloperDocs",
+    "mempalace",
+    "mobile-mcp"
+  ],
+  "server_pid": 8584,
+  "closed_server": {
+    "pid": 8584,
+    "alive": false,
+    "exitCode": null,
+    "signalCode": "SIGTERM"
+  }
+}

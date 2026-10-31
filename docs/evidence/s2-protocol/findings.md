@@ -83,3 +83,23 @@ Both probes attempted command/exec/terminate with the same supplied processId. R
 Probe 2 precisely established cancellation fallback behavior with a 60-second process that saved its own PID within its writable temporary workspace. Raw record: C:\Users\will\AppData\Local\Temp\needs-forever-s2-cancel-a84sYh\results.json . Script: C:\Users\will\AppData\Local\Temp\needs-forever-s2-command-cancel-probe.mjs . Child PID 35336 was live before terminate and still live after the -32600 refusal. Closing only owned app-server PID 31064 produced SIGTERM and OS liveness=false, and within 500 ms command PID 35336 also had liveness=false. Original pending command RPC rejected on app-server exit. The whole precise probe finished in 1.54 seconds, ruling out natural completion of the 60-second child. No unrelated process was killed.
 
 Conclusion: S2 must support buffered verification, inspect nonzero exit codes, and use owned app-server close fallback for cancellation on this installed Windows sandbox. Do not advertise command/exec/terminate runtime support merely because the generated protocol includes it. These are environment capability results only, not T01-T05 acceptance, product pause verification, or S3 recovery evidence.
+## Runtime normal-timeout addendum (2026-11-01, no model)
+
+Question: Does a normal verification command timeout require closing the owned app-server, or can the same isolated app-server continue?
+
+Probe script: C:\Users\will\AppData\Local\Temp\needs-forever-s2-command-timeout-probe.mjs . Raw response and PID evidence: C:\Users\will\AppData\Local\Temp\needs-forever-s2-timeout-cSjaLl\results.json . Reused current isolated connect() (all external MCP/features disabled, approval never, network false) in a new OS TEMP workspace. Both command/exec calls used buffered fixed argv [Node executable,-e,constant script,pidFilePath], explicit workspaceWrite, unique processId, and a script that writes its PID inside its workspace and waits 60 seconds.
+
+| timeoutMs | Observed elapsed | Actual command PID | PID alive after response | Same server follow-up |
+| --- | --- | --- | --- | --- |
+| 100 | 157 ms | 38920 | false | exitCode 0, stdout S2_AFTER_TIMEOUT_OK, 89 ms |
+| 300 | 350 ms | 10608 | false | exitCode 0, stdout S2_AFTER_TIMEOUT_OK, 86 ms |
+
+Both timeout requests returned an error envelope, not a CommandExecResponse and not an exitCode field:
+
+```json
+{"error":{"code":-32603,"message":"exec failed: sandbox error: command timed out"},"id":3}
+```
+
+Both follow-up requests used the original app-server PID 8584 and returned `{exitCode:0,stdout:"S2_AFTER_TIMEOUT_OK\n",stderr:""}`. App-server remained live following each timeout. Only after finishing both follow-up checks did the probe close its owned server; PID 8584 then had liveness=false / SIGTERM. Entire probe took 1.69 seconds, so neither 60-second command could have naturally finished. All observed command PIDs exited. No model/threads, project files, global configuration, unrelated processes, or S3 recovery were involved.
+
+Conclusion: distinguish normal command/exec timeout from user-driven cancellation. On installed Windows 0.166.0, timeoutMs itself terminates the child and preserves the app-server for subsequent repair work. Do not close a healthy app-server for this timeout outcome. In contrast, active cancellation via command/exec/terminate remains unsupported (-32600) and requires the owned app-server close fallback when cancelling a still-running verifier. These are environmental capabilities, not product acceptance.
