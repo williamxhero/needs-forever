@@ -41,8 +41,23 @@ export class Supervisor {
     this.nativeThreadUnloadRequested = true;
     this.nativeThreadUnloadPending = true;
     const params: { threadId: string } = { threadId };
-    await rpc.request('thread/unsubscribe', params);
-    this.store.event(this.state, 'native_thread_unload_requested', { thread_id: threadId, method: 'thread/unsubscribe' });
+    try {
+      await rpc.request('thread/unsubscribe', params);
+      this.store.event(this.state, 'native_thread_unload_requested', { thread_id: threadId, method: 'thread/unsubscribe' });
+    } catch (error) {
+      // The completion notification is still represented by the worker's
+      // history. Do not leave the pump permanently deferring notifications
+      // when the unload request itself fails or its connection disappears.
+      this.nativeThreadUnloadPending = false;
+      this.deferredNativeUnloadCompletion = undefined;
+      this.store.event(this.state, 'native_thread_unload_failed', {
+        thread_id: threadId,
+        method: 'thread/unsubscribe',
+        error: error instanceof Error ? error.message : String(error),
+        action: 'reconcile_worker_history_after_reconnect',
+      });
+      throw error;
+    }
   }
 
   private async scheduleRecovery(error: unknown): Promise<boolean> {

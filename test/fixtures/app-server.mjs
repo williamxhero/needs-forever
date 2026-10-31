@@ -66,6 +66,10 @@ for await (const line of lines) {
     send({ id: message.id, result: { data: page.data ?? [], nextCursor: page.nextCursor ?? null, backwardsCursor: page.backwardsCursor ?? null } });
   } else if (message.method === 'thread/archive') {
     send(scenario.archive_failure ? { id: message.id, error: { code: -32000, message: 'Archive fixture failure' } } : { id: message.id, result: {} });
+  } else if (message.method === 'thread/unsubscribe') {
+    if (scenario.unsubscribe_disconnect) process.exit(0);
+    else if (scenario.unsubscribe_error) send({ id: message.id, error: { code: -32000, message: 'Thread unsubscribe fixture failure.' } });
+    else send({ id: message.id, result: {} });
   } else if (message.method === 'turn/start') {
     if (judgeThreads.has(message.params.threadId)) {
       const turnId = `judge-turn-${judges}`;

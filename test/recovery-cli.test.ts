@@ -181,6 +181,26 @@ test('thread closed notification reconnects the saved worker and follows recover
   assert.match(events, /connection_reconnected/);
 });
 
+test('failed native thread unload request clears the gate and reconciles completion after reconnect', () => {
+  const run = fixture('native-unload-request-error', {
+    native_thread_unload_once: true,
+    unsubscribe_error: true,
+    resume_turns: [{ id: 'first-turn-from-server', status: 'completed', items: [] }],
+  });
+  const result = run.run();
+  assert.equal(result.status, 0, result.stderr);
+  const state = json(run.state);
+  assert.equal(state.status, 'DONE');
+  assert.equal(state.worker_thread_id, 'worker-from-server');
+  const events = readFileSync(resolve(run.directory, 'events.jsonl'), 'utf8');
+  assert.match(events, /native_thread_unload_failed/);
+  assert.match(events, /connection_reconnected/);
+  assert.equal((events.match(/"type":"decision"/g) ?? []).length, 1);
+  const sends = readFileSync(run.trace, 'utf8').trim().split('\n').map((line) => JSON.parse(line))
+    .filter((entry) => entry.message?.method === 'turn/start' && entry.message.params.threadId === 'worker-from-server');
+  assert.equal(sends.length, 1);
+});
+
 test('real judge timeout closes the old app-server, reconnects the worker and retries with a fresh judge', () => {
   const run = fixture('real-judge-timeout-recovery', {
     real_judge: true,
