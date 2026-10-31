@@ -1,0 +1,10 @@
+import { readFileSync, writeFileSync } from 'node:fs';
+const root = process.argv[2];
+const workspace = `${root}/workspace`;
+const verify = `import assert from 'node:assert/strict';\nimport { existsSync, readFileSync } from 'node:fs';\nif (!existsSync('repair.flag')) { console.error('INJECTED_FIRST_VERIFICATION_FAILURE: create repair.flag only after this evidence returns to the worker.'); process.exitCode = 41; }\nelse {\n  const read = (name) => JSON.parse(readFileSync(name, 'utf8'));\n  assert.equal(readFileSync('route-attempted.txt', 'utf8'), 'required-first-route-failed');\n  assert.deepEqual(read('stage1.json'), { stage: 1, value: 'alpha' });\n  assert.deepEqual(read('stage2.json'), { stage: 2, value: 'alpha-beta' });\n  assert.deepEqual(read('final.json'), { stage: 3, value: 'alpha-beta-gamma' });\n  console.log('T04 controlled verifier PASS after worker repair.flag.');\n}`;
+writeFileSync(`${workspace}/verify.mjs`, verify);
+const taskFile = `${root}/task.json`;
+const task = JSON.parse(readFileSync(taskFile, 'utf8'));
+task.authorization += ' After the supervisor returns independent verification failure evidence, create the requested local repair.flag and continue; do not create repair.flag before that feedback and do not modify verify.mjs.';
+writeFileSync(taskFile, `${JSON.stringify(task, null, 2)}\n`);
+console.log(JSON.stringify({ root, workspace, taskFile, verifier: 'first invocation exit 7; subsequent invocation validates all stages' }));

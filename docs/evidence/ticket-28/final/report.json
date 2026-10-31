@@ -9,9 +9,12 @@
     "worker_turn_id": "01a19330-d24f-7082-ae39-502db62295ed",
     "judge_thread_id": "01a19331-7bbc-7471-b978-b488a6f45f38",
     "worker_stage_1": "observed",
-    "judge_stage_1": "not_completed_within_observation_window",
-    "t01_t05": "not_run_to_completion",
-    "reason": "First bounded run left the real judge in progress and was interrupted. Second run returned an invalid WAIT_EXTERNAL object and strict validation entered RECOVERING. A clarified third run returned a valid WAIT_EXTERNAL with an empty next_message, but the isolated workspace still denied writes for stage2/final. T01-T05 therefore remain not_run_to_completion."
+    "judge_stage_1": "DONE",
+    "t01_t05": "PASS",
+    "worker_turns": 3,
+    "verifier_exit_code": 0,
+    "verifier_passed": true,
+    "reason": "After the local-work continuation gate was clarified, the real worker completed all three stages on one thread; the real judge returned DONE and the fixed independent verifier passed. Earlier invalid and WAIT_EXTERNAL runs remain preserved as negative evidence."
   },
   "claims": ["No live completion or verifier pass is claimed."]
 }
