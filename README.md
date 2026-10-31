@@ -7,7 +7,7 @@ Requires Node.js 24 or later. Dependencies are locked in `package-lock.json`.
 ```powershell
 npm ci --ignore-scripts --registry https://registry.npmjs.org
 npm run build
-npm tes
+npm test
 node scripts/run-s1-start-demo.mjs
 node scripts/run-s1-continuation-demo.mjs
 node scripts/run-s1-exit.mjs
