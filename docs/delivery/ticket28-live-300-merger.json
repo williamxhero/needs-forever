@@ -1,0 +1,54 @@
+{
+  "current_spec": 21,
+  "ticket": 28,
+  "update": "live-300 evidence merger",
+  "mechanism": "Loaded installed implement-spec-to-done and implement-spec SKILL.md files; independent merger stage",
+  "integrated_at": "2026-10-31T18:32:08.5182843Z",
+  "previous_root": "2102514aa3dcafa733b04c85adef6c90f897cec6",
+  "candidate": "359024037558f97f29da9ee9a9b29c6f65ed1bcb",
+  "merge": "git merge --no-ff --no-edit ticket/28-redo",
+  "result": "PASS",
+  "post_merge_head": "13bb7ea10e06b621c56cad13ae06094005dff716",
+  "build": {
+    "exit_code": 0,
+    "command": "npm run build"
+  },
+  "tests": {
+    "exit_code": 0,
+    "passed": 49,
+    "command": "npm test",
+    "failed": 0,
+    "mode": "simulated"
+  },
+  "live": {
+    "codex_version": "codex-cli 0.166.0",
+    "result": "WAIT_EXTERNAL with nonempty next_message rejected by strict contract",
+    "claim": "No live DONE/WAIT_EXTERNAL acceptance claim",
+    "judge_turn_id": "01a19336-e5ef-7381-b52b-e4caa18689cc",
+    "worker_turn_id": "01a19336-1e4c-7270-9b7d-3c4afd74d24b",
+    "t01_t05": "not_run_to_completion",
+    "state": "RECOVERING",
+    "worker_thread_id": "01a19336-1d40-7191-916f-65b0898ab13b",
+    "judge_thread_id": "01a19336-e55b-7fd1-b472-bf51681b90e5"
+  },
+  "raw_backup": {
+    "path": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\new-workflow\\evidence\\ticket28-raw\\ticket28-live-300",
+    "bytes": 63968,
+    "files": 9,
+    "prior_backup": "ticket28-live:10 files/53669 bytes"
+  },
+  "spec_hashes": {
+    "verification": "D3BD138C3BE2D409FFC8CDF0956858EC86BF7BEF03980149CCEE24B4F9F58D1",
+    "codex": "74444ECF532919C1D48BC3081FC27253C5E921E4D7BC15A8A2ABA10ECF8B9F00"
+  },
+  "diff_check": "PASS: git diff --check de23e6a..HEAD",
+  "clean": {
+    "source": true,
+    "root": true
+  },
+  "limitations": [
+    "Live T01-T05 not_run_to_completion; strict invalid-result recovery observed",
+    "No main/push/Issue closure/archive",
+    "S3 remains unstarted"
+  ]
+}
