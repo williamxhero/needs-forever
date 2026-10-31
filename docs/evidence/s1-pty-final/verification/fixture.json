@@ -1,0 +1,18 @@
+{
+  "app_server_argv": [
+    "C:\\Program Files\\nodejs\\node.exe",
+    "D:\\WILL\\TOOLS\\needs-forever\\test\\fixtures\\app-server.mjs",
+    "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\new-workflow\\pty-final\\verification\\scenario.json"
+  ],
+  "judge_delay_ms": 0,
+  "simulate_verification": true,
+  "judge": {
+    "action": "DONE",
+    "reason": "Fixed simulated success.",
+    "evidence_ids": [
+      "E1"
+    ],
+    "next_message": "",
+    "external": null
+  }
+}

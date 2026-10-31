@@ -1,0 +1,87 @@
+{
+  "candidate": "5fa39fc5466f56371facb0ae09c332cbdcdf3644",
+  "observed_at": "2026-10-31T17:02:46.6605879Z",
+  "notes": "Actual Windows PTY Ctrl+C at three simulated backend phases. Outer PowerShell code1 is not used as task outcome. No live model or real acceptance claim.",
+  "observations": [
+    {
+      "fixture": "worker",
+      "mode": "simulated",
+      "signal": "Actual console Ctrl+C through exec PTY",
+      "pre_signal_state": "pre-signal-state.json",
+      "status": "PAUSED",
+      "version": 2,
+      "pause_reason": "user",
+      "server_pid": 41628,
+      "server_exited": true,
+      "state_lock_released": true,
+      "events": [
+        "connection_verified",
+        "worker_created",
+        "send_prepared",
+        "send_attempted",
+        "send_confirmed",
+        "worker_started",
+        "worker_input",
+        "paused",
+        "owned_calls_cancelled"
+      ],
+      "result": "PASS"
+    },
+    {
+      "fixture": "judge",
+      "mode": "simulated",
+      "signal": "Actual console Ctrl+C through exec PTY",
+      "pre_signal_state": "pre-signal-state.json",
+      "status": "PAUSED",
+      "version": 2,
+      "pause_reason": "user",
+      "server_pid": 25096,
+      "server_exited": true,
+      "state_lock_released": true,
+      "events": [
+        "connection_verified",
+        "worker_created",
+        "send_prepared",
+        "send_attempted",
+        "send_confirmed",
+        "worker_started",
+        "worker_input",
+        "worker_completed",
+        "worker_output",
+        "paused",
+        "owned_calls_cancelled",
+        "stale_judge_result_ignored"
+      ],
+      "result": "PASS"
+    },
+    {
+      "fixture": "verification",
+      "mode": "simulated",
+      "signal": "Actual console Ctrl+C through exec PTY",
+      "pre_signal_state": "pre-signal-state.json",
+      "status": "PAUSED",
+      "version": 2,
+      "pause_reason": "user",
+      "server_pid": 31024,
+      "server_exited": true,
+      "state_lock_released": true,
+      "events": [
+        "connection_verified",
+        "worker_created",
+        "send_prepared",
+        "send_attempted",
+        "send_confirmed",
+        "worker_started",
+        "worker_input",
+        "worker_completed",
+        "worker_output",
+        "decision",
+        "fixture_verification_started",
+        "paused",
+        "owned_calls_cancelled",
+        "stale_verification_result_ignored"
+      ],
+      "result": "PASS"
+    }
+  ]
+}

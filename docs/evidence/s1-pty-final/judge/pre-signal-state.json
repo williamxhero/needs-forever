@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "task_id": "pty-judge",
+  "task_version": 1,
+  "task": {
+    "schema_version": 1,
+    "task_id": "pty-judge",
+    "workspace": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\new-workflow\\pty-final\\judge\\workspace",
+    "goal": "Check manual Ctrl+C at a simulated boundary.",
+    "acceptance": [
+      {
+        "id": "A1",
+        "text": "PAUSED wins before cancellation."
+      }
+    ],
+    "authorization": "Only the isolated fixture.",
+    "limits": {
+      "max_worker_turns": null,
+      "max_minutes": null
+    }
+  },
+  "worker_thread_id": "worker-from-server",
+  "status": "ACTIVE",
+  "phase": "JUDGE",
+  "active_worker_turn_id": null,
+  "reviewing_turn_id": "first-turn-from-server",
+  "handled_turn_ids": [],
+  "pending_action": {
+    "delivery_id": "e542701b-ce97-4d90-90ec-4e70d9469871",
+    "source_turn_id": null,
+    "task_version": 1,
+    "message": "[supervisor:e542701b-ce97-4d90-90ec-4e70d9469871]\n{\"schema_version\":1,\"task_id\":\"pty-judge\",\"workspace\":\"D:\\\\WILL\\\\TOOLS\\\\needs-forever\\\\.scratch\\\\new-workflow\\\\pty-final\\\\judge\\\\workspace\",\"goal\":\"Check manual Ctrl+C at a simulated boundary.\",\"acceptance\":[{\"id\":\"A1\",\"text\":\"PAUSED wins before cancellation.\"}],\"authorization\":\"Only the isolated fixture.\",\"limits\":{\"max_worker_turns\":null,\"max_minutes\":null}}",
+    "stage": "confirmed",
+    "target_turn_id": "first-turn-from-server"
+  },
+  "retry": {
+    "kind": null,
+    "attempt": 0,
+    "next_at": null
+  },
+  "last_decision": null,
+  "worker_turn_count": 1,
+  "elapsed_active_seconds": 24.852000000000032,
+  "updated_at": "2026-10-31T17:02:05.085Z",
+  "codex_version": "codex-cli 0.166.0",
+  "mode": "simulated"
+}

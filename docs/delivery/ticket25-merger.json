@@ -1,0 +1,54 @@
+{
+  "current_spec": 20,
+  "ticket": 25,
+  "mechanism": "Loaded installed implement-spec-to-done SKILL.md and executed merger stage",
+  "integrated_at": "2026-10-31T17:00:14.1572157Z",
+  "branch": "spec/20-s1-redo",
+  "before": "77d458fd5c87d3b5a6fff42f969545c8222ad4fc",
+  "commit": "5fa39fc5466f56371facb0ae09c332cbdcdf3644",
+  "merge": "git merge --ff-only ticket/25-redo",
+  "ancestry": "PASS",
+  "build": {
+    "exit_code": 0,
+    "command": "npm run build"
+  },
+  "verification": {
+    "checks": "T01 T02 T05 T07 T08 T14 status_and_task task_lock original_worker_resume prepared_before_send unknown_send_guard cumulative_crash_checkpoint all PASS",
+    "passed": 23,
+    "failed": 0,
+    "mode": "simulated",
+    "exit_code": 0,
+    "command": "node scripts/run-s1-exit.mjs runs/ticket25/merger-final",
+    "report": "runs/ticket25/merger-final/report.json"
+  },
+  "diff_check": "PASS: git diff --check 5d640e5..HEAD",
+  "source_worktree_clean": true,
+  "integration_worktree_clean": true,
+  "samples": {
+    "byte_differences": 18,
+    "files": 48,
+    "directories": 6,
+    "explanation": "run-s1-exit intentionally normalizes CRLF, trailing whitespace and final LF for tracked sample; all source files match after exact documented normalization",
+    "normalized_mismatches": 0
+  },
+  "protocol": {
+    "files": 110,
+    "new_types": "ThreadResumeParams, ThreadResumeResponse and three transitive types; import script includes resume",
+    "mismatches": 0,
+    "normalization": "Only .js import suffixes",
+    "source": "C:\\Users\\will\\AppData\\Local\\Temp\\needs-forever-protocol-01660"
+  },
+  "preserved_runs": {
+    "path": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\new-workflow\\evidence\\ticket25-raw\\runs",
+    "files": 2621,
+    "bytes": 7396725
+  },
+  "red_green": "Tracked README records actual observed public CLI RED/GREEN cycles; no raw RED logs claimed in final evidence",
+  "pending": [
+    "Independent Standards/Spec reviews and findings",
+    "Final three-phase Windows PTY Ctrl+C probes",
+    "Main merge, safe resource cleanup, push, remote verification and tracker closure",
+    "S2 and S3 remain unstarted/not_run"
+  ],
+  "no_main_push_cleanup_or_issue_close": true
+}

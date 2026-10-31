@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "task_id": "pty-judge",
+  "task_version": 2,
+  "task": {
+    "schema_version": 1,
+    "task_id": "pty-judge",
+    "workspace": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\new-workflow\\pty-final\\judge\\workspace",
+    "goal": "Check manual Ctrl+C at a simulated boundary.",
+    "acceptance": [
+      {
+        "id": "A1",
+        "text": "PAUSED wins before cancellation."
+      }
+    ],
+    "authorization": "Only the isolated fixture.",
+    "limits": {
+      "max_worker_turns": null,
+      "max_minutes": null
+    }
+  },
+  "worker_thread_id": "worker-from-server",
+  "status": "PAUSED",
+  "phase": "IDLE",
+  "active_worker_turn_id": null,
+  "reviewing_turn_id": "first-turn-from-server",
+  "handled_turn_ids": [],
+  "pending_action": null,
+  "retry": {
+    "kind": null,
+    "attempt": 0,
+    "next_at": null
+  },
+  "last_decision": null,
+  "worker_turn_count": 1,
+  "elapsed_active_seconds": 24.975000000000033,
+  "updated_at": "2026-10-31T17:02:05.213Z",
+  "codex_version": "codex-cli 0.166.0",
+  "mode": "simulated",
+  "pause_reason": "user"
+}

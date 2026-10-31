@@ -1,0 +1,6 @@
+{
+  "trace": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\new-workflow\\pty-final\\verification\\protocol.jsonl",
+  "state_file": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\new-workflow\\pty-final\\verification\\state.json",
+  "hold_worker": false,
+  "verification_delay_ms": 120000
+}

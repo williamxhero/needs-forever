@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "task_id": "pty-worker",
+  "workspace": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\new-workflow\\pty-final\\worker\\workspace",
+  "goal": "Check manual Ctrl+C at a simulated boundary.",
+  "acceptance": [
+    {
+      "id": "A1",
+      "text": "PAUSED wins before cancellation."
+    }
+  ],
+  "authorization": "Only the isolated fixture."
+}
