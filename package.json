@@ -1,0 +1,19 @@
+{
+  "name": "codex-supervisor",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A local, single-task, recoverable Codex app-server supervisor.",
+  "type": "module",
+  "engines": { "node": ">=24" },
+  "bin": { "codex-supervisor": "dist/src/cli.js" },
+  "exports": "./dist/src/index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "npm run build && node --test \"dist/test/*.test.js\"",
+    "start": "node dist/src/cli.js"
+  },
+  "devDependencies": {
+    "@types/node": "24.12.0",
+    "typescript": "6.0.3"
+  }
+}
