@@ -1,0 +1,104 @@
+{
+  "current_spec": 21,
+  "mechanism": "Loaded installed to-tickets SKILL.md; followed its full workflow and reused existing approved vertical slices",
+  "previous_spec": {
+    "spec": 20,
+    "main": "de23e6ae29bc12e840aa97dfb6d70b3cc6526d5b",
+    "remote": "de23e6ae29bc12e840aa97dfb6d70b3cc6526d5b",
+    "cleanup": "PASS",
+    "closed": [
+      {
+        "comment": "https://github.com/williamxhero/needs-forever/issues/23#issuecomment-6546624245",
+        "number": 23,
+        "state": "CLOSED",
+        "state_reason": "completed",
+        "closed_at": "2026-10-31T17:16:44Z",
+        "url": "https://github.com/williamxhero/needs-forever/issues/23"
+      },
+      {
+        "comment": "https://github.com/williamxhero/needs-forever/issues/24#issuecomment-6546629598",
+        "number": 24,
+        "state": "CLOSED",
+        "state_reason": "completed",
+        "closed_at": "2026-10-31T17:17:12Z",
+        "url": "https://github.com/williamxhero/needs-forever/issues/24"
+      },
+      {
+        "comment": "https://github.com/williamxhero/needs-forever/issues/25#issuecomment-6546631203",
+        "number": 25,
+        "state": "CLOSED",
+        "state_reason": "completed",
+        "closed_at": "2026-10-31T17:17:20Z",
+        "url": "https://github.com/williamxhero/needs-forever/issues/25"
+      },
+      {
+        "comment": "https://github.com/williamxhero/needs-forever/issues/20#issuecomment-6546632795",
+        "number": 20,
+        "state": "CLOSED",
+        "state_reason": "completed",
+        "closed_at": "2026-10-31T17:17:27Z",
+        "url": "https://github.com/williamxhero/needs-forever/issues/20"
+      }
+    ],
+    "total_todo_readback": "PASS",
+    "native_children": [
+      20,
+      21,
+      22
+    ],
+    "next_spec": 21,
+    "transition": "20 CLOSED/completed -> 21 may begin to-tickets"
+  },
+  "authorization": "User approved all breakdown decisions; no repeated confirmation",
+  "vertical_slices": [
+    {
+      "ticket": 26,
+      "delivers": "Real read-only per-review judge, bounded evidence and strict decision contract"
+    },
+    {
+      "ticket": 27,
+      "delivers": "Fixed independent verifier and protected baseline rejecting false DONE"
+    },
+    {
+      "ticket": 28,
+      "delivers": "Deterministic request handling and complete live S2 exit demonstration"
+    }
+  ],
+  "body_sha256": {
+    "21": "7d24fb6b8082b7d23aca26ba2af5da0ff846cc44eedd76afeb31054d1ee4dd71",
+    "26": "c861cb3dd6c3841f469ff8181e32ec2ad8d3ea52ae5b2213128871c5cb868fd7",
+    "27": "d747b9e242c24a220095bedf4499d4a0e1d12ab0e84c14bf0ddc2a7a4e7973d2",
+    "28": "de98f6107b3d3f7452e72620c04e74040e2fadd78ca8a00ec5cda46887dcc8ee"
+  },
+  "comments_read": {
+    "21": 0,
+    "26": 0,
+    "27": 0,
+    "28": 0
+  },
+  "native_children": [
+    26,
+    27,
+    28
+  ],
+  "native_blocked_by": {
+    "21": [
+      20
+    ],
+    "26": [
+      25
+    ],
+    "27": [
+      26
+    ],
+    "28": [
+      27
+    ]
+  },
+  "labels": "PASS ready-for-agent",
+  "coverage": "All S2 stories and exit gates covered; #28 owns live T01-T05 and S2 delivery; S3 untouched",
+  "ready_frontier": [
+    26
+  ],
+  "later_spec": "22 unstarted"
+}

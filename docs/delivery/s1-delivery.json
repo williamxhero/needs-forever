@@ -1,0 +1,48 @@
+{
+  "spec": 20,
+  "main": "de23e6ae29bc12e840aa97dfb6d70b3cc6526d5b",
+  "remote": "de23e6ae29bc12e840aa97dfb6d70b3cc6526d5b",
+  "cleanup": "PASS",
+  "closed": [
+    {
+      "comment": "https://github.com/williamxhero/needs-forever/issues/23#issuecomment-6546624245",
+      "number": 23,
+      "state": "CLOSED",
+      "state_reason": "completed",
+      "closed_at": "2026-10-31T17:16:44Z",
+      "url": "https://github.com/williamxhero/needs-forever/issues/23"
+    },
+    {
+      "comment": "https://github.com/williamxhero/needs-forever/issues/24#issuecomment-6546629598",
+      "number": 24,
+      "state": "CLOSED",
+      "state_reason": "completed",
+      "closed_at": "2026-10-31T17:17:12Z",
+      "url": "https://github.com/williamxhero/needs-forever/issues/24"
+    },
+    {
+      "comment": "https://github.com/williamxhero/needs-forever/issues/25#issuecomment-6546631203",
+      "number": 25,
+      "state": "CLOSED",
+      "state_reason": "completed",
+      "closed_at": "2026-10-31T17:17:20Z",
+      "url": "https://github.com/williamxhero/needs-forever/issues/25"
+    },
+    {
+      "comment": "https://github.com/williamxhero/needs-forever/issues/20#issuecomment-6546632795",
+      "number": 20,
+      "state": "CLOSED",
+      "state_reason": "completed",
+      "closed_at": "2026-10-31T17:17:27Z",
+      "url": "https://github.com/williamxhero/needs-forever/issues/20"
+    }
+  ],
+  "total_todo_readback": "PASS",
+  "native_children": [
+    20,
+    21,
+    22
+  ],
+  "next_spec": 21,
+  "transition": "20 CLOSED/completed -> 21 may begin to-tickets"
+}

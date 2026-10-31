@@ -141,7 +141,29 @@ See `docs/delivery/s1-review.md` and `docs/evidence/s1-review-fixes/`. Raw runs
 are preserved under `.scratch/new-workflow/evidence/s1-review-fix-raw/runs`.
 The resume race fix is supported by source analysis, not an invented dynamic RED.
 
-Current stage: S1 acceptance passed, delivery operations pending. No S1, S2, S3,
-or total SPEC is complete yet; no implementation Issue has been closed. S2 must
-remain unstarted until main merge, safe cleanup, push, remote equality and S1
-tracker closure are verified. Delivery receipts will record the actual transition.
+S1 delivery completed on main `de23e6ae29bc12e840aa97dfb6d70b3cc6526d5b`.
+Local/remote equality, clean root, ancestry of all implementation commits, three
+recoverably archived worktrees and five deleted merged branches were verified.
+The final push followed successful cleanup. The first archive requests returned
+queued; initial branch deletion therefore failed safely. A copied receipt's CRLF
+was corrected before the final range diff check and push. No force was used.
+
+Completion comments were uploaded with UTF-8/no-BOM body files and read back
+exactly. Tickets #23/#24/#25 and SPEC #20 read back CLOSED/completed. Total #19's
+S1 todo was checked and its native children remained #20/#21/#22.
+See `docs/delivery/s1-delivery.json` for closure timestamps and references.
+
+## S1 closed -> current S2 / #21
+
+Only after the S1 closure verification, the full #21 body/comments and existing
+#26/#27/#28 were read. Installed `/to-tickets` was executed again for this current
+SPEC: existing approved vertical slices cover all S2 requirements, so they are
+reused without duplicates. The actual labels, native children and blockers were
+read back: #26 blocked by completed #25, #27 by #26, #28 by #27; #21 by #20.
+Receipt: `docs/delivery/s2-workflow-revalidation.json`.
+
+Current SPEC is uniquely #21, with implementation order #26 -> #27 -> #28.
+Each ticket uses its own worktree, public CLI TDD and an independent merger.
+S2 exit includes live T01-T05, protected verification and request handling,
+followed by independent reviews and the complete delivery/closure gate. No S3
+decomposition or implementation may begin until #21 is delivered and CLOSED.
