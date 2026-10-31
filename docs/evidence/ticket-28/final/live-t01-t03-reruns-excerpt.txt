@@ -1,0 +1,16 @@
+# T01-T03 live rerun record
+
+The successful complete live run was executed in the isolated worktree path `C:\Users\will\.codex\worktrees\s2-redo-ticket28\needs-forever\runs\ticket28-live-local-gate` and is backed up in the current repository at `.scratch/new-workflow/evidence/ticket28-raw/ticket28-live-local-gate` (13 files, 107032 bytes). It provides the complete T01/T02/T03/T05 sequence:
+
+- worker `01a1934b-e35d-7d01-8f80-654988ee6b97` completed three turns on one thread;
+- judge decisions were `CONTINUE`, `CONTINUE`, then `DONE`;
+- the first route failed and the materially different direct-file route produced the exact stage files;
+- fixed verifier exit code was 0 and final state was `DONE`.
+
+Two post-correction live reruns were attempted and preserved as negative evidence:
+
+- `runs/ticket28-live-t01-t03-new`: worker invoked verifier itself; supervisor classified the terminal failure as S3 recovery and did not infer DONE. Raw backup is not accepted as T01-T03 PASS.
+- `runs/ticket28-live-t01-t03-opaque`: real T01 continuation was observed (same worker after first `CONTINUE`), then the second judge did not complete within the expected turn. Raw backup `.scratch/new-workflow/evidence/ticket28-raw/ticket28-live-t01-t03-opaque` has 11 files and 79396 bytes.
+- `runs/ticket28-live-t01-t03-opaque2`: repeated real worker turns were observed, but the judge repeatedly requested cross-turn evidence and the run was user-paused before DONE. Raw backup `.scratch/new-workflow/evidence/ticket28-raw/ticket28-live-t01-t03-opaque2` has 19 files and 281780 bytes.
+
+The successful local-gate run is the only run used for PASS claims; the two reruns remain explicitly negative/not-run evidence.

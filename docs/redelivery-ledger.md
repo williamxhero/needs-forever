@@ -221,3 +221,8 @@ prove T01-T05. #28 and #21 remain OPEN; S2 cannot enter main delivery or S3.
 ## T04 live gate completed
 
 The fresh isolated run `runs/ticket28-live-t04i` supplied the required supervisor-mediated sequence: the real judge returned `DONE`, the fixed verifier exited 41 with `INJECTED_FIRST_VERIFICATION_FAILURE`, the failure evidence was sent to the same worker, the worker created `repair.flag`, the judge returned `DONE` again, and the fixed verifier exited 0. The final state is `DONE` with unchanged protected files. Raw evidence is backed up under `.scratch/new-workflow/evidence/ticket28-raw/ticket28-live-t04i`; the concise receipt is `docs/evidence/ticket-28/final/live-t04i-excerpt.txt`.
+### Corrected live T01-T03/T05 evidence (2026-11-01)
+
+The complete live local-gate run was executed in the isolated worktree path `C:\Users\will\.codex\worktrees\s2-redo-ticket28\needs-forever\runs\ticket28-live-local-gate` with worker `01a1934b-e35d-7d01-8f80-654988ee6b97`. It completed three confirmed turns on one worker thread; the judge returned `CONTINUE`, `CONTINUE`, then `DONE`. The required unavailable route failed, the materially different direct-file route produced the exact stage artifacts, and the fixed supervisor verifier returned exit code 0. The final state was `DONE`. Raw evidence is backed up at `.scratch/new-workflow/evidence/ticket28-raw/ticket28-live-local-gate` (13 files, 107032 bytes).
+
+Two post-correction reruns are retained as negative evidence only: one worker ran the verifier itself and entered recovery; one observed T01 continuation but the judge did not complete; a third repeated cross-turn evidence requests and was user-paused before DONE. They do not replace the successful local-gate run or support PASS claims.

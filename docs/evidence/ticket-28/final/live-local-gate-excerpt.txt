@@ -1,11 +1,27 @@
 codex_version=codex-cli 0.166.0
+system=Windows 11; Node 24.19.0
+workspace=C:\Users\will\.codex\worktrees\s2-redo-ticket28\needs-forever\runs\ticket28-live-local-gate\workspace
 worker_thread_id=01a1934b-e35d-7d01-8f80-654988ee6b97
 worker_turns=3
-judge_thread_id=01a1934d-bf62-72c3-941b-476448dcbe56
-judge_turn_id=01a1934d-bfec-7f52-b5a0-670f12f5d203
-judge decision: DONE; evidence E1/E2; next_message=""
-verification argv=[C:\\Program Files\\nodejs\\node.exe, verify.mjs]
-verification exitCode=0
-verification stdout=All three independent stage checks PASS; the failed first route was attempted.
+turn1=01a1934b-e45c-7ce2-b2c8-06ccf48dca83
+turn1_judge=01a1934c-541d-7bc1-ad43-15bea242cd03
+turn1_decision=CONTINUE; next_message=Perform Stage 2 next
+turn2=01a1934d-18a9-7f53-b936-545a507c3db8
+turn2_judge=01a1934d-31df-7720-9dc6-7c189a77bedc
+turn2_decision=CONTINUE; next_message=Perform Stage 3 next
+turn3=01a1934d-8958-7123-9620-2fb5e974b94e
+turn3_judge=01a1934d-bf62-72c3-941b-476448dcbe56
+turn3_decision=DONE
+route_failure=unavailable-route.mjs exited 23; required-first-route-failed marker preserved
+route_recovery=materially different direct-file Node command wrote exact stage1.json
+stage2=stage2.json exact {"stage":2,"value":"alpha-beta"}
+stage3=final.json exact {"stage":3,"value":"alpha-beta-gamma"}
+verification_argv=[C:\Program Files\nodejs\node.exe, verify.mjs]
+verification_exitCode=0
+verification_stdout=All three independent stage checks PASS; the failed first route was attempted.
 protected_before=[] protected_after=[] passed=true
-verdict: live T01-T05 complete for the isolated three-stage acceptance
+T01=PASS one premature worker finish caused same-worker continuation (turn1 -> turn2)
+T02=PASS two premature worker finishes caused same-worker continuation (turn1 -> turn2 -> turn3)
+T03=PASS failed route followed by materially different direct-file route
+T05=PASS final judge DONE plus independent verifier exit 0 persisted DONE
+raw_backup=.scratch/new-workflow/evidence/ticket28-raw/ticket28-live-local-gate (13 files, 107032 bytes; copied into current repository)

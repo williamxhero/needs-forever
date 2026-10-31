@@ -13,6 +13,6 @@ This ticket adds deterministic app-server request handling at the public CLI and
 
 ## Validation
 
-`npm test` covers the existing 48-test S1/S2 regression plus the public CLI request test (`49/49` expected after this ticket's test is included). The request test uses the fixture app-server only to exercise the JSONL seam; it does not claim live model behavior.
+`npm test` covers the existing 48-test S1/S2 regression plus the public CLI request test (`50/50` expected after this ticket's test is included). The request test uses the fixture app-server only to exercise the JSONL seam; it does not claim live model behavior.
 
-The live three-stage entry was started against Codex `0.166.0` in an isolated workspace. The real worker completed stage 1 and emitted real worker IDs/events; the first judge remained in progress beyond the bounded observation window. The run was interrupted and is recorded as `not_run` for complete T01-T05 acceptance. No simulated result is labelled live.
+The complete live local-gate run against Codex `0.166.0` is recorded at `runs/ticket28-live-local-gate`: one real worker completed three turns on one thread, real judge decisions were `CONTINUE`, `CONTINUE`, then `DONE`, the required route failed before the direct-file recovery route, and the fixed verifier returned exit code 0. This supplies live T01/T02/T03/T05 evidence. Controlled T04 is recorded separately in `live-t04i-excerpt.txt` and proves supervisor verifier exit 41, same-worker repair feedback, then exit 0 and final DONE. Earlier and post-correction incomplete runs remain explicitly negative evidence; no simulated result is labelled live.

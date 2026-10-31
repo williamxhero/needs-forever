@@ -1,21 +1,54 @@
 {
   "ticket": 28,
   "mode": "mixed",
-  "simulated": {"command": "npm test", "expected_tests": 50, "passed_tests": 50, "verdict": "PASS"},
+  "simulated": {
+    "command": "npm test",
+    "expected_tests": 50,
+    "passed_tests": 50,
+    "verdict": "PASS"
+  },
   "live": {
     "codex_version": "codex-cli 0.166.0",
-    "workspace": "runs/ticket28-live/workspace",
-    "worker_thread_id": "01a19330-d158-7660-955f-17be8f069972",
-    "worker_turn_id": "01a19330-d24f-7082-ae39-502db62295ed",
-    "judge_thread_id": "01a19331-7bbc-7471-b978-b488a6f45f38",
-    "worker_stage_1": "observed",
-    "judge_stage_1": "DONE",
-    "t01_t05": "PASS",
-    "worker_turns": 3,
-    "verifier_exit_code": 0,
-    "verifier_passed": true,
-    "t04_controlled_verifier": "PASS: supervisor DONE -> fixed verifier exit 41 -> same-worker repair.flag feedback -> judge DONE -> fixed verifier exit 0",
-    "reason": "After the local-work continuation gate was clarified, the real worker completed all three stages on one thread; the real judge returned DONE and the fixed independent verifier passed. Earlier invalid and WAIT_EXTERNAL runs remain preserved as negative evidence."
+    "local_gate": {
+      "workspace": "runs/ticket28-live-local-gate/workspace",
+      "worker_thread_id": "01a1934b-e35d-7d01-8f80-654988ee6b97",
+      "worker_turns": 3,
+      "judge_decisions": [
+        "CONTINUE",
+        "CONTINUE",
+        "DONE"
+      ],
+      "judge_thread_ids": [
+        "01a1934c-541d-7bc1-ad43-15bea242cd03",
+        "01a1934d-31df-7720-9dc6-7c189a77bedc",
+        "01a1934d-bf62-72c3-941b-476448dcbe56"
+      ],
+      "route_failure": "unavailable-route.mjs exit 23; marker preserved",
+      "route_recovery": "materially different direct-file route",
+      "verifier_exit_code": 0,
+      "verifier_passed": true,
+      "final_state": "DONE",
+      "evidence": "docs/evidence/ticket-28/final/live-local-gate-excerpt.txt",
+      "raw_backup": ".scratch/new-workflow/evidence/ticket28-raw/ticket28-live-local-gate (13 files, 107032 bytes)"
+    },
+    "t04i": {
+      "worker_thread_id": "01a19372-3578-7813-9fd8-192f769c8d80",
+      "first_judge_thread_id": "01a19372-9625-7f51-af85-e766c3996cd9",
+      "first_verification_exit_code": 41,
+      "failure_feedback_delivery": "fbed4f45-3629-46df-b4d9-c64d247988ed",
+      "second_judge_thread_id": "01a19373-55a0-7da1-ac8a-2fa3790f9496",
+      "second_verification_exit_code": 0,
+      "final_state": "DONE",
+      "evidence": "docs/evidence/ticket-28/final/live-t04i-excerpt.txt",
+      "raw_backup": ".scratch/new-workflow/evidence/ticket28-raw/ticket28-live-t04i (13 files, 62339 bytes)"
+    },
+    "negative_reruns": [
+      "runs/ticket28-live-t01-t03-new: worker-side verifier execution; RECOVERING",
+      "runs/ticket28-live-t01-t03-opaque: T01 continuation then judge incomplete",
+      "runs/ticket28-live-t01-t03-opaque2: repeated CONTINUE and user-paused before DONE"
+    ]
   },
-  "claims": ["No live completion or verifier pass is claimed."]
+  "claims": [
+    "Live local gate PASS covers T01/T02/T03/T05; controlled t04i PASS covers T04; negative reruns retained and not used as PASS."
+  ]
 }
