@@ -1,7 +1,7 @@
 {
   "ticket": 28,
   "mode": "mixed",
-  "simulated": {"command": "npm test", "expected_tests": 49, "passed_tests": 49, "verdict": "PASS"},
+  "simulated": {"command": "npm test", "expected_tests": 50, "passed_tests": 50, "verdict": "PASS"},
   "live": {
     "codex_version": "codex-cli 0.166.0",
     "workspace": "runs/ticket28-live/workspace",
