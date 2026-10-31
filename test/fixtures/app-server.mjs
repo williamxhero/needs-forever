@@ -114,7 +114,8 @@ for await (const line of lines) {
     send({ method: 'item/started', params: { threadId: message.params.threadId, turnId, item: { type: 'userMessage', id: `input-${turns}`, clientId: message.params.clientUserMessageId, content: message.params.input } } });
     if (scenario.pause_after_ms !== undefined) setTimeout(() => send({ method: 'supervisor/test/pause', params: {} }), scenario.pause_after_ms);
     if (!scenario.hold_worker) {
-      const completed = { method: 'turn/completed', params: { threadId: message.params.threadId, turn: { id: turnId, status: scenario.terminal_status ?? 'completed', items: [...scenario.tool_items ?? [], ...commandItems, { type: 'agentMessage', id: 'answer-1', text: scenario.answer ?? 'Only fixture stage completed.' }] } } };
+      const terminalStatus = scenario.terminal_statuses?.[turns - 1] ?? scenario.terminal_status ?? 'completed';
+      const completed = { method: 'turn/completed', params: { threadId: message.params.threadId, turn: { id: turnId, status: terminalStatus, items: [...scenario.tool_items ?? [], ...commandItems, { type: 'agentMessage', id: 'answer-1', text: scenario.answer ?? 'Only fixture stage completed.' }] } } };
       if (scenario.stream_items) { for (const item of completed.params.turn.items) send({ method: 'item/completed', params: { threadId: message.params.threadId, turnId, item } }); completed.params.turn.items = []; }
       if (scenario.late_error_first && turns > 1) setTimeout(() => send(completed), 80);
       else if (scenario.server_requests?.length) setTimeout(() => send(completed), 120);

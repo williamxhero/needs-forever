@@ -267,7 +267,7 @@ test('failed worker terminal never reaches the fixed DONE judge', () => {
   writeFileSync(fixture.fixture, JSON.stringify(config));
   const started = run(fixture.argv);
   assert.equal(started.status, 1);
-  assert.match(started.stderr, /Worker terminal status failed/);
+  assert.match(started.stderr, /Worker turn .* failed/);
   assert.equal(json(fixture.stateFile).phase, 'RECOVERING');
   assert.equal(json(fixture.stateFile).last_decision, null);
   assert.equal(existsSync(resolve(fixture.directory, 'snapshots')), false);
@@ -468,14 +468,14 @@ test('resume records a failed sent delivery and enters unified recovery without 
   const pending = json(fixture.stateFile).pending_action;
   writeFileSync(fixture.scenario, JSON.stringify({ trace: fixture.trace, resume_turns: [{ id: 'first-turn-from-server', status: 'failed', error: { message: 'Worker process exited with code 17.' }, items: [{ type: 'userMessage', clientId: pending.delivery_id }] }] }));
   const resumed = run(['resume', '--state', fixture.stateFile, '--test-fixture', fixture.fixture]);
-  assert.equal(resumed.status, 1);
+  assert.equal(resumed.status, 0, resumed.stderr);
   const state = json(fixture.stateFile);
-  assert.equal(state.phase, 'RECOVERING');
-  assert.equal(state.pending_action.delivery_id, pending.delivery_id);
-  assert.match(state.last_error, /Worker process exited with code 17/);
+  assert.equal(state.status, 'WAIT_EXTERNAL');
+  assert.equal(state.pending_action, null);
   const events = readFileSync(resolve(fixture.directory, 'events.jsonl'), 'utf8').trim().split('\n').map((line) => JSON.parse(line));
   assert.equal(events.filter((event) => event.type === 'worker_history_failed').length, 1);
-  assert.equal(events.filter((event) => event.type === 'send_confirmed').length, 0);
+  assert.equal(events.filter((event) => event.type === 'worker_history_failed_continuation').length, 1);
+  assert.equal(events.filter((event) => event.type === 'send_confirmed').length, 1);
 });
 
 test('resume reviews the saved completed worker turn without adding another worker round', () => {

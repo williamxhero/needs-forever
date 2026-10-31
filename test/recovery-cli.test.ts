@@ -72,6 +72,40 @@ test('worker disconnect keeps the sent delivery, reconnects the same worker and 
   assert.equal((events.match(/"type":"send_confirmed"/g) ?? []).length, 1);
 });
 
+test('live worker failed terminal recovers through history and a fresh continuation', () => {
+  const run = fixture('live-worker-failed-terminal', {
+    terminal_statuses: ['failed', 'completed'],
+    resume_turns: [{ id: 'first-turn-from-server', status: 'failed', error: { message: 'Worker command exited with code 17.' }, items: [] }],
+  });
+  const result = run.run();
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(json(run.state).status, 'DONE');
+  const events = readFileSync(resolve(run.directory, 'events.jsonl'), 'utf8');
+  assert.match(events, /worker_terminal_recovery_required/);
+  assert.match(events, /worker_history_failed_continuation/);
+  assert.equal((events.match(/"type":"send_confirmed"/g) ?? []).length, 2);
+  const sends = readFileSync(run.trace, 'utf8').trim().split('\n').map((line) => JSON.parse(line)).filter((entry) => entry.message?.method === 'turn/start' && entry.message.params.threadId === 'worker-from-server');
+  assert.equal(sends.length, 2);
+  assert.notEqual(sends[0].message.params.clientUserMessageId, sends[1].message.params.clientUserMessageId);
+});
+
+test('live worker interrupted terminal confirms history before a fresh continuation', () => {
+  const run = fixture('live-worker-interrupted-terminal', {
+    terminal_statuses: ['interrupted', 'completed'],
+    resume_turns: [{ id: 'first-turn-from-server', status: 'interrupted', items: [] }],
+  });
+  const result = run.run();
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(json(run.state).status, 'DONE');
+  const events = readFileSync(resolve(run.directory, 'events.jsonl'), 'utf8');
+  assert.match(events, /worker_terminal_recovery_required/);
+  assert.match(events, /worker_history_interrupted/);
+  assert.equal((events.match(/"type":"send_confirmed"/g) ?? []).length, 2);
+  const sends = readFileSync(run.trace, 'utf8').trim().split('\n').map((line) => JSON.parse(line)).filter((entry) => entry.message?.method === 'turn/start' && entry.message.params.threadId === 'worker-from-server');
+  assert.equal(sends.length, 2);
+  assert.notEqual(sends[0].message.params.clientUserMessageId, sends[1].message.params.clientUserMessageId);
+});
+
 test('real judge timeout closes the old app-server, reconnects the worker and retries with a fresh judge', () => {
   const run = fixture('real-judge-timeout-recovery', {
     real_judge: true,

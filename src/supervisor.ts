@@ -208,7 +208,10 @@ export class Supervisor {
       this.store.event(this.state, 'worker_history_reconciled', { turn_id: active, status: matchingActive.status });
       if (matchingActive.status === 'completed') this.enqueue({ kind: 'notification', method: 'turn/completed', params: { threadId: this.state.worker_thread_id, turn: matchingActive } });
       else if (matchingActive.status === 'interrupted') this.continueAfterInterrupted(null, matchingActive);
-      else if (matchingActive.status === 'failed') throw this.failedHistoryError(matchingActive);
+      else if (matchingActive.status === 'failed') {
+        const error = this.recordFailedHistory(matchingActive);
+        this.continueAfterTerminal(null, matchingActive, error);
+      }
       return;
     }
     const matching = turns.find((turn) => Array.isArray(turn.items) && turn.items.some((item) => item.type === 'userMessage' && item.clientId === pending.delivery_id));
@@ -232,10 +235,11 @@ export class Supervisor {
     } else if (matching.status === 'interrupted') {
       this.continueAfterInterrupted(pending, matching);
     } else if (matching.status === 'failed') {
-      throw this.failedHistoryError(matching);
+      const error = this.recordFailedHistory(matching);
+      this.continueAfterTerminal(pending, matching, error);
     }
   }
-  private failedHistoryError(turn: { id: string; error?: { message?: string } | null }): Error {
+  private recordFailedHistory(turn: { id: string; error?: { message?: string } | null }): Error {
     const message = turn.error?.message ?? `Worker turn ${turn.id} failed without an error message.`;
     this.state.last_error = message;
     this.store.event(this.state, 'worker_history_failed', { turn_id: turn.id, error: message });
@@ -251,6 +255,16 @@ export class Supervisor {
     this.save();
     this.store.event(this.state, 'worker_history_interrupted', { turn_id: turn.id, old_delivery_id: pending?.delivery_id ?? null, action: 'new_continuation' });
     this.sendNext(message, pending?.source_turn_id ?? turn.id);
+  }
+  private continueAfterTerminal(pending: PendingAction | null, turn: { id: string }, error: Error): void {
+    const message = pending?.message.replace(/^\[supervisor:[^\]]+\]\n/, '') ?? JSON.stringify(this.state.task);
+    this.state.pending_action = null;
+    this.state.active_worker_turn_id = null;
+    this.state.reviewing_turn_id = null;
+    this.state.phase = 'WORKER';
+    this.save();
+    this.store.event(this.state, 'worker_history_failed_continuation', { turn_id: turn.id, old_delivery_id: pending?.delivery_id ?? null, error: error.message, action: 'new_continuation' });
+    this.sendNext(`The previous worker turn failed with this error: ${error.message}\nContinue the authorized task from the current workspace using a repaired or different route.\n${message}`, pending?.source_turn_id ?? turn.id);
   }
   private async reconnectAndReconcile(argv: string[]): Promise<void> {
     const old = this.rpc;
@@ -430,8 +444,32 @@ export class Supervisor {
           if (candidate) candidate.completed = event;
         }
         if (action !== 'judge') continue;
-        if (event.status !== 'completed') throw new Error(`Worker terminal status ${event.status}; no DONE is inferred until the failure is classified and recovered.`);
         const turn = record(record(redact(event.raw)).turn);
+        if (event.status !== 'completed') {
+          let detail = `Worker turn ${event.turn_id} ended with status ${event.status}.`;
+          if (turn.error && typeof turn.error === 'object' && !Array.isArray(turn.error)) {
+            const error = record(turn.error);
+            if (typeof error.message === 'string' && error.message.trim()) detail = error.message;
+          }
+          const terminalError = new Error(`Worker turn ${event.turn_id} ${event.status}: ${detail}`);
+          this.store.event(this.state, 'worker_terminal_recovery_required', { turn_id: event.turn_id, status: event.status, error: terminalError.message });
+          const enabled = this.fixture?.recovery_enabled === true || this.fixture?.recovery_delays_ms !== undefined || this.fixture === undefined;
+          if (!enabled || !this.state.worker_thread_id) throw terminalError;
+          let recoveryError: unknown = terminalError;
+          while (this.state.status === 'ACTIVE') {
+            if (!(await this.scheduleRecovery(recoveryError))) break;
+            try {
+              await this.reconnectAndReconcile(argv);
+              if (this.state.status !== 'ACTIVE') break;
+              this.state.phase = 'WORKER';
+              this.save();
+              break;
+            } catch (error) {
+              recoveryError = error;
+            }
+          }
+          continue;
+        }
         if (Array.isArray(turn.items)) for (const value of turn.items) {
           const item = record(value);
           this.displayOutput(item, event.turn_id);
