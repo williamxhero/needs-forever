@@ -11,7 +11,7 @@
     "worker_stage_1": "observed",
     "judge_stage_1": "not_completed_within_observation_window",
     "t01_t05": "not_run_to_completion",
-    "reason": "The real judge turn remained in progress during the bounded live run; the process was interrupted to avoid an unbounded wait."
+    "reason": "First bounded run left the real judge in progress and was interrupted. A second bounded run reached a real judge terminal, but the model returned an invalid WAIT_EXTERNAL object with a nonempty next_message; strict validation rejected it and entered RECOVERING. T01-T05 therefore remain not_run_to_completion."
   },
   "claims": ["No live completion or verifier pass is claimed."]
 }
