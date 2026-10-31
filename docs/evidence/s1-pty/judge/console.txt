@@ -1,4 +1,3 @@
 SIMULATED: app-server and judge fixtures are active.
 worker: Only fixture stage completed.
 PAUSED: user
-
