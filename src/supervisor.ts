@@ -392,7 +392,11 @@ export class Supervisor {
         this.state.phase = 'WORKER';
         this.save();
         if (known.status === 'completed') this.enqueue({ kind: 'notification', method: 'turn/completed', params: { threadId: this.state.worker_thread_id, turn: known } });
-        else if (known.status === 'interrupted') { this.resetIdle(); this.sendNext(JSON.stringify(this.state.task), null); }
+        else if (known.status === 'interrupted') this.continueAfterInterrupted(this.state.pending_action, known);
+        else if (known.status === 'failed') {
+          const error = this.recordFailedHistory(known);
+          this.continueAfterTerminal(this.state.pending_action, known, error);
+        }
         else if (known.status !== 'inProgress') throw new Error(`Resumed turn status ${known.status}; explicit recovery diagnostics are required.`);
       } else if (resume && this.state.pending_action?.stage === 'sent') {
         await this.reconcileWorkerHistory(created);

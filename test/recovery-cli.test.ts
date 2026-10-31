@@ -106,6 +106,28 @@ test('live worker interrupted terminal confirms history before a fresh continuat
   assert.notEqual(sends[0].message.params.clientUserMessageId, sends[1].message.params.clientUserMessageId);
 });
 
+test('worker quota failure waits externally and explicit resume reconciles the failed turn', () => {
+  const run = fixture('live-worker-quota-resume', {
+    terminal_statuses: ['failed', 'completed'],
+    terminal_errors: [{ message: 'Account quota exceeded; restore credits before continuing.' }],
+  });
+  const first = run.run();
+  assert.equal(first.status, 0, first.stderr);
+  const waiting = json(run.state);
+  assert.equal(waiting.status, 'WAIT_EXTERNAL');
+  assert.equal(waiting.phase, 'IDLE');
+  assert.equal(waiting.active_worker_turn_id, 'first-turn-from-server');
+  const scenario = json(resolve(run.directory, 'scenario.json'));
+  scenario.resume_turns = [{ id: 'first-turn-from-server', status: 'failed', error: { message: 'Account quota exceeded; restore credits before continuing.' }, items: [] }];
+  writeFileSync(resolve(run.directory, 'scenario.json'), JSON.stringify(scenario));
+  const resumed = spawnSync(process.execPath, [resolve('dist/src/cli.js'), 'resume', '--state', run.state, '--test-fixture', run.fixtureFile], { encoding: 'utf8', timeout: 5000 });
+  assert.equal(resumed.status, 0, resumed.stderr);
+  assert.equal(json(run.state).status, 'DONE');
+  const events = readFileSync(resolve(run.directory, 'events.jsonl'), 'utf8');
+  assert.match(events, /external_wait_required/);
+  assert.match(events, /worker_history_failed_continuation/);
+});
+
 test('real judge timeout closes the old app-server, reconnects the worker and retries with a fresh judge', () => {
   const run = fixture('real-judge-timeout-recovery', {
     real_judge: true,
