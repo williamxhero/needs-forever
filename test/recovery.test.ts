@@ -30,4 +30,3 @@ test('repeated recovery failures produce an investigation instruction at thresho
   assert.equal(failures.at(-1)?.count, 3);
   assert.match(failures.at(-1)?.instruction ?? '', /different hypothesis|route/i);
 });
-
