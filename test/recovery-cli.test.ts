@@ -146,6 +146,25 @@ test('periodic reconcile hydrates paginated history and compensates a missed com
   assert.equal((events.match(/"type":"send_confirmed"/g) ?? []).length, 1);
 });
 
+test('periodic reconcile never resends a sent delivery while history is still inconclusive', () => {
+  const run = fixture('periodic-unknown-delivery', {
+    hold_worker: true,
+    response_order: 'missing',
+    suppress_worker_confirmation: true,
+    reconcile_interval_ms: 20,
+    pause_after_ms: 250,
+  });
+  const result = run.run();
+  assert.equal(result.status, 0, result.stderr);
+  const state = json(run.state);
+  assert.equal(state.status, 'PAUSED');
+  assert.equal(state.pending_action.stage, 'sent');
+  const sends = readFileSync(run.trace, 'utf8').split('\n').filter((line) => line.includes('"method":"turn/start"'));
+  assert.equal(sends.length, 1);
+  const events = readFileSync(resolve(run.directory, 'events.jsonl'), 'utf8');
+  assert.match(events, /send_reconciliation_deferred/);
+});
+
 test('thread closed notification reconnects the saved worker and follows recovered history', () => {
   const run = fixture('thread-closed-recovery', {
     hold_worker: true,

@@ -201,7 +201,7 @@ export class Supervisor {
       this.store.event(this.state, type, { role: 'judge', ...details });
     });
   }
-  private async reconcileWorkerHistory(resumed: ThreadStartResponse): Promise<void> {
+  private async reconcileWorkerHistory(resumed: ThreadStartResponse, allowResendWhenAbsent = true): Promise<void> {
     const pending = this.state.pending_action;
     const turns = resumed.thread.turns;
     if (!pending || pending.stage !== 'sent') {
@@ -220,6 +220,11 @@ export class Supervisor {
     }
     const matching = turns.find((turn) => Array.isArray(turn.items) && turn.items.some((item) => item.type === 'userMessage' && item.clientId === pending.delivery_id));
     if (!matching) {
+      if (!allowResendWhenAbsent) {
+        this.store.event(this.state, 'send_reconciliation_deferred', { delivery_id: pending.delivery_id, reason: 'history_does_not_yet_confirm_absence' });
+        this.save();
+        return;
+      }
       const message = pending.message.replace(/^\[supervisor:[^\]]+\]\n/, '');
       this.state.pending_action = null;
       this.state.active_worker_turn_id = null;
@@ -265,10 +270,11 @@ export class Supervisor {
     try {
       const params: ThreadResumeParams = { threadId: this.state.worker_thread_id, cwd: this.state.task.workspace, approvalPolicy: 'never', sandbox: 'workspace-write', excludeTurns: false };
       const resumed = await this.hydrateWorkerTurns(this.rpc, await this.rpc.request<ThreadResumeResponse>('thread/resume', params));
-      if (this.state.status !== 'ACTIVE' || resumed.thread.id !== this.state.worker_thread_id) return;
+      if (this.state.status !== 'ACTIVE') return;
+      if (resumed.thread.id !== this.state.worker_thread_id) throw new Error('Periodic reconciliation changed worker identity.');
       this.validateWorker(resumed);
       this.store.event(this.state, 'worker_history_reconciled_periodic', { thread_id: this.state.worker_thread_id, turns: resumed.thread.turns.length });
-      await this.reconcileWorkerHistory(resumed);
+      await this.reconcileWorkerHistory(resumed, false);
     } finally {
       this.reconcileInFlight = false;
     }

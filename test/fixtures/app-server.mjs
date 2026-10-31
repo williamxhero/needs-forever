@@ -115,10 +115,10 @@ for await (const line of lines) {
       send({ method: 'item/started', params: { threadId: message.params.threadId, turnId: 'unrelated-turn', item: { type: 'userMessage', id: 'old-input', clientId: 'obsolete-delivery', content: [] } } });
       if (!scenario.real_judge) send({ method: 'turn/completed', params: { threadId: message.params.threadId, turn: { id: 'first-turn-from-server', status: 'completed', items: [] } } });
     }
-    send({ method: 'turn/started', params: { threadId: message.params.threadId, turn: { id: turnId, status: 'inProgress', items: [] } } });
+    if (!scenario.suppress_worker_confirmation) send({ method: 'turn/started', params: { threadId: message.params.threadId, turn: { id: turnId, status: 'inProgress', items: [] } } });
     if (scenario.thread_closed_after_ms !== undefined) setTimeout(() => send({ method: 'thread/closed', params: { threadId: message.params.threadId } }), scenario.thread_closed_after_ms);
     (scenario.server_requests ?? []).forEach((request, index) => setTimeout(() => send({ id: request.id ?? `server-request-${turns}-${index}`, method: request.method, params: { ...(request.params ?? {}), threadId: message.params.threadId, turnId } }), index * 15));
-    send({ method: 'item/started', params: { threadId: message.params.threadId, turnId, item: { type: 'userMessage', id: `input-${turns}`, clientId: message.params.clientUserMessageId, content: message.params.input } } });
+    if (!scenario.suppress_worker_confirmation) send({ method: 'item/started', params: { threadId: message.params.threadId, turnId, item: { type: 'userMessage', id: `input-${turns}`, clientId: message.params.clientUserMessageId, content: message.params.input } } });
     if (scenario.pause_after_ms !== undefined) setTimeout(() => send({ method: 'supervisor/test/pause', params: {} }), scenario.pause_after_ms);
     if (!scenario.hold_worker) {
       const terminalStatus = scenario.terminal_statuses?.[turns - 1] ?? scenario.terminal_status ?? 'completed';
