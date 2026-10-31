@@ -24,6 +24,8 @@ function scenario(name: string, options: Record<string, unknown> = {}) {
 test('judge prompt states the terminal next_message contract', () => {
   assert.match(judgeInstructions, /WAIT_EXTERNAL, next_message MUST be exactly the empty string/);
   assert.match(judgeInstructions, /Only CONTINUE may have a nonempty next_message/);
+  assert.match(judgeInstructions, /If any original acceptance item is incomplete and the authorization covers local workspace work, you MUST choose CONTINUE/);
+  assert.match(judgeInstructions, /WAIT_EXTERNAL is allowed only when the snapshot contains a concrete, necessary external condition/);
 });
 
 test('real judge boundary continues the original worker then completes with fresh archived read-only judges', () => {
