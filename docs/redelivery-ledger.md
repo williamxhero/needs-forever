@@ -21,9 +21,10 @@ count as accepted implementation or acceptance evidence.
 
 ## Current workflow (2026-11-01)
 
-The user invoked `implement-spec-to-done` for #19. The sole current SPEC is #20.
-Its full body and comments, #19's full contract, native child relationships and
-SPEC dependency edges were read again. Order: #20, then #21, then #22.
+The user invoked `implement-spec-to-done` for #19. Initially the sole current
+SPEC was #20. Its full body and comments, #19's full contract, native child
+relationships and SPEC dependency edges were read again. Order: #20, then #21,
+then #22. S1 is now delivered and CLOSED; current SPEC is #21, as recorded below.
 
 Skills are executed by loading their installed SKILL.md files and following the
 complete procedures; this environment exposes no dedicated skill-call tool.
@@ -35,7 +36,7 @@ Ticket #23's policy criterion is clarified to match #20: validate the actual
 worker policy in S1, use a fixed judge for deterministic tests, and validate the
 real judge's read-only policy in S2. The total requirement remains unchanged.
 
-After current-ticket revalidation, resume the unfinished #23 worktree as a
+The initial restart plan, now completed for S1, was to resume #23 as a
 draft: no earlier passing test is assumed to be current acceptance. Complete
 each ready ticket with TDD, then integrate using a merger agent. Re-read all S1
 criteria, run its complete simulated acceptance and independent Standards/Spec
