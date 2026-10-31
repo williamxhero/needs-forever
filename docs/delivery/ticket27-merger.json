@@ -1,0 +1,74 @@
+{
+  "current_spec": 21,
+  "ticket": 27,
+  "mechanism": "Loaded installed implement-spec-to-done and implement-spec SKILL.md files; independent merger stage",
+  "integrated_at": "2026-10-31T18:11:03.8082214Z",
+  "branch": "spec/21-s2-redo",
+  "before": "62a463cbc85a2d504ff49cd4a6154b244b4c855d",
+  "implementation_commit": "3a5228571e4683644e358e0966a5b524bb77acca",
+  "merge": "git merge --ff-only ticket/27-redo",
+  "ancestry": "PASS",
+  "build": {
+    "command": "npm run build",
+    "exit_code": 0
+  },
+  "verification": {
+    "passed": 48,
+    "command": "node scripts/run-s2-verification-exit.mjs runs/ticket27-exit/merger",
+    "judge_cases": 14,
+    "mode": "simulated",
+    "tests": 48,
+    "s1_regression": 24,
+    "verification_cases": 10,
+    "failed": 0,
+    "exit_code": 0,
+    "report": "runs/ticket27-exit/merger/report.json"
+  },
+  "demo": {
+    "decisions": [
+      "CONTINUE",
+      "CONTINUE",
+      "DONE"
+    ],
+    "captured": "docs/evidence/ticket-27/demo/report.json",
+    "recheck_exit": 0,
+    "merger_recheck": "node verify.mjs in captured demo/workspace",
+    "local_subprocesses": "Actual Node route/verifier; app-server and AI decisions simulated; no real Codex sandbox enforcement claimed",
+    "worker_identity": "worker-from-server",
+    "worker_turns": 3
+  },
+  "diff_check": "PASS: git diff --check de23e6a..3a52285",
+  "source_worktree_clean": true,
+  "integration_worktree_clean_before_receipt": true,
+  "samples": {
+    "files": 97,
+    "directories": 10,
+    "unexplained_mismatches": 0,
+    "byte_identical": 97
+  },
+  "protocol": {
+    "files": 119,
+    "mismatches": 0,
+    "source": "C:\\Users\\will\\AppData\\Local\\Temp\\needs-forever-protocol-01660",
+    "normalization": "Only .js import suffixes"
+  },
+  "preserved_runs": {
+    "originals_preserved": true,
+    "root": ".scratch/new-workflow/evidence/ticket27-raw",
+    "ticket27": {
+      "files": 405,
+      "bytes": 1581119
+    },
+    "ticket27_demo": {
+      "files": 18,
+      "bytes": 85443
+    }
+  },
+  "normalization": "Committed PowerShell text transcripts normalize CRLF/trailing whitespace; runtime JSON/JSONL and workspace sample bytes unchanged; raw runs preserved",
+  "limitations": [
+    "All public CLI model/protocol tests simulated, live T01-T05 not_run",
+    "Ticket28 request handling and S2 live exit remain pending",
+    "S3 general retry/reconnect/history reconciliation remains outside current ticket"
+  ],
+  "no_main_push_cleanup_or_issue_close": true
+}
