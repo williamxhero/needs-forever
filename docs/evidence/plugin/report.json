@@ -1,0 +1,71 @@
+{
+  "spec": 32,
+  "plugin": "needs-forever@needs-forever-local",
+  "version": "0.2.0",
+  "platform": "Windows x64",
+  "node": "v24.19.0",
+  "codex": "codex-cli 0.166.0",
+  "core_baseline": "b64964a5527560004767488816977b6e749154f1",
+  "checks": [
+    {
+      "command": "npm test",
+      "result": "PASS",
+      "passed": 74,
+      "failed": 0
+    },
+    {
+      "command": "git diff --check",
+      "result": "PASS"
+    },
+    {
+      "command": "node --check plugins/needs-forever/scripts/control.mjs",
+      "result": "PASS"
+    },
+    {
+      "command": "node scripts/verify-plugin-install.mjs",
+      "result": "PASS",
+      "mode": "live-local-install-no-model",
+      "evidence": "install.json"
+    },
+    {
+      "command": "python -X utf8 <skill-creator>/scripts/quick_validate.py plugins/needs-forever/skills/supervise",
+      "result": "PASS"
+    }
+  ],
+  "process_control_acceptance": {
+    "mode": "simulated-app-server-real-processes",
+    "boundary": "copied installed package in a directory containing Chinese text and spaces -> detached host -> unchanged CLI -> explicit JSONL fixture",
+    "background_start": "PASS",
+    "durable_pause": "PASS",
+    "resume_original_worker": "PASS",
+    "history_completion_without_duplicate_send": "PASS",
+    "duplicate_live_host_rejected": "PASS",
+    "done_cannot_resume": "PASS",
+    "startup_failure_visible": "PASS",
+    "orphaned_active_checkpoint_distinct_from_live": "PASS",
+    "read_only_status_does_not_start_model_or_modify_state": "PASS"
+  },
+  "limits": [
+    "No new live model execution was used to validate the plugin wrapper; reused core live evidence is unchanged.",
+    "Only Windows / Codex 0.166.0 / Node.js 24 was exercised.",
+    "The plugin manages its own worker; it does not take over an existing Desktop chat.",
+    "Machine restart and lost host control require explicit recovery; no OS auto-start is installed.",
+    "No public marketplace publication was performed."
+  ],
+  "reviews": {
+    "fixed_point": "b64964a",
+    "reviewed_commit": "c52f7f5",
+    "spec": "PASS",
+    "standards": "PASS"
+  },
+  "local_install": {
+    "mode": "actual-user-codex-install-no-model",
+    "plugin_id": "needs-forever@needs-forever-local",
+    "installed": true,
+    "enabled": true,
+    "installed_path": "C:\\Users\\will\\.codex\\plugins\\cache\\needs-forever-local\\needs-forever\\0.2.0",
+    "doctor": "PASS",
+    "bundle_parity_files": 18,
+    "bundle_parity": "PASS"
+  }
+}
