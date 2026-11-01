@@ -1,0 +1,16 @@
+{
+  "generated_by": "npm run plugin:build",
+  "files": {
+    "src/cli.js": "675111518bcedcbf03f194b9eac717ab3f4b47d4064a9ce32f15737ab43fe7a5",
+    "src/index.js": "03e898ec1f5980e9758d1fc83bd8a03cd746d8f42a8bea4a46e9d766e1563283",
+    "src/judge.js": "d9b2d933d7902462ea9c196ff8c8d8811ca17c295fd393537d2092d120de5af7",
+    "src/recovery.js": "db606a6e5674c70e4f70b56d794e14576ae0d4473d15a6ef4e8a72ab4aa9da2e",
+    "src/redact.js": "cd943daa4180f8c87b091babc0160dedab3432b471624710e67926fbfe779db6",
+    "src/rules.js": "e743c10107cb043bf2c06957b2646cb9fc723474bd456d0f96a02861d5d376fc",
+    "src/snapshot.js": "6b815e1bc90f42d4dbb5672ee314e17b71763c7baeced3a119ec91aa36193427",
+    "src/store.js": "23067b5e1642728050960f5dcea17b2b7c7ff8172fa2f58175f6df786a544629",
+    "src/supervisor.js": "0c2f586924c38c8b82a4cc75af23ec9bfdfea2a9306c3a1870319ba6cd927652",
+    "src/transport.js": "bb10bff3680a7937e37cb3b829ff385fb59f9a57862d834814796e92185b37a8",
+    "src/types.js": "1d776e8997c21eccad34b1b01358b1a3f8df090b5647a855ba3972d361311f08"
+  }
+}

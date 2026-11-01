@@ -1,0 +1,8 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "needs-forever",
+  "version": "0.2.0",
+  "description": "持续推进一个本地 Codex 任务，保留原线程，支持独立验收、暂停与恢复。",
+  "author": { "name": "williamxhero" },
+  "repository": "https://github.com/williamxhero/needs-forever"
+}

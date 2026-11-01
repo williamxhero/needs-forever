@@ -1,0 +1,60 @@
+{
+  "mode": "live-local-install-no-model",
+  "commands": [
+    {
+      "argv": [
+        "C:\\Users\\will\\AppData\\Roaming\\npm\\node_modules\\@openai\\codex\\node_modules\\@openai\\codex-win32-x64\\vendor\\x86_64-pc-windows-msvc\\bin\\codex.exe",
+        "plugin",
+        "marketplace",
+        "add",
+        "D:\\WILL\\TOOLS\\needs-forever",
+        "--json"
+      ],
+      "exit_code": 0,
+      "stdout": "{\n  \"marketplaceName\": \"needs-forever-local\",\n  \"installedRoot\": \"D:\\\\WILL\\\\TOOLS\\\\needs-forever\",\n  \"alreadyAdded\": false\n}\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "C:\\Users\\will\\AppData\\Roaming\\npm\\node_modules\\@openai\\codex\\node_modules\\@openai\\codex-win32-x64\\vendor\\x86_64-pc-windows-msvc\\bin\\codex.exe",
+        "plugin",
+        "add",
+        "needs-forever@needs-forever-local",
+        "--json"
+      ],
+      "exit_code": 0,
+      "stdout": "{\n  \"pluginId\": \"needs-forever@needs-forever-local\",\n  \"name\": \"needs-forever\",\n  \"marketplaceName\": \"needs-forever-local\",\n  \"version\": \"0.2.0\",\n  \"installedPath\": \"D:\\\\WILL\\\\TOOLS\\\\needs-forever\\\\runs\\\\plugin-install\\\\1793492852830\\\\codex-home\\\\plugins\\\\cache\\\\needs-forever-local\\\\needs-forever\\\\0.2.0\",\n  \"authPolicy\": \"ON_USE\"\n}\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "C:\\Users\\will\\AppData\\Roaming\\npm\\node_modules\\@openai\\codex\\node_modules\\@openai\\codex-win32-x64\\vendor\\x86_64-pc-windows-msvc\\bin\\codex.exe",
+        "plugin",
+        "list",
+        "--marketplace",
+        "needs-forever-local",
+        "--json"
+      ],
+      "exit_code": 0,
+      "stdout": "{\n  \"installed\": [\n    {\n      \"pluginId\": \"needs-forever@needs-forever-local\",\n      \"name\": \"needs-forever\",\n      \"marketplaceName\": \"needs-forever-local\",\n      \"version\": \"0.2.0\",\n      \"installed\": true,\n      \"enabled\": true,\n      \"source\": {\n        \"source\": \"local\",\n        \"path\": \"D:\\\\WILL\\\\TOOLS\\\\needs-forever\\\\plugins\\\\needs-forever\"\n      },\n      \"marketplaceSource\": {\n        \"sourceType\": \"local\",\n        \"source\": \"\\\\\\\\?\\\\D:\\\\WILL\\\\TOOLS\\\\needs-forever\"\n      },\n      \"installPolicy\": \"AVAILABLE\",\n      \"authPolicy\": \"ON_USE\"\n    }\n  ],\n  \"available\": []\n}\n",
+      "stderr": ""
+    }
+  ],
+  "directory": "D:\\WILL\\TOOLS\\needs-forever\\runs\\plugin-install\\1793492852830",
+  "skills": [
+    {
+      "name": "needs-forever:supervise",
+      "description": "持续执行一个已授权的本地任务，或查询、暂停、恢复 Needs Forever 管理的任务。用于用户要求自动推进到验收通过、启动监督任务或管理其检查点。",
+      "path": "D:\\WILL\\TOOLS\\needs-forever\\runs\\plugin-install\\1793492852830\\codex-home\\plugins\\cache\\needs-forever-local\\needs-forever\\0.2.0\\skills\\supervise\\SKILL.md",
+      "scope": "user",
+      "enabled": true,
+      "pluginId": "needs-forever@needs-forever-local"
+    }
+  ],
+  "skill_errors": [],
+  "installed_doctor": {
+    "exit_code": 0,
+    "stdout": "{\n  \"ready\": true,\n  \"node\": \"v24.19.0\",\n  \"codex\": \"codex-cli 0.166.0\",\n  \"plugin_version\": \"0.2.0\"\n}\n",
+    "stderr": ""
+  }
+}

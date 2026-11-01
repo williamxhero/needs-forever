@@ -1,0 +1,10 @@
+{
+  "name": "needs-forever-local",
+  "interface": { "displayName": "Needs Forever" },
+  "plugins": [{
+    "name": "needs-forever",
+    "source": { "source": "local", "path": "./plugins/needs-forever" },
+    "policy": { "installation": "AVAILABLE", "authentication": "ON_USE" },
+    "category": "Productivity"
+  }]
+}

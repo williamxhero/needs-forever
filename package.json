@@ -9,7 +9,8 @@
   "exports": "./dist/src/index.js",
   "scripts": {
     "build": "tsc",
-    "test": "npm run build && node --test \"dist/test/*.test.js\"",
+    "test": "npm run build && node scripts/build-plugin.mjs && node --test \"dist/test/*.test.js\"",
+    "plugin:build": "npm run build && node scripts/build-plugin.mjs",
     "start": "node dist/src/cli.js"
   },
   "devDependencies": {

@@ -1,6 +1,28 @@
 # Codex Supervisor v0.1
 
-S1 (#20) delivers validated startup/status, same-worker continuation, durable pause/resume and cumulative limits. S2 tickets #26/#27 add the independent read-only semantic judge, bounded evidence protocol and protected fixed-argv verification. S2 delivery still requires request handling, live acceptance, review and the coordinating agent's delivery gates.
+The validated core (#19) provides same-worker continuation, an independent read-only judge, protected verification, durable pause/resume, retry and history reconciliation. The Needs Forever plugin packages this core for Codex.
+
+## Codex plugin
+
+Install the bundled plugin from this repository:
+
+```powershell
+codex plugin marketplace add D:\WILL\TOOLS\needs-forever
+codex plugin add needs-forever@needs-forever-local
+codex plugin list --marketplace needs-forever-local --json
+```
+
+Open a new chat (restart the app if its plugin list has not refreshed), then invoke `$needs-forever:supervise` with the local task, acceptance criteria and authorization. For example: “用 $needs-forever:supervise 完成 D:/projects/example 的本地构建修复，验收使用现有 verify.mjs，仅授权修改该项目。” The skill writes a task contract and starts an independent worker; it does not take over the current Desktop chat.
+
+The plugin supports `doctor`, `start`, `status`, `pause` and `resume`. Its installed `scripts/control.mjs` runs with Node.js >=24; no npm install or development checkout is needed. Task records default to `<workspace>/.codex-supervisor/<task_id>/state.json`, outside the plugin cache. Save the returned state path to query, pause or resume from another chat. `ACTIVE` in a checkpoint is separate from the `live` process check; an orphaned ACTIVE checkpoint requires explicit resume. `DONE` cannot resume.
+
+`pause` uses the plugin's private local control channel to deliver the core's existing durable pause input and waits for its process to finish. It never kills a PID from a stale receipt. Background startup is acknowledged only after this invocation saves its checkpoint; the receipt alone does not prove a worker round has started.
+
+The compatibility manifest and portable manifest live under `plugins/needs-forever/`; `.agents/plugins/marketplace.json` exposes the package. `npm run plugin:build` regenerates its bundled JavaScript from the core. Commit the generated runtime with source changes: installations do not execute build scripts. `npm test` checks bundle parity and the isolated copied-package lifecycle. `node scripts/verify-plugin-install.mjs` verifies real CLI installation, skill discovery and installed-package preflight in an isolated CODEX_HOME without starting a model.
+
+Plugin execution shares the core's Windows / Codex 0.166.0 support boundary. Installation and discovery checks use the real Codex host; deterministic process-control tests use an explicit simulated app-server. The plugin wrapper has no new live model acceptance claim; the reused core's original live evidence remains under `docs/evidence/`.
+
+## Core CLI
 
 Requires Node.js 24 or later. Dependencies are locked in `package-lock.json`.
 
