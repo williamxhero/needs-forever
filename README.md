@@ -1,6 +1,6 @@
 # Codex Supervisor v0.1
 
-The validated core (#19) provides same-worker continuation, an independent read-only judge, protected verification, durable pause/resume, retry and history reconciliation. The Needs Forever plugin packages this core for Codex.
+The Needs Forever plugin defaults to supervising the current Desktop main session (#33). That session is worker A; an independent hidden Node.js process B controls synchronous Stop hooks and creates a fresh read-only supervisor C for each judgment. The core's original independent-worker mode remains available for existing checkpoints.
 
 ## Codex plugin
 
@@ -12,15 +12,17 @@ codex plugin add needs-forever@needs-forever-local
 codex plugin list --marketplace needs-forever-local --json
 ```
 
-Open a new chat (restart the app if its plugin list has not refreshed), then invoke `$needs-forever:supervise` with the local task, acceptance criteria and authorization. For example: “用 $needs-forever:supervise 完成 D:/projects/example 的本地构建修复，验收使用现有 verify.mjs，仅授权修改该项目。” The skill writes a task contract and starts an independent worker; it does not take over the current Desktop chat.
+Review the plugin hooks in Codex Settings > Hooks and reload as required by the host. Invoke `$needs-forever:supervise` in the intended Desktop chat with the local task, acceptance criteria and authorization. For example: “用 $needs-forever:supervise 完成 D:/projects/example 的本地构建修复，验收使用现有 verify.mjs，仅授权修改该项目。” The skill writes the contract and runs installed `control.mjs start` from that workspace. Native pre/post hook receipts correlate this invocation to A; after binding, B starts automatically. Until that receipt exists, the task remains pending and must not be reported as supervised.
 
-The plugin supports `doctor`, `start`, `status`, `pause` and `resume`. Its installed `scripts/control.mjs` runs with Node.js >=24; no npm install or development checkout is needed. Task records default to `<workspace>/.codex-supervisor/<task_id>/state.json`, outside the plugin cache. Save the returned state path to query, pause or resume from another chat. `ACTIVE` in a checkpoint is separate from the `live` process check; an orphaned ACTIVE checkpoint requires explicit resume. `DONE` cannot resume.
+The installed `scripts/control.mjs` supports `doctor`, `start`, `status`, `pause` and `resume`, using Node.js >=24 without npm install or a checkout. Records default to `<workspace>/.codex-supervisor/<task_id>/state.json`. Other chats can query or pause a task; an already bound task resumes only through a fresh native receipt from the original A. `status` separately reports B reachability, host process presence, hook effectiveness and actual continuation confirmation. A returned direction alone does not prove A executed it. `DONE` cannot resume.
 
-`pause` uses the plugin's private local control channel to deliver the core's existing durable pause input and waits for its process to finish. It never kills a PID from a stale receipt. Background startup is acknowledged only after this invocation saves its checkpoint; the receipt alone does not prove a worker round has started.
+Interrupt or `pause` saves PAUSED before canceling owned judgment/verification. New native user input invalidates old judgment and pending direction without changing the contract or authorization. A hook timeout, host restart or bundle change requires explicit recovery. `resume` rotates the run and controller handles, preserves original A, artifacts, verifier baseline and cumulative limits, then waits for a new Stop. Unknown old deliveries are retained as audit history and never replayed. Leases are reclaimed only after matching their owner and proving ESRCH; no saved PID is killed.
 
 The compatibility manifest and portable manifest live under `plugins/needs-forever/`; `.agents/plugins/marketplace.json` exposes the package. `npm run plugin:build` regenerates its bundled JavaScript from the core. Commit the generated runtime with source changes: installations do not execute build scripts. `npm test` checks bundle parity and the isolated copied-package lifecycle. `node scripts/verify-plugin-install.mjs` verifies real CLI installation, skill discovery and installed-package preflight in an isolated CODEX_HOME without starting a model.
 
-Plugin execution shares the core's Windows / Codex 0.166.0 support boundary. Installation and discovery checks use the real Codex host; deterministic process-control tests use an explicit simulated app-server. The plugin wrapper has no new live model acceptance claim; the reused core's original live evidence remains under `docs/evidence/`.
+Desktop and CLI versions are checked separately: the private C protocol remains pinned to CLI 0.166.0, while native Desktop hooks require their own actual-host verification and trust. `doctor` alone does not prove native hook support or trust. Main-session implementation evidence is under `docs/evidence/spec33/`; process-level replacement-host/model tests are simulated. Required real Desktop acceptance remains a separate release gate. See [the current architecture](docs/main-session-architecture.md) for boundaries and host limitations.
+
+Checkpoints without `control_mode` retain the original independent-worker behavior. New compatibility tasks require explicit `start --control-mode independent-worker`. The core CLI below is that legacy execution entry and rejects main-session checkpoints before acquiring or changing their worker state.
 
 ## Core CLI
 

@@ -5,11 +5,13 @@ import { createConnection, createServer } from 'node:net';
 import { resolve, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
 import { setTimeout as delay } from 'node:timers/promises';
-import { canonicalPath, indexPath, readJson } from './main-session.js';
+import { canonicalPath, registeredStatePaths, readJson, mainLeasePath, contractHash } from './main-session.js';
 import { handleLifecycle } from './lifecycle.js';
 import { Store } from './store.js';
 import { redact } from './redact.js';
 import { preflightSupervisor, superviseStop } from './main-supervision.js';
+import { classifyRecoveryError, nextBackoff, recordRecoveryFailure } from './recovery.js';
+import { reachedLimits } from './rules.js';
 export function controllerRequest(controller, command, payload = null, timeout = 2_000) {
     return new Promise((done, reject) => {
         const socket = createConnection(controller.endpoint);
@@ -51,17 +53,87 @@ export async function controllerStatus(path) {
         }
         catch { /* Read-only, never restart. */ }
     }
-    return { ...state, control_mode: state.control_mode ?? 'independent-worker', live, continuation_confirmed: state.continuation_confirmed ?? false, recovery_required: (state.status === 'ACTIVE' && !live) || state.phase === 'RECOVERING' };
+    let hostAlive = null;
+    const pid = state.host.desktop_pid;
+    if (pid) {
+        try {
+            process.kill(pid, 0);
+            hostAlive = true;
+        }
+        catch (error) {
+            hostAlive = error.code === 'ESRCH' ? false : null;
+        }
+    }
+    const elapsed = state.elapsed_active_seconds + (state.status === 'ACTIVE' && live && state.active_checkpoint_at ? Math.max(0, Date.now() - Date.parse(state.active_checkpoint_at)) / 1000 : 0);
+    return { ...state, host: { ...state.host, hook_effective: state.host.hook_effective && hostAlive !== false }, elapsed_active_seconds: elapsed, control_mode: state.control_mode ?? 'independent-worker', live, controller_reachable: live, host_process_alive: hostAlive, hook_effective: state.host.hook_effective && hostAlive !== false, continuation_confirmed: state.continuation_confirmed ?? false, recovery_required: (state.status === 'ACTIVE' && (!live || hostAlive === false)) || state.phase === 'RECOVERING' };
+}
+function processAbsent(pid) {
+    if (!Number.isInteger(pid) || pid <= 0)
+        throw new Error('Invalid saved controller identity.');
+    try {
+        process.kill(pid, 0);
+        return false;
+    }
+    catch (error) {
+        if (error.code === 'ESRCH')
+            return true;
+        throw error;
+    }
+}
+export async function pauseMainController(path) {
+    const state = readJson(path);
+    if (state.status === 'PAUSED' && state.controller && !processAbsent(state.controller.pid))
+        return controllerRequest(state.controller, 'pause');
+    if (state.status === 'PAUSED' && state.pause_reason)
+        return { paused: true, status: 'PAUSED', state_path: path };
+    if (state.status !== 'ACTIVE' && state.status !== 'PAUSED')
+        throw new Error(`Task is ${state.status}; no active task to pause.`);
+    if (state.controller && !processAbsent(state.controller.pid))
+        return controllerRequest(state.controller, 'pause');
+    const store = new Store(path);
+    store.lock(state.task, true);
+    try {
+        const latest = readJson(path);
+        if (latest.controller && !processAbsent(latest.controller.pid))
+            throw new Error('A controller became active; retry using its owned channel.');
+        latest.status = 'PAUSED';
+        latest.pause_reason = 'user';
+        latest.phase = 'IDLE';
+        latest.input_epoch = (latest.input_epoch ?? 0) + 1;
+        latest.pending_action = null;
+        delete latest.direction_context;
+        latest.host.hook_effective = false;
+        store.save(latest);
+        store.event(latest, 'main_session_offline_pause', { controller_proven_absent: true });
+        return { paused: true, status: 'PAUSED', state_path: path };
+    }
+    finally {
+        store.release();
+    }
+}
+export async function prepareControllerResume(path) {
+    const state = readJson(path);
+    if (!state.controller || processAbsent(state.controller.pid))
+        return;
+    await controllerRequest(state.controller, 'release-for-resume');
+    const deadline = Date.now() + 3_000;
+    while (!processAbsent(state.controller.pid)) {
+        if (Date.now() >= deadline)
+            throw new Error('Owned B has not exited; no lease was reclaimed. Inspect status before retrying.');
+        await delay(25);
+    }
 }
 export async function launchController(path, pluginRoot, fixture) {
     const state = readJson(path);
     if (state.controller)
         throw new Error('A controller receipt already exists; use explicit resume, never silently replace it.');
+    state.controller_startup_deadline = new Date(Date.now() + 25_000).toISOString();
+    new Store(path).save(state);
     const script = resolve(pluginRoot, 'scripts/controller.mjs');
     const child = spawn(process.execPath, [script, path, ...(fixture ? ['--test-fixture', fixture] : [])], { cwd: state.task.workspace, detached: true, windowsHide: true, stdio: ['ignore', 'ignore', 'ignore', 'ipc'] });
     try {
         await new Promise((done, reject) => {
-            const timer = setTimeout(() => { child.unref(); reject(new Error('B startup outcome unknown; inspect state and use explicit recovery.')); }, 10_000);
+            const timer = setTimeout(() => { child.unref(); reject(new Error('B startup outcome unknown; inspect state and use explicit recovery.')); }, 25_000);
             child.once('error', (error) => { clearTimeout(timer); reject(error); });
             child.once('exit', (code) => { clearTimeout(timer); reject(new Error(`B exited before readiness (${code}).`)); });
             child.once('message', (message) => { clearTimeout(timer); message.error ? reject(new Error(message.error)) : done(); });
@@ -84,23 +156,20 @@ export function boundStateForEvent(input, pluginRoot, simulated) {
         return null;
     if (canonicalPath(input.cwd) !== canonicalPath(process.cwd()))
         return null;
-    const index = indexPath(input.cwd);
-    if (!existsSync(index))
-        return null;
-    for (const path of readJson(index).states) {
+    for (const path of registeredStatePaths(input.cwd)) {
         if (!existsSync(path))
             continue;
         const state = readJson(path);
-        if (state.control_mode === 'main-session' && state.binding.status === 'BOUND' && state.main_session_id === input.session_id && (state.mode === 'simulated') === simulated && state.controller && canonicalPath(state.controller.plugin_root) === canonicalPath(pluginRoot))
+        if (state.control_mode === 'main-session' && state.status !== 'DONE' && state.binding.status === 'BOUND' && state.main_session_id === input.session_id && (state.mode === 'simulated') === simulated && state.controller?.lifecycle === 'running')
             return path;
     }
     return null;
 }
-export async function dispatchBoundLifecycle(path, input) {
+export async function dispatchBoundLifecycle(path, input, pluginRoot, bundleHash) {
     const state = readJson(path);
     if (!state.controller || state.controller.lifecycle !== 'running')
         return {};
-    return controllerRequest(state.controller, 'lifecycle', input, 590_000);
+    return controllerRequest(state.controller, 'lifecycle', { ...input, ...(pluginRoot ? { callback_plugin_root: canonicalPath(pluginRoot) } : {}), ...(bundleHash ? { callback_bundle_sha256: bundleHash } : {}) }, 590_000);
 }
 // Stop judgments share the existing schema/readonly judge. Transport-only
 // fixtures substitute the external model; live tasks cannot use fixture output.
@@ -122,15 +191,53 @@ export async function runController(path, pluginRoot, fixturePath) {
     if (state.controller)
         throw new Error('Controller receipt already exists; explicit recovery is required.');
     store.lock(state.task);
-    const leasePath = resolve(tmpdir(), 'codex-supervisor-locks', `main-session-${createHash('sha256').update(state.main_session_id).digest('hex')}.lock`);
+    const leasePath = mainLeasePath(state.main_session_id);
     let lease;
     let server;
     let closing = false;
+    let checkpointTimer;
+    const startupAbort = new AbortController();
     const sockets = new Set();
     const id = randomUUID();
-    const controller = { id, pid: process.pid, token: randomUUID(), endpoint: process.platform === 'win32' ? `\\\\.\\pipe\\needs-forever-main-${id}` : resolve(tmpdir(), `nf-main-${id}.sock`), lifecycle: 'running', started_at: new Date().toISOString(), run_generation: state.run_generation, plugin_root: canonicalPath(pluginRoot) };
+    const controller = { id, pid: process.pid, token: randomUUID(), endpoint: process.platform === 'win32' ? `\\\\.\\pipe\\needs-forever-main-${id}` : resolve(tmpdir(), `nf-main-${id}.sock`), lifecycle: 'running', started_at: new Date().toISOString(), run_generation: state.run_generation, plugin_root: canonicalPath(pluginRoot), bundle_sha256: createHash('sha256').update(readFileSync(resolve(pluginRoot, 'runtime/integrity.json'))).digest('hex') };
     let active = null;
+    const accrue = () => {
+        const now = Date.now();
+        if (state.status === 'ACTIVE' && state.active_checkpoint_at)
+            state.elapsed_active_seconds += Math.max(0, now - Date.parse(state.active_checkpoint_at)) / 1000;
+        state.active_checkpoint_at = new Date(now).toISOString();
+    };
+    const cancelActive = (reason) => {
+        const prior = active;
+        if (!prior)
+            return;
+        prior.valid = false;
+        active = null;
+        state.stop_transport = { request: prior.request, outcome: 'failed', error: reason };
+        store.save(state); // Durable invalidation precedes canceling any owned call.
+        prior.abort.abort();
+        if (!prior.socket.destroyed && !prior.socket.writableEnded)
+            prior.socket.end('{}\n');
+    };
+    const pause = (reason) => {
+        accrue();
+        state.status = 'PAUSED';
+        state.pause_reason = reason;
+        state.phase = 'IDLE';
+        state.input_epoch = (state.input_epoch ?? 0) + 1;
+        state.pending_action = null;
+        delete state.direction_context;
+        state.continuation_confirmed = false;
+        store.save(state);
+        cancelActive('Paused before cancellation.');
+    };
     const recover = (message) => {
+        if (state.status === 'PAUSED' || state.status === 'DONE')
+            return;
+        state.input_epoch = (state.input_epoch ?? 0) + 1;
+        delete state.direction_context;
+        state.tool_starts = {};
+        state.continuation_confirmed = false;
         state.phase = 'RECOVERING';
         state.last_error = String(redact(message));
         state.host.hook_effective = false;
@@ -140,6 +247,9 @@ export async function runController(path, pluginRoot, fixturePath) {
         if (closing)
             return;
         closing = true;
+        clearInterval(checkpointTimer);
+        startupAbort.abort();
+        accrue();
         if (active) {
             active.valid = false;
             active.abort.abort();
@@ -159,7 +269,6 @@ export async function runController(path, pluginRoot, fixturePath) {
             throw new Error('This main session already has a controller lease; explicit recovery is required.');
         }
         writeFileSync(lease, JSON.stringify({ pid: process.pid, controller_id: id, state_path: path, main_session_id: state.main_session_id }));
-        await preflightSupervisor(state, fixture);
         server = createServer((socket) => {
             sockets.add(socket);
             socket.on('error', () => { });
@@ -179,15 +288,18 @@ export async function runController(path, pluginRoot, fixturePath) {
                         throw new Error('Owned controller handle identity mismatch.');
                     if (message.command === 'ping')
                         return { live: true, controller_id: id };
-                    if (message.command === 'pause') {
-                        state.status = 'PAUSED';
-                        state.pause_reason = 'user';
-                        state.phase = 'IDLE';
+                    if (message.command === 'release-for-resume') {
+                        const hostPid = state.host.desktop_pid;
+                        if (state.status === 'ACTIVE' && state.phase !== 'RECOVERING' && !(hostPid && processAbsent(hostPid)))
+                            throw new Error('Active healthy supervision must be paused before resume.');
+                        cancelActive('Explicit resume retires the old controller without replay.');
+                        state.host.hook_effective = false;
                         store.save(state);
-                        if (active) {
-                            active.valid = false;
-                            active.abort.abort();
-                        }
+                        setImmediate(shutdown);
+                        return { released: true };
+                    }
+                    if (message.command === 'pause') {
+                        pause('user');
                         setImmediate(shutdown);
                         return { paused: true, state_path: path };
                     }
@@ -196,8 +308,42 @@ export async function runController(path, pluginRoot, fixturePath) {
                     const event = message.payload;
                     if (event?.session_id !== state.main_session_id || canonicalPath(event.cwd) !== canonicalPath(state.task.workspace) || event.agent_id != null || event.agent_type != null || event.agent_transcript_path != null)
                         return {};
+                    if (event.hook_event_name === 'SessionStart' || (event.callback_plugin_root && canonicalPath(event.callback_plugin_root) !== controller.plugin_root) || (event.callback_bundle_sha256 && event.callback_bundle_sha256 !== controller.bundle_sha256)) {
+                        cancelActive('Native host restarted or installed plugin changed.');
+                        recover('Native host restarted or installed plugin changed; explicit resume must revalidate the original A.');
+                        store.save(state);
+                        return {};
+                    }
+                    if (event.run_generation != null && event.run_generation !== state.run_generation)
+                        return {};
+                    if (typeof event.event_id === 'string') {
+                        if (state.processed_event_ids?.includes(event.event_id))
+                            return {};
+                        state.processed_event_ids = [...(state.processed_event_ids ?? []), event.event_id];
+                    }
+                    if (event.hook_event_name === 'Interrupt') {
+                        pause('user');
+                        setImmediate(shutdown);
+                        return {};
+                    }
+                    if (event.hook_event_name === 'UserPromptSubmit') {
+                        accrue();
+                        state.input_epoch = (state.input_epoch ?? 0) + 1;
+                        state.latest_human_input = { prompt: String(redact(typeof event.prompt === 'string' ? event.prompt : '')).slice(0, 8_000), at: new Date().toISOString(), input_epoch: state.input_epoch };
+                        state.pending_action = null;
+                        delete state.direction_context;
+                        state.continuation_confirmed = false;
+                        state.tool_starts = {};
+                        if (state.status === 'ACTIVE' && state.phase !== 'RECOVERING')
+                            state.phase = 'WORKER';
+                        store.save(state);
+                        cancelActive('A newer human input invalidated the pending judgment.');
+                        return {};
+                    }
                     if (active && event.hook_event_name === 'Stop')
-                        throw new Error('A Stop is already pending; inspect the preserved attempt rather than creating another.');
+                        return {};
+                    accrue();
+                    store.save(state);
                     const result = handleLifecycle(event, state.host, pluginRoot);
                     state = readJson(path);
                     if (!result.stop_request || state.status !== 'ACTIVE' || state.phase === 'RECOVERING')
@@ -205,7 +351,7 @@ export async function runController(path, pluginRoot, fixturePath) {
                     const request = result.stop_request;
                     if (fixture?.transport?.timeout_ms != null)
                         request.deadline_at = new Date(Date.now() + Number(fixture.transport.timeout_ms)).toISOString();
-                    const current = { abort: new AbortController(), request, socket, valid: true };
+                    const current = { abort: new AbortController(), request, socket, valid: true, epoch: state.input_epoch ?? 0 };
                     active = current;
                     state.stop_transport = { request, outcome: 'pending' };
                     state.phase = 'JUDGE';
@@ -214,6 +360,8 @@ export async function runController(path, pluginRoot, fixturePath) {
                         if (!current.valid)
                             return;
                         current.valid = false;
+                        if (active === current)
+                            active = null;
                         current.abort.abort();
                         state.stop_transport = { request, outcome: 'unknown', error: reason };
                         recover(reason);
@@ -227,9 +375,55 @@ export async function runController(path, pluginRoot, fixturePath) {
                     socket.once('close', disconnected);
                     const timer = setTimeout(() => { invalidate('Stop hook deadline elapsed; late supervisor output is invalid.'); socket.end('{}\n'); }, Math.max(1, Date.parse(request.deadline_at) - Date.now()));
                     try {
-                        const decision = await evaluateStop(state, request, fixture, current.abort.signal, store);
-                        if (!current.valid || closing || socket.destroyed || Date.now() >= Date.parse(request.deadline_at))
+                        const valid = () => {
+                            const saved = readJson(path);
+                            return current.valid && active === current && !closing && !socket.destroyed && saved.status === 'ACTIVE' && saved.phase !== 'RECOVERING' && saved.run_generation === request.run_generation && saved.task_version === request.task_version && saved.contract_sha256 === request.contract_sha256 && saved.contract_sha256 === contractHash(saved.task) && (saved.input_epoch ?? 0) === current.epoch && saved.last_stop?.stop_attempt_id === request.stop_attempt_id && Date.now() < Date.parse(request.deadline_at);
+                        };
+                        const guarded = new class extends Store {
+                            save(candidate) {
+                                if (!valid())
+                                    throw new Error('Obsolete judgment checkpoint rejected.');
+                                const saved = readJson(path);
+                                saved.phase = candidate.phase;
+                                if (candidate.judge_thread_ids)
+                                    saved.judge_thread_ids = candidate.judge_thread_ids;
+                                saved.codex_version = candidate.codex_version;
+                                super.save(saved);
+                            }
+                        }(path);
+                        let decision;
+                        if (state.mode === 'simulated' && !fixture?.app_server_argv && !fixture?.transport?.decision)
+                            throw new Error('Missing explicit simulated supervisor adapter; configure it before explicit resume.');
+                        while (true) {
+                            try {
+                                decision = await evaluateStop(structuredClone(state), request, fixture, current.abort.signal, guarded);
+                                break;
+                            }
+                            catch (error) {
+                                if (!valid() || current.abort.signal.aborted)
+                                    return {};
+                                const classification = classifyRecoveryError(error);
+                                state = readJson(path);
+                                state.recovery_failures = recordRecoveryFailure((state.recovery_failures ?? []), error);
+                                const backoff = nextBackoff((state.retry.attempt ?? 0) + 1);
+                                state.retry = { kind: classification.kind, attempt: backoff.attempt, next_at: backoff.next_at };
+                                store.save(state);
+                                store.event(state, 'main_session_retry', { ...classification, ...backoff, stop_attempt_id: request.stop_attempt_id });
+                                if (!classification.recoverable)
+                                    throw error;
+                                await delay(Math.min(backoff.delay_seconds * 1000, Math.max(1, Date.parse(request.deadline_at) - Date.now())), undefined, { signal: current.abort.signal });
+                            }
+                        }
+                        if (!valid())
                             return {};
+                        state = readJson(path);
+                        accrue();
+                        const limits = reachedLimits(state.task.limits, state);
+                        if (limits.time || (decision.action === 'CONTINUE' && limits.turns)) {
+                            pause('user_limit');
+                            return {};
+                        }
+                        state.retry = { kind: null, attempt: 0, next_at: null };
                         state.last_decision = redact(decision);
                         state.host.hook_effective = state.mode === 'live' && state.host.source === 'native-desktop';
                         state.host.reason = 'Correlated synchronous Stop judged and returned; actual main-session continuation requires subsequent matching activity.';
@@ -279,22 +473,61 @@ export async function runController(path, pluginRoot, fixturePath) {
             });
         });
         await new Promise((done, reject) => { server.once('error', reject); server.listen(controller.endpoint, done); });
+        // Publish an owned cancelable handle before the potentially slow external
+        // model preflight. Reachability still does not mean ACTIVE or hook effective.
+        state.controller = controller;
+        store.save(state);
+        process.once('SIGTERM', shutdown);
+        process.once('SIGINT', shutdown);
+        await preflightSupervisor(state, fixture, startupAbort.signal);
+        state = readJson(path);
+        if (closing || state.pause_reason || (state.controller_startup_deadline && Date.now() >= Date.parse(state.controller_startup_deadline)))
+            throw new Error('B startup canceled or deadline expired; explicit recovery required.');
         state.controller = controller;
         state.status = 'ACTIVE';
         state.phase = 'WORKER';
         state.continuation_confirmed = false;
+        state.active_checkpoint_at = new Date().toISOString();
         delete state.recovery_condition;
         state.host.reason = 'Bound controller reachable; Stop continuation and actual main-session activity still require evidence.';
         store.save(state);
         store.event(state, 'main_session_controller_started', { controller_id: id, main_session_id: state.main_session_id, pid: process.pid });
+        checkpointTimer = setInterval(() => {
+            if (closing)
+                return;
+            state = readJson(path);
+            accrue();
+            const hostPid = state.host.desktop_pid;
+            if (state.status === 'ACTIVE' && state.phase !== 'RECOVERING' && hostPid && processAbsent(hostPid)) {
+                cancelActive('Desktop owner exited.');
+                recover('Desktop owner exited; explicit same-A resume required.');
+            }
+            if (state.status === 'ACTIVE' && reachedLimits(state.task.limits, state).time)
+                pause('user_limit');
+            else
+                store.save(state);
+        }, 250);
         process.send?.({ ready: true, controller_id: id });
         if (process.connected)
             process.disconnect();
-        process.once('SIGTERM', shutdown);
-        process.once('SIGINT', shutdown);
         await new Promise((done) => server.once('close', done));
     }
+    catch (error) {
+        if (!closing && state.controller?.id === id) {
+            state.phase = 'RECOVERING';
+            state.host.hook_effective = false;
+            state.last_error = String(redact(error.message));
+            state.recovery_condition = { kind: 'controller_startup', message: state.last_error, resume_when: 'Resolve the startup failure, then explicitly resume the original A.' };
+            state.controller.lifecycle = 'exited';
+            store.save(state);
+        }
+        server?.close();
+        for (const socket of sockets)
+            socket.end();
+        throw error;
+    }
     finally {
+        clearInterval(checkpointTimer);
         if (lease !== undefined) {
             closeSync(lease);
             if (JSON.parse(readFileSync(leasePath, 'utf8')).controller_id === id)

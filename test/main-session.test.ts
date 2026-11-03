@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
+import { spawnSync, spawn } from 'node:child_process';
 import { cpSync, mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 
@@ -43,6 +43,43 @@ test('installed main-session preparation stays pending without native identity d
   assert.equal(value.worker_thread_id, null);
   assert.match(value.recovery_condition.message, /native.*hook/i);
   assert.equal(existsSync(`${f.state}.session.json`), false, 'Preparation must not create another worker host.');
+});
+
+test('pause while native binding is pending prevents a late binding receipt from activating supervision', () => {
+  const f = setup('pause-pending-binding');
+  const tool = { tool_use_id: 'prepare-pending', tool_input: { command: `node "${f.control}" prepare --task "${f.task}" --state "${f.state}" --test-fixture "${f.fixture}"` } };
+  assert.equal(hook(f, { ...tool, hook_event_name: 'PreToolUse' }).status, 0);
+  const prepared = f.run('prepare', ['--task', f.task, '--test-fixture', f.fixture]);
+  assert.equal(prepared.status, 0, prepared.stderr);
+  assert.equal(f.run('pause').status, 0);
+  try {
+    assert.equal(hook(f, { ...tool, hook_event_name: 'PostToolUse', tool_response: prepared.stdout }).status, 0);
+    const state = JSON.parse(f.run('status').stdout);
+    assert.equal(state.status, 'PAUSED'); assert.equal(state.pause_reason, 'user'); assert.equal(state.live, false);
+  } finally { f.run('pause'); }
+});
+
+test('concurrent installed preparations in one workspace retain every independent A registration', async (t) => {
+  const f = setup('parallel-index');
+  const entries = Array.from({ length: 4 }, (_, index) => {
+    const task = join(f.directory, `task-${index}.json`); const state = join(f.workspace, '.codex-supervisor', `task-${index}`, 'state.json');
+    writeFileSync(task, JSON.stringify({ ...JSON.parse(readFileSync(f.task, 'utf8')), task_id: `task-${index}` }));
+    const session_id = `parallel-A-${f.directory}-${index}`;
+    const tool = { tool_use_id: `prepare-${index}`, tool_input: { command: `node "${f.control}" prepare --task "${task}" --state "${state}" --test-fixture "${f.fixture}"` } };
+    assert.equal(hook(f, { ...tool, session_id, hook_event_name: 'PreToolUse' }).status, 0);
+    t.after(() => spawnSync(process.execPath, [f.control, 'pause', '--state', state], { cwd: f.workspace, encoding: 'utf8', timeout: 10_000 }));
+    return { task, state, session_id, tool };
+  });
+  const outputs = await Promise.all(entries.map((entry) => new Promise<string>((done, reject) => {
+    const child = spawn(process.execPath, [f.control, 'prepare', '--task', entry.task, '--state', entry.state, '--test-fixture', f.fixture], { cwd: f.workspace, windowsHide: true });
+    let stdout = ''; let stderr = ''; child.stdout.on('data', (data) => { stdout += data; }); child.stderr.on('data', (data) => { stderr += data; });
+    child.once('error', reject); child.once('exit', (code) => code === 0 ? done(stdout) : reject(new Error(stderr)));
+  })));
+  for (const [index, entry] of entries.entries()) {
+    assert.equal(hook(f, { ...entry.tool, session_id: entry.session_id, hook_event_name: 'PostToolUse', tool_response: outputs[index] }).status, 0);
+    const result = spawnSync(process.execPath, [f.control, 'status', '--state', entry.state], { cwd: f.workspace, encoding: 'utf8', timeout: 10_000 });
+    const state = JSON.parse(result.stdout); assert.equal(state.main_session_id, entry.session_id); assert.equal(state.live, true);
+  }
 });
 
 test('binding accepts neutral task filenames and Code Mode tool input without recording unrelated callbacks', (t) => {

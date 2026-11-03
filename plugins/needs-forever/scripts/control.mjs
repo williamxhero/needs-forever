@@ -10,6 +10,8 @@ import { fileURLToPath } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
 import { codexCommand, PROTOCOL_VERSION } from '../runtime/src/transport.js';
 import { redact } from '../runtime/src/redact.js';
+import { prepareMainSession, resumeMainSession } from '../runtime/src/main-session.js';
+import { controllerStatus, pauseMainController, prepareControllerResume } from '../runtime/src/main-controller.js';
 
 const script = fileURLToPath(import.meta.url);
 const cli = fileURLToPath(new URL('../runtime/src/cli.js', import.meta.url));
@@ -34,8 +36,9 @@ function options(args) {
   const flags = {};
   for (let i = 0; i < args.length; i += 2) {
     const key = args[i];
-    if (!['--task', '--state', '--test-fixture'].includes(key) || flags[key] || !args[i + 1] || args[i + 1].startsWith('--')) throw new Error('Expected unique --task, --state or --test-fixture FILE flags.');
-    flags[key] = absolute(args[i + 1], key);
+    if (!['--task', '--state', '--test-fixture', '--control-mode'].includes(key) || flags[key] || !args[i + 1] || args[i + 1].startsWith('--')) throw new Error('Expected unique --task, --state, --test-fixture or --control-mode flags.');
+    if (key === '--control-mode') { if (!['main-session', 'independent-worker'].includes(args[i + 1])) throw new Error('Invalid control mode.'); flags[key] = args[i + 1]; }
+    else flags[key] = absolute(args[i + 1], key);
   }
   return flags;
 }
@@ -213,6 +216,26 @@ async function main() {
     return emit({ ready: true, node: process.version, codex: version, plugin_version: read(fileURLToPath(new URL('../plugin.json', import.meta.url))).version });
   }
   const flags = options(args);
+  // Route before any legacy lease/checkpoint/process mutation. Missing mode in
+  // saved checkpoints is the original independent-worker contract.
+  const saved = flags['--state'] && existsSync(flags['--state']) ? read(flags['--state']) : null;
+  const mode = command === 'start' ? flags['--control-mode'] ?? 'main-session' : saved?.control_mode ?? 'independent-worker';
+  if (flags['--control-mode'] && flags['--control-mode'] !== mode) throw new Error('An existing checkpoint cannot change control mode.');
+  if (mode === 'main-session') {
+    if (command === 'start') {
+      const task = read(absolute(flags['--task'], '--task'));
+      const path = flags['--state'] ?? resolve(absolute(task.workspace, 'task.workspace'), '.codex-supervisor', task.task_id, 'state.json');
+      const state = prepareMainSession(flags['--task'], path, Boolean(flags['--test-fixture']));
+      return emit({ prepared: true, control_mode: state.control_mode, binding: state.binding, state_path: path });
+    }
+    const path = absolute(flags['--state'], '--state');
+    if (command === 'status') return emit(await controllerStatus(path));
+    if (command === 'resume') { await prepareControllerResume(path); const state = resumeMainSession(path, flags['--task'], Boolean(flags['--test-fixture'])); return emit({ prepared: true, control_mode: state.control_mode, binding: state.binding, state_path: path }); }
+    if (command === 'pause') {
+      return emit(await pauseMainController(path));
+    }
+    throw new Error('Commands: start/status/pause/resume.');
+  }
   if (command === 'start' || command === 'resume') return emit(await launch(command, flags));
   if (command !== 'status' && command !== 'pause') throw new Error('Commands: doctor | start --task FILE [--state FILE] | status/pause/resume --state FILE.');
   const statePath = absolute(flags['--state'], '--state');

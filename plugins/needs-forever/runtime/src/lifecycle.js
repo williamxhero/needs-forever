@@ -1,12 +1,17 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { atomicJson, canonicalPath, contractHash, indexPath, readJson } from './main-session.js';
+import { atomicJson, canonicalPath, contractHash, registeredStatePaths, readJson } from './main-session.js';
 import { Store } from './store.js';
 import { record, text } from './types.js';
 import { redact } from './redact.js';
 const hash = (value) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const normalizedCommand = (value) => value.replace(/\\+/g, '/').toLowerCase();
+function isControlCommand(command, pluginRoot, operation) {
+    const direct = command.includes(normalizedCommand(resolve(pluginRoot, 'scripts/main-session.mjs')));
+    const control = command.includes(normalizedCommand(resolve(pluginRoot, 'scripts/control.mjs')));
+    return operation ? (direct && command.includes(operation)) || (control && command.includes(operation === 'prepare' ? 'start' : 'resume')) : (direct && /\b(prepare|resume)\b/.test(command)) || (control && /\b(start|resume)\b/.test(command));
+}
 function strings(value) {
     if (typeof value === 'string')
         return [value];
@@ -34,16 +39,13 @@ export function handleLifecycle(input, host, pluginRoot) {
     const observation = toolId ? resolve(workspace, '.codex-supervisor', 'hook-observations', `${hash([session, toolId])}.json`) : null;
     if (name === 'PreToolUse' && observation) {
         const command = normalizedCommand(strings(event.tool_input).join('\n'));
-        if (command.includes(normalizedCommand(resolve(pluginRoot, 'scripts/main-session.mjs'))) && command.includes('prepare')) {
+        if (isControlCommand(command, pluginRoot)) {
             // Only fingerprints are retained; command bodies can contain credentials.
             atomicJson(observation, { session_id: session, tool_use_id: toolId, cwd: canonicalPath(workspace), input_sha256: hash(event.tool_input), source: host.source, at: Date.now(), plugin_root: canonicalPath(pluginRoot) });
             return {};
         }
     }
-    const index = indexPath(workspace);
-    if (!existsSync(index))
-        return {};
-    const entries = readJson(index).states;
+    const entries = registeredStatePaths(workspace);
     for (const path of entries) {
         if (!existsSync(path))
             continue;
@@ -54,9 +56,23 @@ export function handleLifecycle(input, host, pluginRoot) {
             continue;
         if ((state.mode === 'simulated') !== (host.source === 'simulated'))
             continue;
+        if (state.binding.status === 'BOUND' && state.main_session_id === session && state.status === 'ACTIVE') {
+            const turn = typeof event.turn_id === 'string' ? event.turn_id : null;
+            state.observed_turn_ids ??= [];
+            if (turn && !state.observed_turn_ids.includes(turn)) {
+                state.observed_turn_ids.push(turn);
+                state.worker_turn_count++;
+            }
+            // Hosts without turn ids prove at least one turn; Stop callbacks alone
+            // never prove that an internal continuation created another turn.
+            if (!turn && state.worker_turn_count === 0)
+                state.worker_turn_count = 1;
+        }
         if (state.binding.status === 'BOUND' && state.main_session_id === session && state.status === 'ACTIVE' && toolId && ['PreToolUse', 'PostToolUse'].includes(name)) {
             const store = new Store(path);
             state.tool_starts ??= {};
+            if (state.processed_tool_ids?.includes(toolId))
+                return {};
             if (name === 'PreToolUse') {
                 state.tool_starts[toolId] = { at: new Date().toISOString(), input_sha256: hash(event.tool_input) };
                 const keys = Object.keys(state.tool_starts);
@@ -65,6 +81,8 @@ export function handleLifecycle(input, host, pluginRoot) {
             }
             else {
                 const start = state.tool_starts[toolId];
+                if (!start || start.input_sha256 !== hash(event.tool_input))
+                    return {};
                 const serialized = JSON.stringify(redact({ hook_event_name: name, tool_name: event.tool_name ?? null, tool_input: event.tool_input ?? null, tool_response: event.tool_response ?? null }));
                 const truncated = serialized.length > 8_000;
                 store.event(state, 'main_tool_result', { session_id: session, turn_id: event.turn_id ?? null, tool_use_id: toolId, run_generation: state.run_generation, input_epoch: state.input_epoch ?? 0, contract_sha256: state.contract_sha256, original_event: name, value: truncated ? { truncated: true, prefix: serialized.slice(0, 8_000) } : JSON.parse(serialized), complete: !truncated });
@@ -76,6 +94,7 @@ export function handleLifecycle(input, host, pluginRoot) {
                     store.event(state, 'main_session_continuation_confirmed', { session_id: session, turn_id: event.turn_id ?? null, delivery_id: context.delivery_id, tool_use_id: toolId, original_event: name });
                 }
                 delete state.tool_starts[toolId];
+                state.processed_tool_ids = [...(state.processed_tool_ids ?? []), toolId];
             }
             store.save(state);
             return {};
@@ -96,7 +115,7 @@ export function handleLifecycle(input, host, pluginRoot) {
             // lease and return a supported host decision before claiming readiness.
             return state.status === 'ACTIVE' ? { state_path: path, stop_request: request } : {};
         }
-        if (state.binding.status !== 'PENDING_NATIVE_HOOK' || name !== 'PostToolUse' || !observation || !existsSync(observation))
+        if (state.pause_reason || state.binding.status !== 'PENDING_NATIVE_HOOK' || name !== 'PostToolUse' || !observation || !existsSync(observation))
             continue;
         const prior = readJson(observation);
         if (prior.session_id !== session || prior.tool_use_id !== toolId || prior.input_sha256 !== hash(event.tool_input) || prior.source !== host.source || prior.cwd !== canonicalPath(workspace) || prior.plugin_root !== canonicalPath(pluginRoot) || Date.now() - prior.at > 10 * 60_000)
@@ -104,9 +123,12 @@ export function handleLifecycle(input, host, pluginRoot) {
         const command = normalizedCommand(strings(event.tool_input).join('\n'));
         // Actual receipt output (unknown before preparation) correlates a registered
         // host's pre/post pair to this one task. A session-id flag cannot do this.
-        if (!command.includes(normalizedCommand(resolve(pluginRoot, 'scripts/main-session.mjs'))) || !command.includes('prepare') || !command.includes(normalizedCommand(state.binding.task_path)) || !command.includes(normalizedCommand(path)))
+        const operation = state.binding.operation ?? 'prepare';
+        if (!isControlCommand(command, pluginRoot, operation) || (operation === 'prepare' && !command.includes(normalizedCommand(state.binding.task_path))) || (!command.includes(normalizedCommand(path)) && !command.includes('start')))
             continue;
         if (!strings(event.tool_response).some((value) => value.includes(state.binding.challenge)))
+            continue;
+        if (operation === 'resume' && state.main_session_id !== null && state.main_session_id !== session)
             continue;
         state.main_session_id = session;
         state.binding = { ...state.binding, status: 'BOUND', tool_use_id: toolId, bound_at: new Date().toISOString() };

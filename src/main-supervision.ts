@@ -22,10 +22,11 @@ function commandFor(state: MainSessionState, fixture: any): string[] {
   if (fixture) throw new Error('A live supervisor cannot use fixture results.');
   return codexCommand();
 }
-export async function preflightSupervisor(state: MainSessionState, fixture: any): Promise<void> {
+export async function preflightSupervisor(state: MainSessionState, fixture: any, signal?: AbortSignal): Promise<void> {
   // Host-only and legacy transport fixtures do not claim model availability.
   if (state.mode === 'simulated' && !fixture?.app_server_argv) return;
-  const connection = await connect(commandFor(state, fixture), state.task.workspace, AbortSignal.timeout(15_000));
+  const timeout = AbortSignal.timeout(15_000);
+  const connection = await connect(commandFor(state, fixture), state.task.workspace, signal ? AbortSignal.any([signal, timeout]) : timeout);
   try { state.codex_version = connection.version; }
   finally { await connection.rpc.close(); }
 }
@@ -39,10 +40,11 @@ function snapshotFor(state: MainSessionState, request: StopRequest, store: Store
   const snapshot: Snapshot & { control_mode: string; stop_request: StopRequest; main_session_id: string | null; input_epoch: number } = {
     snapshot_id: randomUUID(), task_id: state.task_id, task_version: state.task_version,
     worker_thread_id: state.main_session_id!, worker_turn_id: request.turn_id ?? `stop:${request.stop_attempt_id}`,
-    task: state.task, control_mode: 'main-session', main_session_id: state.main_session_id, stop_request: { ...request, last_assistant_message: request.last_assistant_message?.slice(0, 2_000) ?? null }, input_epoch: state.input_epoch ?? 0,
+    task: redact(state.task) as typeof state.task, control_mode: 'main-session', main_session_id: state.main_session_id, stop_request: { ...request, last_assistant_message: request.last_assistant_message?.slice(0, 2_000) ?? null }, input_epoch: state.input_epoch ?? 0,
     evidence: [], evidence_complete: true, omissions: [], recent_instructions: [],
   };
   if ((request.last_assistant_message?.length ?? 0) > 2_000) snapshot.omissions!.push('Last assistant wording truncated to 2000 characters; it is an untrusted claim, never independent completion evidence.');
+  if (state.latest_human_input) snapshot.recent_instructions!.push({ source: 'native-human-input', ...state.latest_human_input, scope: 'Context only. Original acceptance and authorization remain binding.' });
   // Keep the original contract and Stop identity intact, even when logs are large.
   if (JSON.stringify(snapshot).length > budget - 1_000) throw new Error('Original task contract exceeds the 24k snapshot budget; provide a concise contract without dropping acceptance or authorization.');
   const append = (entry: Snapshot['evidence'][number]) => {
@@ -53,7 +55,7 @@ function snapshotFor(state: MainSessionState, request: StopRequest, store: Store
   let omitted = 0;
   for (const event of [...events].reverse()) {
     if (event.task_version !== state.task_version) continue;
-    if (event.type === 'main_tool_result' && currentEvents.has(event) && event.session_id === state.main_session_id && event.run_generation === state.run_generation && event.contract_sha256 === state.contract_sha256) {
+    if (event.type === 'main_tool_result' && currentEvents.has(event) && event.session_id === state.main_session_id && event.run_generation === state.run_generation && event.input_epoch === (state.input_epoch ?? 0) && event.contract_sha256 === state.contract_sha256) {
       const entry = { id: String(event.event_id), type: 'functionCallOutput', value: event.value, source: { event_id: String(event.event_id), thread_id: state.main_session_id!, ...(typeof event.turn_id === 'string' ? { turn_id: event.turn_id } : {}), item_id: String(event.tool_use_id) } };
       if (!append(entry)) omitted++;
       if (event.complete === false) snapshot.evidence_complete = false;
