@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "route_id": "spec33-cancelled-judge-native-default-20261103",
+  "target": "SPEC33 native cancelled-C automatic archival acceptance",
+  "host_capability_readback": {
+    "host_id": "local",
+    "readback_evidence": [
+      "2026-11-03 current create_thread local-host tool schema: gpt-6.1-sol supports low/medium/high/xhigh/max/ultra; gpt-6-astra supports low/medium/high/xhigh/max/ultra; other supported_routes below are advertised subsets.",
+      "2026-11-03 fresh config.toml lines10-11: model gpt-6.1-sol, model_reasoning_effort xhigh; create_thread higher-priority tool instruction requires omitting model unless explicitly requested by human."
+    ],
+    "supported_routes": [
+      {
+        "model": "gpt-6.1-sol",
+        "thinking": [
+          "medium",
+          "high",
+          "xhigh"
+        ]
+      },
+      {
+        "model": "gpt-6-astra",
+        "thinking": [
+          "medium",
+          "high",
+          "xhigh"
+        ]
+      },
+      {
+        "model": "deepseek-v4.1-flash",
+        "thinking": [
+          "high"
+        ]
+      },
+      {
+        "model": "claude-sonnet-5-5",
+        "thinking": [
+          "medium",
+          "high",
+          "xhigh"
+        ]
+      },
+      {
+        "model": "claude-opus-5-5",
+        "thinking": [
+          "medium",
+          "high",
+          "xhigh"
+        ]
+      }
+    ]
+  },
+  "route": {
+    "recommended": {
+      "model": "gpt-6.1-sol",
+      "thinking": "xhigh"
+    },
+    "fallbacks": [
+      {
+        "model": "gpt-6-astra",
+        "thinking": "xhigh"
+      }
+    ],
+    "rationale": "Preserve actual Desktop configured default under the higher-priority no-unrequested-model-override tool instruction. Bootstrap only, then fresh task settings readback and validator allow receipt before acceptance assignment."
+  },
+  "xhigh_evidence": [
+    "Inherited user-configured Desktop default, not a claim that high is inadequate. No model or effort override will be sent."
+  ]
+}

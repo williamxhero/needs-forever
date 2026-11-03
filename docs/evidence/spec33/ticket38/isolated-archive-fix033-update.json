@@ -1,0 +1,19 @@
+{
+  "kind": "official-isolated-profile-runtime-update-no-auth-or-trust-copy",
+  "at": "2026-11-03T14:01:34.908Z",
+  "home": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\main-session-supervision\\live-desktop\\中文 空间验收\\Codex Home",
+  "installed_root": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\main-session-supervision\\live-desktop\\中文 空间验收\\Codex Home\\plugins\\cache\\needs-forever-spec33\\needs-forever\\0.3.3",
+  "argv": [
+    "plugin",
+    "add",
+    "needs-forever@needs-forever-spec33",
+    "--json"
+  ],
+  "exit_code": 0,
+  "expected_plugin_files": 27,
+  "source_parity": true,
+  "hooks_unchanged": true,
+  "auth_copied": false,
+  "trust_written": false,
+  "command_stdout": "{\n  \"pluginId\": \"needs-forever@needs-forever-spec33\",\n  \"name\": \"needs-forever\",\n  \"marketplaceName\": \"needs-forever-spec33\",\n  \"version\": \"0.3.3\",\n  \"installedPath\": \"D:\\\\WILL\\\\TOOLS\\\\needs-forever\\\\.scratch\\\\main-session-supervision\\\\live-desktop\\\\中文 空间验收\\\\Codex Home\\\\plugins\\\\cache\\\\needs-forever-spec33\\\\needs-forever\\\\0.3.3\",\n  \"authPolicy\": \"ON_USE\"\n}\n"
+}

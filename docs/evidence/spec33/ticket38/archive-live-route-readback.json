@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "route_id": "spec33-cancelled-judge-native-default-20261103",
+  "target": "SPEC33 native cancelled-C automatic archival acceptance",
+  "task_id": "01a1a1a6-547e-7540-b838-e157cfebff71",
+  "requested": {
+    "model": "gpt-6.1-sol",
+    "thinking": "xhigh"
+  },
+  "applied": {
+    "model": "gpt-6.1-sol",
+    "thinking": "xhigh"
+  },
+  "selection": "recommended",
+  "substitution_reason": null,
+  "readback_evidence": [
+    "C:\\Users\\will\\.codex\\sessions\\2026\\11\\03\\rollout-2026-11-03T21-43-14-01a1a1a6-547e-7540-b838-e157cfebff71.jsonl actual latest turn_context 01a1a1b8-21f8-7083-ac4a-067f7f76319d, cwd C:\\Users\\will\\Documents\\Codex\\2026-11-03\\needs-forever-spec33-cancel-archive; diagnostic settings readback only, not supervision identity protocol."
+  ]
+}

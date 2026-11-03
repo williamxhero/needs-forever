@@ -1,0 +1,9 @@
+{
+  "prepared_at": "2026-11-03T13:45:02.025Z",
+  "kind": "prepared-only-no-supervision-started",
+  "workspace": "C:/Users/will/Documents/Codex/2026-11-03/needs-forever-spec33-cancel-archive",
+  "task_id": "spec33-native-cancelled-judge-archive-20261103",
+  "task_sha256": "5d5c5ba038ede82d44f0d119bfa916fe594a36ec7835bee42223697d47a4c807",
+  "verifier_sha256": "a23640e92b6c6c2568740e7cc950c45f9d22bc225d1dabbaaf16dd45807b68c2",
+  "native_a": "01a1a1a6-547e-7540-b838-e157cfebff71"
+}

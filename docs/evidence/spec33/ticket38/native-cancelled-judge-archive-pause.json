@@ -1,0 +1,56 @@
+{
+  "kind": "real-native-known-C-public-pause-and-automatic-archive",
+  "started_at_unix": 1793714532.2951145,
+  "result": "PAUSED_AND_AUTOMATICALLY_ARCHIVED",
+  "before": {
+    "task_id": "spec33-native-cancelled-judge-archive-20261103",
+    "main_session_id": "01a1a1a6-547e-7540-b838-e157cfebff71",
+    "status": "ACTIVE",
+    "phase": "JUDGE",
+    "run_generation": "291cab1d-747b-4e89-b40d-c342d201f6ab",
+    "updated_at": "2026-11-03T14:04:49.680Z",
+    "input_epoch": null
+  },
+  "judge_id": "01a1a1ba-15f6-7471-80a9-c0c4623ea167",
+  "observed_at_unix": 1793714689.8053067,
+  "public_pause_exit": 0,
+  "after": {
+    "task_id": "spec33-native-cancelled-judge-archive-20261103",
+    "main_session_id": "01a1a1a6-547e-7540-b838-e157cfebff71",
+    "status": "PAUSED",
+    "phase": "IDLE",
+    "run_generation": "291cab1d-747b-4e89-b40d-c342d201f6ab",
+    "updated_at": "2026-11-03T14:04:49.906Z",
+    "input_epoch": 1
+  },
+  "selected_events": [
+    {
+      "event_id": "34d67aef-249a-49d6-b477-6ee88cd2e494",
+      "at": "2026-11-03T14:04:49.682Z",
+      "type": "judge_created",
+      "thread_id": "01a1a1ba-15f6-7471-80a9-c0c4623ea167",
+      "stop_attempt_id": "d4d0a823-098e-4d14-87f3-b2315f5daa82",
+      "main_session_id": "01a1a1a6-547e-7540-b838-e157cfebff71"
+    },
+    {
+      "event_id": "92c4d382-2e9f-459d-8e8d-065581fbe4a3",
+      "at": "2026-11-03T14:04:49.920Z",
+      "type": "judge_terminated",
+      "thread_id": "01a1a1ba-15f6-7471-80a9-c0c4623ea167",
+      "turn_id": "01a1a1ba-169c-7042-8413-0b7cd0ebbd59",
+      "via": "owned_app_server_exit",
+      "stop_attempt_id": "d4d0a823-098e-4d14-87f3-b2315f5daa82",
+      "main_session_id": "01a1a1a6-547e-7540-b838-e157cfebff71"
+    },
+    {
+      "event_id": "6939b996-4e3b-4806-93c2-21a8f11e1923",
+      "at": "2026-11-03T14:04:50.973Z",
+      "type": "judge_archived",
+      "thread_id": "01a1a1ba-15f6-7471-80a9-c0c4623ea167",
+      "via": "isolated_cleanup",
+      "stop_attempt_id": "d4d0a823-098e-4d14-87f3-b2315f5daa82",
+      "main_session_id": "01a1a1a6-547e-7540-b838-e157cfebff71"
+    }
+  ],
+  "finished_at_unix": 1793714691.0888486
+}
