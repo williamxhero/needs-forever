@@ -1,11 +1,11 @@
 {
   "description": "Needs Forever main-session supervision. Review these hooks in Codex Settings > Hooks before use.",
   "hooks": {
-    "SessionStart": [{ "hooks": [{ "type": "command", "command": "node \"${PLUGIN_ROOT}/scripts/lifecycle.mjs\"", "commandWindows": "node \"%PLUGIN_ROOT%\\scripts\\lifecycle.mjs\"", "timeout": 30 }] }],
-    "PreToolUse": [{ "hooks": [{ "type": "command", "command": "node \"${PLUGIN_ROOT}/scripts/lifecycle.mjs\"", "commandWindows": "node \"%PLUGIN_ROOT%\\scripts\\lifecycle.mjs\"", "timeout": 30 }] }],
-    "PostToolUse": [{ "hooks": [{ "type": "command", "command": "node \"${PLUGIN_ROOT}/scripts/lifecycle.mjs\"", "commandWindows": "node \"%PLUGIN_ROOT%\\scripts\\lifecycle.mjs\"", "timeout": 60 }] }],
-    "Stop": [{ "hooks": [{ "type": "command", "command": "node \"${PLUGIN_ROOT}/scripts/lifecycle.mjs\"", "commandWindows": "node \"%PLUGIN_ROOT%\\scripts\\lifecycle.mjs\"", "timeout": 600 }] }],
-    "UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "node \"${PLUGIN_ROOT}/scripts/lifecycle.mjs\"", "commandWindows": "node \"%PLUGIN_ROOT%\\scripts\\lifecycle.mjs\"", "timeout": 30 }] }],
-    "Interrupt": [{ "hooks": [{ "type": "command", "command": "node \"${PLUGIN_ROOT}/scripts/lifecycle.mjs\"", "commandWindows": "node \"%PLUGIN_ROOT%\\scripts\\lifecycle.mjs\"", "timeout": 3 }] }]
+    "SessionStart": [{ "hooks": [{ "type": "command", "command": "node \"${PLUGIN_ROOT}/scripts/lifecycle.mjs\"", "commandWindows": "node \"${PLUGIN_ROOT}/scripts/lifecycle.mjs\"", "timeout": 30 }] }],
+    "PreToolUse": [{ "hooks": [{ "type": "command", "command": "node \"${PLUGIN_ROOT}/scripts/lifecycle.mjs\"", "commandWindows": "node \"${PLUGIN_ROOT}/scripts/lifecycle.mjs\"", "timeout": 30 }] }],
+    "PostToolUse": [{ "hooks": [{ "type": "command", "command": "node \"${PLUGIN_ROOT}/scripts/lifecycle.mjs\"", "commandWindows": "node \"${PLUGIN_ROOT}/scripts/lifecycle.mjs\"", "timeout": 60 }] }],
+    "Stop": [{ "hooks": [{ "type": "command", "command": "node \"${PLUGIN_ROOT}/scripts/lifecycle.mjs\"", "commandWindows": "node \"${PLUGIN_ROOT}/scripts/lifecycle.mjs\"", "timeout": 600 }] }],
+    "UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "node \"${PLUGIN_ROOT}/scripts/lifecycle.mjs\"", "commandWindows": "node \"${PLUGIN_ROOT}/scripts/lifecycle.mjs\"", "timeout": 30 }] }],
+    "Interrupt": [{ "hooks": [{ "type": "command", "command": "node \"${PLUGIN_ROOT}/scripts/lifecycle.mjs\"", "commandWindows": "node \"${PLUGIN_ROOT}/scripts/lifecycle.mjs\"", "timeout": 3 }] }]
   }
 }
