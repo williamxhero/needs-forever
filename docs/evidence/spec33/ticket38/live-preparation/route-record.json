@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "route_id": "spec33-desktop-default-20261103",
+  "target": "SPEC33 native Desktop acceptance A",
+  "host_capability_readback": {
+    "host_id": "local",
+    "readback_evidence": [
+      "Current tools.mcp__codex_app__create_thread model/effort schema; local host advertised routes observed 2026-11-03",
+      "C:/Users/will/.codex/config.toml:10-11 default gpt-6.1-sol/xhigh read immediately before creation",
+      "Contract stores the intersection of freshly advertised capabilities and the skill allow-list; low/max/ultra are advertised but cannot be selected under this skill policy."
+    ],
+    "supported_routes": [
+      {
+        "model": "gpt-6.1-sol",
+        "thinking": [
+          "medium",
+          "high",
+          "xhigh"
+        ]
+      },
+      {
+        "model": "gpt-6-astra",
+        "thinking": [
+          "medium",
+          "high",
+          "xhigh"
+        ]
+      },
+      {
+        "model": "deepseek-v4.1-flash",
+        "thinking": [
+          "high"
+        ]
+      },
+      {
+        "model": "claude-sonnet-5-5",
+        "thinking": [
+          "medium",
+          "high",
+          "xhigh"
+        ]
+      },
+      {
+        "model": "claude-opus-5-5",
+        "thinking": [
+          "medium",
+          "high",
+          "xhigh"
+        ]
+      }
+    ]
+  },
+  "route": {
+    "recommended": {
+      "model": "gpt-6.1-sol",
+      "thinking": "xhigh"
+    },
+    "fallbacks": [
+      {
+        "model": "gpt-6-astra",
+        "thinking": "xhigh"
+      }
+    ],
+    "rationale": "Inherit the actual Desktop configured default. The higher-priority create_thread tool instructions forbid specifying a model without an explicit user model request. No model/effort override will be sent. Verify the created task before acceptance assignment. The advertised fallback is recorded but cannot be used silently."
+  },
+  "xhigh_evidence": [
+    "Inherited Desktop default, not an optimization choice or a claim high is inadequate: config.toml currently selects gpt-6.1-sol and xhigh; higher-priority app tool policy requires omitting model unless the user explicitly requests one. Preserve the actual host default under that instruction."
+  ]
+}

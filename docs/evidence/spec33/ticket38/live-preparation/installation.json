@@ -1,0 +1,138 @@
+{
+  "kind": "authorized-real-user-home-side-by-side-install",
+  "authorization": "Human reply allowed parallel installation and creation/driving of Desktop acceptance chat; hook trust remains human-only.",
+  "date": "2026-11-03T09:30:48.527Z",
+  "candidate": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\main-session-supervision\\live-desktop\\candidate-marketplace",
+  "codex_home": "C:/Users/will/.codex",
+  "commands": [
+    {
+      "argv": [
+        "C:/Users/will/AppData/Local/OpenAI/Codex/bin/ca9abb0b4d8ac692/codex.exe",
+        "--version"
+      ],
+      "exit_code": 0,
+      "stdout": "codex-cli 0.159.0\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "C:/Users/will/AppData/Local/OpenAI/Codex/bin/ca9abb0b4d8ac692/codex.exe",
+        "plugin",
+        "marketplace",
+        "add",
+        "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\main-session-supervision\\live-desktop\\candidate-marketplace",
+        "--json"
+      ],
+      "exit_code": 0,
+      "stdout": "{\n  \"marketplaceName\": \"needs-forever-spec33\",\n  \"installedRoot\": \"D:\\\\WILL\\\\TOOLS\\\\needs-forever\\\\.scratch\\\\main-session-supervision\\\\live-desktop\\\\candidate-marketplace\",\n  \"alreadyAdded\": false\n}\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "C:/Users/will/AppData/Local/OpenAI/Codex/bin/ca9abb0b4d8ac692/codex.exe",
+        "plugin",
+        "add",
+        "needs-forever@needs-forever-spec33",
+        "--json"
+      ],
+      "exit_code": 0,
+      "stdout": "{\n  \"pluginId\": \"needs-forever@needs-forever-spec33\",\n  \"name\": \"needs-forever\",\n  \"marketplaceName\": \"needs-forever-spec33\",\n  \"version\": \"0.3.0\",\n  \"installedPath\": \"C:\\\\Users\\\\will\\\\.codex\\\\plugins\\\\cache\\\\needs-forever-spec33\\\\needs-forever\\\\0.3.0\",\n  \"authPolicy\": \"ON_USE\"\n}\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "C:/Users/will/AppData/Local/OpenAI/Codex/bin/ca9abb0b4d8ac692/codex.exe",
+        "plugin",
+        "list",
+        "--marketplace",
+        "needs-forever-spec33",
+        "--json"
+      ],
+      "exit_code": 0,
+      "stdout": "{\n  \"installed\": [\n    {\n      \"pluginId\": \"needs-forever@needs-forever-spec33\",\n      \"name\": \"needs-forever\",\n      \"marketplaceName\": \"needs-forever-spec33\",\n      \"version\": \"0.3.0\",\n      \"installed\": true,\n      \"enabled\": true,\n      \"source\": {\n        \"source\": \"local\",\n        \"path\": \"D:\\\\WILL\\\\TOOLS\\\\needs-forever\\\\.scratch\\\\main-session-supervision\\\\live-desktop\\\\candidate-marketplace\\\\plugins\\\\needs-forever\"\n      },\n      \"marketplaceSource\": {\n        \"sourceType\": \"local\",\n        \"source\": \"\\\\\\\\?\\\\D:\\\\WILL\\\\TOOLS\\\\needs-forever\\\\.scratch\\\\main-session-supervision\\\\live-desktop\\\\candidate-marketplace\"\n      },\n      \"installPolicy\": \"AVAILABLE\",\n      \"authPolicy\": \"ON_USE\"\n    }\n  ],\n  \"available\": []\n}\n",
+      "stderr": ""
+    }
+  ],
+  "old_package": "C:\\Users\\will\\.codex\\plugins\\cache\\needs-forever-local\\needs-forever\\0.2.0",
+  "old_hashes_before": {
+    ".codex-plugin/plugin.json": "6c62cca2159d7f3d5dfc428040ef1d7e7c84e6f1cf41b256abe1e651581b40b3",
+    "package.json": "a1874ccf7f782ad8c7e4250620a5147f7406e0f38073c5a1f77aacb996a7b6c8",
+    "plugin.json": "5686461f9e9c606d628ecc56e01b0272c6fd33378f23aea73433f8c0ce6c9a70",
+    "runtime/integrity.json": "ba4d4317add84865a9bbd529820e5ed23a0440cec655e25e814d46fffa384654",
+    "runtime/src/cli.js": "675111518bcedcbf03f194b9eac717ab3f4b47d4064a9ce32f15737ab43fe7a5",
+    "runtime/src/index.js": "03e898ec1f5980e9758d1fc83bd8a03cd746d8f42a8bea4a46e9d766e1563283",
+    "runtime/src/judge.js": "d9b2d933d7902462ea9c196ff8c8d8811ca17c295fd393537d2092d120de5af7",
+    "runtime/src/recovery.js": "db606a6e5674c70e4f70b56d794e14576ae0d4473d15a6ef4e8a72ab4aa9da2e",
+    "runtime/src/redact.js": "cd943daa4180f8c87b091babc0160dedab3432b471624710e67926fbfe779db6",
+    "runtime/src/rules.js": "e743c10107cb043bf2c06957b2646cb9fc723474bd456d0f96a02861d5d376fc",
+    "runtime/src/snapshot.js": "6b815e1bc90f42d4dbb5672ee314e17b71763c7baeced3a119ec91aa36193427",
+    "runtime/src/store.js": "23067b5e1642728050960f5dcea17b2b7c7ff8172fa2f58175f6df786a544629",
+    "runtime/src/supervisor.js": "0c2f586924c38c8b82a4cc75af23ec9bfdfea2a9306c3a1870319ba6cd927652",
+    "runtime/src/transport.js": "bb10bff3680a7937e37cb3b829ff385fb59f9a57862d834814796e92185b37a8",
+    "runtime/src/types.js": "1d776e8997c21eccad34b1b01358b1a3f8df090b5647a855ba3972d361311f08",
+    "scripts/control.mjs": "47c76ac4870f041dbcb766bd5df68e4dbc679772bd132ec74e2ddec23460748f",
+    "skills/supervise/references/task.md": "abab1a597f3d3afefa6259bee4d3a7044e79ff8cf935139519327bb971de975b",
+    "skills/supervise/SKILL.md": "195466d57c429ef154a490e8b5bcc04d1283eb7f8c8094679269207dacb5f744"
+  },
+  "trust_changed_by_script": false,
+  "live_hook_effectiveness": "not_run",
+  "installation": {
+    "pluginId": "needs-forever@needs-forever-spec33",
+    "name": "needs-forever",
+    "marketplaceName": "needs-forever-spec33",
+    "version": "0.3.0",
+    "installedPath": "C:\\Users\\will\\.codex\\plugins\\cache\\needs-forever-spec33\\needs-forever\\0.3.0",
+    "authPolicy": "ON_USE"
+  },
+  "old_hashes_after": {
+    ".codex-plugin/plugin.json": "6c62cca2159d7f3d5dfc428040ef1d7e7c84e6f1cf41b256abe1e651581b40b3",
+    "package.json": "a1874ccf7f782ad8c7e4250620a5147f7406e0f38073c5a1f77aacb996a7b6c8",
+    "plugin.json": "5686461f9e9c606d628ecc56e01b0272c6fd33378f23aea73433f8c0ce6c9a70",
+    "runtime/integrity.json": "ba4d4317add84865a9bbd529820e5ed23a0440cec655e25e814d46fffa384654",
+    "runtime/src/cli.js": "675111518bcedcbf03f194b9eac717ab3f4b47d4064a9ce32f15737ab43fe7a5",
+    "runtime/src/index.js": "03e898ec1f5980e9758d1fc83bd8a03cd746d8f42a8bea4a46e9d766e1563283",
+    "runtime/src/judge.js": "d9b2d933d7902462ea9c196ff8c8d8811ca17c295fd393537d2092d120de5af7",
+    "runtime/src/recovery.js": "db606a6e5674c70e4f70b56d794e14576ae0d4473d15a6ef4e8a72ab4aa9da2e",
+    "runtime/src/redact.js": "cd943daa4180f8c87b091babc0160dedab3432b471624710e67926fbfe779db6",
+    "runtime/src/rules.js": "e743c10107cb043bf2c06957b2646cb9fc723474bd456d0f96a02861d5d376fc",
+    "runtime/src/snapshot.js": "6b815e1bc90f42d4dbb5672ee314e17b71763c7baeced3a119ec91aa36193427",
+    "runtime/src/store.js": "23067b5e1642728050960f5dcea17b2b7c7ff8172fa2f58175f6df786a544629",
+    "runtime/src/supervisor.js": "0c2f586924c38c8b82a4cc75af23ec9bfdfea2a9306c3a1870319ba6cd927652",
+    "runtime/src/transport.js": "bb10bff3680a7937e37cb3b829ff385fb59f9a57862d834814796e92185b37a8",
+    "runtime/src/types.js": "1d776e8997c21eccad34b1b01358b1a3f8df090b5647a855ba3972d361311f08",
+    "scripts/control.mjs": "47c76ac4870f041dbcb766bd5df68e4dbc679772bd132ec74e2ddec23460748f",
+    "skills/supervise/references/task.md": "abab1a597f3d3afefa6259bee4d3a7044e79ff8cf935139519327bb971de975b",
+    "skills/supervise/SKILL.md": "195466d57c429ef154a490e8b5bcc04d1283eb7f8c8094679269207dacb5f744"
+  },
+  "old_package_unchanged": true,
+  "package_hashes": {
+    ".codex-plugin/plugin.json": "d6eb13bf2505fdc9ed532c81a6c140872e2d439ad03b648c57b807a2798c4058",
+    "hooks/hooks.json": "cca4603c5de1d9164d9815d051e3ccc994c03baed826dfb30f0fa7041af9987e",
+    "package.json": "86e5f6abc0de911ff52f13e994ebb263fdd027c3f165797ee6b41af565c8ef17",
+    "runtime/integrity.json": "15c623fe834b0ef7b93bf903a33c2b9c6de48add02c1018d567d1c07913c15cb",
+    "runtime/src/cli.js": "a9e9d85dd6b9fef1a77b50f5c62bdd31ba8819f9fbfc7e097a026c4084ab1d34",
+    "runtime/src/hook-host.js": "1cd9e46ce63d753fd8e4962652461e544da97c8ac032c884092415942aab94a8",
+    "runtime/src/index.js": "03e898ec1f5980e9758d1fc83bd8a03cd746d8f42a8bea4a46e9d766e1563283",
+    "runtime/src/judge.js": "d9b2d933d7902462ea9c196ff8c8d8811ca17c295fd393537d2092d120de5af7",
+    "runtime/src/lifecycle.js": "91f3af97f40a5f38454b159953e2adbb072505d700310b65d03d63c929067e36",
+    "runtime/src/main-controller.js": "59edcb9fb5fedba0511650f037b3888351777f2d0f37c7aa84576845db172f39",
+    "runtime/src/main-session.js": "6363d142d23b5373eb94af7e623cd81ed8f697201eb460495c06cdbccc0661bc",
+    "runtime/src/main-supervision.js": "5871495380c6749c0dc7dd0a79ba425afe2296e3c6021251e1a4104bf668bcef",
+    "runtime/src/recovery.js": "db606a6e5674c70e4f70b56d794e14576ae0d4473d15a6ef4e8a72ab4aa9da2e",
+    "runtime/src/redact.js": "cd943daa4180f8c87b091babc0160dedab3432b471624710e67926fbfe779db6",
+    "runtime/src/rules.js": "e743c10107cb043bf2c06957b2646cb9fc723474bd456d0f96a02861d5d376fc",
+    "runtime/src/snapshot.js": "6b815e1bc90f42d4dbb5672ee314e17b71763c7baeced3a119ec91aa36193427",
+    "runtime/src/store.js": "23067b5e1642728050960f5dcea17b2b7c7ff8172fa2f58175f6df786a544629",
+    "runtime/src/supervisor.js": "0c2f586924c38c8b82a4cc75af23ec9bfdfea2a9306c3a1870319ba6cd927652",
+    "runtime/src/transport.js": "bb10bff3680a7937e37cb3b829ff385fb59f9a57862d834814796e92185b37a8",
+    "runtime/src/types.js": "1d776e8997c21eccad34b1b01358b1a3f8df090b5647a855ba3972d361311f08",
+    "scripts/control.mjs": "f52617495e79ce6914894633a74f9c2de6f29ea691b063eba05a5a71f7f2f959",
+    "scripts/controller.mjs": "96138daed420a09c9aa2c946c8ec3939447ebb27f171ddc3edd5ba8a846afa36",
+    "scripts/lifecycle.mjs": "ad061a1b2dc4b1c986be2511a780222e3d5774c442f37602aa867ce12a0bcdb8",
+    "scripts/main-session.mjs": "77347f866a4439df0b97c6f83f1cdc77d71f7be9bd8f38ee910c8ffa57e1c5fc",
+    "skills/supervise/references/task.md": "abab1a597f3d3afefa6259bee4d3a7044e79ff8cf935139519327bb971de975b",
+    "skills/supervise/SKILL.md": "86e9fcd5ae5a6d7d98bcef2d1aa1f838cd9ce1697792fca82b57a8bac5782d16"
+  },
+  "package_matches_release": true,
+  "pass": true
+}

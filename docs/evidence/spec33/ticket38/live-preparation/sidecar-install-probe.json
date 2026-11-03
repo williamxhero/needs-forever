@@ -1,0 +1,149 @@
+{
+  "kind": "isolated-side-by-side-install-no-model-no-trust",
+  "home": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\main-session-supervision\\sidecar-install-probe\\codex-home",
+  "workspace": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\main-session-supervision\\sidecar-install-probe\\workspace",
+  "oldSource": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\main-session-supervision\\sidecar-install-probe\\old-marketplace",
+  "candidate": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\main-session-supervision\\sidecar-install-probe\\candidate-marketplace",
+  "commands": [
+    {
+      "argv": [
+        "C:/Users/will/AppData/Local/OpenAI/Codex/bin/ca9abb0b4d8ac692/codex.exe",
+        "--version"
+      ],
+      "exit_code": 0,
+      "stdout": "codex-cli 0.159.0\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "C:/Users/will/AppData/Local/OpenAI/Codex/bin/ca9abb0b4d8ac692/codex.exe",
+        "plugin",
+        "marketplace",
+        "add",
+        "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\main-session-supervision\\sidecar-install-probe\\old-marketplace",
+        "--json"
+      ],
+      "exit_code": 0,
+      "stdout": "{\n  \"marketplaceName\": \"needs-forever-local\",\n  \"installedRoot\": \"D:\\\\WILL\\\\TOOLS\\\\needs-forever\\\\.scratch\\\\main-session-supervision\\\\sidecar-install-probe\\\\old-marketplace\",\n  \"alreadyAdded\": false\n}\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "C:/Users/will/AppData/Local/OpenAI/Codex/bin/ca9abb0b4d8ac692/codex.exe",
+        "plugin",
+        "add",
+        "needs-forever@needs-forever-local",
+        "--json"
+      ],
+      "exit_code": 0,
+      "stdout": "{\n  \"pluginId\": \"needs-forever@needs-forever-local\",\n  \"name\": \"needs-forever\",\n  \"marketplaceName\": \"needs-forever-local\",\n  \"version\": \"0.2.0\",\n  \"installedPath\": \"D:\\\\WILL\\\\TOOLS\\\\needs-forever\\\\.scratch\\\\main-session-supervision\\\\sidecar-install-probe\\\\codex-home\\\\plugins\\\\cache\\\\needs-forever-local\\\\needs-forever\\\\0.2.0\",\n  \"authPolicy\": \"ON_USE\"\n}\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "C:/Users/will/AppData/Local/OpenAI/Codex/bin/ca9abb0b4d8ac692/codex.exe",
+        "plugin",
+        "list",
+        "--marketplace",
+        "needs-forever-local",
+        "--json"
+      ],
+      "exit_code": 0,
+      "stdout": "{\n  \"installed\": [\n    {\n      \"pluginId\": \"needs-forever@needs-forever-local\",\n      \"name\": \"needs-forever\",\n      \"marketplaceName\": \"needs-forever-local\",\n      \"version\": \"0.2.0\",\n      \"installed\": true,\n      \"enabled\": true,\n      \"source\": {\n        \"source\": \"local\",\n        \"path\": \"D:\\\\WILL\\\\TOOLS\\\\needs-forever\\\\.scratch\\\\main-session-supervision\\\\sidecar-install-probe\\\\old-marketplace\\\\plugins\\\\needs-forever\"\n      },\n      \"marketplaceSource\": {\n        \"sourceType\": \"local\",\n        \"source\": \"\\\\\\\\?\\\\D:\\\\WILL\\\\TOOLS\\\\needs-forever\\\\.scratch\\\\main-session-supervision\\\\sidecar-install-probe\\\\old-marketplace\"\n      },\n      \"installPolicy\": \"AVAILABLE\",\n      \"authPolicy\": \"ON_USE\"\n    }\n  ],\n  \"available\": []\n}\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "C:/Users/will/AppData/Local/OpenAI/Codex/bin/ca9abb0b4d8ac692/codex.exe",
+        "plugin",
+        "marketplace",
+        "add",
+        "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\main-session-supervision\\sidecar-install-probe\\candidate-marketplace",
+        "--json"
+      ],
+      "exit_code": 0,
+      "stdout": "{\n  \"marketplaceName\": \"needs-forever-spec33\",\n  \"installedRoot\": \"D:\\\\WILL\\\\TOOLS\\\\needs-forever\\\\.scratch\\\\main-session-supervision\\\\sidecar-install-probe\\\\candidate-marketplace\",\n  \"alreadyAdded\": false\n}\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "C:/Users/will/AppData/Local/OpenAI/Codex/bin/ca9abb0b4d8ac692/codex.exe",
+        "plugin",
+        "add",
+        "needs-forever@needs-forever-spec33",
+        "--json"
+      ],
+      "exit_code": 0,
+      "stdout": "{\n  \"pluginId\": \"needs-forever@needs-forever-spec33\",\n  \"name\": \"needs-forever\",\n  \"marketplaceName\": \"needs-forever-spec33\",\n  \"version\": \"0.3.0\",\n  \"installedPath\": \"D:\\\\WILL\\\\TOOLS\\\\needs-forever\\\\.scratch\\\\main-session-supervision\\\\sidecar-install-probe\\\\codex-home\\\\plugins\\\\cache\\\\needs-forever-spec33\\\\needs-forever\\\\0.3.0\",\n  \"authPolicy\": \"ON_USE\"\n}\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "C:/Users/will/AppData/Local/OpenAI/Codex/bin/ca9abb0b4d8ac692/codex.exe",
+        "plugin",
+        "list",
+        "--marketplace",
+        "needs-forever-local",
+        "--json"
+      ],
+      "exit_code": 0,
+      "stdout": "{\n  \"installed\": [\n    {\n      \"pluginId\": \"needs-forever@needs-forever-local\",\n      \"name\": \"needs-forever\",\n      \"marketplaceName\": \"needs-forever-local\",\n      \"version\": \"0.2.0\",\n      \"installed\": true,\n      \"enabled\": true,\n      \"source\": {\n        \"source\": \"local\",\n        \"path\": \"D:\\\\WILL\\\\TOOLS\\\\needs-forever\\\\.scratch\\\\main-session-supervision\\\\sidecar-install-probe\\\\old-marketplace\\\\plugins\\\\needs-forever\"\n      },\n      \"marketplaceSource\": {\n        \"sourceType\": \"local\",\n        \"source\": \"\\\\\\\\?\\\\D:\\\\WILL\\\\TOOLS\\\\needs-forever\\\\.scratch\\\\main-session-supervision\\\\sidecar-install-probe\\\\old-marketplace\"\n      },\n      \"installPolicy\": \"AVAILABLE\",\n      \"authPolicy\": \"ON_USE\"\n    }\n  ],\n  \"available\": []\n}\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "C:/Users/will/AppData/Local/OpenAI/Codex/bin/ca9abb0b4d8ac692/codex.exe",
+        "plugin",
+        "list",
+        "--marketplace",
+        "needs-forever-spec33",
+        "--json"
+      ],
+      "exit_code": 0,
+      "stdout": "{\n  \"installed\": [\n    {\n      \"pluginId\": \"needs-forever@needs-forever-spec33\",\n      \"name\": \"needs-forever\",\n      \"marketplaceName\": \"needs-forever-spec33\",\n      \"version\": \"0.3.0\",\n      \"installed\": true,\n      \"enabled\": true,\n      \"source\": {\n        \"source\": \"local\",\n        \"path\": \"D:\\\\WILL\\\\TOOLS\\\\needs-forever\\\\.scratch\\\\main-session-supervision\\\\sidecar-install-probe\\\\candidate-marketplace\\\\plugins\\\\needs-forever\"\n      },\n      \"marketplaceSource\": {\n        \"sourceType\": \"local\",\n        \"source\": \"\\\\\\\\?\\\\D:\\\\WILL\\\\TOOLS\\\\needs-forever\\\\.scratch\\\\main-session-supervision\\\\sidecar-install-probe\\\\candidate-marketplace\"\n      },\n      \"installPolicy\": \"AVAILABLE\",\n      \"authPolicy\": \"ON_USE\"\n    }\n  ],\n  \"available\": []\n}\n",
+      "stderr": ""
+    }
+  ],
+  "old_install": {
+    "pluginId": "needs-forever@needs-forever-local",
+    "name": "needs-forever",
+    "marketplaceName": "needs-forever-local",
+    "version": "0.2.0",
+    "installedPath": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\main-session-supervision\\sidecar-install-probe\\codex-home\\plugins\\cache\\needs-forever-local\\needs-forever\\0.2.0",
+    "authPolicy": "ON_USE"
+  },
+  "old_path": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\main-session-supervision\\sidecar-install-probe\\codex-home\\plugins\\cache\\needs-forever-local\\needs-forever\\0.2.0",
+  "old_hashes_before": {
+    ".codex-plugin/plugin.json": "6c62cca2159d7f3d5dfc428040ef1d7e7c84e6f1cf41b256abe1e651581b40b3",
+    "package.json": "a1874ccf7f782ad8c7e4250620a5147f7406e0f38073c5a1f77aacb996a7b6c8",
+    "plugin.json": "5686461f9e9c606d628ecc56e01b0272c6fd33378f23aea73433f8c0ce6c9a70",
+    "runtime/integrity.json": "ba4d4317add84865a9bbd529820e5ed23a0440cec655e25e814d46fffa384654",
+    "runtime/src/cli.js": "675111518bcedcbf03f194b9eac717ab3f4b47d4064a9ce32f15737ab43fe7a5",
+    "runtime/src/index.js": "03e898ec1f5980e9758d1fc83bd8a03cd746d8f42a8bea4a46e9d766e1563283",
+    "runtime/src/judge.js": "d9b2d933d7902462ea9c196ff8c8d8811ca17c295fd393537d2092d120de5af7",
+    "runtime/src/recovery.js": "db606a6e5674c70e4f70b56d794e14576ae0d4473d15a6ef4e8a72ab4aa9da2e",
+    "runtime/src/redact.js": "cd943daa4180f8c87b091babc0160dedab3432b471624710e67926fbfe779db6",
+    "runtime/src/rules.js": "e743c10107cb043bf2c06957b2646cb9fc723474bd456d0f96a02861d5d376fc",
+    "runtime/src/snapshot.js": "6b815e1bc90f42d4dbb5672ee314e17b71763c7baeced3a119ec91aa36193427",
+    "runtime/src/store.js": "23067b5e1642728050960f5dcea17b2b7c7ff8172fa2f58175f6df786a544629",
+    "runtime/src/supervisor.js": "0c2f586924c38c8b82a4cc75af23ec9bfdfea2a9306c3a1870319ba6cd927652",
+    "runtime/src/transport.js": "bb10bff3680a7937e37cb3b829ff385fb59f9a57862d834814796e92185b37a8",
+    "runtime/src/types.js": "1d776e8997c21eccad34b1b01358b1a3f8df090b5647a855ba3972d361311f08",
+    "scripts/control.mjs": "47c76ac4870f041dbcb766bd5df68e4dbc679772bd132ec74e2ddec23460748f",
+    "skills/supervise/references/task.md": "abab1a597f3d3afefa6259bee4d3a7044e79ff8cf935139519327bb971de975b",
+    "skills/supervise/SKILL.md": "195466d57c429ef154a490e8b5bcc04d1283eb7f8c8094679269207dacb5f744"
+  },
+  "old_cache_survives_remove": true,
+  "new_install": {
+    "pluginId": "needs-forever@needs-forever-spec33",
+    "name": "needs-forever",
+    "marketplaceName": "needs-forever-spec33",
+    "version": "0.3.0",
+    "installedPath": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\main-session-supervision\\sidecar-install-probe\\codex-home\\plugins\\cache\\needs-forever-spec33\\needs-forever\\0.3.0",
+    "authPolicy": "ON_USE"
+  },
+  "old_cache_survives_upgrade": true,
+  "new_version": "0.3.0",
+  "new_matches_candidate": true,
+  "pass": true
+}
