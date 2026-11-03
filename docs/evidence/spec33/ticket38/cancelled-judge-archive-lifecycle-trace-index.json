@@ -1,0 +1,922 @@
+{
+  "classification": "Read-only localization of four failed full-suite fixtures; no sensitive config/raw task state exported",
+  "integration_commit": "904a8d0af21748ca8435765949072bef149db2e6",
+  "failed_fixtures": [
+    {
+      "test_fixture": "real-invalid-json",
+      "directory": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\integration\\runs\\ticket29\\real-invalid-json-1793713344671",
+      "source_files": [
+        {
+          "path": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\integration\\runs\\ticket29\\real-invalid-json-1793713344671\\protocol.jsonl",
+          "sha256": "1be73f3b26fec80f2805ec10ae83c241dd24d8ed34a97f89520cddf74ae20792",
+          "bytes": 11506
+        },
+        {
+          "path": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\integration\\runs\\ticket29\\real-invalid-json-1793713344671\\events.jsonl",
+          "sha256": "bd7a5ab8ea8630f6604b748d1c8ebced220cc14386762451676a466016e9755a",
+          "bytes": 4791
+        },
+        {
+          "path": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\integration\\runs\\ticket29\\real-invalid-json-1793713344671\\state.json",
+          "sha256": "1ef26b9265b3217bccb6c2fae2b4cf402ad1b5c57799c42e460e5efeb67f9fd1",
+          "bytes": 2343
+        },
+        {
+          "path": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\integration\\runs\\ticket29\\real-invalid-json-1793713344671\\summary.md",
+          "sha256": "78c756b98c0095489c524046ee846fd9ad799e49d6f79c22caa50cc54397919b",
+          "bytes": 175
+        }
+      ],
+      "actual_fixture_pids": [
+        7268,
+        24244,
+        45372,
+        59592,
+        60128
+      ],
+      "protocol_timeline": [
+        {
+          "pid": 7268
+        },
+        {
+          "pid": 24244
+        },
+        {
+          "pid": 24244,
+          "method": "initialize"
+        },
+        {
+          "pid": 24244,
+          "method": "initialized"
+        },
+        {
+          "pid": 24244,
+          "method": "config/read"
+        },
+        {
+          "pid": 45372
+        },
+        {
+          "pid": 45372,
+          "method": "initialize"
+        },
+        {
+          "pid": 45372,
+          "method": "initialized"
+        },
+        {
+          "pid": 45372,
+          "method": "config/read"
+        },
+        {
+          "pid": 45372,
+          "method": "thread/start"
+        },
+        {
+          "pid": 45372,
+          "method": "turn/start",
+          "threadId": "worker-from-server"
+        },
+        {},
+        {
+          "pid": 45372,
+          "method": "thread/start"
+        },
+        {
+          "pid": 45372,
+          "method": "turn/start",
+          "threadId": "judge-1"
+        },
+        {
+          "pid": 45372,
+          "method": "thread/archive",
+          "threadId": "judge-1"
+        },
+        {
+          "pid": 59592
+        },
+        {
+          "pid": 60128
+        },
+        {
+          "pid": 60128,
+          "method": "initialize"
+        },
+        {
+          "pid": 60128,
+          "method": "initialized"
+        },
+        {
+          "pid": 60128,
+          "method": "config/read"
+        }
+      ],
+      "event_timeline": [
+        {
+          "at": "2026-11-03T13:42:27.434Z",
+          "type": "connection_verified"
+        },
+        {
+          "at": "2026-11-03T13:42:27.462Z",
+          "type": "worker_created",
+          "thread_id": "worker-from-server"
+        },
+        {
+          "at": "2026-11-03T13:42:27.463Z",
+          "type": "send_prepared"
+        },
+        {
+          "at": "2026-11-03T13:42:27.465Z",
+          "type": "send_attempted"
+        },
+        {
+          "at": "2026-11-03T13:42:27.513Z",
+          "type": "send_confirmed",
+          "thread_id": "worker-from-server",
+          "turn_id": "first-turn-from-server"
+        },
+        {
+          "at": "2026-11-03T13:42:27.514Z",
+          "type": "worker_started",
+          "thread_id": "worker-from-server",
+          "turn_id": "first-turn-from-server",
+          "status": "inProgress",
+          "action": "observe"
+        },
+        {
+          "at": "2026-11-03T13:42:27.515Z",
+          "type": "worker_input",
+          "thread_id": "worker-from-server",
+          "turn_id": "first-turn-from-server",
+          "status": "input",
+          "action": "observe"
+        },
+        {
+          "at": "2026-11-03T13:42:27.516Z",
+          "type": "worker_evidence",
+          "thread_id": "worker-from-server"
+        },
+        {
+          "at": "2026-11-03T13:42:27.516Z",
+          "type": "worker_completed",
+          "thread_id": "worker-from-server",
+          "turn_id": "first-turn-from-server",
+          "status": "completed",
+          "action": "judge"
+        },
+        {
+          "at": "2026-11-03T13:42:27.516Z",
+          "type": "worker_output",
+          "thread_id": "worker-from-server",
+          "turn_id": "first-turn-from-server"
+        },
+        {
+          "at": "2026-11-03T13:42:27.530Z",
+          "type": "judge_created",
+          "thread_id": "judge-1"
+        },
+        {
+          "at": "2026-11-03T13:42:27.622Z",
+          "type": "judge_output",
+          "thread_id": "judge-1",
+          "turn_id": "judge-turn-1"
+        },
+        {
+          "at": "2026-11-03T13:42:27.661Z",
+          "type": "judge_archived",
+          "thread_id": "judge-1"
+        },
+        {
+          "at": "2026-11-03T13:42:27.662Z",
+          "type": "recovery_retry_scheduled",
+          "kind": "invalid_judge_output"
+        }
+      ],
+      "selected_final_state": {
+        "status": "ACTIVE",
+        "phase": "RECOVERING",
+        "updated_at": "2026-11-03T13:42:29.660Z",
+        "worker_thread_id": "worker-from-server",
+        "active_worker_turn_id": null,
+        "reviewing_turn_id": "first-turn-from-server"
+      }
+    },
+    {
+      "test_fixture": "worker-disconnect",
+      "directory": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\integration\\runs\\ticket29\\worker-disconnect-1793713349770",
+      "source_files": [
+        {
+          "path": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\integration\\runs\\ticket29\\worker-disconnect-1793713349770\\protocol.jsonl",
+          "sha256": "7999fad9c4851ba8c30e83daade0574a031bc58475f512db2cf675b52001dd35",
+          "bytes": 10344
+        },
+        {
+          "path": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\integration\\runs\\ticket29\\worker-disconnect-1793713349770\\events.jsonl",
+          "sha256": "df1b6d982bfd891439b0ea9a6cca53f3c6abcfa5248bfc4ddb06ccbe0f180638",
+          "bytes": 4004
+        },
+        {
+          "path": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\integration\\runs\\ticket29\\worker-disconnect-1793713349770\\state.json",
+          "sha256": "ee4500fd708c6ab92dd454fd60a250c20f07d097a1ec79b5cff67e673c49d3a3",
+          "bytes": 2912
+        },
+        {
+          "path": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\integration\\runs\\ticket29\\worker-disconnect-1793713349770\\summary.md",
+          "sha256": "a3cee109742ef247b0633758e01eba1a6edc91f86fbaa3a5dbb6dc403e44e66d",
+          "bytes": 231
+        }
+      ],
+      "actual_fixture_pids": [
+        7952,
+        39400,
+        44724,
+        59720,
+        59756,
+        59828,
+        59872,
+        60004,
+        60116
+      ],
+      "protocol_timeline": [
+        {
+          "pid": 39400
+        },
+        {
+          "pid": 44724
+        },
+        {
+          "pid": 44724,
+          "method": "initialize"
+        },
+        {
+          "pid": 44724,
+          "method": "initialized"
+        },
+        {
+          "pid": 44724,
+          "method": "config/read"
+        },
+        {
+          "pid": 59720
+        },
+        {
+          "pid": 59720,
+          "method": "initialize"
+        },
+        {
+          "pid": 59720,
+          "method": "initialized"
+        },
+        {
+          "pid": 59720,
+          "method": "config/read"
+        },
+        {
+          "pid": 59720,
+          "method": "thread/start"
+        },
+        {
+          "pid": 59720,
+          "method": "turn/start",
+          "threadId": "worker-from-server"
+        },
+        {},
+        {
+          "pid": 59756
+        },
+        {
+          "pid": 59828
+        },
+        {
+          "pid": 59828,
+          "method": "initialize"
+        },
+        {
+          "pid": 59828,
+          "method": "initialized"
+        },
+        {
+          "pid": 59828,
+          "method": "config/read"
+        },
+        {
+          "pid": 59872
+        },
+        {
+          "pid": 59872,
+          "method": "initialize"
+        },
+        {
+          "pid": 59872,
+          "method": "initialized"
+        },
+        {
+          "pid": 59872,
+          "method": "config/read"
+        },
+        {
+          "pid": 59872,
+          "method": "thread/resume",
+          "threadId": "worker-from-server"
+        },
+        {
+          "pid": 60004
+        },
+        {
+          "pid": 60116
+        },
+        {
+          "pid": 60116,
+          "method": "initialize"
+        },
+        {
+          "pid": 60116,
+          "method": "initialized"
+        },
+        {
+          "pid": 60116,
+          "method": "config/read"
+        },
+        {
+          "pid": 7952
+        }
+      ],
+      "event_timeline": [
+        {
+          "at": "2026-11-03T13:42:31.953Z",
+          "type": "connection_verified"
+        },
+        {
+          "at": "2026-11-03T13:42:31.960Z",
+          "type": "worker_created",
+          "thread_id": "worker-from-server"
+        },
+        {
+          "at": "2026-11-03T13:42:31.962Z",
+          "type": "send_prepared"
+        },
+        {
+          "at": "2026-11-03T13:42:31.964Z",
+          "type": "send_attempted"
+        },
+        {
+          "at": "2026-11-03T13:42:32.058Z",
+          "type": "recovery_retry_scheduled",
+          "kind": "service_unavailable"
+        },
+        {
+          "at": "2026-11-03T13:42:33.433Z",
+          "type": "connection_reconnected",
+          "thread_id": "worker-from-server"
+        },
+        {
+          "at": "2026-11-03T13:42:33.435Z",
+          "type": "send_reconciled_absent",
+          "action": "resend_after_history_check"
+        },
+        {
+          "at": "2026-11-03T13:42:33.436Z",
+          "type": "send_prepared"
+        },
+        {
+          "at": "2026-11-03T13:42:33.437Z",
+          "type": "send_attempted"
+        },
+        {
+          "at": "2026-11-03T13:42:33.439Z",
+          "type": "recovery_retry_scheduled",
+          "kind": "service_unavailable"
+        }
+      ],
+      "selected_final_state": {
+        "status": "ACTIVE",
+        "phase": "RECOVERING",
+        "updated_at": "2026-11-03T13:42:34.661Z",
+        "worker_thread_id": "worker-from-server",
+        "active_worker_turn_id": null,
+        "reviewing_turn_id": null
+      }
+    },
+    {
+      "test_fixture": "repeated-judge-failures",
+      "directory": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\integration\\runs\\ticket29\\repeated-judge-failures-1793713376077",
+      "source_files": [
+        {
+          "path": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\integration\\runs\\ticket29\\repeated-judge-failures-1793713376077\\protocol.jsonl",
+          "sha256": "882a618cafbbcb8699453dd1627da84352b25ca597ab76e0b13a29bc5736fc8f",
+          "bytes": 27473
+        },
+        {
+          "path": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\integration\\runs\\ticket29\\repeated-judge-failures-1793713376077\\events.jsonl",
+          "sha256": "6b7b52a3806fb04a90e567d680fb1ab726c7904db8190fe321faa7dccc72f4cb",
+          "bytes": 8042
+        },
+        {
+          "path": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\integration\\runs\\ticket29\\repeated-judge-failures-1793713376077\\state.json",
+          "sha256": "40861fd36f30fe37426e39cd42683e77816fc8c8927c64eaf21dbabff7c41a5f",
+          "bytes": 3200
+        },
+        {
+          "path": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\integration\\runs\\ticket29\\repeated-judge-failures-1793713376077\\summary.md",
+          "sha256": "3c75e4df5e18090d056b5696a6dbee85ec367a7ddee6ff4388b1eb61cac44b42",
+          "bytes": 181
+        }
+      ],
+      "actual_fixture_pids": [
+        31952,
+        32700,
+        46160,
+        47596,
+        48208,
+        51180,
+        55028,
+        55284,
+        57304,
+        59444,
+        60016
+      ],
+      "protocol_timeline": [
+        {
+          "pid": 47596
+        },
+        {
+          "pid": 60016
+        },
+        {
+          "pid": 60016,
+          "method": "initialize"
+        },
+        {
+          "pid": 60016,
+          "method": "initialized"
+        },
+        {
+          "pid": 60016,
+          "method": "config/read"
+        },
+        {
+          "pid": 32700
+        },
+        {
+          "pid": 32700,
+          "method": "initialize"
+        },
+        {
+          "pid": 32700,
+          "method": "initialized"
+        },
+        {
+          "pid": 32700,
+          "method": "config/read"
+        },
+        {
+          "pid": 32700,
+          "method": "thread/start"
+        },
+        {
+          "pid": 32700,
+          "method": "turn/start",
+          "threadId": "worker-from-server"
+        },
+        {},
+        {
+          "pid": 32700,
+          "method": "thread/start"
+        },
+        {
+          "pid": 32700,
+          "method": "turn/start",
+          "threadId": "judge-1"
+        },
+        {
+          "pid": 32700,
+          "method": "thread/archive",
+          "threadId": "judge-1"
+        },
+        {
+          "pid": 55284
+        },
+        {
+          "pid": 55028
+        },
+        {
+          "pid": 55028,
+          "method": "initialize"
+        },
+        {
+          "pid": 55028,
+          "method": "initialized"
+        },
+        {
+          "pid": 55028,
+          "method": "config/read"
+        },
+        {
+          "pid": 57304
+        },
+        {
+          "pid": 57304,
+          "method": "initialize"
+        },
+        {
+          "pid": 57304,
+          "method": "initialized"
+        },
+        {
+          "pid": 57304,
+          "method": "config/read"
+        },
+        {
+          "pid": 57304,
+          "method": "thread/resume",
+          "threadId": "worker-from-server"
+        },
+        {
+          "pid": 57304,
+          "method": "thread/start"
+        },
+        {
+          "pid": 57304,
+          "method": "turn/start",
+          "threadId": "judge-2"
+        },
+        {
+          "pid": 57304,
+          "method": "thread/archive",
+          "threadId": "judge-2"
+        },
+        {
+          "pid": 31952
+        },
+        {
+          "pid": 59444
+        },
+        {
+          "pid": 59444,
+          "method": "initialize"
+        },
+        {
+          "pid": 59444,
+          "method": "initialized"
+        },
+        {
+          "pid": 59444,
+          "method": "config/read"
+        },
+        {
+          "pid": 48208
+        },
+        {
+          "pid": 48208,
+          "method": "initialize"
+        },
+        {
+          "pid": 48208,
+          "method": "initialized"
+        },
+        {
+          "pid": 48208,
+          "method": "config/read"
+        },
+        {
+          "pid": 48208,
+          "method": "thread/resume",
+          "threadId": "worker-from-server"
+        },
+        {
+          "pid": 48208,
+          "method": "thread/start"
+        },
+        {
+          "pid": 48208,
+          "method": "turn/start",
+          "threadId": "judge-3"
+        },
+        {
+          "pid": 48208,
+          "method": "thread/archive",
+          "threadId": "judge-3"
+        },
+        {
+          "pid": 46160
+        },
+        {
+          "pid": 51180
+        },
+        {
+          "pid": 51180,
+          "method": "initialize"
+        },
+        {
+          "pid": 51180,
+          "method": "initialized"
+        },
+        {
+          "pid": 51180,
+          "method": "config/read"
+        }
+      ],
+      "event_timeline": [
+        {
+          "at": "2026-11-03T13:42:57.349Z",
+          "type": "connection_verified"
+        },
+        {
+          "at": "2026-11-03T13:42:57.371Z",
+          "type": "worker_created",
+          "thread_id": "worker-from-server"
+        },
+        {
+          "at": "2026-11-03T13:42:57.373Z",
+          "type": "send_prepared"
+        },
+        {
+          "at": "2026-11-03T13:42:57.374Z",
+          "type": "send_attempted"
+        },
+        {
+          "at": "2026-11-03T13:42:57.380Z",
+          "type": "send_confirmed",
+          "thread_id": "worker-from-server",
+          "turn_id": "first-turn-from-server"
+        },
+        {
+          "at": "2026-11-03T13:42:57.381Z",
+          "type": "worker_started",
+          "thread_id": "worker-from-server",
+          "turn_id": "first-turn-from-server",
+          "status": "inProgress",
+          "action": "observe"
+        },
+        {
+          "at": "2026-11-03T13:42:57.381Z",
+          "type": "worker_input",
+          "thread_id": "worker-from-server",
+          "turn_id": "first-turn-from-server",
+          "status": "input",
+          "action": "observe"
+        },
+        {
+          "at": "2026-11-03T13:42:57.382Z",
+          "type": "worker_evidence",
+          "thread_id": "worker-from-server"
+        },
+        {
+          "at": "2026-11-03T13:42:57.382Z",
+          "type": "worker_completed",
+          "thread_id": "worker-from-server",
+          "turn_id": "first-turn-from-server",
+          "status": "completed",
+          "action": "judge"
+        },
+        {
+          "at": "2026-11-03T13:42:57.382Z",
+          "type": "worker_output",
+          "thread_id": "worker-from-server",
+          "turn_id": "first-turn-from-server"
+        },
+        {
+          "at": "2026-11-03T13:42:57.404Z",
+          "type": "judge_created",
+          "thread_id": "judge-1"
+        },
+        {
+          "at": "2026-11-03T13:42:57.423Z",
+          "type": "judge_output",
+          "thread_id": "judge-1",
+          "turn_id": "judge-turn-1"
+        },
+        {
+          "at": "2026-11-03T13:42:57.435Z",
+          "type": "judge_archived",
+          "thread_id": "judge-1"
+        },
+        {
+          "at": "2026-11-03T13:42:57.437Z",
+          "type": "recovery_retry_scheduled",
+          "kind": "invalid_judge_output"
+        },
+        {
+          "at": "2026-11-03T13:42:58.196Z",
+          "type": "connection_reconnected",
+          "thread_id": "worker-from-server"
+        },
+        {
+          "at": "2026-11-03T13:42:58.200Z",
+          "type": "judge_created",
+          "thread_id": "judge-2"
+        },
+        {
+          "at": "2026-11-03T13:42:58.207Z",
+          "type": "judge_output",
+          "thread_id": "judge-2",
+          "turn_id": "judge-turn-2"
+        },
+        {
+          "at": "2026-11-03T13:42:58.210Z",
+          "type": "judge_archived",
+          "thread_id": "judge-2"
+        },
+        {
+          "at": "2026-11-03T13:42:58.210Z",
+          "type": "recovery_retry_scheduled",
+          "kind": "invalid_judge_output"
+        },
+        {
+          "at": "2026-11-03T13:42:59.671Z",
+          "type": "connection_reconnected",
+          "thread_id": "worker-from-server"
+        },
+        {
+          "at": "2026-11-03T13:42:59.780Z",
+          "type": "judge_created",
+          "thread_id": "judge-3"
+        },
+        {
+          "at": "2026-11-03T13:42:59.784Z",
+          "type": "judge_output",
+          "thread_id": "judge-3",
+          "turn_id": "judge-turn-3"
+        },
+        {
+          "at": "2026-11-03T13:42:59.789Z",
+          "type": "judge_archived",
+          "thread_id": "judge-3"
+        },
+        {
+          "at": "2026-11-03T13:42:59.789Z",
+          "type": "recovery_retry_scheduled",
+          "kind": "invalid_judge_output"
+        }
+      ],
+      "selected_final_state": {
+        "status": "ACTIVE",
+        "phase": "RECOVERING",
+        "updated_at": "2026-11-03T13:43:00.925Z",
+        "worker_thread_id": "worker-from-server",
+        "active_worker_turn_id": null,
+        "reviewing_turn_id": "first-turn-from-server"
+      }
+    },
+    {
+      "test_fixture": "pause-recovery",
+      "directory": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\integration\\runs\\ticket29\\pause-recovery-1793713383750",
+      "source_files": [
+        {
+          "path": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\integration\\runs\\ticket29\\pause-recovery-1793713383750\\protocol.jsonl",
+          "sha256": "2eeacaf36ecd0516d864ed98bab3d816538da1c190d46be15bdd89fe0cc9f1c7",
+          "bytes": 5174
+        },
+        {
+          "path": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\integration\\runs\\ticket29\\pause-recovery-1793713383750\\events.jsonl",
+          "sha256": "85805ebc8e2606cd2d455653b2a84235a3dc5bab4dd8f070dde6bc00e1e73e16",
+          "bytes": 4172
+        },
+        {
+          "path": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\integration\\runs\\ticket29\\pause-recovery-1793713383750\\state.json",
+          "sha256": "87cc05d21be1e07d5a16bd73ef6ca913ab41603772c0f004e71be62fec74fb48",
+          "bytes": 1462
+        },
+        {
+          "path": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\integration\\runs\\ticket29\\pause-recovery-1793713383750\\summary.md",
+          "sha256": "6363701485d5a267ba99de2ac60daea4751b8627b85127bb38834084717416b5",
+          "bytes": 137
+        }
+      ],
+      "actual_fixture_pids": [
+        39992,
+        54944,
+        57216
+      ],
+      "protocol_timeline": [
+        {
+          "pid": 54944
+        },
+        {
+          "pid": 57216
+        },
+        {
+          "pid": 57216,
+          "method": "initialize"
+        },
+        {
+          "pid": 57216,
+          "method": "initialized"
+        },
+        {
+          "pid": 57216,
+          "method": "config/read"
+        },
+        {
+          "pid": 39992
+        },
+        {
+          "pid": 39992,
+          "method": "initialize"
+        },
+        {
+          "pid": 39992,
+          "method": "initialized"
+        },
+        {
+          "pid": 39992,
+          "method": "config/read"
+        },
+        {
+          "pid": 39992,
+          "method": "thread/start"
+        },
+        {
+          "pid": 39992,
+          "method": "turn/start",
+          "threadId": "worker-from-server"
+        },
+        {}
+      ],
+      "event_timeline": [
+        {
+          "at": "2026-11-03T13:43:06.380Z",
+          "type": "connection_verified"
+        },
+        {
+          "at": "2026-11-03T13:43:06.465Z",
+          "type": "worker_created",
+          "thread_id": "worker-from-server"
+        },
+        {
+          "at": "2026-11-03T13:43:06.467Z",
+          "type": "send_prepared"
+        },
+        {
+          "at": "2026-11-03T13:43:06.468Z",
+          "type": "send_attempted"
+        },
+        {
+          "at": "2026-11-03T13:43:06.554Z",
+          "type": "send_confirmed",
+          "thread_id": "worker-from-server",
+          "turn_id": "first-turn-from-server"
+        },
+        {
+          "at": "2026-11-03T13:43:06.556Z",
+          "type": "worker_started",
+          "thread_id": "worker-from-server",
+          "turn_id": "first-turn-from-server",
+          "status": "inProgress",
+          "action": "observe"
+        },
+        {
+          "at": "2026-11-03T13:43:06.558Z",
+          "type": "worker_input",
+          "thread_id": "worker-from-server",
+          "turn_id": "first-turn-from-server",
+          "status": "input",
+          "action": "observe"
+        },
+        {
+          "at": "2026-11-03T13:43:06.559Z",
+          "type": "worker_evidence",
+          "thread_id": "worker-from-server"
+        },
+        {
+          "at": "2026-11-03T13:43:06.560Z",
+          "type": "worker_completed",
+          "thread_id": "worker-from-server",
+          "turn_id": "first-turn-from-server",
+          "status": "completed",
+          "action": "judge"
+        },
+        {
+          "at": "2026-11-03T13:43:06.560Z",
+          "type": "worker_output",
+          "thread_id": "worker-from-server",
+          "turn_id": "first-turn-from-server"
+        },
+        {
+          "at": "2026-11-03T13:43:06.564Z",
+          "type": "recovery_retry_scheduled",
+          "kind": "judge_timeout"
+        },
+        {
+          "at": "2026-11-03T13:43:06.639Z",
+          "type": "paused"
+        },
+        {
+          "at": "2026-11-03T13:43:06.710Z",
+          "type": "owned_calls_cancelled"
+        }
+      ],
+      "selected_final_state": {
+        "status": "PAUSED",
+        "phase": "IDLE",
+        "updated_at": "2026-11-03T13:43:06.640Z",
+        "worker_thread_id": "worker-from-server",
+        "active_worker_turn_id": null,
+        "reviewing_turn_id": "first-turn-from-server"
+      }
+    }
+  ],
+  "matching_test_fixture_nodes_after_test_exit": [],
+  "cleanup_required": false,
+  "processes_killed": false
+}

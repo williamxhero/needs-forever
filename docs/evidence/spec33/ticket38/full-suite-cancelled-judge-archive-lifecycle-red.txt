@@ -1,0 +1,225 @@
+
+> codex-supervisor@0.3.3 test
+> npm run build && node scripts/build-plugin.mjs && node --test "dist/test/*.test.js"
+
+
+> codex-supervisor@0.3.3 build
+> tsc
+
+Built self-contained plugin runtime (17 modules).
+✔ server requests preserve string ids and receive deterministic refusals (2338.2346ms)
+✔ start preserves the task and server identities; status reads WAIT_EXTERNAL without launching a server (2039.3236ms)
+✔ start rejects a server policy granting writes outside the configured workspace before running a turn (3175.5182ms)
+✔ a second CLI cannot supervise the same task through another state file (4162.2588ms)
+✔ credential-shaped tool output is redacted before becoming a saved judge input (2280.0962ms)
+✔ inherited MCP names are disabled before creating any worker, including names with dots or quotes (1572.4166ms)
+✔ the foreground CLI displays the worker reply and the supervisor waiting reason (2027.62ms)
+✔ server-provided turn identities cannot place snapshot evidence outside the snapshot directory (1575.6877ms)
+✔ two early finishes continue the same worker then persist stable simulated DONE with prepared deliveries (1587.6409ms)
+✔ a correlated started turn progresses to DONE even when turn/start never returns a response (1525.3333ms)
+✔ started/completed before response and duplicate/foreign/stale events cannot add work (1360.5437ms)
+✔ unknown turn/start outcome preserves the sent delivery in RECOVERING without resending (1055.9046ms)
+✔ failed worker terminal never reaches the fixed DONE judge (1631.1283ms)
+✔ a late failure for an already confirmed old delivery cannot cancel the next worker (1909.4629ms)
+✔ judge input is saved while its result is pending and duplicate terminal events do not start another judge (2412.7697ms)
+✔ T08 simulated worker pause is saved before interrupting its owned turn (2119.043ms)
+✔ T08 simulated delayed judge success cannot overwrite durable PAUSED (1713.3157ms)
+✔ T08 simulated verification is interrupted after PAUSED and cannot mark DONE (1193.6631ms)
+✔ explicit resume uses saved task and worker identity, and DONE cannot reopen (2839.6019ms)
+✔ cumulative turn limit pauses before another send and resume requires an increased or removed limit (3546.5965ms)
+✔ ACTIVE time is checkpointed while waiting and the explicit total-time limit pauses a running worker (2453.42ms)
+✔ explicit resume preserves an unknown sent delivery and never blindly replays it (4464.0886ms)
+✔ resume reconciles an interrupted sent delivery into one new continuation (6065.9656ms)
+✔ resume records a failed sent delivery and enters unified recovery without confirming it (3661.614ms)
+✔ resume reviews the saved completed worker turn without adding another worker round (4013.9682ms)
+✔ explicit resume reclaims only a dead supervisor lock and preserves checkpointed time after a crash (2345.84ms)
+✔ ACTIVE resume rejects changed goal or authorization before altering the saved contract (2082.0078ms)
+✔ isolated installed-package discovery reports untrusted hooks without claiming native effectiveness (2368.2372ms)
+✔ judge prompt states the terminal next_message contract (3.2347ms)
+✔ real judge boundary continues the original worker then completes with fresh archived read-only judges (1965.5925ms)
+✔ judge outputs with unknown fields, references or illegal action combinations never finish the task (14676.6292ms)
+✔ worker claims alone cannot prove DONE or an external dependency (3369.8649ms)
+✔ bounded snapshots preserve the contract, real sources, recent instructions and failures while explicitly omitting large output (1405.229ms)
+✔ streamed completed items supply worker evidence and judge JSON when terminal turns have no items (1364.3113ms)
+✔ a timed out known C with unconfirmed turn terminates and is archived without another model (3378.7687ms)
+✔ a timed out known C with confirmed turn terminates and is archived without another model (4391.9823ms)
+✔ terminated judge archive rejection or timeout is bounded and never restarts a model or infers completion (9352.8349ms)
+✔ T06 WAIT_EXTERNAL cites an actual failed route, stays idle and notifies once despite duplicates (2240.8065ms)
+✔ fences, appended text and a second JSON object are rejected with the exact raw output retained (6710.2756ms)
+✔ judge policy expansion prevents its turn and archive failure cannot invalidate an otherwise valid decision (5379.8455ms)
+✔ PAUSED wins over a real judge that is in flight and the owned judge connection terminates (3008.829ms)
+✔ only the expected judge turn can supply the result even if a foreign completion arrives first (3138.1068ms)
+✔ truncated tool output cannot be used to infer either terminal decision (3033.9945ms)
+✔ an uncertain judge turn start terminates the old connection before entering recovery (2189.2844ms)
+✔ connection failure during a judge result wait preserves the actual error and ends the old call (1920.9765ms)
+✔ installed bound main session automatically owns an independent B and synchronous Stop returns direction without claiming execution (3066.9882ms)
+✔ installed Stop deadline invalidates delayed direction and retains an explicit recovery checkpoint (4161.5599ms)
+✔ a second task cannot own the same main session and its failed startup remains diagnosable (5950.5617ms)
+✔ an installed state rejects a second B without disturbing its owned controller (3228.0647ms)
+✔ disconnecting the owned hook before judgment invalidates late output instead of replaying it (3069.1692ms)
+✔ native Interrupt persists PAUSED before canceling a delayed judgment and cannot return its late direction (3101.117ms)
+✔ a newer human prompt cancels old judgment while a later Stop in the same turn can still be supervised (7013.335ms)
+✔ explicit resume preserves original A and cumulative evidence, requiring a fresh same-A native receipt (5620.0804ms)
+✔ plugin start defaults to main-session and core CLI cannot mutate that checkpoint as a legacy worker (2568.684ms)
+✔ foreign and stale generation Stop events do not replace a returned direction (4089.213ms)
+✔ native host restart requires explicit same-A resume and never replays a prior direction (6820.312ms)
+✔ explicit cumulative turn and ACTIVE time limits pause durably without inventing a hidden limit (9077.9921ms)
+✔ prepared Desktop demo uses installed main-session control and preserves a fixed failing acceptance gate (2331.9814ms)
+✔ an installed but uninvoked plugin keeps ordinary lifecycle and doctor/status callbacks neutral without supervision UI text (24505.4512ms)
+✔ read-only rg mentioning an installed start command creates no opt-in artifacts (561.409ms)
+✔ read-only echo mentioning an installed start command creates no opt-in artifacts (287.106ms)
+✔ read-only code-example mentioning an installed start command creates no opt-in artifacts (325.8103ms)
+✔ installed main-session preparation stays pending without native identity despite guessed session environment (677.123ms)
+✔ pause while native binding is pending prevents a late binding receipt from activating supervision (1939.636ms)
+✔ concurrent installed preparations in one workspace retain every independent A registration (7244.23ms)
+✔ binding accepts neutral task filenames and json-code without recording unrelated callbacks (1937.2673ms)
+✔ binding accepts neutral task filenames and literal-code without recording unrelated callbacks (2145.094ms)
+✔ binding accepts neutral task filenames and assigned-code without recording unrelated callbacks (3197.9059ms)
+✔ binding accepts neutral task filenames and powershell-node without recording unrelated callbacks (2435.5672ms)
+✔ structured host callback binds only the matching preparation and keeps fixture evidence simulated (4463.1065ms)
+✔ bound Stop callback records distinct attempt identities without subagent recursion or foreign-session activity (6691.5337ms)
+✔ Windows discovered hook commands stay neutral through PowerShell and cmd in a Chinese path with spaces (12763.7355ms)
+✔ Windows discovered powershell hook commands correlate simulated preparation and bind the original session (3348.2419ms)
+✔ Windows discovered cmd hook commands correlate simulated preparation and bind the original session (2282.7689ms)
+✔ installed Stop creates fresh readonly C for each same-turn stop and confirms only subsequent A tool activity (13352.1114ms)
+✔ assistant completion or blocked wording alone cannot support DONE or WAIT_EXTERNAL (7952.5783ms)
+✔ fixed isolated verifier failure reaches A and a subsequent repaired Stop alone can release the binding (9195.2428ms)
+✔ protected verifier changes refuse DONE before execution and retain original restoration content (7201.398ms)
+✔ WAIT_EXTERNAL contains independently traceable condition and recovery without a continuation (5647.7031ms)
+✔ long assistant wording cannot crowd independent proof or the full original contract out of the 24k judge snapshot (7862.5755ms)
+✔ workspace changes during an otherwise successful fixed check invalidate DONE until a stable recheck (11940.825ms)
+✔ custom checkpoint paths do not make controller heartbeat writes invalidate a stable fixed check (4535.9668ms)
+✔ task files beside a custom checkpoint still invalidate DONE when they change during verification (4761.0101ms)
+✔ unprotected UUID-named business JSON beside a custom checkpoint remains in the workspace change gate (4758.4449ms)
+✔ protected files with checkpoint artifact names retain their fixed baseline enforcement (3152.0236ms)
+✔ truncated old tool output requests concise proof but cannot poison a later Stop with new complete evidence (3076.1396ms)
+✔ installed pause returns before bounded C cleanup and cleanup failure cannot restart A (5649.03ms)
+✔ human input during held JUDGE invalidates late success and current evidence must be gathered again (3315.7425ms)
+✔ human input during delayed VERIFY invalidates late success and current evidence must be gathered again (5848.5109ms)
+✔ a recoverable invalid judgment retries inside the original Stop deadline without turning failure into task completion (8637.4218ms)
+✔ recoverable model errors remove credential canaries from public state and the next supervisor input (7366.0132ms)
+✔ an adapter occurrence accepts one C and delivery while separate identical native invocations each judge (6546.4087ms)
+✔ released main-session binding leaves later ordinary native lifecycle completely neutral (2052.8306ms)
+✔ plugin ships the exact executable core and resolves all marketplace/skill resources locally (10.501ms)
+✔ installed copy starts in background, pauses durably, resumes the original worker, then completes (10034.9627ms)
+✔ plugin reports failed startup and status never launches a worker (1961.2731ms)
+✔ status distinguishes an orphaned ACTIVE checkpoint from a live supervisor without changing it (1242.6565ms)
+✔ recoverable judge failures retry forever with visible classification and no attempt limit (2020.525ms)
+✔ quota-shaped failure enters WAIT_EXTERNAL while ordinary 429 remains retryable (4246.3233ms)
+✖ real judge invalid JSON is archived before a fresh judge retries the same snapshot (5099.2589ms)
+✖ worker disconnect keeps the sent delivery, reconnects the same worker and resends only after history is absent (5067.4135ms)
+✔ live worker failed terminal recovers through history and a fresh continuation (2724.0899ms)
+✔ live worker interrupted terminal confirms history before a fresh continuation (2321.8688ms)
+✔ worker quota failure waits externally and explicit resume reconciles the failed turn (2442.3814ms)
+✔ periodic reconcile hydrates paginated history and compensates a missed completion once (1587.114ms)
+✔ periodic reconcile never resends a sent delivery while history is still inconclusive (1836.9953ms)
+✔ thread closed notification reconnects the saved worker and follows recovered history (2899.6169ms)
+✔ failed native thread unload request clears the gate and reconciles completion after reconnect (3343.8985ms)
+✔ real judge timeout closes the old app-server, reconnects the worker and retries with a fresh judge (4082.904ms)
+✖ three identical judge failures appear in the next judge snapshot as an investigation instruction (5192.865ms)
+✔ transient initial app-server startup failure uses the same recovery backoff before creating the worker (2479.3592ms)
+✖ pausing during recovery cancels the backoff timer immediately (3024.0898ms)
+✔ recovery classification distinguishes timeout, invalid output, service/network, rate limit, auth and quota (2.4967ms)
+✔ backoff uses 5/15/60/300 seconds and remains at 300 (3.5696ms)
+✔ repeated recovery failures produce an investigation instruction at threshold three (1.0401ms)
+✔ DONE requires the fixed argv independent check in the explicit worker sandbox (2327.5811ms)
+✔ T04 nonzero independent output reaches the original worker and only the repaired check can finish (2826.6421ms)
+✔ server-side verification timeout returns its actual error to the worker without losing the healthy connection (4479.0795ms)
+✔ missing independent stdout or stderr cannot manufacture a successful DONE (3208.4761ms)
+✔ protected changes before checking refuse DONE and give the original worker exact restoration evidence (2304.7938ms)
+✔ a missing protected verifier is refused until the original worker restores it (2593.7951ms)
+✔ a protected change during a successful check invalidates it and requires restoration before DONE (2330.4624ms)
+✔ resume retains the original protected baseline and saved argv after the input file and verifier change (3232.9722ms)
+✔ PAUSED is durable before independent cancellation and a late successful check cannot set DONE (1381.4184ms)
+✔ a hung independent call ends its owned server and resumes the exact idle worker before sending failure evidence (4015.3637ms)
+ℹ tests 125
+ℹ suites 0
+ℹ pass 121
+ℹ fail 4
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 123105.5609
+
+✖ failing tests:
+
+test at dist\test\recovery-cli.test.js:45:1
+✖ real judge invalid JSON is archived before a fresh judge retries the same snapshot (5099.2589ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+  null !== 0
+
+      at TestContext.<anonymous> (file:///D:/WILL/TOOLS/needs-forever/.scratch/spec33-worktrees/integration/dist/test/recovery-cli.test.js:52:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at dist\test\recovery-cli.test.js:59:1
+✖ worker disconnect keeps the sent delivery, reconnects the same worker and resends only after history is absent (5067.4135ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+  null !== 0
+
+      at TestContext.<anonymous> (file:///D:/WILL/TOOLS/needs-forever/.scratch/spec33-worktrees/integration/dist/test/recovery-cli.test.js:62:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at dist\test\recovery-cli.test.js:244:1
+✖ three identical judge failures appear in the next judge snapshot as an investigation instruction (5192.865ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+  null !== 0
+
+      at TestContext.<anonymous> (file:///D:/WILL/TOOLS/needs-forever/.scratch/spec33-worktrees/integration/dist/test/recovery-cli.test.js:252:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at dist\test\recovery-cli.test.js:269:1
+✖ pausing during recovery cancels the backoff timer immediately (3024.0898ms)
+  AssertionError [ERR_ASSERTION]: Pause should cancel the recovery backoff instead of waiting five seconds.
+      at TestContext.<anonymous> (file:///D:/WILL/TOOLS/needs-forever/.scratch/spec33-worktrees/integration/dist/test/recovery-cli.test.js:274:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }

@@ -1,0 +1,52 @@
+{
+  "classification": "Third failed full integration run; no final PASS",
+  "implementation": "5e5c32b6b872057bc9ae7f20c07f540ea81df28e",
+  "test_fix_commit": "4a7847c8949e3d11bad572ab17ac7c0401596c82",
+  "integration_merge": "904a8d0af21748ca8435765949072bef149db2e6",
+  "command": "npm test",
+  "exit_code": 1,
+  "tests": 125,
+  "passed": 121,
+  "failed": 4,
+  "cancelled": 0,
+  "skipped": 0,
+  "todo": 0,
+  "duration_ms": 123105.5609,
+  "failures": [
+    {
+      "test": "real judge invalid JSON is archived before a fresh judge retries the same snapshot",
+      "error": "null !== 0",
+      "duration_ms": 5099.2589,
+      "source": "dist/test/recovery-cli.test.js:52"
+    },
+    {
+      "test": "worker disconnect keeps the sent delivery, reconnects the same worker and resends only after history is absent",
+      "error": "null !== 0",
+      "duration_ms": 5067.4135,
+      "source": "dist/test/recovery-cli.test.js:62"
+    },
+    {
+      "test": "three identical judge failures appear in the next judge snapshot as an investigation instruction",
+      "error": "null !== 0",
+      "duration_ms": 5192.865,
+      "source": "dist/test/recovery-cli.test.js:252"
+    },
+    {
+      "test": "pausing during recovery cancels the backoff timer immediately",
+      "error": "Pause should cancel the recovery backoff instead of waiting five seconds.",
+      "duration_ms": 3024.0898,
+      "source": "dist/test/recovery-cli.test.js:274"
+    }
+  ],
+  "previously_failing_cases": "The explicit confirmed/unconfirmed known-C timeout, newer-human-input and phased recovery-timeout cases passed in this run.",
+  "original_raw_output": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\integration\\runs\\spec33-cancelled-judge-archive\\full-suite-lifecycle-original-red.txt",
+  "original_raw_output_sha256": "8841e0c4d08496691b740af936559823c1f001a859fc3ed9dcaddc49e6a40d67",
+  "tracked_output": "docs\\evidence\\spec33\\ticket38\\full-suite-cancelled-judge-archive-lifecycle-red.txt",
+  "tracked_output_sha256": "e6a5cc353a7e7314ab08b20117a6f7f14b3d70d95f74eeb2eff47c6b40c7abff",
+  "tracked_output_transformation": "UTF-8 without BOM, LF and trailing-whitespace normalization only; original raw bytes separately retained",
+  "matching_test_fixture_nodes_after_exit": [],
+  "processes_terminated_by_integrator": false,
+  "install_performed": false,
+  "runtime_integrity_and_archive": "28 archive/receipt/source files and 17 runtime module hashes still match reviewed archive 395c8b568c97823d734bd0ed6567237235c077f81f0e2fce36f766ce8f2dda46",
+  "held_verifier_test_limit": "Held verifier cancellation proves no success after cancellation; it does not observe an actual late exit0 and its rejection."
+}
