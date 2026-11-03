@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync, spawn } from 'node:child_process';
-import { cpSync, mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { cpSync, mkdirSync, readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 
 function setup(name: string, neutralPaths = false) {
@@ -26,6 +26,33 @@ function hook(f: ReturnType<typeof setup>, event: Record<string, unknown>, simul
     env: { ...process.env, PLUGIN_ROOT: f.plugin },
   });
 }
+
+test('an installed but uninvoked plugin keeps ordinary lifecycle and doctor/status callbacks neutral without supervision UI text', () => {
+  const f = setup('uninvoked-neutral');
+  const plain = ['SessionStart', 'PreToolUse', 'PostToolUse', 'Stop', 'Interrupt', 'UserPromptSubmit'].map((hook_event_name) => ({ hook_event_name, prompt: 'Please start needs-forever supervision.', tool_use_id: 'ordinary', tool_input: { command: 'git status --short' }, tool_response: 'ordinary output' }));
+  const controls = ['doctor', 'status'].flatMap((command) => ['PreToolUse', 'PostToolUse'].map((hook_event_name) => ({ hook_event_name, tool_use_id: command, tool_input: { command: `node "${join(f.plugin, 'scripts/control.mjs')}" ${command} --state "${f.state}"` }, tool_response: '{}' })));
+  for (const event of [...plain, ...controls]) {
+    const result = hook(f, event, false);
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.stdout.trim(), '{}');
+    assert.equal(result.stderr, '');
+    assert.deepEqual(readdirSync(f.workspace), [], 'An ordinary chat must not create supervision state, process receipts or evidence.');
+  }
+  assert.equal(f.run('prepare', ['--task', f.task, '--test-fixture', f.fixture]).status, 0);
+  const snapshot = (directory: string): unknown => readdirSync(directory, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name)).map((entry) => [entry.name, entry.isDirectory() ? snapshot(join(directory, entry.name)) : readFileSync(join(directory, entry.name), 'utf8')]);
+  const pending = snapshot(f.workspace);
+  for (const event of [...plain, ...controls]) {
+    const result = hook(f, { ...event, session_id: 'foreign-uninvoked-session' });
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.stdout.trim(), '{}');
+    assert.equal(result.stderr, '');
+    assert.deepEqual(snapshot(f.workspace), pending, 'An uninvoked foreign chat cannot mutate another task waiting for native binding.');
+  }
+  const configured = JSON.parse(readFileSync(join(f.plugin, 'hooks/hooks.json'), 'utf8'));
+  for (const [event, groups] of Object.entries(configured.hooks) as Array<[string, any[]]>) {
+    for (const handler of groups.flatMap((group) => group.hooks)) assert.equal(handler.statusMessage, undefined, `${event} must not advertise supervision before knowing whether this session opted in.`);
+  }
+});
 
 test('installed main-session preparation stays pending without native identity despite guessed session environment', () => {
   const f = setup('pending-native-identity');

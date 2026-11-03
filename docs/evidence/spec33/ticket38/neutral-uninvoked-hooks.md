@@ -1,0 +1,19 @@
+# Neutral lifecycle for sessions without supervision
+
+2026-11-03. User added an explicit constraint: sessions that have not invoked supervision must not react as supervised sessions. This correction is based on integration `2d1178f7d0bf5622ae0be963e2fcd21b166ddc81`; only the worktree candidate changes. The already installed 0.3.0 package, trust and real Desktop checkpoint are untouched.
+
+The existing ordinary-event adapter behavior is already neutral: a session without an explicit start/resume binding returns `{}`, does not create task state or launch B/C, and does not return CONTINUE. Reading doctor/status or mentioning supervision in natural language does not activate it. Foreign callbacks cannot bind or mutate someone else's pending task. Once DONE releases a binding, later ordinary callbacks do not reopen it. Explicit start/resume remains the authorized skill/control entrance; no natural-language keyword enables supervision.
+
+One real configuration gap remained: Stop declared unconditional `statusMessage: Checking Needs Forever acceptance`. The official pinned 0.159 source confirms this can advertise supervision before the script knows whether a task is enabled: `hooks/src/engine/dispatcher.rs:81–98` copies configured status_message into its Running summary; `core/src/hook_runtime.rs:463–466` emits preview HookStarted before running Stop. The worktree now removes this unconditional message. All six lifecycle definitions have no custom statusMessage.
+
+The host still globally matches these installed synchronous handlers. In the same pinned source, `hook_runtime.rs:875–887` emits HookStarted for nonbuiltin synchronous handlers even without custom status text. Therefore this correction cannot promise zero script/Node startup or zero generic Desktop hook UI. It removes the plugin-specific premature supervision claim and keeps the plugin's task/model/continuation effects neutral. No supported per-session declarative hook registration was introduced or assumed.
+
+Public installed-copy regression, observed red → green:
+
+- Ten ordinary/doctor/status/native callbacks in an otherwise empty workspace return exact `{}`, empty stderr and no workspace artifacts; a natural-language request alone is included. A second set from a foreign session leaves a pending task's complete workspace bytes unchanged. The initial test failed specifically on Stop's unconditional statusMessage (`neutral-hooks-red.txt`); removing the message makes it pass (`neutral-hooks-green.txt`).
+- A terminal public lifecycle test completes a simulated task, waits for the owned B to exit, then sends all six ordinary events. Replies remain exact `{}` with empty stderr; saved DONE state bytes and external model-protocol trace remain unchanged. Existing foreign/obsolete-session and explicit start/resume tests remain included.
+- `npm run build` passed. The affected main-session/controller/supervision plus plugin package suites pass **38/38**, zero skips (`neutral-hooks-regression.txt`). No unrelated full regression or real native acceptance was repeated.
+
+Read-only comparison confirms the currently installed side-by-side 0.3.0 hook file still contains the earlier message and SHA256 `cca4603c5de1d9164d9815d051e3ccc994c03baed826dfb30f0fa7041af9987e`. The corrected worktree hook file SHA256 is `39b23af27cd477edf4fcfaa19cfada48d8280e9028810a2512a701e7e2436626`. Earlier release/archive/install receipts therefore describe the preceding candidate; they are not evidence that this correction is installed. Installing this hook change would require a separately reviewed update and the host's trust workflow. This task performed neither installation nor trust mutation.
+
+Required real Desktop completion remains unaccepted. T16 retains only its previously observed live_partial pending-entry branch. No main merge, push or issue closure follows from this correction.
