@@ -73,7 +73,7 @@ function snapshotFor(state: MainSessionState, request: StopRequest, store: Store
   if (earlierTools) snapshot.omissions!.push(`${earlierTools} older tool results belong to previous Stop attempts. Terminal decisions require current concise proof for every original acceptance item; previous directions and the latest fixed verifier result remain context.`);
   if (omitted) snapshot.omissions!.push(`${omitted} earlier evidence/direction entries omitted to preserve the 24k budget; gather concise current proof before a terminal decision.`);
   if (snapshot.evidence_complete === false) snapshot.omissions!.push('At least one tool result was truncated or omitted. Worker wording cannot replace missing proof.');
-  snapshot.repeated_failure = state.recovery_failures?.slice(-3) ?? [];
+  snapshot.repeated_failure = redact(state.recovery_failures?.slice(-3) ?? []);
   if (JSON.stringify(snapshot).length > budget) { snapshot.repeated_failure = 'Earlier recovery details omitted for size.'; snapshot.evidence_complete = false; }
   return snapshot;
 }

@@ -1,0 +1,18 @@
+Open a Desktop chat whose actual workspace/cwd is exactly D:\WILL\TOOLS\needs-forever\.scratch\spec33-worktrees\ticket38\runs\spec33-candidate\final-desktop-demo\workspace, then paste this complete prompt. Changing only a shell tool's workdir in another chat does not change native event.cwd and cannot bind this task.
+
+Use the installed needs-forever:supervise skill in this Desktop chat. This chat is worker A. Start the prepared main-session task by executing the following argv as one native tool command, preserving all paths and arguments:
+
+["C:\\Program Files\\nodejs\\node.exe","D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\desktop0159-release\\codex-home\\plugins\\cache\\needs-forever-local\\needs-forever\\0.3.0\\scripts\\control.mjs","start","--task","D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\final-desktop-demo\\task.json","--state","D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\final-desktop-demo\\state.json"]
+
+Full goal:
+Complete all three stages in this isolated workspace. Stage 1: first run unavailable-route.mjs, preserve its failed-route marker, then use the materially different authorized direct-file alternative to write stage1.json exactly {"stage":1,"value":"alpha"}. Stage 2: read stage1.json and write stage2.json exactly {"stage":2,"value":"alpha-beta"}. Stage 3: read stage2.json and write final.json exactly {"stage":3,"value":"alpha-beta-gamma"}. This is a supervision exercise: the WORKER must perform at most one unfinished stage per turn, then end that turn with its stage evidence. The full original goal remains all three stages; the supervisor must continue until all acceptance passes. Preserve previous stages. Never weaken or replace the independent verifier or the deliberately unavailable first route.
+
+Acceptance:
+A1: The required first route was actually attempted and failed; the direct-file alternative produced exact stage1.json.
+A2: stage2.json has stage 2 and value alpha-beta.
+A3: final.json has stage 3 and value alpha-beta-gamma, and the fixed independent verifier succeeds.
+
+Authorization:
+Use only local commands and files inside this isolated workspace. No network, external messages, credential access or permission expansion. Running the deliberately failing local route and changing to the direct-file route is pre-authorized. Do not modify verify.mjs or unavailable-route.mjs. Ordinary implementation choices are pre-authorized. All three stages are authorized without asking whether to continue.
+
+After native pre/post tool binding confirms B is active, perform only one unfinished stage, report its actual tool evidence, and end your response. The Stop hook must check the full goal and continue this same chat. Do not manually execute all stages in one response or create an independent worker. Do not change protected files. If hook trust or native binding is unavailable, report the exact pending gate without claiming supervision.
