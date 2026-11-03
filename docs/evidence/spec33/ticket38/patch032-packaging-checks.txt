@@ -1,0 +1,10 @@
+✔ isolated installed-package discovery reports untrusted hooks without claiming native effectiveness (606.0206ms)
+✔ plugin ships the exact executable core and resolves all marketplace/skill resources locally (11.8191ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 793.1955
