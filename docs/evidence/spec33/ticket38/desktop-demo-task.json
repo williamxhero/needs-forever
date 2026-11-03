@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "task_id": "s2-demo-1793697848521",
+  "workspace": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\corrected-desktop-demo\\workspace",
+  "goal": "Complete all three stages in this isolated workspace. Stage 1: first run unavailable-route.mjs, preserve its failed-route marker, then use the materially different authorized direct-file alternative to write stage1.json exactly {\"stage\":1,\"value\":\"alpha\"}. Stage 2: read stage1.json and write stage2.json exactly {\"stage\":2,\"value\":\"alpha-beta\"}. Stage 3: read stage2.json and write final.json exactly {\"stage\":3,\"value\":\"alpha-beta-gamma\"}. This is a supervision exercise: the WORKER must perform at most one unfinished stage per response between consecutive Stop attempts, then end that response with its stage evidence. After a Stop continuation, perform the next unfinished stage even when the host remains in the same native turn. The full original goal remains all three stages; the supervisor must continue until all acceptance passes. Preserve previous stages. Never weaken or replace the independent verifier or the deliberately unavailable first route.",
+  "acceptance": [
+    {
+      "id": "A1",
+      "text": "The required first route was actually attempted and failed; the direct-file alternative produced exact stage1.json."
+    },
+    {
+      "id": "A2",
+      "text": "stage2.json has stage 2 and value alpha-beta."
+    },
+    {
+      "id": "A3",
+      "text": "final.json has stage 3 and value alpha-beta-gamma, and the fixed independent verifier succeeds."
+    }
+  ],
+  "authorization": "Use only local commands and files inside this isolated workspace. No network, external messages, credential access or permission expansion. Running the deliberately failing local route and changing to the direct-file route is pre-authorized. Do not modify verify.mjs or unavailable-route.mjs. Ordinary implementation choices are pre-authorized. All three stages are authorized without asking whether to continue.",
+  "verify": {
+    "argv": [
+      "C:\\Program Files\\nodejs\\node.exe",
+      "verify.mjs"
+    ],
+    "timeout_seconds": 15,
+    "protected_files": [
+      "verify.mjs",
+      "unavailable-route.mjs"
+    ]
+  },
+  "limits": {
+    "max_worker_turns": null,
+    "max_minutes": null
+  }
+}

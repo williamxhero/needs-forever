@@ -15,6 +15,13 @@ test('prepared Desktop demo uses installed main-session control and preserves a 
   assert.equal(receipt.live_desktop_acceptance, 'not_run');
   const task = JSON.parse(readFileSync(receipt.task_file, 'utf8'));
   assert.match(task.goal, /all three stages/);
+  assert.doesNotMatch(task.goal, /per turn|end that turn/);
+  assert.match(task.goal, /at most one unfinished stage per response/);
+  assert.match(task.goal, /same native turn/);
+  assert.equal(task.acceptance.length, 3);
+  const prompt = readFileSync(receipt.launch_prompt, 'utf8');
+  assert.doesNotMatch(prompt, /per turn|end that turn/);
+  assert.match(prompt, /same native turn/);
   const verification = () => spawnSync(task.verify.argv[0], task.verify.argv.slice(1), { cwd: receipt.workspace, encoding: 'utf8' });
   assert.equal(verification().status, 1);
   assert.equal(spawnSync(process.execPath, ['unavailable-route.mjs'], { cwd: receipt.workspace }).status, 23);

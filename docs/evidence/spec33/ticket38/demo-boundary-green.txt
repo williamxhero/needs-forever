@@ -1,0 +1,9 @@
+✔ prepared Desktop demo uses installed main-session control and preserves a fixed failing acceptance gate (446.4629ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 550.9527
