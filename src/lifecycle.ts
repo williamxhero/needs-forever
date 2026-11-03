@@ -36,10 +36,11 @@ export function handleLifecycle(input: unknown, host: HookHost, pluginRoot: stri
   const observation = toolId ? resolve(workspace, '.codex-supervisor', 'hook-observations', `${hash([session, toolId])}.json`) : null;
   if (name === 'PreToolUse' && observation) {
     const command = normalizedCommand(strings(event.tool_input).join('\n'));
-    if (!command.includes(normalizedCommand(resolve(pluginRoot, 'scripts/main-session.mjs'))) || !command.includes('prepare')) return {};
+    if (command.includes(normalizedCommand(resolve(pluginRoot, 'scripts/main-session.mjs'))) && command.includes('prepare')) {
     // Only fingerprints are retained; command bodies can contain credentials.
     atomicJson(observation, { session_id: session, tool_use_id: toolId, cwd: canonicalPath(workspace), input_sha256: hash(event.tool_input), source: host.source, at: Date.now(), plugin_root: canonicalPath(pluginRoot) });
     return {};
+    }
   }
   const index = indexPath(workspace);
   if (!existsSync(index)) return {};
@@ -50,6 +51,30 @@ export function handleLifecycle(input: unknown, host: HookHost, pluginRoot: stri
     if (state.control_mode !== 'main-session' || state.status === 'DONE' || canonicalPath(state.task.workspace) !== canonicalPath(workspace)) continue;
     if (state.contract_sha256 !== contractHash(state.task)) continue;
     if ((state.mode === 'simulated') !== (host.source === 'simulated')) continue;
+    if (state.binding.status === 'BOUND' && state.main_session_id === session && state.status === 'ACTIVE' && toolId && ['PreToolUse', 'PostToolUse'].includes(name)) {
+      const store = new Store(path);
+      state.tool_starts ??= {};
+      if (name === 'PreToolUse') {
+        state.tool_starts[toolId] = { at: new Date().toISOString(), input_sha256: hash(event.tool_input) };
+        const keys = Object.keys(state.tool_starts);
+        for (const key of keys.slice(0, Math.max(0, keys.length - 128))) delete state.tool_starts[key];
+      } else {
+        const start = state.tool_starts[toolId];
+        const serialized = JSON.stringify(redact({ hook_event_name: name, tool_name: event.tool_name ?? null, tool_input: event.tool_input ?? null, tool_response: event.tool_response ?? null }));
+        const truncated = serialized.length > 8_000;
+        store.event(state, 'main_tool_result', { session_id: session, turn_id: event.turn_id ?? null, tool_use_id: toolId, run_generation: state.run_generation, input_epoch: state.input_epoch ?? 0, contract_sha256: state.contract_sha256, original_event: name, value: truncated ? { truncated: true, prefix: serialized.slice(0, 8_000) } : JSON.parse(serialized), complete: !truncated });
+        const context = state.direction_context;
+        if (start && start.input_sha256 === hash(event.tool_input) && state.pending_action?.stage === 'sent' && context && context.delivery_id === state.pending_action.delivery_id && context.run_generation === state.run_generation && context.input_epoch === (state.input_epoch ?? 0) && context.contract_sha256 === state.contract_sha256 && Date.parse(start.at) >= Date.parse(context.at)) {
+          state.pending_action.stage = 'confirmed';
+          state.pending_action.target_turn_id = typeof event.turn_id === 'string' ? event.turn_id : null;
+          state.continuation_confirmed = true;
+          store.event(state, 'main_session_continuation_confirmed', { session_id: session, turn_id: event.turn_id ?? null, delivery_id: context.delivery_id, tool_use_id: toolId, original_event: name });
+        }
+        delete state.tool_starts[toolId];
+      }
+      store.save(state);
+      return {};
+    }
     if (name === 'Stop' && state.binding.status === 'BOUND' && state.main_session_id === session && !state.pause_reason) {
       const request: StopRequest = {
         schema_version: 1, task_id: state.task_id, task_version: state.task_version, contract_sha256: state.contract_sha256,

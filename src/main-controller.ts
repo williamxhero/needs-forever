@@ -11,6 +11,8 @@ import type { MainSessionState, StopRequest } from './main-session.js';
 import { handleLifecycle } from './lifecycle.js';
 import { Store } from './store.js';
 import { redact } from './redact.js';
+import { preflightSupervisor, superviseStop } from './main-supervision.js';
+import type { Decision } from './types.js';
 
 type Controller = NonNullable<MainSessionState['controller']>;
 type HookReply = { decision?: 'block'; reason?: string };
@@ -79,14 +81,14 @@ export async function dispatchBoundLifecycle(path: string, input: unknown): Prom
   return controllerRequest(state.controller, 'lifecycle', input, 590_000);
 }
 
-// #36 connects the fresh readonly judge here. The transport fixture substitutes
-// only the external supervisor/host; live tasks cannot obtain a fixture result.
-export async function evaluateStop(state: MainSessionState, request: StopRequest, fixture: any, signal: AbortSignal): Promise<HookReply> {
-  if (state.mode !== 'simulated' || !fixture?.transport?.decision) throw new Error('Fresh supervisor adapter is required before this live Stop can be judged.');
+// Stop judgments share the existing schema/readonly judge. Transport-only
+// fixtures substitute the external model; live tasks cannot use fixture output.
+export async function evaluateStop(state: MainSessionState, request: StopRequest, fixture: any, signal: AbortSignal, store: Store): Promise<Decision> {
+  if (state.mode !== 'simulated' || !fixture?.transport?.decision) return superviseStop(state, request, fixture, signal, store);
   await delay(Number(fixture.transport.delay_ms ?? 0), undefined, { signal });
   const decision = fixture.transport.decision;
   if (decision.action !== 'CONTINUE' || typeof decision.next_message !== 'string' || !decision.next_message.trim()) throw new Error('Transport fixtures may only request concrete CONTINUE; DONE requires the completion gate.');
-  return { decision: 'block', reason: String(redact(decision.next_message)) };
+  return { action: 'CONTINUE', reason: 'Simulated external transport direction.', evidence_ids: [], next_message: String(redact(decision.next_message)), external: null };
 }
 export async function runController(path: string, pluginRoot: string, fixturePath?: string): Promise<void> {
   const store = new Store(path);
@@ -118,6 +120,7 @@ export async function runController(path: string, pluginRoot: string, fixturePat
     try { lease = openSync(leasePath, 'wx', 0o600); }
     catch { throw new Error('This main session already has a controller lease; explicit recovery is required.'); }
     writeFileSync(lease, JSON.stringify({ pid: process.pid, controller_id: id, state_path: path, main_session_id: state.main_session_id }));
+    await preflightSupervisor(state, fixture);
     server = createServer((socket) => {
       sockets.add(socket); socket.on('error', () => {}); socket.on('close', () => sockets.delete(socket));
       let input = '';
@@ -158,18 +161,39 @@ export async function runController(path: string, pluginRoot: string, fixturePat
           socket.once('close', disconnected);
           const timer = setTimeout(() => { invalidate('Stop hook deadline elapsed; late supervisor output is invalid.'); socket.end('{}\n'); }, Math.max(1, Date.parse(request.deadline_at) - Date.now()));
           try {
-            const reply = await evaluateStop(state, request, fixture, current.abort.signal);
+            const decision = await evaluateStop(state, request, fixture, current.abort.signal, store);
             if (!current.valid || closing || socket.destroyed || Date.now() >= Date.parse(request.deadline_at)) return {};
+            state.last_decision = redact(decision) as Decision;
+            state.host.hook_effective = state.mode === 'live' && state.host.source === 'native-desktop';
+            state.host.reason = 'Correlated synchronous Stop judged and returned; actual main-session continuation requires subsequent matching activity.';
+            if (decision.action !== 'CONTINUE') {
+              state.status = decision.action; state.phase = 'IDLE'; state.pending_action = null;
+              state.stop_transport = { request, outcome: 'returned' };
+              if (decision.action === 'DONE') state.binding.status = 'RELEASED';
+              store.save(state);
+              store.event(state, 'main_session_terminal', { action: decision.action, stop_attempt_id: request.stop_attempt_id, reason: decision.reason, external: decision.external });
+              // Allow the active synchronous hook response to flush before closing B.
+              socket.once('finish', () => setImmediate(shutdown));
+              return {};
+            }
             const delivery = randomUUID();
-            state.pending_action = { delivery_id: delivery, source_turn_id: request.turn_id, task_version: request.task_version, message: reply.reason!, stage: 'sent', target_turn_id: null };
+            state.pending_action = { delivery_id: delivery, source_turn_id: request.turn_id, task_version: request.task_version, message: String(redact(decision.next_message)), stage: 'sent', target_turn_id: null };
+            state.direction_context = { delivery_id: delivery, at: new Date().toISOString(), run_generation: state.run_generation, input_epoch: state.input_epoch ?? 0, contract_sha256: state.contract_sha256 };
             state.continuation_confirmed = false; state.phase = 'WORKER';
             state.stop_transport = { request, outcome: 'returned', delivery_id: delivery }; store.save(state);
             store.event(state, 'stop_hook_direction_returned', { stop_attempt_id: request.stop_attempt_id, delivery_id: delivery, session_id: request.session_id, execution_confirmed: false });
-            return reply;
+            return { decision: 'block', reason: state.pending_action.message };
           } catch (error) {
             if (current.valid) { state.stop_transport = { request, outcome: 'failed', error: String(redact((error as Error).message)) }; recover((error as Error).message); store.save(state); }
             return {};
-          } finally { clearTimeout(timer); if (active === current) active = null; }
+          } finally {
+            clearTimeout(timer);
+            // A successful host client closes after reading its response. That
+            // old socket must never invalidate the next Stop's checkpoint.
+            socket.removeListener('end', disconnected);
+            socket.removeListener('close', disconnected);
+            if (active === current) active = null;
+          }
         })().then((result) => { if (!socket.destroyed && !socket.writableEnded) socket.end(JSON.stringify(result) + '\n'); }).catch((error) => { if (!socket.destroyed && !socket.writableEnded) socket.end(JSON.stringify({ error: String(redact(error.message)) }) + '\n'); });
       });
     });
