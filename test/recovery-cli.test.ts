@@ -280,13 +280,58 @@ test('transient initial app-server startup failure uses the same recovery backof
   assert.match(events, /service_unavailable/);
 });
 
-test('pausing during recovery cancels the backoff timer immediately', () => {
-  const run = fixture('pause-recovery', { judge_failures: ['Judge timeout.'], pause_after_ms: 50, recovery_delays_ms: [5000] });
+test('pausing during recovery cancels the backoff timer immediately', async (t) => {
+  const run = fixture('pause-recovery', { judge_failures: ['Judge timeout.'], recovery_delays_ms: [5000] });
+  const child = spawn(process.execPath, [resolve('dist/src/cli.js'), 'start', '--task', run.task, '--state', run.state, '--test-fixture', run.fixtureFile], { windowsHide: true, stdio: 'pipe' });
+  let stdout = '', stderr = '';
+  child.stdout.on('data', (chunk) => { stdout += chunk; });
+  child.stderr.on('data', (chunk) => { stderr += chunk; });
+  let settled = false;
+  const exited = new Promise<number | null>((done, reject) => { child.once('error', reject); child.once('exit', (code) => { settled = true; done(code); }); });
+  t.after(async () => {
+    if (!settled) {
+      child.stdin.write('\u0003');
+      await Promise.race([exited, delay(5_000)]);
+      if (!settled) child.kill();
+    }
+  });
+  const entries = (path: string): any[] => existsSync(path) ? readFileSync(path, 'utf8').trim().split('\n').filter(Boolean).map((line) => JSON.parse(line)) : [];
+  const events = () => entries(resolve(run.directory, 'events.jsonl'));
+  const until = async (condition: () => boolean, description: string, timeout = 5_000) => {
+    const deadline = Date.now() + timeout;
+    while (!condition() && Date.now() < deadline && !settled) await delay(10);
+    assert.ok(condition(), `${description}; stderr=${stderr}; stdout=${stdout}`);
+  };
+  // Measure cancellation only after the actual five-second recovery timer is
+  // armed. Cold app-server startup is unrelated to cancellation latency.
+  await until(() => events().some((entry) => entry.type === 'recovery_retry_scheduled') && json(run.state).phase === 'RECOVERING', 'Recovery must actually enter its backoff before cancellation');
+  const scheduled = events().find((entry) => entry.type === 'recovery_retry_scheduled');
+  assert.equal(scheduled.delay_seconds, 5);
+  assert.ok(json(run.state).retry.next_at);
   const started = Date.now();
-  const result = run.run();
-  assert.equal(result.status, 0, result.stderr);
-  assert.ok(Date.now() - started < 2000, 'Pause should cancel the recovery backoff instead of waiting five seconds.');
+  child.stdin.write('\u0003');
+  await until(() => events().some((entry) => entry.type === 'paused'), 'Public cancellation must persist PAUSED promptly', 2_000);
+  assert.equal(json(run.state).status, 'PAUSED');
+  assert.equal(json(run.state).retry.next_at, null);
+  await until(() => settled, 'Cancellation must exit without waiting for the backoff', 2_000);
+  assert.equal(await exited, 0, stderr);
+  assert.ok(Date.now() - started < 2_000, 'Pause should cancel the recovery backoff instead of waiting five seconds.');
   const state = json(run.state);
   assert.equal(state.status, 'PAUSED');
   assert.equal(state.retry.next_at, null);
+  const recorded = events();
+  const paused = recorded.findIndex((entry) => entry.type === 'paused');
+  const cancelled = recorded.findIndex((entry) => entry.type === 'owned_calls_cancelled');
+  assert.ok(paused >= 0 && cancelled > paused, 'Durable PAUSED must precede owned-server cancellation.');
+  assert.ok(Date.parse(recorded[paused].at) >= started);
+  assert.ok(Date.parse(recorded[paused].at) - started < 2_000);
+  assert.equal(recorded.filter((entry) => entry.type === 'recovery_retry_scheduled').length, 1);
+  assert.equal(recorded.some((entry) => entry.type === 'decision'), false);
+  assert.equal(recorded.slice(paused + 1).some((entry) => ['recovery_retry_scheduled', 'connection_reconnected', 'send_attempted', 'decision'].includes(entry.type)), false, 'Pause must not wake recovery or model work.');
+  assert.doesNotMatch(stdout, /DONE:/);
+  const protocol = entries(run.trace);
+  assert.equal(protocol.filter((entry) => entry.message?.method === 'thread/start').length, 1);
+  assert.equal(protocol.filter((entry) => entry.message?.method === 'turn/start').length, 1);
+  const ownerPid = protocol.find((entry) => entry.message?.method === 'thread/start').pid;
+  assert.throws(() => process.kill(ownerPid, 0), 'The exact owned app-server must exit.');
 });
