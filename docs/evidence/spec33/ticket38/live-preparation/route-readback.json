@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "route_id": "spec33-desktop-default-20261103",
+  "target": "SPEC33 native Desktop acceptance A",
+  "task_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+  "requested": {"model": "gpt-6.1-sol", "thinking": "xhigh"},
+  "applied": {"model": "gpt-6.1-sol", "thinking": "xhigh"},
+  "selection": "recommended",
+  "substitution_reason": null,
+  "readback_evidence": ["C:/Users/will/.codex/sessions/2026/11/03/rollout-2026-11-03T17-31-25-01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7.jsonl turn_context 01a1a0bf-ca24-7392-86c1-a8558a0dccb4; actual model gpt-6.1-sol and effort xhigh, cwd C:/Users/will/Documents/Codex/2026-11-03/needs-forever-spec33-desktop; this is a local applied-settings readback only, not the supervision identity protocol."]
+}
