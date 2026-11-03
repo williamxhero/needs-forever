@@ -269,8 +269,8 @@ test('installed pause returns before bounded C cleanup and cleanup failure canno
   assert.equal(f.status().status, 'PAUSED');
 });
 
-for (const phase of ['JUDGE', 'VERIFY']) test(`human input during delayed ${phase} invalidates late success and current evidence must be gathered again`, async (t) => {
-  const f = setup(`input-during-${phase}`, { judge_actions: ['DONE', 'DONE'], ...(phase === 'JUDGE' ? { judge_delay_ms: 1_500 } : { verification_delay_ms: 1_500 }) }, phase === 'VERIFY');
+for (const phase of ['JUDGE', 'VERIFY']) test(`human input during ${phase === 'JUDGE' ? 'held' : 'delayed'} ${phase} invalidates late success and current evidence must be gathered again`, async (t) => {
+  const f = setup(`input-during-${phase}`, { judge_actions: ['DONE', 'DONE'], ...(phase === 'JUDGE' ? { hold_judge_once: true } : { verification_delay_ms: 1_500 }) }, phase === 'VERIFY');
   t.after(() => f.run('pause'));
   f.activity('old-check', 'All three artifacts checked before the new instruction.');
   const callback = spawn(process.execPath, [join(f.plugin, 'scripts/lifecycle.mjs'), '--test-fixture', f.fixture], { cwd: f.workspace, env: { ...process.env, PLUGIN_ROOT: f.plugin }, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
@@ -279,6 +279,10 @@ for (const phase of ['JUDGE', 'VERIFY']) test(`human input during delayed ${phas
   callback.stdin.end(JSON.stringify({ hook_event_name: 'Stop', session_id: `input-during-${phase}`, cwd: f.workspace, turn_id: 'same-turn' }));
   for (let i = 0; i < 50 && f.status().phase !== phase; i++) await delay(25);
   assert.equal(f.status().phase, phase);
+  if (phase === 'JUDGE') {
+    for (let i = 0; i < 200 && !f.protocol().some((entry) => entry.message?.method === 'turn/start' && entry.message.params.threadId === 'judge-1'); i++) await delay(25);
+    assert.ok(f.protocol().some((entry) => entry.message?.method === 'turn/start' && entry.message.params.threadId === 'judge-1'), 'Human input must follow the actual held C start.');
+  }
   assert.equal(f.hook({ hook_event_name: 'UserPromptSubmit', prompt: 'Recheck the current files; keep the original authorization.' }).status, 0);
   await exited; assert.deepEqual(JSON.parse(output), {});
   assert.equal(f.status().status, 'ACTIVE'); assert.equal(f.status().phase, 'WORKER');

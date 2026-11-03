@@ -140,7 +140,7 @@ test('resume retains the original protected baseline and saved argv after the in
 });
 
 test('PAUSED is durable before independent cancellation and a late successful check cannot set DONE', () => {
-  const fixture = scenario('pause-independent', { pause_after_ms: 100, verification_delay_ms: 350 });
+  const fixture = scenario('pause-independent', { pause_when_verification_started: true, hold_verification: true });
   const result = fixture.run();
   assert.equal(result.status, 0, result.stderr);
   const state = json(fixture.state);
@@ -149,7 +149,11 @@ test('PAUSED is durable before independent cancellation and a late successful ch
   assert.ok(fixture.protocol().some((entry) => entry.message?.method === 'command/exec'));
   assert.ok(fixture.events().some((entry) => entry.type === 'stale_verification_result_ignored'));
   assert.ok(!fixture.events().some((entry) => entry.type === 'verification_result' && entry.passed));
-  assert.throws(() => process.kill(fixture.protocol().findLast((entry) => entry.kind === 'spawn').pid, 0));
+  const verificationOwner = fixture.protocol().find((entry) => entry.message?.method === 'command/exec').pid;
+  assert.throws(() => process.kill(verificationOwner, 0));
+  const paused = fixture.events().findIndex((entry) => entry.type === 'paused');
+  const cancelled = fixture.events().findIndex((entry) => entry.type === 'owned_calls_cancelled');
+  assert.ok(paused >= 0 && cancelled > paused, 'Durable PAUSED must precede independent-call cancellation.');
 });
 
 test('a hung independent call ends its owned server and resumes the exact idle worker before sending failure evidence', () => {

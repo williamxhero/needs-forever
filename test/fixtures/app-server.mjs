@@ -81,7 +81,12 @@ for await (const line of lines) {
         send({ id: 'malicious-request', method: scenario.judge_request_once, params: {} }); continue;
       }
       if (scenario.judge_send_error) { send({ id: message.id, error: { code: -32000, message: 'Judge send outcome is uncertain.' } }); continue; }
-      send({ id: message.id, result: { turn: { id: turnId, status: 'inProgress', items: [] } } });
+      const acknowledgeJudge = () => {
+        send({ id: message.id, result: { turn: { id: turnId, status: 'inProgress', items: [] } } });
+        if (scenario.pause_when_judge_started) send({ method: 'supervisor/test/pause', params: {} });
+      };
+      if (scenario.judge_start_response_delay_ms) setTimeout(acknowledgeJudge, scenario.judge_start_response_delay_ms);
+      else acknowledgeJudge();
       if (scenario.judge_disconnect) process.exit(0);
       const snapshot = JSON.parse(message.params.input[0].text);
       const action = scenario.judge_actions?.[judges - 1] ?? 'DONE';
@@ -150,6 +155,7 @@ for await (const line of lines) {
     const executed = scenario.execute_verification ? spawnSync(message.params.command[0], message.params.command.slice(1), { cwd: message.params.cwd, encoding: 'utf8', windowsHide: true, timeout: message.params.timeoutMs }) : null;
     const outcome = executed ? { exitCode: executed.status, stdout: executed.stdout ?? '', stderr: executed.stderr ?? '' } : scenario.verification_results?.[index] ?? { exitCode: 0, stdout: 'Fixture late success.', stderr: '' };
     for (const change of scenario.verification_changes?.[index] ?? []) writeFileSync(resolve(message.params.cwd, change.path), change.content);
+    if (scenario.pause_when_verification_started) send({ method: 'supervisor/test/pause', params: {} });
     if (!scenario.hold_verification && !scenario.hold_verification_indices?.includes(index)) setTimeout(() => send(outcome.error ? { id: message.id, error: outcome.error } : { id: message.id, result: outcome }), scenario.verification_delay_ms ?? 300);
   } else if (message.method === 'turn/interrupt') {
     if (scenario.state_file) trace({ kind: 'checkpoint_at_interrupt', state: JSON.parse(readFileSync(scenario.state_file, 'utf8')) });

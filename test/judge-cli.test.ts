@@ -1,11 +1,13 @@
-import { test } from 'node:test';
+import { test, type TestContext } from 'node:test';
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
-import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { spawn, spawnSync } from 'node:child_process';
+import { setTimeout as delay } from 'node:timers/promises';
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { judgeInstructions } from '../src/judge.js';
 
 function json(path: string): any { return JSON.parse(readFileSync(path, 'utf8')); }
+function jsonl(path: string): any[] { return existsSync(path) ? readFileSync(path, 'utf8').trim().split('\n').filter(Boolean).map((line) => JSON.parse(line)) : []; }
 function scenario(name: string, options: Record<string, unknown> = {}) {
   const directory = resolve('runs/ticket26', `${name}-${Date.now()}`);
   const workspace = resolve(directory, 'workspace');
@@ -18,7 +20,28 @@ function scenario(name: string, options: Record<string, unknown> = {}) {
   writeFileSync(task, JSON.stringify({ schema_version: 1, task_id: name, workspace, goal: 'Produce the accepted local result.', acceptance: [{ id: 'A1', text: 'The result is checked.' }], authorization: 'Local workspace only; no network.' }));
   writeFileSync(config, JSON.stringify({ trace, state_file: state, real_judge: true, ...options }));
   writeFileSync(fixture, JSON.stringify({ app_server_argv: [process.execPath, resolve('test/fixtures/app-server.mjs'), config], real_judge: true }));
-  return { directory, workspace, task, state, trace, config, fixture, run() { return spawnSync(process.execPath, [resolve('dist/src/cli.js'), 'start', '--task', task, '--state', state, '--test-fixture', fixture], { encoding: 'utf8', timeout: 15000 }); }, events() { return readFileSync(resolve(directory, 'events.jsonl'), 'utf8').trim().split('\n').map((line) => JSON.parse(line)); }, protocol() { return readFileSync(trace, 'utf8').trim().split('\n').map((line) => JSON.parse(line)); }, snapshots() { return readdirSync(resolve(directory, 'snapshots')).map((name) => json(resolve(directory, 'snapshots', name))); } };
+  return { directory, workspace, task, state, trace, config, fixture, run() { return spawnSync(process.execPath, [resolve('dist/src/cli.js'), 'start', '--task', task, '--state', state, '--test-fixture', fixture], { encoding: 'utf8', timeout: 15000 }); }, events() { return jsonl(resolve(directory, 'events.jsonl')); }, protocol() { return jsonl(trace); }, snapshots() { return readdirSync(resolve(directory, 'snapshots')).map((name) => json(resolve(directory, 'snapshots', name))); } };
+}
+
+function runningScenario(fixture: ReturnType<typeof scenario>, t: TestContext) {
+  const child = spawn(process.execPath, [resolve('dist/src/cli.js'), 'start', '--task', fixture.task, '--state', fixture.state, '--test-fixture', fixture.fixture], { windowsHide: true, stdio: 'pipe' });
+  let stderr = '', settled = false;
+  child.stdout.resume();
+  child.stderr.on('data', (chunk) => { stderr += chunk; });
+  const exited = new Promise<number | null>((done, reject) => { child.once('error', reject); child.once('exit', (code) => { settled = true; done(code); }); });
+  t.after(async () => {
+    if (settled) return;
+    child.stdin.write('\u0003');
+    const abort = new AbortController();
+    try { await Promise.race([exited, delay(5_000, undefined, { signal: abort.signal })]); }
+    finally { abort.abort(); if (!settled) child.kill(); }
+  });
+  const until = async (condition: () => boolean, description: string) => {
+    const deadline = Date.now() + 5_000;
+    while (!condition() && Date.now() < deadline && !settled) await delay(25);
+    assert.ok(condition(), `${description}; stderr=${stderr}`);
+  };
+  return { until, exited, get settled() { return settled; }, get stderr() { return stderr; } };
 }
 
 test('judge prompt states the terminal next_message contract', () => {
@@ -127,12 +150,18 @@ test('streamed completed items supply worker evidence and judge JSON when termin
   assert.equal(source.params.item.id, 'check');
 });
 
-test('a timed out judge terminates the owned connection without a second judge or inferred completion', () => {
-  const fixture = scenario('judge-timeout', { hold_judge: true, mcp_servers: ['boundary.example'] });
-  writeFileSync(fixture.fixture, JSON.stringify({ ...json(fixture.fixture), judge_timeout_ms: 100 }));
-  const result = fixture.run();
-  assert.equal(result.status, 1, result.stderr);
-  assert.match(result.stderr, /judge.*timeout/i);
+for (const acknowledged of [false, true]) test(`a timed out known C with ${acknowledged ? 'confirmed' : 'unconfirmed'} turn terminates and is archived without another model`, async (t) => {
+  const fixture = scenario(`judge-timeout-${acknowledged ? 'confirmed' : 'unconfirmed'}`, { hold_judge: true, mcp_servers: ['boundary.example'], ...(acknowledged ? {} : { judge_start_response_delay_ms: 2_000 }) });
+  writeFileSync(fixture.fixture, JSON.stringify({ ...json(fixture.fixture), judge_timeout_ms: 1_000 }));
+  const running = runningScenario(fixture, t);
+  await running.until(() => fixture.protocol().some((entry) => entry.message?.method === 'turn/start' && entry.message.params.threadId === 'judge-1'), 'The known C turn request must reach the held external fixture');
+  await running.until(() => fixture.events().some((entry) => entry.type === 'judge_terminated'), 'The actual judge deadline must terminate its owned call');
+  const terminated = fixture.events().find((entry) => entry.type === 'judge_terminated');
+  assert.equal(terminated.thread_id, 'judge-1');
+  assert.equal(terminated.turn_id, acknowledged ? 'judge-turn-1' : null);
+  await running.until(() => running.settled, 'The bounded archival cleanup must finish after cancellation');
+  assert.equal(await running.exited, 1, running.stderr);
+  assert.match(running.stderr, /judge.*timeout/i);
   assert.equal(json(fixture.state).phase, 'RECOVERING');
   assert.equal(json(fixture.state).last_decision, null);
   assert.equal(fixture.protocol().filter((entry) => entry.message?.params?.sandbox === 'read-only').length, 1);
@@ -145,24 +174,31 @@ test('a timed out judge terminates the owned connection without a second judge o
   const cleanupPid = archives[0].pid;
   const cleanupRequests = trace.filter((entry) => entry.pid === cleanupPid && entry.message?.method);
   assert.deepEqual(cleanupRequests.map((entry) => entry.message.method), ['initialize', 'initialized', 'config/read', 'thread/archive']);
-  assert.notEqual(cleanupPid, trace.find((entry) => entry.message?.method === 'turn/start' && entry.message.params.threadId === 'judge-1').pid);
-  const ownerPid = trace.find((entry) => entry.message?.method === 'turn/start' && entry.message.params.threadId === 'judge-1').pid;
+  // C belongs to the connection that created its readonly thread, regardless
+  // of whether turn/start was acknowledged before cancellation.
+  const owner = trace.find((entry) => entry.message?.method === 'thread/start' && entry.message.params.sandbox === 'read-only');
+  assert.ok(owner, 'The original C creation request must be recorded.');
+  const ownerPid = owner.pid;
+  assert.notEqual(cleanupPid, ownerPid);
   const cleanupSpawn = trace.find((entry) => entry.kind === 'spawn' && entry.pid === cleanupPid);
   assert.deepEqual(cleanupSpawn.argv, trace.find((entry) => entry.kind === 'spawn' && entry.pid === ownerPid).argv, 'Cleanup must preserve the guarded features and disabled MCP configuration.');
   assert.equal(cleanupSpawn.cwd, fixture.workspace);
   assert.throws(() => process.kill(ownerPid, 0));
   assert.ok(fixture.events().some((entry) => entry.type === 'judge_archived' && entry.thread_id === 'judge-1'));
+  assert.equal(trace.filter((entry) => entry.message?.method === 'turn/start' && entry.message.params.threadId === 'judge-1').length, 1);
+  assert.equal(trace.filter((entry) => entry.message?.method === 'turn/start' && entry.message.params.threadId === 'worker-from-server').length, 1);
 });
 
-test('terminated judge archive rejection or timeout is bounded and never restarts a model or infers completion', () => {
+test('terminated judge archive rejection or timeout is bounded and never restarts a model or infers completion', async (t) => {
   for (const options of [{ archive_failure: true }, { hold_archive: true }]) {
     const fixture = scenario(`judge-cleanup-${Object.keys(options)[0]}`, { hold_judge: true, ...options });
-    writeFileSync(fixture.fixture, JSON.stringify({ ...json(fixture.fixture), judge_timeout_ms: 100 }));
-    const started = Date.now();
-    const result = fixture.run();
-    assert.equal(result.status, 1, result.stderr);
-    assert.match(result.stderr, /judge.*timeout/i);
-    assert.ok(Date.now() - started < 7_000, 'Cleanup must have its own short deadline.');
+    writeFileSync(fixture.fixture, JSON.stringify({ ...json(fixture.fixture), judge_timeout_ms: 1_000 }));
+    const running = runningScenario(fixture, t);
+    await running.until(() => fixture.protocol().some((entry) => entry.message?.method === 'turn/start' && entry.message.params.threadId === 'judge-1'), 'The held C must start before testing cleanup failure');
+    await running.until(() => fixture.events().some((entry) => entry.type === 'judge_terminated' && entry.thread_id === 'judge-1'), 'The known C must terminate on its deadline');
+    await running.until(() => running.settled, 'Cleanup rejection or timeout must settle within its independent deadline');
+    assert.equal(await running.exited, 1, running.stderr);
+    assert.match(running.stderr, /judge.*timeout/i);
     assert.equal(json(fixture.state).phase, 'RECOVERING');
     assert.equal(json(fixture.state).last_decision, null);
     const requests = fixture.protocol().filter((entry) => entry.message?.method);
@@ -223,7 +259,7 @@ test('judge policy expansion prevents its turn and archive failure cannot invali
 });
 
 test('PAUSED wins over a real judge that is in flight and the owned judge connection terminates', () => {
-  const fixture = scenario('pause-real-judge', { pause_after_ms: 100, judge_delay_ms: 350, tool_items: [{ type: 'commandExecution', id: 'check', command: 'check', status: 'completed', exitCode: 0, aggregatedOutput: 'A1 passes.' }] });
+  const fixture = scenario('pause-real-judge', { pause_when_judge_started: true, hold_judge: true, tool_items: [{ type: 'commandExecution', id: 'check', command: 'check', status: 'completed', exitCode: 0, aggregatedOutput: 'A1 passes.' }] });
   const result = fixture.run();
   assert.equal(result.status, 0, result.stderr);
   const state = json(fixture.state);
@@ -232,8 +268,12 @@ test('PAUSED wins over a real judge that is in flight and the owned judge connec
   assert.equal(state.last_decision, null);
   const trace = fixture.protocol();
   assert.ok(trace.some((entry) => entry.message?.params?.threadId === 'judge-1' && entry.message?.method === 'turn/start'));
-  const pid = trace.findLast((entry) => entry.kind === 'spawn').pid;
-  assert.throws(() => process.kill(pid, 0));
+  const ownerPid = trace.find((entry) => entry.message?.method === 'thread/start' && entry.message.params.sandbox === 'read-only').pid;
+  const cleanupPid = trace.find((entry) => entry.message?.method === 'thread/archive' && entry.message.params.threadId === 'judge-1').pid;
+  assert.notEqual(cleanupPid, ownerPid);
+  assert.throws(() => process.kill(ownerPid, 0));
+  assert.throws(() => process.kill(cleanupPid, 0));
+  assert.ok(fixture.events().some((entry) => entry.type === 'judge_terminated' && entry.thread_id === 'judge-1' && entry.turn_id === 'judge-turn-1'));
   assert.ok(fixture.events().some((entry) => entry.type === 'stale_judge_result_ignored'));
   assert.deepEqual(trace.filter((entry) => entry.message?.method === 'thread/archive').map((entry) => entry.message.params.threadId), ['judge-1']);
   assert.equal(trace.filter((entry) => entry.message?.method === 'turn/start').length, 2, 'PAUSED cannot launch another model.');
