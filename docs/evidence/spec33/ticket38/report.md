@@ -33,7 +33,7 @@ Final candidate is staged under worktree `runs/spec33-candidate/final-package/` 
 
 ## Acceptance matrix
 
-`simulated` means actual process-level tests with replacement host/model; it does not mean native Desktop passed. Every required native case is still `not_run`. References are the source public test suites whose observed full run is captured above.
+`simulated` means actual process-level tests with replacement host/model; it does not mean native Desktop passed. Required native completion cases remain unaccepted. A later real Desktop negative-entry observation covers only part of T16 (`live_partial` below); all other native matrix results remain `not_run`. References are the source public test suites whose observed full run is captured above.
 
 | Case | Available evidence | Real Desktop A result |
 | --- | --- | --- |
@@ -52,7 +52,7 @@ Final candidate is staged under worktree `runs/spec33-candidate/final-package/` 
 | T13 | simulated: timeout/disconnected hook become recovery checkpoints without replay | not_run |
 | T14 | simulated: traced external condition returns WAIT_EXTERNAL and recovery details | not_run |
 | T15 | simulated: host restart requires explicit same-A native receipt, baseline/counters retained | not_run |
-| T16 | live isolated: six discovered hooks explicitly untrusted; simulated pending binding refuses to claim active supervision | not_run |
+| T16 | live_partial: real Desktop installed doctor/start/status stay pending/unbound with native_hook_required; fresh owned discovery separately reports six untrusted hooks. Actual owner's skip reason and other T16 branches unverified | live_partial; incomplete |
 | T17 | simulated: status is read-only, cumulative explicit limits pause, default limits absent | not_run |
 | T18 | simulated Windows native command and installed copies in Chinese/space paths; live isolated package discovery/integrity at recorded paths | not_run |
 | T19 | simulated: full existing independent-worker regression in 107-test suite | not_run |
@@ -75,3 +75,11 @@ Based on integration `5f0cae8949df0a1ece1f042cea4c22380ccdcaf0`, the final Spec 
 The saved task/prompt/preparation have been regenerated from the corrected script without starting a model or native chat. README now consistently names the sole canonical manifest. Final Standards review reports zero hard findings and zero blockers; dispatch duplication is deferred as an advisory refactor, and State structure is not a finding. Final Spec approval of this correction remains pending independent verification.
 
 Final branch-wide whitespace verification uses `git diff --check 1bae005697e902a9fc3b93f5f04bb333f8ccd87d...HEAD`, rather than only the unstaged diff. The earlier branch check failed on CRLF evidence text in ticket34/final-checks.txt and ticket38 evidence; those affected tracked files were normalized to LF without changing their lines' content. The complete fixed branch check passes; no unaffected regression suite was repeated for this line-ending correction.
+
+## Real Desktop pending-entry observation
+
+After the final review/authorized preparation recorded in `final-review-and-live-preparation.md`, parent sent the authorized test instructions to actual A `01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7`. Receipt `live-preparation/native-untrusted-entry.json`, timestamp `2026-11-03T09:42:51.203Z`, preserves public Desktop command results from completed turn `01a1a0c8-1b67-7943-b778-18323acaf758` at the intended actual cwd. A read the installed 0.3.0 skill/reference and executed installed doctor, start and status through native tools. Doctor reports ready with Node v24.19.0, CLI 0.166.0 and plugin 0.3.0; start/status exit successfully but do not establish native binding.
+
+Task `spec33-native-desktop-minimal-20261103` remains PAUSED/RECOVERING, binding PENDING_NATIVE_HOOK, main_session_id null, no controller receipt, hook_effective false and recovery kind native_hook_required. PAUSED here is the preparation checkpoint and is **not evidence of a user pause request**. A did no stage work, did not manually launch B and did not create an independent worker. Parent verified all stage outputs remain absent and the protected baseline hashes match preparation. The copied status receipt omits the binding challenge and protected-file base64; only the baseline hashes are retained. The checkpoint remains intact.
+
+This is real T16 pending-entry evidence only (`live_partial`), not proof that trusted hooks executed or proof of the current Desktop owner's exact skip reason. Fresh owned discovery still reports untrusted hooks separately. T16's other branches remain untested; T01 binding/B startup, continuation, C/verification, DONE and every required native completion case remain incomplete. No task or issue may be closed from this observation.
