@@ -31,7 +31,21 @@ test('an installed but uninvoked plugin keeps ordinary lifecycle and doctor/stat
   const f = setup('uninvoked-neutral');
   const plain = ['SessionStart', 'PreToolUse', 'PostToolUse', 'Stop', 'Interrupt', 'UserPromptSubmit'].map((hook_event_name) => ({ hook_event_name, prompt: 'Please start needs-forever supervision.', tool_use_id: 'ordinary', tool_input: { command: 'git status --short' }, tool_response: 'ordinary output' }));
   const controls = ['doctor', 'status'].flatMap((command) => ['PreToolUse', 'PostToolUse'].map((hook_event_name) => ({ hook_event_name, tool_use_id: command, tool_input: { command: `node "${join(f.plugin, 'scripts/control.mjs')}" ${command} --state "${f.state}"` }, tool_response: '{}' })));
-  for (const event of [...plain, ...controls]) {
+  const script = join(f.plugin, 'scripts/control.mjs');
+  const example = `node "${script}" start --task "${f.task}"`;
+  const readOnlyInputs = [
+    { cmd: `rg start "${script}"` },
+    { command: `echo '${example}'` },
+    { command: `Get-Content "${script}" # start` },
+    { code: `const example = ${JSON.stringify(example)}; text(example);` },
+    { code: `// tools.exec_command(${JSON.stringify({ cmd: example })})` },
+    { code: `text(${JSON.stringify(`tools.exec_command(${JSON.stringify({ cmd: example })})`)});` },
+    { code: `if (false) { await tools.exec_command(${JSON.stringify({ cmd: example })}); }` },
+    { cmd: `node "${script}" status --state "${f.state}" # start` },
+    { cmd: `echo ignored; ${example}` },
+  ];
+  const readOnly = readOnlyInputs.flatMap((tool_input, index) => ['PreToolUse', 'PostToolUse'].map((hook_event_name) => ({ hook_event_name, tool_name: 'functions.exec', tool_use_id: `read-only-${index}`, tool_input, tool_response: '{}' })));
+  for (const event of [...plain, ...controls, ...readOnly]) {
     const result = hook(f, event, false);
     assert.equal(result.status, 0, result.stderr);
     assert.equal(result.stdout.trim(), '{}');
@@ -41,7 +55,7 @@ test('an installed but uninvoked plugin keeps ordinary lifecycle and doctor/stat
   assert.equal(f.run('prepare', ['--task', f.task, '--test-fixture', f.fixture]).status, 0);
   const snapshot = (directory: string): unknown => readdirSync(directory, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name)).map((entry) => [entry.name, entry.isDirectory() ? snapshot(join(directory, entry.name)) : readFileSync(join(directory, entry.name), 'utf8')]);
   const pending = snapshot(f.workspace);
-  for (const event of [...plain, ...controls]) {
+  for (const event of [...plain, ...controls, ...readOnly]) {
     const result = hook(f, { ...event, session_id: 'foreign-uninvoked-session' });
     assert.equal(result.status, 0, result.stderr);
     assert.equal(result.stdout.trim(), '{}');
@@ -52,6 +66,20 @@ test('an installed but uninvoked plugin keeps ordinary lifecycle and doctor/stat
   for (const [event, groups] of Object.entries(configured.hooks) as Array<[string, any[]]>) {
     for (const handler of groups.flatMap((group) => group.hooks)) assert.equal(handler.statusMessage, undefined, `${event} must not advertise supervision before knowing whether this session opted in.`);
   }
+});
+
+for (const exampleKind of ['rg', 'echo', 'code-example'] as const) test(`read-only ${exampleKind} mentioning an installed start command creates no opt-in artifacts`, () => {
+  const f = setup(`read-only-${exampleKind}`);
+  const script = join(f.plugin, 'scripts/control.mjs');
+  const command = `node "${script}" start --task "${f.task}"`;
+  const tool_input = exampleKind === 'rg' ? { cmd: `rg start "${script}"` }
+    : exampleKind === 'echo' ? { command: `echo '${command}'` }
+    : { code: `const example = ${JSON.stringify(command)}; text(example);` };
+  const result = hook(f, { hook_event_name: 'PreToolUse', tool_name: 'functions.exec', tool_use_id: 'read-only-call', tool_input });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout.trim(), '{}');
+  assert.equal(result.stderr, '');
+  assert.deepEqual(readdirSync(f.workspace), [], 'Reading a startup example cannot leave supervision observations.');
 });
 
 test('installed main-session preparation stays pending without native identity despite guessed session environment', () => {
@@ -65,6 +93,7 @@ test('installed main-session preparation stays pending without native identity d
   assert.equal(value.main_session_id, null);
   assert.equal(value.status, 'PAUSED');
   assert.equal(value.binding.status, 'PENDING_NATIVE_HOOK');
+  assert.match(JSON.parse(prepared.stdout).binding_instruction, /single.*Node.*top-level/i);
   assert.equal(value.host.hook_effective, false);
   assert.equal(value.task_version, 1);
   assert.equal(value.worker_thread_id, null);
@@ -109,14 +138,18 @@ test('concurrent installed preparations in one workspace retain every independen
   }
 });
 
-test('binding accepts neutral task filenames and Code Mode tool input without recording unrelated callbacks', (t) => {
-  const f = setup('code-mode-binding', true);
+for (const entry of ['json-code', 'literal-code', 'assigned-code', 'powershell-node'] as const) test(`binding accepts neutral task filenames and ${entry} without recording unrelated callbacks`, (t) => {
+  const f = setup(`code-mode-binding-${entry}`, true);
   t.after(() => f.run('pause'));
   const unrelated = hook(f, { hook_event_name: 'PreToolUse', tool_use_id: 'ordinary-call', tool_input: { command: 'git status --short' } });
   assert.equal(unrelated.status, 0, unrelated.stderr);
   assert.equal(existsSync(join(f.workspace, '.codex-supervisor')), false, 'Unsupervised ordinary chats must not create observation artifacts.');
-  const code = `text(await tools.exec_command(${JSON.stringify({ cmd: `node "${f.control}" prepare --task "${f.task}" --state "${f.state}" --test-fixture "${f.fixture}"` })}));`;
-  const tool = { tool_use_id: 'code-call', tool_name: 'functions.exec', tool_input: { code } };
+  const command = `node "${f.control}" prepare --task "${f.task}" --state "${f.state}" --test-fixture "${f.fixture}"`;
+  const literal = `{cmd: ${JSON.stringify(command)}, workdir: ${JSON.stringify(f.workspace)}, max_output_tokens: 1000}`;
+  const code = entry === 'json-code' ? `text(await tools.exec_command(${JSON.stringify({ cmd: command })}));`
+    : entry === 'assigned-code' ? `const result = await tools.exec_command(${literal}); text(result);`
+    : `// @exec: literal command\ntext(await tools.exec_command(${literal}));`;
+  const tool = { tool_use_id: 'code-call', tool_name: 'functions.exec', tool_input: entry === 'powershell-node' ? { cmd: `& "${process.execPath}" ${command.slice(5)}` } : { code } };
   assert.equal(hook(f, { ...tool, hook_event_name: 'PreToolUse' }).status, 0);
   const prepared = f.run('prepare', ['--task', f.task, '--test-fixture', f.fixture]);
   assert.equal(prepared.status, 0, prepared.stderr);

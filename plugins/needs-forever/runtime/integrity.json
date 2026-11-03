@@ -2,10 +2,11 @@
   "generated_by": "npm run plugin:build",
   "files": {
     "src/cli.js": "a9e9d85dd6b9fef1a77b50f5c62bdd31ba8819f9fbfc7e097a026c4084ab1d34",
+    "src/control-intent.js": "33c80a172debd1fb149606b3623e19d6fb50216f5fbab80a343f60456a066f70",
     "src/hook-host.js": "1cd9e46ce63d753fd8e4962652461e544da97c8ac032c884092415942aab94a8",
     "src/index.js": "03e898ec1f5980e9758d1fc83bd8a03cd746d8f42a8bea4a46e9d766e1563283",
     "src/judge.js": "d9b2d933d7902462ea9c196ff8c8d8811ca17c295fd393537d2092d120de5af7",
-    "src/lifecycle.js": "91f3af97f40a5f38454b159953e2adbb072505d700310b65d03d63c929067e36",
+    "src/lifecycle.js": "2dd0c97ac38b3351bc4901ecce0e9efb6b4e0ce11f2a6d1f4acda833d4091ad9",
     "src/main-controller.js": "59edcb9fb5fedba0511650f037b3888351777f2d0f37c7aa84576845db172f39",
     "src/main-session.js": "6363d142d23b5373eb94af7e623cd81ed8f697201eb460495c06cdbccc0661bc",
     "src/main-supervision.js": "5871495380c6749c0dc7dd0a79ba425afe2296e3c6021251e1a4104bf668bcef",
