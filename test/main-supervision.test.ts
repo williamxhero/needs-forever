@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
+import { spawnSync, spawn } from 'node:child_process';
+import { setTimeout as delay } from 'node:timers/promises';
 import { cpSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
@@ -37,7 +38,7 @@ function setup(name: string, options: Record<string, unknown> = {}, verify = fal
     }
   };
   const stop = () => { const result = hook({ hook_event_name: 'Stop', stop_hook_active: true, last_assistant_message: 'All complete.' }); assert.equal(result.status, 0, result.stderr); return JSON.parse(result.stdout); };
-  return { directory, workspace, state, scenario, run, hook, status, protocol, activity, stop };
+  return { directory, workspace, plugin, fixture, state, scenario, run, hook, status, protocol, activity, stop };
 }
 
 test('installed Stop creates fresh readonly C for each same-turn stop and confirms only subsequent A tool activity', (t) => {
@@ -176,4 +177,35 @@ test('truncated old tool output requests concise proof but cannot poison a later
   assert.equal(snapshots[0].evidence_complete, false);
   assert.equal(snapshots[1].evidence_complete, true);
   assert.equal(snapshots[1].evidence.some((entry: any) => entry.source?.item_id === 'oversized-result'), false);
+});
+
+for (const phase of ['JUDGE', 'VERIFY']) test(`human input during delayed ${phase} invalidates late success and current evidence must be gathered again`, async (t) => {
+  const f = setup(`input-during-${phase}`, { judge_actions: ['DONE', 'DONE'], ...(phase === 'JUDGE' ? { judge_delay_ms: 1_500 } : { verification_delay_ms: 1_500 }) }, phase === 'VERIFY');
+  t.after(() => f.run('pause'));
+  f.activity('old-check', 'All three artifacts checked before the new instruction.');
+  const callback = spawn(process.execPath, [join(f.plugin, 'scripts/lifecycle.mjs'), '--test-fixture', f.fixture], { cwd: f.workspace, env: { ...process.env, PLUGIN_ROOT: f.plugin }, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
+  let output = ''; callback.stdout.on('data', (chunk) => { output += chunk; });
+  const exited = new Promise<void>((done) => callback.once('exit', () => done()));
+  callback.stdin.end(JSON.stringify({ hook_event_name: 'Stop', session_id: `input-during-${phase}`, cwd: f.workspace, turn_id: 'same-turn' }));
+  for (let i = 0; i < 50 && f.status().phase !== phase; i++) await delay(25);
+  assert.equal(f.status().phase, phase);
+  assert.equal(f.hook({ hook_event_name: 'UserPromptSubmit', prompt: 'Recheck the current files; keep the original authorization.' }).status, 0);
+  await exited; assert.deepEqual(JSON.parse(output), {});
+  assert.equal(f.status().status, 'ACTIVE'); assert.equal(f.status().phase, 'WORKER');
+  const next = f.stop(); assert.equal(next.decision, 'block', 'Old input-epoch proof cannot establish DONE.');
+  const snapshots = f.protocol().filter((entry) => entry.message?.method === 'turn/start').map((entry) => JSON.parse(entry.message.params.input[0].text));
+  assert.ok(snapshots.at(-1).recent_instructions.some((entry: any) => entry.source === 'native-human-input' && /Recheck/.test(entry.prompt)));
+  assert.equal(snapshots.at(-1).evidence.length, 0);
+});
+
+test('a recoverable invalid judgment retries inside the original Stop deadline without turning failure into task completion', (t) => {
+  const f = setup('recover-judgment', { judge_actions: ['CONTINUE', 'CONTINUE'], judge_outputs: ['invalid JSON'] });
+  t.after(() => f.run('pause'));
+  f.activity('remaining', 'Stage three remains incomplete.');
+  assert.equal(f.stop().decision, 'block');
+  const status = f.status();
+  assert.equal(status.status, 'ACTIVE'); assert.equal(status.phase, 'WORKER');
+  assert.equal(status.judge_thread_ids.length, 2);
+  assert.ok(status.recovery_failures.length >= 1);
+  assert.equal(status.retry.kind, null);
 });

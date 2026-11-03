@@ -1,6 +1,8 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, realpathSync, renameSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, realpathSync, renameSync, statSync, writeFileSync, openSync, closeSync, unlinkSync, readdirSync } from 'node:fs';
 import { dirname, isAbsolute, resolve } from 'node:path';
+import { tmpdir } from 'node:os';
+import { reachedLimits } from './rules.js';
 import { Store } from './store.js';
 import { record, text } from './types.js';
 import type { State, Task } from './types.js';
@@ -10,15 +12,22 @@ export interface MainSessionState extends State {
   main_session_id: string | null;
   run_generation: string;
   contract_sha256: string;
-  binding: { status: 'PENDING_NATIVE_HOOK' | 'BOUND' | 'RELEASED'; tool_use_id: string | null; bound_at: string | null; challenge: string; task_path: string };
+  binding: { status: 'PENDING_NATIVE_HOOK' | 'BOUND' | 'RELEASED'; tool_use_id: string | null; bound_at: string | null; challenge: string; task_path: string; operation?: 'prepare' | 'resume' };
   host: { desktop_version: string | null; cli_version: string | null; hook_effective: boolean; source: 'unverified' | 'native-desktop' | 'simulated'; reason: string };
   last_stop?: StopRequest;
-  controller?: { id: string; pid: number; endpoint: string; token: string; lifecycle: 'running' | 'exited'; started_at: string; run_generation: string; plugin_root: string };
+  controller?: { id: string; pid: number; endpoint: string; token: string; lifecycle: 'running' | 'exited'; started_at: string; run_generation: string; plugin_root: string; bundle_sha256?: string };
   stop_transport?: { request: StopRequest; outcome: 'pending' | 'returned' | 'unknown' | 'failed'; error?: string; delivery_id?: string };
   continuation_confirmed?: boolean;
   tool_starts?: Record<string, { at: string; input_sha256: string }>;
   input_epoch?: number;
   direction_context?: { delivery_id: string; at: string; run_generation: string; input_epoch: number; contract_sha256: string };
+  latest_human_input?: { prompt: string; at: string; input_epoch: number };
+  observed_turn_ids?: string[];
+  active_checkpoint_at?: string;
+  processed_event_ids?: string[];
+  processed_tool_ids?: string[];
+  recovery_history?: unknown[];
+  controller_startup_deadline?: string;
 }
 export interface StopRequest {
   schema_version: 1;
@@ -48,8 +57,24 @@ export function canonicalPath(path: string): string {
 }
 export function contractHash(task: Task): string { return createHash('sha256').update(JSON.stringify(task)).digest('hex'); }
 export function indexPath(workspace: string): string { return resolve(workspace, '.codex-supervisor', 'main-session-index.json'); }
-function validatedTask(path: string): Task {
-  const task = record(readJson(path));
+export function mainLeasePath(session: string): string { return resolve(tmpdir(), 'codex-supervisor-locks', `main-session-${createHash('sha256').update(session).digest('hex')}.lock`); }
+function registerState(workspace: string, statePath: string): void {
+  // One immutable identity slot per checkpoint avoids a workspace-wide RMW
+  // lock, including a lock left behind by a crash during registration.
+  const key = createHash('sha256').update(resolve(statePath)).digest('hex');
+  atomicJson(resolve(workspace, '.codex-supervisor', 'main-session-bindings', `${key}.json`), { schema_version: 1, state_path: statePath });
+}
+export function registeredStatePaths(workspace: string): string[] {
+  const old = indexPath(workspace);
+  const directory = resolve(workspace, '.codex-supervisor', 'main-session-bindings');
+  const entries: string[] = existsSync(old) ? readJson(old).states : [];
+  if (existsSync(directory)) for (const name of readdirSync(directory)) {
+    if (/^[a-f0-9]{64}\.json$/.test(name)) entries.push(readJson(resolve(directory, name)).state_path);
+  }
+  return [...new Set(entries)];
+}
+export function validateTask(input: unknown): Task {
+  const task = record(input);
   if (task.schema_version !== 1) throw new Error('schema_version must be 1.');
   const taskId = text(task.task_id, 'task_id');
   if (!/^[\w.-]+$/.test(taskId) || ['.', '..'].includes(taskId)) throw new Error('Invalid task_id.');
@@ -72,6 +97,7 @@ function validatedTask(path: string): Task {
   }
   return result;
 }
+function validatedTask(path: string): Task { return validateTask(readJson(path)); }
 export function prepareMainSession(taskPath: string, statePath: string, simulated = false): MainSessionState {
   if (existsSync(statePath)) throw new Error('Task state already exists; use explicit resume.');
   const task = validatedTask(taskPath);
@@ -91,11 +117,50 @@ export function prepareMainSession(taskPath: string, statePath: string, simulate
     };
     store.protect(state);
     store.save(state);
-    const path = indexPath(task.workspace);
-    const entries: string[] = existsSync(path) ? readJson(path).states : [];
-    atomicJson(path, { schema_version: 1, states: [...new Set([...entries, statePath])] });
+    registerState(task.workspace, statePath);
     store.event(state, 'main_session_prepared', { control_mode: state.control_mode, binding_status: state.binding.status });
     return state;
+  } finally { store.release(); }
+}
+export function resumeMainSession(statePath: string, taskPath?: string, simulated = false): MainSessionState {
+  let state = readJson(statePath) as MainSessionState;
+  if (state.control_mode !== 'main-session' || (!state.main_session_id && state.binding.status !== 'PENDING_NATIVE_HOOK') || state.status === 'DONE') throw new Error('Explicit resume requires an unfinished main-session checkpoint.');
+  const store = new Store(statePath); store.lock(state.task, true);
+  try {
+    state = readJson(statePath) as MainSessionState;
+    if (state.control_mode !== 'main-session' || state.status === 'DONE') throw new Error('Checkpoint changed before the resume lock was acquired.');
+    if (state.controller) {
+      try { process.kill(state.controller.pid, 0); throw new Error('Controller is still alive; pause it and wait for its owned exit before resume.'); }
+      catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ESRCH') throw error; }
+    }
+    const task = taskPath ? validatedTask(taskPath) : validateTask(state.task);
+    if (task.task_id !== state.task_id || canonicalPath(task.workspace) !== canonicalPath(state.task.workspace) || canonicalPath(process.cwd()) !== canonicalPath(task.workspace)) throw new Error('Resume must preserve task and workspace identity.');
+    if ((state.mode === 'simulated') !== simulated) throw new Error('Resume must preserve live/simulated mode.');
+    if (state.status !== 'PAUSED' && (task.goal !== state.task.goal || task.authorization !== state.task.authorization)) throw new Error('Changing goal or authorization requires durable PAUSED first.');
+    if (JSON.stringify(task.verify) !== JSON.stringify(state.task.verify)) throw new Error('The original independent verifier and protected baseline are fixed for this task.');
+    const limits = reachedLimits(task.limits, state);
+    if (limits.turns || limits.time) throw new Error('Cumulative user_limit reached; explicitly raise/remove limits before resume.');
+    const leasePath = state.main_session_id ? mainLeasePath(state.main_session_id) : null;
+    if (leasePath && existsSync(leasePath)) {
+      const guard = `${leasePath}.reclaim`; const fd = openSync(guard, 'wx');
+      try {
+        const owner = readJson(leasePath);
+        if (owner.state_path !== statePath || owner.main_session_id !== state.main_session_id || owner.controller_id !== state.controller?.id || !Number.isInteger(owner.pid) || owner.pid <= 0) throw new Error('Main-session lease identity is ambiguous; cannot reclaim.');
+        try { process.kill(owner.pid, 0); throw new Error('Main-session lease owner is still alive.'); }
+        catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ESRCH') throw error; }
+        unlinkSync(leasePath);
+      } finally { closeSync(fd); unlinkSync(guard); }
+    }
+    state.recovery_history = [...(state.recovery_history ?? []), { at: new Date().toISOString(), run_generation: state.run_generation, controller: state.controller, stop_transport: state.stop_transport, pending_action: state.pending_action }];
+    state.task = task; state.task_version++; state.contract_sha256 = contractHash(task); state.run_generation = randomUUID();
+    delete state.controller; delete state.last_stop; delete state.stop_transport; delete state.direction_context; delete state.active_checkpoint_at;
+    state.pending_action = null; state.tool_starts = {}; state.continuation_confirmed = false; state.input_epoch = (state.input_epoch ?? 0) + 1;
+    state.status = 'PAUSED'; state.phase = 'RECOVERING'; delete state.pause_reason;
+    state.binding = { ...state.binding, status: 'PENDING_NATIVE_HOOK', challenge: randomUUID(), tool_use_id: null, operation: 'resume' };
+    state.host.hook_effective = false; state.host.reason = 'Explicit resume awaits a fresh native receipt from the original main session.';
+    state.recovery_condition = { kind: 'resume_native_receipt', message: state.host.reason, resume_when: 'Complete resume in the original A, then wait for a new native Stop. Old directions are never replayed.' };
+    store.save(state); store.event(state, 'main_session_resume_prepared', { main_session_id: state.main_session_id, run_generation: state.run_generation });
+    registerState(task.workspace, statePath); return state;
   } finally { store.release(); }
 }
 export function mainSessionStatus(path: string): Record<string, unknown> {

@@ -25,7 +25,7 @@ function setup(name: string, options: Record<string, unknown> = {}) {
   const control = join(plugin, 'scripts/control.mjs');
   const run = (command: string, extra: string[] = []) => spawnSync(process.execPath, [control, command, '--state', state, ...extra], { cwd: workspace, encoding: 'utf8', timeout: 20_000 });
   return { directory, plugin, workspace, state, task, fixture, scenario, trace, run,
-    start() { return run('start', ['--task', task, '--test-fixture', fixture]); },
+    start() { return run('start', ['--control-mode', 'independent-worker', '--task', task, '--test-fixture', fixture]); },
     resume() { return run('resume', ['--test-fixture', fixture]); },
   };
 }

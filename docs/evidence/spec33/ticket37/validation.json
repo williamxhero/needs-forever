@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "ticket": 37,
+  "spec": 33,
+  "date": "2026-11-03",
+  "evidence_mode": "simulated",
+  "baseline": "7dba064",
+  "seam": "Installed copied plugin public control plus native hook stdin/stdout to durable state, actual local processes and explicit external model protocol replacement",
+  "checks": [
+    { "command": "npm run plugin:build", "result": "passed", "bundled_modules": 16 },
+    { "command": "node --test dist/test/main-controller.test.js dist/test/main-supervision.test.js dist/test/plugin.test.js", "stage": "first integration checkpoint", "result": "passed", "tests": 21 },
+    { "command": "node --test --test-name-pattern=\"human input during|recoverable invalid\" dist/test/main-supervision.test.js", "stage": "delayed judge/verifier and visible recovery checks", "result": "passed", "tests": 3 },
+    { "command": "node --test --test-name-pattern=\"pause while native binding|concurrent installed preparations\" dist/test/main-session.test.js", "stage": "pending pause and concurrent independent registration", "result": "passed", "tests": 2 },
+    { "command": "npm test", "stage": "first full regression", "result": "failed", "tests": 104, "passed": 103, "failed": 1, "failure": "Host-only missing supervisor fixture was retried until its harness deadline; fixed by rejecting permanent fixture misconfiguration before the recoverable-error loop." },
+    { "command": "npm test", "stage": "final full regression after fix", "result": "passed", "exit_code": 0, "tests": 104, "passed": 104, "failed": 0, "cancelled": 0, "skipped": 0, "duration_ms": 31430.6013 },
+    { "command": "git diff --check", "result": "passed" },
+    { "command": "git merge codex/spec33-main-session", "result": "already up to date" }
+  ],
+  "not_run": [
+    "Real Desktop live acceptance matrix, installed hook trust and native same-A continuation",
+    "Actual Desktop shutdown/reopen and real host duplicate-command retry semantics"
+  ],
+  "limitations": [
+    "Desktop hook stdin has no documented stable event ID; fixture event_id duplicates are not proof of native host identical-stdin retry deduplication.",
+    "Whether internal Stop continuation triggers UserPromptSubmit needs real-host verification; every observed UserPromptSubmit currently invalidates old direction and judgment."
+  ]
+}
