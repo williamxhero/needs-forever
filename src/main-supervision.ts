@@ -3,7 +3,7 @@ import { createReadStream } from 'node:fs';
 import { readdir, readlink } from 'node:fs/promises';
 import { setImmediate as yieldControl } from 'node:timers/promises';
 import { resolve, relative } from 'node:path';
-import { AppServerJudge, validateDecision } from './judge.js';
+import { AppServerJudge, archiveTerminatedJudge, validateDecision } from './judge.js';
 import { codexCommand, connect, type Rpc } from './transport.js';
 import { Store } from './store.js';
 import { redact } from './redact.js';
@@ -153,7 +153,7 @@ export async function superviseStop(state: MainSessionState, request: StopReques
   judge.bind(connection.rpc, (type, details) => {
     if (type === 'judge_created' && typeof details.thread_id === 'string') { state.judge_thread_ids ??= []; state.judge_thread_ids.push(details.thread_id); if (!signal.aborted && state.status === 'ACTIVE') store.save(state); }
     store.event(state, type, { ...details, stop_attempt_id: request.stop_attempt_id, main_session_id: state.main_session_id });
-  });
+  }, (threadId) => archiveTerminatedJudge(commandFor(state, fixture), state.task.workspace, threadId));
   connection.rpc.setRequestHandler((_id, method, params) => judge.serverRequest(method, params));
   const pump = (async () => { try { while (true) { const event = await connection.rpc.next(); judge.observe(event.method, event.params); } } catch (error) { judge.connectionFailed(error as Error); } })();
   try {

@@ -1,7 +1,7 @@
 import type { Decision, Snapshot } from './types.js';
 import { setTimeout as delay } from 'node:timers/promises';
 import { resolve } from 'node:path';
-import { RpcServerError, type Rpc } from './transport.js';
+import { connect, RpcServerError, type Rpc } from './transport.js';
 import type { ThreadStartParams } from './protocol/generated/v2/ThreadStartParams.js';
 import type { ThreadStartResponse } from './protocol/generated/v2/ThreadStartResponse.js';
 import type { TurnStartParams } from './protocol/generated/v2/TurnStartParams.js';
@@ -14,7 +14,7 @@ import { record, text } from './types.js';
 
 export interface Judge {
   judge(snapshot: Snapshot, signal?: AbortSignal): Promise<Decision>;
-  bind?(rpc: Rpc, event: (type: string, details: Record<string, unknown>) => void): void;
+  bind?(rpc: Rpc, event: (type: string, details: Record<string, unknown>) => void, archiveTerminated?: (threadId: string) => Promise<void>): void;
   observe?(method: string, params: unknown): void;
   connectionFailed?(error: Error): void;
   serverRequest?(method: string, params: unknown): Promise<unknown>;
@@ -58,10 +58,32 @@ export function validateDecision(raw: string, snapshot: Snapshot): Decision {
   return value as unknown as Decision;
 }
 
+// The cancelled call's signal and RPC are already closed. A separate, bounded
+// model-free connection can archive an unloaded persistent C directly by ID.
+export async function archiveTerminatedJudge(argv: string[], workspace: string, threadId: string): Promise<void> {
+  const cancellation = new AbortController();
+  const timer = setTimeout(() => cancellation.abort(), 3_000);
+  let connection: Awaited<ReturnType<typeof connect>> | undefined;
+  try {
+    connection = await connect(argv, workspace, cancellation.signal, 1_000);
+    cancellation.signal.throwIfAborted();
+    const params: ThreadArchiveParams = { threadId };
+    await connection.rpc.request<ThreadArchiveResponse>('thread/archive', params);
+  } catch (error) {
+    if (cancellation.signal.aborted) throw new Error('Terminated judge archive cleanup deadline exceeded.');
+    throw error;
+  } finally {
+    clearTimeout(timer);
+    cancellation.abort();
+    await connection?.rpc.close();
+  }
+}
+
 export class AppServerJudge implements Judge {
   constructor(private readonly timeoutMs = 120_000) {}
   private rpc!: Rpc;
   private event!: (type: string, details: Record<string, unknown>) => void;
+  private archiveTerminated: ((threadId: string) => Promise<void>) | undefined;
   private thread: string | undefined;
   private terminal: { resolve: (turn: Record<string, unknown>) => void; reject: (error: Error) => void } | undefined;
   private readonly observed = new Map<string, Map<string, Record<string, unknown>>>();
@@ -69,7 +91,7 @@ export class AppServerJudge implements Judge {
   private expectedTurn: string | undefined;
   private raw = '';
   get rawOutput(): string { return this.raw; }
-  bind(rpc: Rpc, event: (type: string, details: Record<string, unknown>) => void): void { this.rpc = rpc; this.event = event; }
+  bind(rpc: Rpc, event: (type: string, details: Record<string, unknown>) => void, archiveTerminated?: (threadId: string) => Promise<void>): void { this.rpc = rpc; this.event = event; this.archiveTerminated = archiveTerminated; }
   connectionFailed(error: Error): void { this.terminal?.reject(error); }
   async serverRequest(method: string, params: unknown): Promise<unknown> {
     this.event('judge_server_request_refused', { method, params });
@@ -152,6 +174,15 @@ export class AppServerJudge implements Judge {
       clearTimeout(timer);
       signal?.removeEventListener('abort', aborted);
       await termination;
+      if (this.thread && termination) {
+        try {
+          if (!this.archiveTerminated) throw new Error('No isolated terminated-judge archive connection was configured.');
+          await this.archiveTerminated(this.thread);
+          this.event('judge_archived', { thread_id: this.thread, via: 'isolated_cleanup' });
+        } catch (error) {
+          this.event('judge_archive_failed', { thread_id: this.thread, via: 'isolated_cleanup', error: error instanceof Error ? error.message : String(error) });
+        }
+      }
       if (this.thread && (completed || !turnId) && !termination) {
         try { const params: ThreadArchiveParams = { threadId: this.thread }; await this.rpc.request<ThreadArchiveResponse>('thread/archive', params); this.event('judge_archived', { thread_id: this.thread }); }
         catch { this.event('judge_archive_failed', { thread_id: this.thread }); }

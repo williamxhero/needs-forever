@@ -5,7 +5,7 @@ import { spawnSync } from 'node:child_process';
 
 const scenario = JSON.parse(readFileSync(process.argv[2], 'utf8'));
 const trace = (value) => appendFileSync(scenario.trace, `${JSON.stringify(value)}\n`);
-trace({ kind: 'spawn', argv: process.argv.slice(3), pid: process.pid });
+trace({ kind: 'spawn', argv: process.argv.slice(3), pid: process.pid, cwd: process.cwd() });
 if (process.argv.includes('--version')) {
   console.log('codex-cli 0.166.0');
   process.exit(0);
@@ -65,6 +65,7 @@ for await (const line of lines) {
     const page = scenario.turn_pages?.[pageIndex] ?? { data: scenario.resume_turns ?? [], nextCursor: null };
     send({ id: message.id, result: { data: page.data ?? [], nextCursor: page.nextCursor ?? null, backwardsCursor: page.backwardsCursor ?? null } });
   } else if (message.method === 'thread/archive') {
+    if (scenario.hold_archive) continue;
     send(scenario.archive_failure ? { id: message.id, error: { code: -32000, message: 'Archive fixture failure' } } : { id: message.id, result: {} });
   } else if (message.method === 'thread/unsubscribe') {
     if (scenario.unsubscribe_disconnect) process.exit(0);

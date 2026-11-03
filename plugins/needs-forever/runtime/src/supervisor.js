@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { isAbsolute, relative, resolve } from 'node:path';
 import { record, text } from './types.js';
 import { Store } from './store.js';
+import { archiveTerminatedJudge } from './judge.js';
 import { normalize, selectAction, reachedLimits } from './rules.js';
 import { connect, RpcServerError } from './transport.js';
 import { redact } from './redact.js';
@@ -244,14 +245,14 @@ export class Supervisor {
         throw new RpcServerError(-32601, 'Method not found.');
     }
     bindRpc(rpc) { this.rpc = rpc; rpc.setRequestHandler((_id, method, params) => this.handleServerRequest(method, params)); return rpc; }
-    bindJudge(rpc) {
+    bindJudge(rpc, argv) {
         this.judge.bind?.(rpc, (type, details) => {
             if (type === 'judge_created' && typeof details.thread_id === 'string') {
                 (this.state.judge_thread_ids ??= []).push(details.thread_id);
                 this.save();
             }
             this.store.event(this.state, type, { role: 'judge', ...details });
-        });
+        }, (threadId) => archiveTerminatedJudge(argv, this.state.task.workspace, threadId));
     }
     async reconcileWorkerHistory(resumed, allowResendWhenAbsent = true) {
         const pending = this.state.pending_action;
@@ -382,7 +383,7 @@ export class Supervisor {
             return;
         const connection = await connect(argv, this.state.task.workspace, this.abort.signal);
         const rpc = this.bindRpc(connection.rpc);
-        this.bindJudge(rpc);
+        this.bindJudge(rpc, argv);
         const params = { threadId: this.state.worker_thread_id, cwd: this.state.task.workspace, approvalPolicy: 'never', sandbox: 'workspace-write', excludeTurns: false };
         const resumed = await this.hydrateWorkerTurns(rpc, await rpc.request('thread/resume', params));
         if (this.state.status !== 'ACTIVE')
@@ -461,13 +462,7 @@ export class Supervisor {
         this.validateWorker(resumed);
         if (resumed.thread.turns.some((turn) => turn.status === 'inProgress'))
             throw new Error('Verification recovery found an unexpected active worker turn; no send performed.');
-        this.judge.bind?.(rpc, (type, details) => {
-            if (type === 'judge_created' && typeof details.thread_id === 'string') {
-                (this.state.judge_thread_ids ??= []).push(details.thread_id);
-                this.save();
-            }
-            this.store.event(this.state, type, { role: 'judge', ...details });
-        });
+        this.bindJudge(rpc, argv);
         this.store.event(this.state, 'verification_worker_restored', { thread_id: this.state.worker_thread_id, server_process_id: rpc.processId });
         void this.pump(rpc);
     }
@@ -526,7 +521,7 @@ export class Supervisor {
                 throw new Error('Resume requires the saved worker thread identity; explicit recovery cannot proceed.');
             const connection = await this.connectWithRecovery(argv);
             const rpc = this.bindRpc(connection.rpc);
-            this.bindJudge(rpc);
+            this.bindJudge(rpc, argv);
             if (this.state.status !== 'ACTIVE')
                 return;
             this.state.codex_version = connection.version;

@@ -1,6 +1,6 @@
 import { setTimeout as delay } from 'node:timers/promises';
 import { resolve } from 'node:path';
-import { RpcServerError } from './transport.js';
+import { connect, RpcServerError } from './transport.js';
 import { record, text } from './types.js';
 export const decisionSchema = {
     type: 'object', additionalProperties: false,
@@ -49,6 +49,29 @@ export function validateDecision(raw, snapshot) {
         throw new Error('DONE/WAIT_EXTERNAL require independent evidence, not worker claims.');
     return value;
 }
+// The cancelled call's signal and RPC are already closed. A separate, bounded
+// model-free connection can archive an unloaded persistent C directly by ID.
+export async function archiveTerminatedJudge(argv, workspace, threadId) {
+    const cancellation = new AbortController();
+    const timer = setTimeout(() => cancellation.abort(), 3_000);
+    let connection;
+    try {
+        connection = await connect(argv, workspace, cancellation.signal, 1_000);
+        cancellation.signal.throwIfAborted();
+        const params = { threadId };
+        await connection.rpc.request('thread/archive', params);
+    }
+    catch (error) {
+        if (cancellation.signal.aborted)
+            throw new Error('Terminated judge archive cleanup deadline exceeded.');
+        throw error;
+    }
+    finally {
+        clearTimeout(timer);
+        cancellation.abort();
+        await connection?.rpc.close();
+    }
+}
 export class AppServerJudge {
     timeoutMs;
     constructor(timeoutMs = 120_000) {
@@ -56,6 +79,7 @@ export class AppServerJudge {
     }
     rpc;
     event;
+    archiveTerminated;
     thread;
     terminal;
     observed = new Map();
@@ -63,7 +87,7 @@ export class AppServerJudge {
     expectedTurn;
     raw = '';
     get rawOutput() { return this.raw; }
-    bind(rpc, event) { this.rpc = rpc; this.event = event; }
+    bind(rpc, event, archiveTerminated) { this.rpc = rpc; this.event = event; this.archiveTerminated = archiveTerminated; }
     connectionFailed(error) { this.terminal?.reject(error); }
     async serverRequest(method, params) {
         this.event('judge_server_request_refused', { method, params });
@@ -160,6 +184,17 @@ export class AppServerJudge {
             clearTimeout(timer);
             signal?.removeEventListener('abort', aborted);
             await termination;
+            if (this.thread && termination) {
+                try {
+                    if (!this.archiveTerminated)
+                        throw new Error('No isolated terminated-judge archive connection was configured.');
+                    await this.archiveTerminated(this.thread);
+                    this.event('judge_archived', { thread_id: this.thread, via: 'isolated_cleanup' });
+                }
+                catch (error) {
+                    this.event('judge_archive_failed', { thread_id: this.thread, via: 'isolated_cleanup', error: error instanceof Error ? error.message : String(error) });
+                }
+            }
             if (this.thread && (completed || !turnId) && !termination) {
                 try {
                     const params = { threadId: this.thread };

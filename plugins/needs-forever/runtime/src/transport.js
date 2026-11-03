@@ -152,12 +152,12 @@ async function handshake(rpc) {
     await rpc.request('initialize', params);
     rpc.notify('initialized');
 }
-export async function connect(argv, workspace, signal) {
+export async function connect(argv, workspace, signal, versionTimeoutMs = 10_000) {
     signal?.throwIfAborted();
     const [executable, ...arguments_] = argv;
     if (!executable)
         throw new Error('Empty Codex command.');
-    const versionResult = spawnSync(executable, [...arguments_, '--version'], { cwd: workspace, windowsHide: true, encoding: 'utf8', timeout: 10_000 });
+    const versionResult = spawnSync(executable, [...arguments_, '--version'], { cwd: workspace, windowsHide: true, encoding: 'utf8', timeout: versionTimeoutMs });
     const version = versionResult.stdout?.trim();
     if (versionResult.status !== 0 || version !== PROTOCOL_VERSION)
         throw new Error(`Unsupported Codex version. Expected ${PROTOCOL_VERSION}; generate and validate protocol types before changing the baseline.`);

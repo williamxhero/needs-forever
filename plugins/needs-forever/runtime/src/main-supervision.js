@@ -3,7 +3,7 @@ import { createReadStream } from 'node:fs';
 import { readdir, readlink } from 'node:fs/promises';
 import { setImmediate as yieldControl } from 'node:timers/promises';
 import { resolve, relative } from 'node:path';
-import { AppServerJudge, validateDecision } from './judge.js';
+import { AppServerJudge, archiveTerminatedJudge, validateDecision } from './judge.js';
 import { codexCommand, connect } from './transport.js';
 import { Store } from './store.js';
 import { redact } from './redact.js';
@@ -207,7 +207,7 @@ export async function superviseStop(state, request, fixture, signal, store) {
                 store.save(state);
         }
         store.event(state, type, { ...details, stop_attempt_id: request.stop_attempt_id, main_session_id: state.main_session_id });
-    });
+    }, (threadId) => archiveTerminatedJudge(commandFor(state, fixture), state.task.workspace, threadId));
     connection.rpc.setRequestHandler((_id, method, params) => judge.serverRequest(method, params));
     const pump = (async () => { try {
         while (true) {
