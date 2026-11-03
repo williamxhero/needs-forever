@@ -80,7 +80,6 @@ function snapshotFor(state: MainSessionState, request: StopRequest, store: Store
 async function workspaceDigest(state: MainSessionState, store: Store, signal: AbortSignal): Promise<string> {
   const hash = createHash('sha256');
   const statePath = resolve(store.path);
-  const generatedJson = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.json$/i;
   const temporaryState = /^\.[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.tmp$/i;
   let visited = 0;
   const walk = async (directory: string): Promise<void> => {
@@ -95,7 +94,6 @@ async function workspaceDigest(state: MainSessionState, store: Store, signal: Ab
       // Omit only Store-owned writes, not that whole directory or its verifier.
       const local = relative(store.directory, path).replaceAll('\\', '/');
       if (relative(statePath, path) === '' || local === 'summary.md' || local === 'events.jsonl'
-        || (local.startsWith('snapshots/') && generatedJson.test(local.slice('snapshots/'.length)))
         || (path.startsWith(statePath) && temporaryState.test(path.slice(statePath.length)))) continue;
       hash.update(name);
       if (item.isSymbolicLink()) hash.update(`link:${await readlink(path)}`);

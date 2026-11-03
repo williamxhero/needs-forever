@@ -189,6 +189,22 @@ test('task files beside a custom checkpoint still invalidate DONE when they chan
   assert.equal(f.status().status, 'DONE');
 });
 
+test('unprotected UUID-named business JSON beside a custom checkpoint remains in the workspace change gate', (t) => {
+  const businessFile = '.spec33-fixture/snapshots/22222222-2222-2222-2222-222222222222.json';
+  const f = setup('custom-checkpoint-business-json', { judge_actions: ['DONE', 'DONE'], verification_changes: [[{ path: businessFile, content: '{"business":"changed during verification"}' }], []] }, true, '.spec33-fixture');
+  t.after(() => { if (f.status().live) f.run('pause'); });
+  mkdirSync(dirname(join(f.workspace, businessFile)), { recursive: true });
+  writeFileSync(join(f.workspace, businessFile), '{"business":"original"}');
+  f.activity('business-before', 'All task outputs, including business JSON, independently checked.');
+  const refused = f.stop();
+  assert.equal(refused.decision, 'block', 'A business file change must refuse DONE even when its name resembles a generated snapshot.');
+  assert.match(refused.reason, /workspace_changed.*true/);
+  assert.equal(f.status().status, 'ACTIVE');
+  f.activity('business-after', 'Business JSON and all other outputs independently rechecked after the change.');
+  assert.deepEqual(f.stop(), {});
+  assert.equal(f.status().status, 'DONE');
+});
+
 test('protected files with checkpoint artifact names retain their fixed baseline enforcement', (t) => {
   const protectedArtifact = '.spec33-fixture/snapshots/11111111-1111-1111-1111-111111111111.json';
   const f = setup('custom-checkpoint-protected', { judge_actions: ['DONE', 'DONE'] }, true, '.spec33-fixture', ['verify.mjs', protectedArtifact]);

@@ -9,7 +9,7 @@
     "src/lifecycle.js": "2dd0c97ac38b3351bc4901ecce0e9efb6b4e0ce11f2a6d1f4acda833d4091ad9",
     "src/main-controller.js": "59edcb9fb5fedba0511650f037b3888351777f2d0f37c7aa84576845db172f39",
     "src/main-session.js": "6363d142d23b5373eb94af7e623cd81ed8f697201eb460495c06cdbccc0661bc",
-    "src/main-supervision.js": "4a948f1f1a86d321c48c3eb05757bed469f7994d5412376498299237131098d2",
+    "src/main-supervision.js": "8dc09c45792ac9aa7c7e9ca38ffe4af55e2f02ca061db08668ed1cbcd692b735",
     "src/recovery.js": "db606a6e5674c70e4f70b56d794e14576ae0d4473d15a6ef4e8a72ab4aa9da2e",
     "src/redact.js": "cd943daa4180f8c87b091babc0160dedab3432b471624710e67926fbfe779db6",
     "src/rules.js": "e743c10107cb043bf2c06957b2646cb9fc723474bd456d0f96a02861d5d376fc",
