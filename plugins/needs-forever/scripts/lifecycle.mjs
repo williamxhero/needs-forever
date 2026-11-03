@@ -4,6 +4,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { registeredStatePaths, readJson } from '../runtime/src/main-session.js';
 import { inspectHookHost } from '../runtime/src/hook-host.js';
+import { controlIntent } from '../runtime/src/control-intent.js';
 import { handleLifecycle } from '../runtime/src/lifecycle.js';
 import { redact } from '../runtime/src/redact.js';
 import { boundStateForEvent, dispatchBoundLifecycle, launchController } from '../runtime/src/main-controller.js';
@@ -25,8 +26,7 @@ try {
   if (existing) {
     console.log(JSON.stringify(await dispatchBoundLifecycle(existing, input, pluginRoot, createHash('sha256').update(readFileSync(new URL('../runtime/integrity.json', import.meta.url))).digest('hex'))));
   } else {
-    const command = JSON.stringify(input.tool_input ?? '').replace(/\\+/g, '/').toLowerCase();
-    const preparation = input.hook_event_name === 'PreToolUse' && /scripts\/(?:main-session|control)\.mjs/.test(command) && /\b(?:prepare|start|resume)\b/.test(command);
+    const preparation = input.hook_event_name === 'PreToolUse' && controlIntent(input.tool_input, pluginRoot) !== null;
     const pending = input.hook_event_name === 'PostToolUse' && typeof input.cwd === 'string' && registeredStatePaths(input.cwd).some((path) => existsSync(path) && readJson(path).binding?.status === 'PENDING_NATIVE_HOOK');
     if (!preparation && !pending) { console.log('{}'); process.exit(0); }
     const host = inspectHookHost(pluginRoot, args[1]);

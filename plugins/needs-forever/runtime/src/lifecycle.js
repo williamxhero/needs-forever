@@ -5,13 +5,8 @@ import { atomicJson, canonicalPath, contractHash, registeredStatePaths, readJson
 import { Store } from './store.js';
 import { record, text } from './types.js';
 import { redact } from './redact.js';
+import { controlIntent } from './control-intent.js';
 const hash = (value) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
-const normalizedCommand = (value) => value.replace(/\\+/g, '/').toLowerCase();
-function isControlCommand(command, pluginRoot, operation) {
-    const direct = command.includes(normalizedCommand(resolve(pluginRoot, 'scripts/main-session.mjs')));
-    const control = command.includes(normalizedCommand(resolve(pluginRoot, 'scripts/control.mjs')));
-    return operation ? (direct && command.includes(operation)) || (control && command.includes(operation === 'prepare' ? 'start' : 'resume')) : (direct && /\b(prepare|resume)\b/.test(command)) || (control && /\b(start|resume)\b/.test(command));
-}
 function strings(value) {
     if (typeof value === 'string')
         return [value];
@@ -38,8 +33,7 @@ export function handleLifecycle(input, host, pluginRoot, adapterOccurrenceId) {
     const toolId = typeof event.tool_use_id === 'string' ? event.tool_use_id : null;
     const observation = toolId ? resolve(workspace, '.codex-supervisor', 'hook-observations', `${hash([session, toolId])}.json`) : null;
     if (name === 'PreToolUse' && observation) {
-        const command = normalizedCommand(strings(event.tool_input).join('\n'));
-        if (isControlCommand(command, pluginRoot)) {
+        if (controlIntent(event.tool_input, pluginRoot)) {
             // Only fingerprints are retained; command bodies can contain credentials.
             atomicJson(observation, { session_id: session, tool_use_id: toolId, cwd: canonicalPath(workspace), input_sha256: hash(event.tool_input), source: host.source, at: Date.now(), plugin_root: canonicalPath(pluginRoot) });
             return {};
@@ -120,11 +114,15 @@ export function handleLifecycle(input, host, pluginRoot, adapterOccurrenceId) {
         const prior = readJson(observation);
         if (prior.session_id !== session || prior.tool_use_id !== toolId || prior.input_sha256 !== hash(event.tool_input) || prior.source !== host.source || prior.cwd !== canonicalPath(workspace) || prior.plugin_root !== canonicalPath(pluginRoot) || Date.now() - prior.at > 10 * 60_000)
             continue;
-        const command = normalizedCommand(strings(event.tool_input).join('\n'));
+        const intent = controlIntent(event.tool_input, pluginRoot);
         // Actual receipt output (unknown before preparation) correlates a registered
         // host's pre/post pair to this one task. A session-id flag cannot do this.
         const operation = state.binding.operation ?? 'prepare';
-        if (!isControlCommand(command, pluginRoot, operation) || (operation === 'prepare' && !command.includes(normalizedCommand(state.binding.task_path))) || (!command.includes(normalizedCommand(path)) && !command.includes('start')))
+        if (!intent || intent.operation !== operation)
+            continue;
+        if (operation === 'prepare' && (!intent.flags['--task'] || canonicalPath(intent.flags['--task']) !== canonicalPath(state.binding.task_path)))
+            continue;
+        if (intent.flags['--state'] ? canonicalPath(intent.flags['--state']) !== canonicalPath(path) : intent.entry !== 'control' || operation !== 'prepare')
             continue;
         if (!strings(event.tool_response).some((value) => value.includes(state.binding.challenge)))
             continue;

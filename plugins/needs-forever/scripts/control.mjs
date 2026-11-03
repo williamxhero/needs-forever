@@ -9,6 +9,7 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
 import { codexCommand, PROTOCOL_VERSION } from '../runtime/src/transport.js';
+import { NATIVE_BINDING_COMMAND_HINT } from '../runtime/src/control-intent.js';
 import { redact } from '../runtime/src/redact.js';
 import { prepareMainSession, resumeMainSession } from '../runtime/src/main-session.js';
 import { controllerStatus, pauseMainController, prepareControllerResume } from '../runtime/src/main-controller.js';
@@ -226,11 +227,11 @@ async function main() {
       const task = read(absolute(flags['--task'], '--task'));
       const path = flags['--state'] ?? resolve(absolute(task.workspace, 'task.workspace'), '.codex-supervisor', task.task_id, 'state.json');
       const state = prepareMainSession(flags['--task'], path, Boolean(flags['--test-fixture']));
-      return emit({ prepared: true, control_mode: state.control_mode, binding: state.binding, state_path: path });
+      return emit({ prepared: true, binding_instruction: NATIVE_BINDING_COMMAND_HINT, control_mode: state.control_mode, binding: state.binding, state_path: path });
     }
     const path = absolute(flags['--state'], '--state');
     if (command === 'status') return emit(await controllerStatus(path));
-    if (command === 'resume') { await prepareControllerResume(path); const state = resumeMainSession(path, flags['--task'], Boolean(flags['--test-fixture'])); return emit({ prepared: true, control_mode: state.control_mode, binding: state.binding, state_path: path }); }
+    if (command === 'resume') { await prepareControllerResume(path); const state = resumeMainSession(path, flags['--task'], Boolean(flags['--test-fixture'])); return emit({ prepared: true, binding_instruction: NATIVE_BINDING_COMMAND_HINT, control_mode: state.control_mode, binding: state.binding, state_path: path }); }
     if (command === 'pause') {
       return emit(await pauseMainController(path));
     }
