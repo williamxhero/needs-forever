@@ -1,0 +1,955 @@
+{
+  "schema_version": 1,
+  "observed_at": "2026-11-03T12:16:35.419Z",
+  "classification": "Actual native Desktop minimal acceptance passed; full SPEC is incomplete",
+  "task_id": "spec33-native-desktop-minimal-20261103",
+  "original_a": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+  "native_turn": "01a1a152-95bd-78f3-9fb6-2a63a992449c",
+  "run_generation": "397a18c7-27bc-49fb-ae02-b381e0c7aa43",
+  "package": {
+    "version": "0.3.3",
+    "reviewed_implementation_commit": "fc19a1658c524aa56c73a29919255c94e902c75e",
+    "package_receipt": "D:/WILL/TOOLS/needs-forever/.scratch/spec33-worktrees/integration/docs/evidence/spec33/ticket38/runtime-fix033-uuid-package.json",
+    "archive": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\needs-forever-0.3.3-runtime-fix033-uuid.tar.gz",
+    "expected_sha256": "03c9813a1bd1d355b399bdee11513c9b840903213c7c6cf74a4d0c07ddc99ac0",
+    "actual_sha256": "03c9813a1bd1d355b399bdee11513c9b840903213c7c6cf74a4d0c07ddc99ac0",
+    "source_parity": {
+      "integration": {
+        "root": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\integration\\plugins\\needs-forever",
+        "file_count": 27,
+        "files": [
+          {
+            "relative_path": ".codex-plugin/plugin.json",
+            "expected_sha256": "f2db377a40bef03690fd0b9177f63970e9bf381170dfd382d161a5c88810c023",
+            "actual_sha256": "f2db377a40bef03690fd0b9177f63970e9bf381170dfd382d161a5c88810c023",
+            "matches": true
+          },
+          {
+            "relative_path": "hooks/hooks.json",
+            "expected_sha256": "ba3f4440160c194bc868500f9f5733350a262e644735d089d2d94d5d0542d49c",
+            "actual_sha256": "ba3f4440160c194bc868500f9f5733350a262e644735d089d2d94d5d0542d49c",
+            "matches": true
+          },
+          {
+            "relative_path": "package.json",
+            "expected_sha256": "e808dd8801d7ab4e50e073bdf428f37ce749dd7ab1d994c555aeaa3d7993d6de",
+            "actual_sha256": "e808dd8801d7ab4e50e073bdf428f37ce749dd7ab1d994c555aeaa3d7993d6de",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/integrity.json",
+            "expected_sha256": "512991da8a03f3ac3cbbaab77916b021ad9f21704fe5b097ad43047b7bb7f9ae",
+            "actual_sha256": "512991da8a03f3ac3cbbaab77916b021ad9f21704fe5b097ad43047b7bb7f9ae",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/src/cli.js",
+            "expected_sha256": "a9e9d85dd6b9fef1a77b50f5c62bdd31ba8819f9fbfc7e097a026c4084ab1d34",
+            "actual_sha256": "a9e9d85dd6b9fef1a77b50f5c62bdd31ba8819f9fbfc7e097a026c4084ab1d34",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/src/control-intent.js",
+            "expected_sha256": "33c80a172debd1fb149606b3623e19d6fb50216f5fbab80a343f60456a066f70",
+            "actual_sha256": "33c80a172debd1fb149606b3623e19d6fb50216f5fbab80a343f60456a066f70",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/src/hook-host.js",
+            "expected_sha256": "1cd9e46ce63d753fd8e4962652461e544da97c8ac032c884092415942aab94a8",
+            "actual_sha256": "1cd9e46ce63d753fd8e4962652461e544da97c8ac032c884092415942aab94a8",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/src/index.js",
+            "expected_sha256": "03e898ec1f5980e9758d1fc83bd8a03cd746d8f42a8bea4a46e9d766e1563283",
+            "actual_sha256": "03e898ec1f5980e9758d1fc83bd8a03cd746d8f42a8bea4a46e9d766e1563283",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/src/judge.js",
+            "expected_sha256": "d9b2d933d7902462ea9c196ff8c8d8811ca17c295fd393537d2092d120de5af7",
+            "actual_sha256": "d9b2d933d7902462ea9c196ff8c8d8811ca17c295fd393537d2092d120de5af7",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/src/lifecycle.js",
+            "expected_sha256": "2dd0c97ac38b3351bc4901ecce0e9efb6b4e0ce11f2a6d1f4acda833d4091ad9",
+            "actual_sha256": "2dd0c97ac38b3351bc4901ecce0e9efb6b4e0ce11f2a6d1f4acda833d4091ad9",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/src/main-controller.js",
+            "expected_sha256": "59edcb9fb5fedba0511650f037b3888351777f2d0f37c7aa84576845db172f39",
+            "actual_sha256": "59edcb9fb5fedba0511650f037b3888351777f2d0f37c7aa84576845db172f39",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/src/main-session.js",
+            "expected_sha256": "6363d142d23b5373eb94af7e623cd81ed8f697201eb460495c06cdbccc0661bc",
+            "actual_sha256": "6363d142d23b5373eb94af7e623cd81ed8f697201eb460495c06cdbccc0661bc",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/src/main-supervision.js",
+            "expected_sha256": "8dc09c45792ac9aa7c7e9ca38ffe4af55e2f02ca061db08668ed1cbcd692b735",
+            "actual_sha256": "8dc09c45792ac9aa7c7e9ca38ffe4af55e2f02ca061db08668ed1cbcd692b735",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/src/recovery.js",
+            "expected_sha256": "db606a6e5674c70e4f70b56d794e14576ae0d4473d15a6ef4e8a72ab4aa9da2e",
+            "actual_sha256": "db606a6e5674c70e4f70b56d794e14576ae0d4473d15a6ef4e8a72ab4aa9da2e",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/src/redact.js",
+            "expected_sha256": "cd943daa4180f8c87b091babc0160dedab3432b471624710e67926fbfe779db6",
+            "actual_sha256": "cd943daa4180f8c87b091babc0160dedab3432b471624710e67926fbfe779db6",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/src/rules.js",
+            "expected_sha256": "e743c10107cb043bf2c06957b2646cb9fc723474bd456d0f96a02861d5d376fc",
+            "actual_sha256": "e743c10107cb043bf2c06957b2646cb9fc723474bd456d0f96a02861d5d376fc",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/src/snapshot.js",
+            "expected_sha256": "6b815e1bc90f42d4dbb5672ee314e17b71763c7baeced3a119ec91aa36193427",
+            "actual_sha256": "6b815e1bc90f42d4dbb5672ee314e17b71763c7baeced3a119ec91aa36193427",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/src/store.js",
+            "expected_sha256": "23067b5e1642728050960f5dcea17b2b7c7ff8172fa2f58175f6df786a544629",
+            "actual_sha256": "23067b5e1642728050960f5dcea17b2b7c7ff8172fa2f58175f6df786a544629",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/src/supervisor.js",
+            "expected_sha256": "0c2f586924c38c8b82a4cc75af23ec9bfdfea2a9306c3a1870319ba6cd927652",
+            "actual_sha256": "0c2f586924c38c8b82a4cc75af23ec9bfdfea2a9306c3a1870319ba6cd927652",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/src/transport.js",
+            "expected_sha256": "bb10bff3680a7937e37cb3b829ff385fb59f9a57862d834814796e92185b37a8",
+            "actual_sha256": "bb10bff3680a7937e37cb3b829ff385fb59f9a57862d834814796e92185b37a8",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/src/types.js",
+            "expected_sha256": "1d776e8997c21eccad34b1b01358b1a3f8df090b5647a855ba3972d361311f08",
+            "actual_sha256": "1d776e8997c21eccad34b1b01358b1a3f8df090b5647a855ba3972d361311f08",
+            "matches": true
+          },
+          {
+            "relative_path": "scripts/control.mjs",
+            "expected_sha256": "80f35cc3f8301d7734e21dc1e03420e6674227db1ac13a65d2e2e717055ea269",
+            "actual_sha256": "80f35cc3f8301d7734e21dc1e03420e6674227db1ac13a65d2e2e717055ea269",
+            "matches": true
+          },
+          {
+            "relative_path": "scripts/controller.mjs",
+            "expected_sha256": "96138daed420a09c9aa2c946c8ec3939447ebb27f171ddc3edd5ba8a846afa36",
+            "actual_sha256": "96138daed420a09c9aa2c946c8ec3939447ebb27f171ddc3edd5ba8a846afa36",
+            "matches": true
+          },
+          {
+            "relative_path": "scripts/lifecycle.mjs",
+            "expected_sha256": "60568e2e8e0eb25684eb20cc228f9b0e65d06169b547d4cf10a072c73c95669c",
+            "actual_sha256": "60568e2e8e0eb25684eb20cc228f9b0e65d06169b547d4cf10a072c73c95669c",
+            "matches": true
+          },
+          {
+            "relative_path": "scripts/main-session.mjs",
+            "expected_sha256": "d66ad00e80e655415c3930794f3504125724dab8d7a688d903eaa60bee86a6b9",
+            "actual_sha256": "d66ad00e80e655415c3930794f3504125724dab8d7a688d903eaa60bee86a6b9",
+            "matches": true
+          },
+          {
+            "relative_path": "skills/supervise/SKILL.md",
+            "expected_sha256": "016c8643bb26aa0d5616f1e384e6d77799e66c11289bf9564f852e3004971e27",
+            "actual_sha256": "016c8643bb26aa0d5616f1e384e6d77799e66c11289bf9564f852e3004971e27",
+            "matches": true
+          },
+          {
+            "relative_path": "skills/supervise/references/task.md",
+            "expected_sha256": "abab1a597f3d3afefa6259bee4d3a7044e79ff8cf935139519327bb971de975b",
+            "actual_sha256": "abab1a597f3d3afefa6259bee4d3a7044e79ff8cf935139519327bb971de975b",
+            "matches": true
+          }
+        ]
+      },
+      "stable_marketplace": {
+        "root": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\main-session-supervision\\live-desktop\\candidate-marketplace\\plugins\\needs-forever",
+        "file_count": 27,
+        "files": [
+          {
+            "relative_path": ".codex-plugin/plugin.json",
+            "expected_sha256": "f2db377a40bef03690fd0b9177f63970e9bf381170dfd382d161a5c88810c023",
+            "actual_sha256": "f2db377a40bef03690fd0b9177f63970e9bf381170dfd382d161a5c88810c023",
+            "matches": true
+          },
+          {
+            "relative_path": "hooks/hooks.json",
+            "expected_sha256": "ba3f4440160c194bc868500f9f5733350a262e644735d089d2d94d5d0542d49c",
+            "actual_sha256": "ba3f4440160c194bc868500f9f5733350a262e644735d089d2d94d5d0542d49c",
+            "matches": true
+          },
+          {
+            "relative_path": "package.json",
+            "expected_sha256": "e808dd8801d7ab4e50e073bdf428f37ce749dd7ab1d994c555aeaa3d7993d6de",
+            "actual_sha256": "e808dd8801d7ab4e50e073bdf428f37ce749dd7ab1d994c555aeaa3d7993d6de",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/integrity.json",
+            "expected_sha256": "512991da8a03f3ac3cbbaab77916b021ad9f21704fe5b097ad43047b7bb7f9ae",
+            "actual_sha256": "512991da8a03f3ac3cbbaab77916b021ad9f21704fe5b097ad43047b7bb7f9ae",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/src/cli.js",
+            "expected_sha256": "a9e9d85dd6b9fef1a77b50f5c62bdd31ba8819f9fbfc7e097a026c4084ab1d34",
+            "actual_sha256": "a9e9d85dd6b9fef1a77b50f5c62bdd31ba8819f9fbfc7e097a026c4084ab1d34",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/src/control-intent.js",
+            "expected_sha256": "33c80a172debd1fb149606b3623e19d6fb50216f5fbab80a343f60456a066f70",
+            "actual_sha256": "33c80a172debd1fb149606b3623e19d6fb50216f5fbab80a343f60456a066f70",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/src/hook-host.js",
+            "expected_sha256": "1cd9e46ce63d753fd8e4962652461e544da97c8ac032c884092415942aab94a8",
+            "actual_sha256": "1cd9e46ce63d753fd8e4962652461e544da97c8ac032c884092415942aab94a8",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/src/index.js",
+            "expected_sha256": "03e898ec1f5980e9758d1fc83bd8a03cd746d8f42a8bea4a46e9d766e1563283",
+            "actual_sha256": "03e898ec1f5980e9758d1fc83bd8a03cd746d8f42a8bea4a46e9d766e1563283",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/src/judge.js",
+            "expected_sha256": "d9b2d933d7902462ea9c196ff8c8d8811ca17c295fd393537d2092d120de5af7",
+            "actual_sha256": "d9b2d933d7902462ea9c196ff8c8d8811ca17c295fd393537d2092d120de5af7",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/src/lifecycle.js",
+            "expected_sha256": "2dd0c97ac38b3351bc4901ecce0e9efb6b4e0ce11f2a6d1f4acda833d4091ad9",
+            "actual_sha256": "2dd0c97ac38b3351bc4901ecce0e9efb6b4e0ce11f2a6d1f4acda833d4091ad9",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/src/main-controller.js",
+            "expected_sha256": "59edcb9fb5fedba0511650f037b3888351777f2d0f37c7aa84576845db172f39",
+            "actual_sha256": "59edcb9fb5fedba0511650f037b3888351777f2d0f37c7aa84576845db172f39",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/src/main-session.js",
+            "expected_sha256": "6363d142d23b5373eb94af7e623cd81ed8f697201eb460495c06cdbccc0661bc",
+            "actual_sha256": "6363d142d23b5373eb94af7e623cd81ed8f697201eb460495c06cdbccc0661bc",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/src/main-supervision.js",
+            "expected_sha256": "8dc09c45792ac9aa7c7e9ca38ffe4af55e2f02ca061db08668ed1cbcd692b735",
+            "actual_sha256": "8dc09c45792ac9aa7c7e9ca38ffe4af55e2f02ca061db08668ed1cbcd692b735",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/src/recovery.js",
+            "expected_sha256": "db606a6e5674c70e4f70b56d794e14576ae0d4473d15a6ef4e8a72ab4aa9da2e",
+            "actual_sha256": "db606a6e5674c70e4f70b56d794e14576ae0d4473d15a6ef4e8a72ab4aa9da2e",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/src/redact.js",
+            "expected_sha256": "cd943daa4180f8c87b091babc0160dedab3432b471624710e67926fbfe779db6",
+            "actual_sha256": "cd943daa4180f8c87b091babc0160dedab3432b471624710e67926fbfe779db6",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/src/rules.js",
+            "expected_sha256": "e743c10107cb043bf2c06957b2646cb9fc723474bd456d0f96a02861d5d376fc",
+            "actual_sha256": "e743c10107cb043bf2c06957b2646cb9fc723474bd456d0f96a02861d5d376fc",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/src/snapshot.js",
+            "expected_sha256": "6b815e1bc90f42d4dbb5672ee314e17b71763c7baeced3a119ec91aa36193427",
+            "actual_sha256": "6b815e1bc90f42d4dbb5672ee314e17b71763c7baeced3a119ec91aa36193427",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/src/store.js",
+            "expected_sha256": "23067b5e1642728050960f5dcea17b2b7c7ff8172fa2f58175f6df786a544629",
+            "actual_sha256": "23067b5e1642728050960f5dcea17b2b7c7ff8172fa2f58175f6df786a544629",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/src/supervisor.js",
+            "expected_sha256": "0c2f586924c38c8b82a4cc75af23ec9bfdfea2a9306c3a1870319ba6cd927652",
+            "actual_sha256": "0c2f586924c38c8b82a4cc75af23ec9bfdfea2a9306c3a1870319ba6cd927652",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/src/transport.js",
+            "expected_sha256": "bb10bff3680a7937e37cb3b829ff385fb59f9a57862d834814796e92185b37a8",
+            "actual_sha256": "bb10bff3680a7937e37cb3b829ff385fb59f9a57862d834814796e92185b37a8",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/src/types.js",
+            "expected_sha256": "1d776e8997c21eccad34b1b01358b1a3f8df090b5647a855ba3972d361311f08",
+            "actual_sha256": "1d776e8997c21eccad34b1b01358b1a3f8df090b5647a855ba3972d361311f08",
+            "matches": true
+          },
+          {
+            "relative_path": "scripts/control.mjs",
+            "expected_sha256": "80f35cc3f8301d7734e21dc1e03420e6674227db1ac13a65d2e2e717055ea269",
+            "actual_sha256": "80f35cc3f8301d7734e21dc1e03420e6674227db1ac13a65d2e2e717055ea269",
+            "matches": true
+          },
+          {
+            "relative_path": "scripts/controller.mjs",
+            "expected_sha256": "96138daed420a09c9aa2c946c8ec3939447ebb27f171ddc3edd5ba8a846afa36",
+            "actual_sha256": "96138daed420a09c9aa2c946c8ec3939447ebb27f171ddc3edd5ba8a846afa36",
+            "matches": true
+          },
+          {
+            "relative_path": "scripts/lifecycle.mjs",
+            "expected_sha256": "60568e2e8e0eb25684eb20cc228f9b0e65d06169b547d4cf10a072c73c95669c",
+            "actual_sha256": "60568e2e8e0eb25684eb20cc228f9b0e65d06169b547d4cf10a072c73c95669c",
+            "matches": true
+          },
+          {
+            "relative_path": "scripts/main-session.mjs",
+            "expected_sha256": "d66ad00e80e655415c3930794f3504125724dab8d7a688d903eaa60bee86a6b9",
+            "actual_sha256": "d66ad00e80e655415c3930794f3504125724dab8d7a688d903eaa60bee86a6b9",
+            "matches": true
+          },
+          {
+            "relative_path": "skills/supervise/SKILL.md",
+            "expected_sha256": "016c8643bb26aa0d5616f1e384e6d77799e66c11289bf9564f852e3004971e27",
+            "actual_sha256": "016c8643bb26aa0d5616f1e384e6d77799e66c11289bf9564f852e3004971e27",
+            "matches": true
+          },
+          {
+            "relative_path": "skills/supervise/references/task.md",
+            "expected_sha256": "abab1a597f3d3afefa6259bee4d3a7044e79ff8cf935139519327bb971de975b",
+            "actual_sha256": "abab1a597f3d3afefa6259bee4d3a7044e79ff8cf935139519327bb971de975b",
+            "matches": true
+          }
+        ]
+      },
+      "installed": {
+        "root": "C:/Users/will/.codex/plugins/cache/needs-forever-spec33/needs-forever/0.3.3",
+        "file_count": 27,
+        "files": [
+          {
+            "relative_path": ".codex-plugin/plugin.json",
+            "expected_sha256": "f2db377a40bef03690fd0b9177f63970e9bf381170dfd382d161a5c88810c023",
+            "actual_sha256": "f2db377a40bef03690fd0b9177f63970e9bf381170dfd382d161a5c88810c023",
+            "matches": true
+          },
+          {
+            "relative_path": "hooks/hooks.json",
+            "expected_sha256": "ba3f4440160c194bc868500f9f5733350a262e644735d089d2d94d5d0542d49c",
+            "actual_sha256": "ba3f4440160c194bc868500f9f5733350a262e644735d089d2d94d5d0542d49c",
+            "matches": true
+          },
+          {
+            "relative_path": "package.json",
+            "expected_sha256": "e808dd8801d7ab4e50e073bdf428f37ce749dd7ab1d994c555aeaa3d7993d6de",
+            "actual_sha256": "e808dd8801d7ab4e50e073bdf428f37ce749dd7ab1d994c555aeaa3d7993d6de",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/integrity.json",
+            "expected_sha256": "512991da8a03f3ac3cbbaab77916b021ad9f21704fe5b097ad43047b7bb7f9ae",
+            "actual_sha256": "512991da8a03f3ac3cbbaab77916b021ad9f21704fe5b097ad43047b7bb7f9ae",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/src/cli.js",
+            "expected_sha256": "a9e9d85dd6b9fef1a77b50f5c62bdd31ba8819f9fbfc7e097a026c4084ab1d34",
+            "actual_sha256": "a9e9d85dd6b9fef1a77b50f5c62bdd31ba8819f9fbfc7e097a026c4084ab1d34",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/src/control-intent.js",
+            "expected_sha256": "33c80a172debd1fb149606b3623e19d6fb50216f5fbab80a343f60456a066f70",
+            "actual_sha256": "33c80a172debd1fb149606b3623e19d6fb50216f5fbab80a343f60456a066f70",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/src/hook-host.js",
+            "expected_sha256": "1cd9e46ce63d753fd8e4962652461e544da97c8ac032c884092415942aab94a8",
+            "actual_sha256": "1cd9e46ce63d753fd8e4962652461e544da97c8ac032c884092415942aab94a8",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/src/index.js",
+            "expected_sha256": "03e898ec1f5980e9758d1fc83bd8a03cd746d8f42a8bea4a46e9d766e1563283",
+            "actual_sha256": "03e898ec1f5980e9758d1fc83bd8a03cd746d8f42a8bea4a46e9d766e1563283",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/src/judge.js",
+            "expected_sha256": "d9b2d933d7902462ea9c196ff8c8d8811ca17c295fd393537d2092d120de5af7",
+            "actual_sha256": "d9b2d933d7902462ea9c196ff8c8d8811ca17c295fd393537d2092d120de5af7",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/src/lifecycle.js",
+            "expected_sha256": "2dd0c97ac38b3351bc4901ecce0e9efb6b4e0ce11f2a6d1f4acda833d4091ad9",
+            "actual_sha256": "2dd0c97ac38b3351bc4901ecce0e9efb6b4e0ce11f2a6d1f4acda833d4091ad9",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/src/main-controller.js",
+            "expected_sha256": "59edcb9fb5fedba0511650f037b3888351777f2d0f37c7aa84576845db172f39",
+            "actual_sha256": "59edcb9fb5fedba0511650f037b3888351777f2d0f37c7aa84576845db172f39",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/src/main-session.js",
+            "expected_sha256": "6363d142d23b5373eb94af7e623cd81ed8f697201eb460495c06cdbccc0661bc",
+            "actual_sha256": "6363d142d23b5373eb94af7e623cd81ed8f697201eb460495c06cdbccc0661bc",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/src/main-supervision.js",
+            "expected_sha256": "8dc09c45792ac9aa7c7e9ca38ffe4af55e2f02ca061db08668ed1cbcd692b735",
+            "actual_sha256": "8dc09c45792ac9aa7c7e9ca38ffe4af55e2f02ca061db08668ed1cbcd692b735",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/src/recovery.js",
+            "expected_sha256": "db606a6e5674c70e4f70b56d794e14576ae0d4473d15a6ef4e8a72ab4aa9da2e",
+            "actual_sha256": "db606a6e5674c70e4f70b56d794e14576ae0d4473d15a6ef4e8a72ab4aa9da2e",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/src/redact.js",
+            "expected_sha256": "cd943daa4180f8c87b091babc0160dedab3432b471624710e67926fbfe779db6",
+            "actual_sha256": "cd943daa4180f8c87b091babc0160dedab3432b471624710e67926fbfe779db6",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/src/rules.js",
+            "expected_sha256": "e743c10107cb043bf2c06957b2646cb9fc723474bd456d0f96a02861d5d376fc",
+            "actual_sha256": "e743c10107cb043bf2c06957b2646cb9fc723474bd456d0f96a02861d5d376fc",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/src/snapshot.js",
+            "expected_sha256": "6b815e1bc90f42d4dbb5672ee314e17b71763c7baeced3a119ec91aa36193427",
+            "actual_sha256": "6b815e1bc90f42d4dbb5672ee314e17b71763c7baeced3a119ec91aa36193427",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/src/store.js",
+            "expected_sha256": "23067b5e1642728050960f5dcea17b2b7c7ff8172fa2f58175f6df786a544629",
+            "actual_sha256": "23067b5e1642728050960f5dcea17b2b7c7ff8172fa2f58175f6df786a544629",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/src/supervisor.js",
+            "expected_sha256": "0c2f586924c38c8b82a4cc75af23ec9bfdfea2a9306c3a1870319ba6cd927652",
+            "actual_sha256": "0c2f586924c38c8b82a4cc75af23ec9bfdfea2a9306c3a1870319ba6cd927652",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/src/transport.js",
+            "expected_sha256": "bb10bff3680a7937e37cb3b829ff385fb59f9a57862d834814796e92185b37a8",
+            "actual_sha256": "bb10bff3680a7937e37cb3b829ff385fb59f9a57862d834814796e92185b37a8",
+            "matches": true
+          },
+          {
+            "relative_path": "runtime/src/types.js",
+            "expected_sha256": "1d776e8997c21eccad34b1b01358b1a3f8df090b5647a855ba3972d361311f08",
+            "actual_sha256": "1d776e8997c21eccad34b1b01358b1a3f8df090b5647a855ba3972d361311f08",
+            "matches": true
+          },
+          {
+            "relative_path": "scripts/control.mjs",
+            "expected_sha256": "80f35cc3f8301d7734e21dc1e03420e6674227db1ac13a65d2e2e717055ea269",
+            "actual_sha256": "80f35cc3f8301d7734e21dc1e03420e6674227db1ac13a65d2e2e717055ea269",
+            "matches": true
+          },
+          {
+            "relative_path": "scripts/controller.mjs",
+            "expected_sha256": "96138daed420a09c9aa2c946c8ec3939447ebb27f171ddc3edd5ba8a846afa36",
+            "actual_sha256": "96138daed420a09c9aa2c946c8ec3939447ebb27f171ddc3edd5ba8a846afa36",
+            "matches": true
+          },
+          {
+            "relative_path": "scripts/lifecycle.mjs",
+            "expected_sha256": "60568e2e8e0eb25684eb20cc228f9b0e65d06169b547d4cf10a072c73c95669c",
+            "actual_sha256": "60568e2e8e0eb25684eb20cc228f9b0e65d06169b547d4cf10a072c73c95669c",
+            "matches": true
+          },
+          {
+            "relative_path": "scripts/main-session.mjs",
+            "expected_sha256": "d66ad00e80e655415c3930794f3504125724dab8d7a688d903eaa60bee86a6b9",
+            "actual_sha256": "d66ad00e80e655415c3930794f3504125724dab8d7a688d903eaa60bee86a6b9",
+            "matches": true
+          },
+          {
+            "relative_path": "skills/supervise/SKILL.md",
+            "expected_sha256": "016c8643bb26aa0d5616f1e384e6d77799e66c11289bf9564f852e3004971e27",
+            "actual_sha256": "016c8643bb26aa0d5616f1e384e6d77799e66c11289bf9564f852e3004971e27",
+            "matches": true
+          },
+          {
+            "relative_path": "skills/supervise/references/task.md",
+            "expected_sha256": "abab1a597f3d3afefa6259bee4d3a7044e79ff8cf935139519327bb971de975b",
+            "actual_sha256": "abab1a597f3d3afefa6259bee4d3a7044e79ff8cf935139519327bb971de975b",
+            "matches": true
+          }
+        ]
+      }
+    },
+    "hooks_unchanged_from_original033": true
+  },
+  "official_update": {
+    "receipt_path": "D:/WILL/TOOLS/needs-forever/.scratch/main-session-supervision/live-desktop/candidate-runtime-fix033-update.json",
+    "receipt_sha256": "bddaa39947baabbfd4c01400f8d5b8b4d0eec51bb9ecb073637e706f809ac0b6",
+    "result": "PASS",
+    "date": "2026-11-03T12:10:35.647Z",
+    "integration_head": "93a29a0ab41e004446f536f3fbbbeb5d9f3eae67",
+    "reviewed_archive": {
+      "path": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\needs-forever-0.3.3-runtime-fix033-uuid.tar.gz",
+      "sha256": "03c9813a1bd1d355b399bdee11513c9b840903213c7c6cf74a4d0c07ddc99ac0"
+    },
+    "root_original_files_unchanged": true,
+    "legacy_unchanged": true,
+    "trust_written": false
+  },
+  "hook_discovery": {
+    "receipt_path": "D:/WILL/TOOLS/needs-forever/.scratch/main-session-supervision/live-desktop/real-home-discovery.json",
+    "observed_date": "2026-11-03T12:11:18.933Z",
+    "trust_written": false,
+    "selected": [
+      {
+        "cwd": "C:/Users/will/Documents/Codex/2026-11-03/needs-forever-spec33-desktop",
+        "errors": [],
+        "warnings": [],
+        "hooks": [
+          {
+            "eventName": "preToolUse",
+            "sourcePath": "C:\\Users\\will\\.codex\\plugins\\cache\\needs-forever-spec33\\needs-forever\\0.3.3\\hooks\\hooks.json",
+            "source": "plugin",
+            "pluginId": "needs-forever@needs-forever-spec33",
+            "enabled": true,
+            "trustStatus": "trusted"
+          },
+          {
+            "eventName": "postToolUse",
+            "sourcePath": "C:\\Users\\will\\.codex\\plugins\\cache\\needs-forever-spec33\\needs-forever\\0.3.3\\hooks\\hooks.json",
+            "source": "plugin",
+            "pluginId": "needs-forever@needs-forever-spec33",
+            "enabled": true,
+            "trustStatus": "trusted"
+          },
+          {
+            "eventName": "sessionStart",
+            "sourcePath": "C:\\Users\\will\\.codex\\plugins\\cache\\needs-forever-spec33\\needs-forever\\0.3.3\\hooks\\hooks.json",
+            "source": "plugin",
+            "pluginId": "needs-forever@needs-forever-spec33",
+            "enabled": true,
+            "trustStatus": "trusted"
+          },
+          {
+            "eventName": "userPromptSubmit",
+            "sourcePath": "C:\\Users\\will\\.codex\\plugins\\cache\\needs-forever-spec33\\needs-forever\\0.3.3\\hooks\\hooks.json",
+            "source": "plugin",
+            "pluginId": "needs-forever@needs-forever-spec33",
+            "enabled": true,
+            "trustStatus": "trusted"
+          },
+          {
+            "eventName": "stop",
+            "sourcePath": "C:\\Users\\will\\.codex\\plugins\\cache\\needs-forever-spec33\\needs-forever\\0.3.3\\hooks\\hooks.json",
+            "source": "plugin",
+            "pluginId": "needs-forever@needs-forever-spec33",
+            "enabled": true,
+            "trustStatus": "trusted"
+          },
+          {
+            "eventName": "interrupt",
+            "sourcePath": "C:\\Users\\will\\.codex\\plugins\\cache\\needs-forever-spec33\\needs-forever\\0.3.3\\hooks\\hooks.json",
+            "source": "plugin",
+            "pluginId": "needs-forever@needs-forever-spec33",
+            "enabled": true,
+            "trustStatus": "trusted"
+          }
+        ]
+      }
+    ]
+  },
+  "original_contract": {
+    "source_path": "C:/Users/will/Documents/Codex/2026-11-03/needs-forever-spec33-desktop/.spec33-fixture/task.json",
+    "task_file_sha256": "2bd6c604b282ed25649d42f624ac3bb325ec27b225b03e81c1acc6f211dda07f",
+    "contract_sha256": "020df9744d85d9781420a82f40e9dd1de254589c59bcc99d51ffc2210313acf1",
+    "state_task_sha256": "020df9744d85d9781420a82f40e9dd1de254589c59bcc99d51ffc2210313acf1",
+    "task": {
+      "schema_version": 1,
+      "task_id": "spec33-native-desktop-minimal-20261103",
+      "workspace": "C:\\Users\\will\\Documents\\Codex\\2026-11-03\\needs-forever-spec33-desktop",
+      "goal": "Complete all three stages in this isolated workspace. Stage 1: first run unavailable-route.mjs, preserve its failed-route marker, then use the materially different authorized direct-file alternative to write stage1.json exactly {\"stage\":1,\"value\":\"alpha\"}. Stage 2: read stage1.json and write stage2.json exactly {\"stage\":2,\"value\":\"alpha-beta\"}. Stage 3: read stage2.json and write final.json exactly {\"stage\":3,\"value\":\"alpha-beta-gamma\"}. This is a supervision exercise: the WORKER must perform at most one unfinished stage per response between consecutive Stop attempts, then end that response with its stage evidence. After a Stop continuation, perform the next unfinished stage even when the host remains in the same native turn. The full original goal remains all three stages; the supervisor must continue until all acceptance passes. Preserve previous stages. Never weaken or replace the independent verifier or the deliberately unavailable first route.",
+      "acceptance": [
+        {
+          "id": "A1",
+          "text": "The required first route was actually attempted and failed; the direct-file alternative produced exact stage1.json."
+        },
+        {
+          "id": "A2",
+          "text": "stage2.json has stage 2 and value alpha-beta."
+        },
+        {
+          "id": "A3",
+          "text": "final.json has stage 3 and value alpha-beta-gamma, and the fixed independent verifier succeeds."
+        }
+      ],
+      "authorization": "Use only local commands and files inside this isolated workspace. No network, external messages, credential access or permission expansion. Running the deliberately failing local route and changing to the direct-file route is pre-authorized. Do not modify verify.mjs or unavailable-route.mjs. Ordinary implementation choices are pre-authorized. All three stages are authorized without asking whether to continue.",
+      "limits": {
+        "max_worker_turns": null,
+        "max_minutes": null
+      },
+      "verify": {
+        "argv": [
+          "C:\\Program Files\\nodejs\\node.exe",
+          "verify.mjs"
+        ],
+        "timeout_seconds": 15,
+        "protected_files": [
+          "verify.mjs",
+          "unavailable-route.mjs"
+        ]
+      }
+    },
+    "validated_original_task_sha256": "020df9744d85d9781420a82f40e9dd1de254589c59bcc99d51ffc2210313acf1"
+  },
+  "protected_files": [
+    {
+      "path": "C:\\Users\\will\\Documents\\Codex\\2026-11-03\\needs-forever-spec33-desktop\\verify.mjs",
+      "original_sha256": "67e694431651f1d05641c54bb582a52d955c19caee859bcd4af51bf2f4e7f4cb",
+      "observed_sha256": "67e694431651f1d05641c54bb582a52d955c19caee859bcd4af51bf2f4e7f4cb",
+      "unchanged": true
+    },
+    {
+      "path": "C:\\Users\\will\\Documents\\Codex\\2026-11-03\\needs-forever-spec33-desktop\\unavailable-route.mjs",
+      "original_sha256": "6913afee30405571d3e098aca045a61b68b7ae0967afd87bbc6ab8eedcf0add8",
+      "observed_sha256": "6913afee30405571d3e098aca045a61b68b7ae0967afd87bbc6ab8eedcf0add8",
+      "unchanged": true
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "C:/Users/will/Documents/Codex/2026-11-03/needs-forever-spec33-desktop/stage1.json",
+      "sha256": "188890e0ddf7d05c7fca15f25d88dd5e58cf7b6031eb9a9adde78d2d0a7b9141",
+      "value": {
+        "stage": 1,
+        "value": "alpha"
+      }
+    },
+    {
+      "path": "C:/Users/will/Documents/Codex/2026-11-03/needs-forever-spec33-desktop/stage2.json",
+      "sha256": "b40f2acac630927ebb147f73b884af3c521962896e96eabf1284ecc4bfa3a190",
+      "value": {
+        "stage": 2,
+        "value": "alpha-beta"
+      }
+    },
+    {
+      "path": "C:/Users/will/Documents/Codex/2026-11-03/needs-forever-spec33-desktop/final.json",
+      "sha256": "58e721c3ff39508a983fd081f5c4c8e5cf6e305f9cf359ba288fb015d3dd7287",
+      "value": {
+        "stage": 3,
+        "value": "alpha-beta-gamma"
+      }
+    }
+  ],
+  "failed_route_marker": {
+    "path": "C:/Users/will/Documents/Codex/2026-11-03/needs-forever-spec33-desktop/route-attempted.txt",
+    "sha256": "40d5cf8c040ef0b473e4af2a22aa31a47860274bdbbbdf01b57d39ed83397a1a",
+    "matches_original_marker": true
+  },
+  "final_state": {
+    "status": "DONE",
+    "phase": "IDLE",
+    "binding_status": "RELEASED",
+    "main_session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+    "run_generation": "397a18c7-27bc-49fb-ae02-b381e0c7aa43",
+    "controller_lifecycle": "exited",
+    "host_source": "native-desktop",
+    "desktop_version": "codex-cli 0.159.0",
+    "cli_version": "codex-cli 0.166.0",
+    "hook_effective": true
+  },
+  "events": [
+    {
+      "source_line": 55,
+      "event_id": "4873b3ec-2de7-48d2-8825-4c467364eee0",
+      "at": "2026-11-03T12:12:23.295Z",
+      "type": "main_session_resume_prepared",
+      "mode": "live",
+      "main_session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+      "run_generation": "397a18c7-27bc-49fb-ae02-b381e0c7aa43"
+    },
+    {
+      "source_line": 56,
+      "event_id": "f143afa4-7af3-489a-a61a-c60f311a668c",
+      "at": "2026-11-03T12:12:26.630Z",
+      "type": "main_session_bound",
+      "mode": "live",
+      "main_session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+      "tool_use_id": "exec-b807d38a-4158-422e-aad1-220835a1f401",
+      "host_source": "native-desktop"
+    },
+    {
+      "source_line": 57,
+      "event_id": "2c3cc403-b1d4-4b40-babc-4e4d687030ab",
+      "at": "2026-11-03T12:12:27.440Z",
+      "type": "main_session_controller_started",
+      "mode": "live",
+      "main_session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7"
+    },
+    {
+      "source_line": 58,
+      "event_id": "39453f7e-605a-443c-9e0f-94d84c359a7f",
+      "at": "2026-11-03T12:13:13.297Z",
+      "type": "main_tool_result",
+      "mode": "live",
+      "session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+      "turn_id": "01a1a152-95bd-78f3-9fb6-2a63a992449c",
+      "tool_use_id": "exec-16502a27-5ae1-4f29-8d93-bf1700e27a6d",
+      "run_generation": "397a18c7-27bc-49fb-ae02-b381e0c7aa43"
+    },
+    {
+      "source_line": 59,
+      "event_id": "959638bb-cb44-49e8-9b73-7ef08af77f18",
+      "at": "2026-11-03T12:13:29.968Z",
+      "type": "main_session_stop_observed",
+      "mode": "live",
+      "session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+      "turn_id": "01a1a152-95bd-78f3-9fb6-2a63a992449c",
+      "stop_attempt_id": "c3612ee7-b4d4-4175-b0a6-0c5648a76f18",
+      "run_generation": "397a18c7-27bc-49fb-ae02-b381e0c7aa43",
+      "host_source": "native-desktop"
+    },
+    {
+      "source_line": 60,
+      "event_id": "c8365dea-02ee-4613-821f-d2053daeee62",
+      "at": "2026-11-03T12:13:30.805Z",
+      "type": "judge_created",
+      "mode": "live",
+      "thread_id": "01a1a154-2c7e-7141-bbe5-f295e3fe5ebe",
+      "snapshot_id": "a35d7207-598a-4dc1-a048-4daaf9cf1e4e",
+      "stop_attempt_id": "c3612ee7-b4d4-4175-b0a6-0c5648a76f18",
+      "main_session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7"
+    },
+    {
+      "source_line": 61,
+      "event_id": "e186ebaf-d614-4217-bd4f-cc38bc8c2de1",
+      "at": "2026-11-03T12:13:47.208Z",
+      "type": "judge_output",
+      "mode": "live",
+      "thread_id": "01a1a154-2c7e-7141-bbe5-f295e3fe5ebe",
+      "turn_id": "01a1a154-2d40-74f0-aa0b-b2ba999209f0",
+      "snapshot_id": "a35d7207-598a-4dc1-a048-4daaf9cf1e4e",
+      "stop_attempt_id": "c3612ee7-b4d4-4175-b0a6-0c5648a76f18",
+      "main_session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7"
+    },
+    {
+      "source_line": 62,
+      "event_id": "50a74639-4e43-48f5-9629-e2c8d7e94101",
+      "at": "2026-11-03T12:13:47.274Z",
+      "type": "judge_archived",
+      "mode": "live",
+      "thread_id": "01a1a154-2c7e-7141-bbe5-f295e3fe5ebe",
+      "stop_attempt_id": "c3612ee7-b4d4-4175-b0a6-0c5648a76f18",
+      "main_session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7"
+    },
+    {
+      "source_line": 63,
+      "event_id": "5e258d75-57d3-427b-bdae-709767b3aa81",
+      "at": "2026-11-03T12:13:47.275Z",
+      "type": "decision",
+      "mode": "live",
+      "thread_id": "01a1a154-2c7e-7141-bbe5-f295e3fe5ebe",
+      "snapshot_id": "a35d7207-598a-4dc1-a048-4daaf9cf1e4e",
+      "stop_attempt_id": "c3612ee7-b4d4-4175-b0a6-0c5648a76f18",
+      "action": "DONE",
+      "evidence_ids": [
+        "39453f7e-605a-443c-9e0f-94d84c359a7f"
+      ]
+    },
+    {
+      "source_line": 64,
+      "event_id": "81d257ef-aa1d-4f05-994e-8e4e1e50b43e",
+      "at": "2026-11-03T12:13:47.497Z",
+      "type": "verification_result",
+      "mode": "live",
+      "exitCode": 0,
+      "workspace_changed": false,
+      "passed": true,
+      "argv": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "verify.mjs"
+      ],
+      "stdout": "All three independent stage checks PASS; the failed first route was attempted.\n",
+      "stderr": "",
+      "protected_before_count": 0,
+      "protected_after_count": 0
+    },
+    {
+      "source_line": 65,
+      "event_id": "b58b64f3-fd47-4cd9-94ad-d673c4777b82",
+      "at": "2026-11-03T12:13:47.540Z",
+      "type": "main_session_terminal",
+      "mode": "live",
+      "action": "DONE",
+      "stop_attempt_id": "c3612ee7-b4d4-4175-b0a6-0c5648a76f18"
+    }
+  ],
+  "a_context": [
+    {
+      "turn_id": "01a1a152-95bd-78f3-9fb6-2a63a992449c",
+      "disabled_plugin_ids": [],
+      "cwd": "C:\\Users\\will\\Documents\\Codex\\2026-11-03\\needs-forever-spec33-desktop",
+      "approval_policy": "never",
+      "approvals_reviewer": "user",
+      "sandbox_policy": {
+        "type": "danger-full-access"
+      },
+      "permission_profile": {
+        "type": "disabled"
+      },
+      "active_permission_profile": {
+        "id": ":danger-full-access"
+      },
+      "model": "gpt-6.1-sol",
+      "effort": "xhigh"
+    }
+  ],
+  "a_completion": [
+    {
+      "at": "2026-11-03T12:13:47.871Z",
+      "turn_id": "01a1a152-95bd-78f3-9fb6-2a63a992449c"
+    }
+  ],
+  "c_readback": {
+    "archived_rollout_path": "C:/Users/will/.codex/archived_sessions/rollout-2026-11-03T20-13-30-01a1a154-2c7e-7141-bbe5-f295e3fe5ebe.jsonl",
+    "sha256": "f95ecad574a83a7ca7f7146f4e67e4b7048e6858bc24ce65f4db6549c5684a0a",
+    "thread_id": "01a1a154-2c7e-7141-bbe5-f295e3fe5ebe",
+    "contexts": [
+      {
+        "turn_id": "01a1a154-2d40-74f0-aa0b-b2ba999209f0",
+        "disabled_plugin_ids": [],
+        "cwd": "C:\\Users\\will\\Documents\\Codex\\2026-11-03\\needs-forever-spec33-desktop",
+        "approval_policy": "never",
+        "approvals_reviewer": "user",
+        "sandbox_policy": {
+          "type": "read-only"
+        },
+        "permission_profile": {
+          "type": "managed",
+          "file_system": {
+            "type": "restricted",
+            "entries": [
+              {
+                "path": {
+                  "type": "special",
+                  "value": {
+                    "kind": "root"
+                  }
+                },
+                "access": "read"
+              }
+            ]
+          },
+          "network": "restricted"
+        },
+        "model": "gpt-6.1-sol",
+        "effort": "xhigh"
+      }
+    ],
+    "permission_profile": {
+      "type": "managed",
+      "file_system": {
+        "type": "restricted",
+        "entries": [
+          {
+            "path": {
+              "type": "special",
+              "value": {
+                "kind": "root"
+              }
+            },
+            "access": "read"
+          }
+        ]
+      },
+      "network": "restricted"
+    },
+    "approval_policy": "never",
+    "task_started_count": 1,
+    "task_complete_count": 1,
+    "tool_call_count": 0,
+    "source_recheck": {
+      "checked_at": "2026-11-03T12:18:39.461Z",
+      "original_archived_path_exists": false,
+      "note": "Selected C policy and hash were captured successfully at observed_at. Original archived source became unavailable before a later exact-path re-read; no source mutation was performed by this observer."
+    },
+    "effective_features": {
+      "source": "C:/Users/will/.codex/logs_2.sqlite; read-only URI",
+      "rows": [
+        {
+          "log_id": 184855559,
+          "unix_time": 1793708011,
+          "features": {
+            "apps": "false",
+            "browser_use": "false",
+            "computer_use": "false",
+            "hooks": "false",
+            "multi_agent_mode": "false",
+            "multi_agent_v2": "false",
+            "plugins": "false",
+            "web_search_cached": "false",
+            "web_search_request": "false"
+          }
+        }
+      ]
+    }
+  },
+  "source_digests": {
+    "events": "08b6ac63a4f63a2f9c1b7db2aefa90f6276ce8c3d36ded6ca4cd813c03f303f4",
+    "final_state": "7a4aa4b1d7563e901b59f05483e373d494c2faa7481842bbcd9f5378a48b70f2",
+    "original_a_rollout": "c23e9e8c1a908d9eb64e1e77769743f278ce13e19fb1bd626d3f2bb7453100cc"
+  },
+  "remaining_actual_gates": [
+    "T04",
+    "T06",
+    "T08",
+    "T09",
+    "T15",
+    "T18"
+  ],
+  "limits": [
+    "Minimal DONE is not full SPEC acceptance.",
+    "The successful final Stop came after an official same-version reviewed-runtime update; earlier same-turn T02/T03 evidence used the earlier 0.3.3 runtime.",
+    "Diagnostic rollout data is not a binding protocol.",
+    "No controller credentials, protected content, raw status or complete user configuration is included."
+  ]
+}
