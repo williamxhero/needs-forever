@@ -1,8 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { spawn, spawnSync } from 'node:child_process';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { setTimeout as delay } from 'node:timers/promises';
 
 function json(path: string): any { return JSON.parse(readFileSync(path, 'utf8')); }
 function fixture(name: string, options: Record<string, unknown>) {
@@ -201,22 +202,55 @@ test('failed native thread unload request clears the gate and reconciles complet
   assert.equal(sends.length, 1);
 });
 
-test('real judge timeout closes the old app-server, reconnects the worker and retries with a fresh judge', () => {
+test('real judge timeout closes the old app-server, reconnects the worker and retries with a fresh judge', async (t) => {
   const run = fixture('real-judge-timeout-recovery', {
     real_judge: true,
-    judge_timeout_ms: 50,
+    // The deadline includes thread/start RPC scheduling. Hold the first C
+    // explicitly instead of racing a 50ms window against parallel file tests.
+    judge_timeout_ms: 1_000,
     hold_judge_once: true,
     tool_items: [{ type: 'commandExecution', id: 'check', command: 'check', status: 'completed', exitCode: 0, aggregatedOutput: 'A1 passes.' }],
     judge_outputs: [JSON.stringify({ action: 'DONE', reason: 'Accepted after timeout recovery.', evidence_ids: ['E1'], next_message: '', external: null })],
   });
-  const result = run.run();
-  assert.equal(result.status, 0, result.stderr);
+  const child = spawn(process.execPath, [resolve('dist/src/cli.js'), 'start', '--task', run.task, '--state', run.state, '--test-fixture', run.fixtureFile], { windowsHide: true, stdio: 'pipe' });
+  let stdout = '', stderr = '';
+  child.stdout.on('data', (chunk) => { stdout += chunk; });
+  child.stderr.on('data', (chunk) => { stderr += chunk; });
+  let settled = false;
+  const exited = new Promise<number | null>((done, reject) => { child.once('error', reject); child.once('exit', (code) => { settled = true; done(code); }); });
+  t.after(async () => {
+    if (!settled) {
+      child.stdin.write('\u0003');
+      await Promise.race([exited, delay(5_000)]);
+      if (!settled) child.kill();
+    }
+  });
+  const entries = (path: string): any[] => existsSync(path) ? readFileSync(path, 'utf8').trim().split('\n').filter(Boolean).map((line) => JSON.parse(line)) : [];
+  const events = () => entries(resolve(run.directory, 'events.jsonl'));
+  const protocol = () => entries(run.trace);
+  const until = async (condition: () => boolean, description: string) => {
+    const deadline = Date.now() + 5_000;
+    while (!condition() && Date.now() < deadline && !settled) await delay(25);
+    assert.ok(condition(), `${description}; stderr=${stderr}; stdout=${stdout}`);
+  };
+  await until(() => protocol().some((entry) => entry.message?.method === 'turn/start' && entry.message.params.threadId === 'judge-1'), 'The held C must actually start before its timeout');
+  const ownerPid = protocol().find((entry) => entry.message?.method === 'turn/start' && entry.message.params.threadId === 'judge-1').pid;
+  await until(() => events().some((entry) => entry.type === 'judge_terminated' && entry.thread_id === 'judge-1'), 'The held C must terminate on its real deadline');
+  assert.throws(() => process.kill(ownerPid, 0));
+  await until(() => events().some((entry) => entry.type === 'judge_archived' && entry.thread_id === 'judge-1' && entry.via === 'isolated_cleanup'), 'The exact terminated C must be archived');
+  await until(() => protocol().some((entry) => entry.message?.method === 'thread/resume' && entry.message.params.threadId === 'worker-from-server'), 'Recovery must resume the original worker');
+  await until(() => protocol().some((entry) => entry.message?.method === 'turn/start' && entry.message.params.threadId === 'judge-2'), 'A fresh C must retry after cleanup');
+  await until(() => settled, 'The fresh C must finish the recovered task');
+  const result = await exited;
+  assert.equal(result, 0, stderr);
   assert.equal(json(run.state).status, 'DONE');
   const state = json(run.state);
-  assert.ok(state.judge_thread_ids.length >= 2);
-  const events = readFileSync(resolve(run.directory, 'events.jsonl'), 'utf8');
-  assert.match(events, /judge_timeout/);
-  assert.match(events, /connection_reconnected/);
+  assert.deepEqual(state.judge_thread_ids, ['judge-1', 'judge-2']);
+  assert.equal(events().filter((entry) => entry.type === 'recovery_retry_scheduled' && entry.kind === 'judge_timeout').length, 1);
+  assert.equal(events().some((entry) => entry.type === 'judge_terminated' && entry.thread_id === null), false, 'The recovery test must exercise a known C, not a startup scheduling race.');
+  assert.deepEqual(protocol().filter((entry) => entry.message?.method === 'thread/archive').map((entry) => entry.message.params.threadId), ['judge-1', 'judge-2']);
+  assert.equal(protocol().filter((entry) => entry.message?.method === 'turn/start' && entry.message.params.threadId === 'worker-from-server').length, 1);
+  assert.ok(events().some((entry) => entry.type === 'connection_reconnected'));
 });
 
 test('three identical judge failures appear in the next judge snapshot as an investigation instruction', () => {
