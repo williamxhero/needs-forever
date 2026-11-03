@@ -1,0 +1,12 @@
+2026-11-03 Windows PowerShell, ticket35 worktree
+npm test
+  TypeScript build: PASS
+  Self-contained plugin packaging: PASS (15 runtime modules)
+  Node tests: 84 tests, 84 pass, 0 fail, 0 skipped
+  Recorded duration: 19511.733 ms
+
+Targeted final disconnect regression:
+  node --test --test-name-pattern='disconnecting' dist/test/main-controller.test.js
+  1 test, 1 pass, 0 fail
+
+Evidence mode: simulated host/supervisor. Native Desktop continuation: not_run.

@@ -13,6 +13,9 @@ export interface MainSessionState extends State {
   binding: { status: 'PENDING_NATIVE_HOOK' | 'BOUND'; tool_use_id: string | null; bound_at: string | null; challenge: string; task_path: string };
   host: { desktop_version: string | null; cli_version: string | null; hook_effective: boolean; source: 'unverified' | 'native-desktop' | 'simulated'; reason: string };
   last_stop?: StopRequest;
+  controller?: { id: string; pid: number; endpoint: string; token: string; lifecycle: 'running' | 'exited'; started_at: string; run_generation: string; plugin_root: string };
+  stop_transport?: { request: StopRequest; outcome: 'pending' | 'returned' | 'unknown' | 'failed'; error?: string; delivery_id?: string };
+  continuation_confirmed?: boolean;
 }
 export interface StopRequest {
   schema_version: 1;
