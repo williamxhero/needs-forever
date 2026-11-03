@@ -1,0 +1,11 @@
+{
+  "description": "Needs Forever main-session supervision. Review these hooks in Codex Settings > Hooks before use.",
+  "hooks": {
+    "SessionStart": [{ "hooks": [{ "type": "command", "command": "node \"${PLUGIN_ROOT}/scripts/lifecycle.mjs\"", "commandWindows": "node \"%PLUGIN_ROOT%\\scripts\\lifecycle.mjs\"", "timeout": 30 }] }],
+    "PreToolUse": [{ "hooks": [{ "type": "command", "command": "node \"${PLUGIN_ROOT}/scripts/lifecycle.mjs\"", "commandWindows": "node \"%PLUGIN_ROOT%\\scripts\\lifecycle.mjs\"", "timeout": 30 }] }],
+    "PostToolUse": [{ "hooks": [{ "type": "command", "command": "node \"${PLUGIN_ROOT}/scripts/lifecycle.mjs\"", "commandWindows": "node \"%PLUGIN_ROOT%\\scripts\\lifecycle.mjs\"", "timeout": 30 }] }],
+    "Stop": [{ "hooks": [{ "type": "command", "command": "node \"${PLUGIN_ROOT}/scripts/lifecycle.mjs\"", "commandWindows": "node \"%PLUGIN_ROOT%\\scripts\\lifecycle.mjs\"", "timeout": 600, "statusMessage": "Checking Needs Forever acceptance" }] }],
+    "UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "node \"${PLUGIN_ROOT}/scripts/lifecycle.mjs\"", "commandWindows": "node \"%PLUGIN_ROOT%\\scripts\\lifecycle.mjs\"", "timeout": 30 }] }],
+    "Interrupt": [{ "hooks": [{ "type": "command", "command": "node \"${PLUGIN_ROOT}/scripts/lifecycle.mjs\"", "commandWindows": "node \"%PLUGIN_ROOT%\\scripts\\lifecycle.mjs\"", "timeout": 3 }] }]
+  }
+}

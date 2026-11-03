@@ -1,0 +1,22 @@
+✔ installed main-session preparation stays pending without native identity despite guessed session environment (182.9188ms)
+✔ binding accepts neutral task filenames and Code Mode tool input without recording unrelated callbacks (430.7103ms)
+✔ structured host callback binds only the matching preparation and keeps fixture evidence simulated (463.1316ms)
+✔ bound Stop callback records distinct attempt identities without subagent recursion or foreign-session activity (891.3592ms)
+✔ Windows native hook command resolves the installed package in a path with spaces and Chinese characters (3644.7619ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5708.1782
+✔ plugin ships the exact executable core and resolves all marketplace/skill resources locally (6.0884ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 101.8759
