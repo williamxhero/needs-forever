@@ -1,0 +1,13 @@
+✔ isolated installed-package discovery reports untrusted hooks without claiming native effectiveness (621.7966ms)
+✔ plugin ships the exact executable core and resolves all marketplace/skill resources locally (7.6818ms)
+✔ installed copy starts in background, pauses durably, resumes the original worker, then completes (1964.3531ms)
+✔ plugin reports failed startup and status never launches a worker (387.1875ms)
+✔ status distinguishes an orphaned ACTIVE checkpoint from a live supervisor without changing it (186.4559ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2653.1794

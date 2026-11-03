@@ -41,6 +41,9 @@ test('plugin ships the exact executable core and resolves all marketplace/skill 
   assert.equal(existsSync(join(source, 'plugin.json')), false, 'The AgentPlugin format suppresses hooks in supported Desktop 0.159.');
   assert.equal(legacy.name, 'needs-forever');
   assert.equal(manifest.version, legacy.version);
+  assert.equal(manifest.version, json('package.json').version);
+  assert.equal(manifest.version, json('package-lock.json').version);
+  assert.equal(manifest.version, json('package-lock.json').packages[''].version);
   assert.equal(resolve(market.plugins[0].source.path), source);
   assert.ok(existsSync(join(source, 'skills/supervise/SKILL.md')));
   for (const [path, hash] of Object.entries(json(join(source, 'runtime/integrity.json')).files)) {
