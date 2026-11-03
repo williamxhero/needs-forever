@@ -1,0 +1,130 @@
+{
+  "classification": "Isolated merge rehearsal only; product baseline full suite is RED 123/124; no delivery/install",
+  "root_original_head": "1bae005697e902a9fc3b93f5f04bb333f8ccd87d",
+  "root_unchanged_after_rehearsal": true,
+  "root_index_empty": true,
+  "backup_directory": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\integration\\runs\\main-merge-rehearsal-033\\root-backup",
+  "backup_manifest": {
+    "root": "D:\\WILL\\TOOLS\\needs-forever",
+    "head": "1bae005697e902a9fc3b93f5f04bb333f8ccd87d",
+    "branch": "main",
+    "tracked_patch_sha256": "a75519523cbe161fe1f873bf3107126f36a6a384aab8dbfa6e55cec91ea452ba",
+    "untracked": [
+      "docs/codex-main-session-supervision-spec.md",
+      "docs/supervisor-web-ui-demo.html",
+      "docs/supervisor-web-ui-design.md",
+      "plugins/needs-forever/runtime/src/web.js",
+      "src/web.ts",
+      "test/web.test.ts"
+    ],
+    "files": [
+      {
+        "path": "README.md",
+        "sha256": "e49aac0f0617c152c4d64da83ad03c7845b50c89363ca0fa35601a2707cb9718",
+        "bytes": 14345
+      },
+      {
+        "path": "plugins/needs-forever/runtime/integrity.json",
+        "sha256": "61affbc3f30c36a7e3aad5e34dafc9d7922c93df821afc89c24618f34fe74597",
+        "bytes": 1130
+      },
+      {
+        "path": "plugins/needs-forever/runtime/src/cli.js",
+        "sha256": "fb12c08486cb0b364dcad292cd4f0ca8eb9c34a3dc518035da2abcde11786b42",
+        "bytes": 12265
+      },
+      {
+        "path": "plugins/needs-forever/runtime/src/index.js",
+        "sha256": "b2f837f519ecc8bed51c3938f677fdb3802da0e76814f37b6dbb5ac945056973",
+        "bytes": 138
+      },
+      {
+        "path": "plugins/needs-forever/scripts/control.mjs",
+        "sha256": "70ab8f9a51c3ef8eac9d49903bf019485b7a714c2e530abb54debf60efeb9a50",
+        "bytes": 14700
+      },
+      {
+        "path": "plugins/needs-forever/skills/supervise/SKILL.md",
+        "sha256": "ebb0a3181f4374663d63cd17e69b51eb525d735631b63f13d88e01103bb8667f",
+        "bytes": 3427
+      },
+      {
+        "path": "src/cli.ts",
+        "sha256": "25182f0331855849a0324d3e6e1e2e473304977bdd4c225be3920bf400c94ea7",
+        "bytes": 11669
+      },
+      {
+        "path": "src/index.ts",
+        "sha256": "caf8f38b29719992c9bb33db0ba50fb9ac5ceaf3f449f7ed08d26e95b344b66b",
+        "bytes": 357
+      },
+      {
+        "path": "docs/codex-main-session-supervision-spec.md",
+        "sha256": "9ffbad5758cf525b7b2523e766f993091aa61cc061377d455e39b0af6d368b48",
+        "bytes": 26608
+      },
+      {
+        "path": "docs/supervisor-web-ui-demo.html",
+        "sha256": "0cc092f049967750a300f45cad808fdac25f84cdefb736766fc09e30b8e925c8",
+        "bytes": 9231
+      },
+      {
+        "path": "docs/supervisor-web-ui-design.md",
+        "sha256": "9d46c0e0638ad3af320c804420e88201b88a7d267c3c8a7507819d510d289e85",
+        "bytes": 11373
+      },
+      {
+        "path": "plugins/needs-forever/runtime/src/web.js",
+        "sha256": "bba33909527e232d54879dddfff481dbe60fc724a060dd2e58e05c624adfe3f3",
+        "bytes": 27985
+      },
+      {
+        "path": "src/web.ts",
+        "sha256": "5bd9b0e59fc194b6142dd889fa8db93dd7e09801bc70208334af3df58d19e6cf",
+        "bytes": 29440
+      },
+      {
+        "path": "test/web.test.ts",
+        "sha256": "c66a57c58425509ae50a2206d677102fbbd0685fb2e4f6d4cd5b0041e4b4a5f0",
+        "bytes": 5142
+      }
+    ],
+    "classification": "Read-only root snapshot; no root index, ref, worktree or stash changed"
+  },
+  "rehearsal_repository": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\integration\\runs\\main-merge-rehearsal-033\\replay",
+  "product_baseline": "6101a107035b69e67c685724a5532438d4f25196",
+  "preserved_web_commit": "94d993e675fd92bbde04b34e0db5a0cfbbd7322c",
+  "rehearsal_merge_commit": "cd8bbb83fdb0736c5952996cf7dd7143ea162338",
+  "rehearsal_worktree_clean": true,
+  "conflicts_resolved": [
+    "README.md",
+    "plugins/needs-forever/runtime/integrity.json",
+    "plugins/needs-forever/runtime/src/cli.js",
+    "plugins/needs-forever/scripts/control.mjs",
+    "plugins/needs-forever/skills/supervise/SKILL.md",
+    "src/cli.ts"
+  ],
+  "untracked_same_name_spec_preserved_in_backup": true,
+  "canonical_spec_from_product_baseline_preserved": true,
+  "replay_patch": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\integration\\runs\\main-merge-rehearsal-033\\adapted-web-replay.patch",
+  "replay_patch_sha256": "6ba82bce8a8c3f792656c460e0d38dea0cd1b56346f25b7ab7aae1920c240fc7",
+  "build": "npm run plugin:build exit 0; TypeScript and 18 runtime modules",
+  "runtime_integrity_modules": 18,
+  "runtime_integrity_matches": true,
+  "targeted_test_command": "node --test --test-name-pattern='TaskCatalog|web server|plugin ships|installed but uninvoked' dist/test/web.test.js dist/test/plugin.test.js dist/test/main-session.test.js",
+  "tests": 4,
+  "passed": 4,
+  "failed": 0,
+  "duration_ms": 5380.7292,
+  "targeted_test_raw_output": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\integration\\runs\\main-merge-rehearsal-033\\web-replay-targeted.txt",
+  "targeted_test_raw_output_sha256": "85159ca775d6441963c0e0242721eb41ac40331dda65cb84326b1cf8073aca84",
+  "design_doc_normalization": "Only copied rehearsal design doc EOF blank line/line endings normalized; original file bytes preserved in backup and untouched root",
+  "actual_root_stash_merge_performed": false,
+  "legacy_registry_changed": false,
+  "native_acceptance": "not_run",
+  "limitations": [
+    "No final product full-suite PASS implied.",
+    "Replayed Web UI remains the existing work; current-main-session event rendering beyond original Web tests is not certified.",
+    "Any later product commit requires rechecking replay before real main merge."
+  ]
+}

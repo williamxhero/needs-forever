@@ -1,0 +1,12 @@
+✔ an installed but uninvoked plugin keeps ordinary lifecycle and doctor/status callbacks neutral without supervision UI text (5276.2264ms)
+✔ plugin ships the exact executable core and resolves all marketplace/skill resources locally (12.776ms)
+✔ TaskCatalog presents persisted state and groups events into worker rounds (20.6239ms)
+✔ web server is read-only and exposes task and record endpoints (89.6797ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5380.7292
