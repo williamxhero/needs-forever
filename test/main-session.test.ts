@@ -45,8 +45,9 @@ test('installed main-session preparation stays pending without native identity d
   assert.equal(existsSync(`${f.state}.session.json`), false, 'Preparation must not create another worker host.');
 });
 
-test('binding accepts neutral task filenames and Code Mode tool input without recording unrelated callbacks', () => {
+test('binding accepts neutral task filenames and Code Mode tool input without recording unrelated callbacks', (t) => {
   const f = setup('code-mode-binding', true);
+  t.after(() => f.run('pause'));
   const unrelated = hook(f, { hook_event_name: 'PreToolUse', tool_use_id: 'ordinary-call', tool_input: { command: 'git status --short' } });
   assert.equal(unrelated.status, 0, unrelated.stderr);
   assert.equal(existsSync(join(f.workspace, '.codex-supervisor')), false, 'Unsupervised ordinary chats must not create observation artifacts.');
@@ -59,8 +60,9 @@ test('binding accepts neutral task filenames and Code Mode tool input without re
   assert.equal(JSON.parse(f.run('status').stdout).main_session_id, 'host-main-session');
 });
 
-test('structured host callback binds only the matching preparation and keeps fixture evidence simulated', () => {
+test('structured host callback binds only the matching preparation and keeps fixture evidence simulated', (t) => {
   const f = setup('correlated-native-binding');
+  t.after(() => f.run('pause'));
   const command = `node "${f.control}" prepare --task "${f.task}" --state "${f.state}" --test-fixture "${f.fixture}"`;
   const tool = { tool_use_id: 'prepare-tool-call', tool_name: 'Bash', tool_input: { command } };
   const before = hook(f, { ...tool, hook_event_name: 'PreToolUse' });
@@ -80,11 +82,13 @@ test('structured host callback binds only the matching preparation and keeps fix
   assert.equal(state.host.hook_effective, false, 'A fixture can never establish native hook effectiveness.');
   assert.equal(state.host.desktop_version, 'simulated-desktop');
   assert.equal(state.host.cli_version, 'simulated-cli');
-  assert.equal(state.status, 'PAUSED', 'Identity binding alone must not claim the background supervisor is active.');
+  assert.equal(state.status, 'ACTIVE', 'The correlated callback automatically starts B; its liveness is separate from actual continuation.');
+  assert.equal(state.live, true);
 });
 
-test('bound Stop callback records distinct attempt identities without subagent recursion or foreign-session activity', () => {
+test('bound Stop callback records distinct attempt identities without subagent recursion or foreign-session activity', (t) => {
   const f = setup('bound-stop-envelope');
+  t.after(() => f.run('pause'));
   const tool = { tool_use_id: 'prepare-call', tool_input: { command: `node "${f.control}" prepare --task "${f.task}" --state "${f.state}" --test-fixture "${f.fixture}"` } };
   assert.equal(hook(f, { ...tool, hook_event_name: 'PreToolUse' }).status, 0);
   const prepared = f.run('prepare', ['--task', f.task, '--test-fixture', f.fixture]);
@@ -96,7 +100,7 @@ test('bound Stop callback records distinct attempt identities without subagent r
   assert.equal(JSON.parse(f.run('status').stdout).last_stop, undefined);
   const first = hook(f, stop);
   assert.equal(first.status, 0, first.stderr);
-  assert.deepEqual(JSON.parse(first.stdout), {}, 'Paused/pending task may record capability evidence but must not continue the model.');
+  assert.deepEqual(JSON.parse(first.stdout), {}, 'A missing supervisor adapter must retain recovery rather than invent a direction.');
   const initial = JSON.parse(f.run('status').stdout);
   assert.equal(initial.last_stop.session_id, 'host-main-session');
   assert.equal(initial.last_stop.task_id, 'bound-stop-envelope');

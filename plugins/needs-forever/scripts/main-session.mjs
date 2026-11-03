@@ -2,6 +2,7 @@
 import { resolve, isAbsolute } from 'node:path';
 import { prepareMainSession, mainSessionStatus } from '../runtime/src/main-session.js';
 import { redact } from '../runtime/src/redact.js';
+import { controllerStatus, controllerRequest } from '../runtime/src/main-controller.js';
 
 try {
   const [command, ...args] = process.argv.slice(2);
@@ -16,7 +17,12 @@ try {
     if (!flags['--task']) throw new Error('--task is required.');
     const state = prepareMainSession(flags['--task'], flags['--state'], Boolean(flags['--test-fixture']));
     result = { prepared: true, task_id: state.task_id, control_mode: state.control_mode, status: state.status, binding: state.binding, state_path: flags['--state'] };
-  } else if (command === 'status') result = mainSessionStatus(flags['--state']);
-  else throw new Error('Commands: prepare --task FILE --state FILE | status --state FILE.');
+  } else if (command === 'status') result = await controllerStatus(flags['--state']);
+  else if (command === 'pause') {
+    const state = mainSessionStatus(flags['--state']);
+    if (!state.controller) throw new Error('No owned controller handle; explicit recovery required.');
+    result = await controllerRequest(state.controller, 'pause');
+  }
+  else throw new Error('Commands: prepare --task FILE --state FILE | status/pause --state FILE.');
   console.log(JSON.stringify(result, null, 2));
 } catch (error) { console.error(String(redact(error.message))); process.exitCode = 1; }
