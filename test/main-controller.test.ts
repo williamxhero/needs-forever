@@ -201,13 +201,13 @@ test('plugin start defaults to main-session and core CLI cannot mutate that chec
   } finally { f.run('pause'); }
 });
 
-test('foreign, stale generation and repeated identified Stop events do not replace a returned direction', (t) => {
+test('foreign and stale generation Stop events do not replace a returned direction', (t) => {
   const f = installed('deduplicated-stop', { decision: { action: 'CONTINUE', next_message: 'Only one eligible direction' } });
   t.after(() => f.run('pause'));
   const first = f.hook({ hook_event_name: 'Stop', event_id: 'stop-unique-one' });
   assert.equal(JSON.parse(first.stdout).decision, 'block');
   const before = JSON.parse(f.run('status').stdout);
-  for (const event of [{ event_id: 'stop-unique-one' }, { session_id: 'foreign-session' }, { run_generation: 'obsolete' }]) {
+  for (const event of [{ session_id: 'foreign-session' }, { run_generation: 'obsolete' }]) {
     assert.deepEqual(JSON.parse(f.hook({ hook_event_name: 'Stop', ...event }).stdout), {});
     assert.equal(JSON.parse(f.run('status').stdout).pending_action.delivery_id, before.pending_action.delivery_id);
   }

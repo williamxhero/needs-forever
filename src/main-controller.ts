@@ -114,7 +114,10 @@ export function boundStateForEvent(input: any, pluginRoot: string, simulated: bo
 export async function dispatchBoundLifecycle(path: string, input: unknown, pluginRoot?: string, bundleHash?: string): Promise<HookReply> {
   const state = readJson(path) as MainSessionState;
   if (!state.controller || state.controller.lifecycle !== 'running') return {};
-  return controllerRequest(state.controller, 'lifecycle', { ...(input as object), ...(pluginRoot ? { callback_plugin_root: canonicalPath(pluginRoot) } : {}), ...(bundleHash ? { callback_bundle_sha256: bundleHash } : {}) }, 590_000);
+  // The adapter owns occurrence identity. It is not a field supplied by native
+  // stdin. One native command invocation sends exactly once on the pinned host.
+  const adapterOccurrenceId = randomUUID();
+  return controllerRequest(state.controller, 'lifecycle', { adapter_occurrence_id: adapterOccurrenceId, event: { ...(input as object), ...(pluginRoot ? { callback_plugin_root: canonicalPath(pluginRoot) } : {}), ...(bundleHash ? { callback_bundle_sha256: bundleHash } : {}) } }, 590_000);
 }
 
 // Stop judgments share the existing schema/readonly judge. Transport-only
@@ -206,13 +209,19 @@ export async function runController(path: string, pluginRoot: string, fixturePat
             setImmediate(shutdown); return { paused: true, state_path: path };
           }
           if (message.command !== 'lifecycle') throw new Error('Unknown B command.');
-          const event = message.payload;
+          const event = message.payload?.event;
           if (event?.session_id !== state.main_session_id || canonicalPath(event.cwd) !== canonicalPath(state.task.workspace) || event.agent_id != null || event.agent_type != null || event.agent_transcript_path != null) return {};
           if (event.hook_event_name === 'SessionStart' || (event.callback_plugin_root && canonicalPath(event.callback_plugin_root) !== controller.plugin_root) || (event.callback_bundle_sha256 && event.callback_bundle_sha256 !== controller.bundle_sha256)) {
             cancelActive('Native host restarted or installed plugin changed.'); recover('Native host restarted or installed plugin changed; explicit resume must revalidate the original A.'); store.save(state); return {};
           }
           if (event.run_generation != null && event.run_generation !== state.run_generation) return {};
-          if (typeof event.event_id === 'string') {
+          if (event.hook_event_name === 'Stop') {
+            const occurrence = message.payload?.adapter_occurrence_id;
+            if (typeof occurrence !== 'string' || !/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(occurrence)) throw new Error('Stop adapter occurrence identity is invalid.');
+            if (state.accepted_stop_occurrences?.includes(occurrence)) throw new Error('Stop adapter occurrence was already accepted; replay is invalid and must not replace its original hook.');
+            if (active) throw new Error('Another Stop occurrence is pending; this request is invalid and cannot allow its hook to stop.');
+          }
+          if (event.hook_event_name !== 'Stop' && typeof event.event_id === 'string') {
             if (state.processed_event_ids?.includes(event.event_id)) return {};
             state.processed_event_ids = [...(state.processed_event_ids ?? []), event.event_id];
           }
@@ -224,9 +233,12 @@ export async function runController(path: string, pluginRoot: string, fixturePat
             if (state.status === 'ACTIVE' && state.phase !== 'RECOVERING') state.phase = 'WORKER';
             store.save(state); cancelActive('A newer human input invalidated the pending judgment.'); return {};
           }
-          if (active && event.hook_event_name === 'Stop') return {};
+          if (event.hook_event_name === 'Stop' && state.status === 'ACTIVE' && state.phase !== 'RECOVERING' && !state.pause_reason) {
+            state.accepted_stop_occurrences = [...(state.accepted_stop_occurrences ?? []), message.payload.adapter_occurrence_id];
+            store.save(state); // Persist admission before any asynchronous C.
+          }
           accrue(); store.save(state);
-          const result = handleLifecycle(event, state.host, pluginRoot);
+          const result = handleLifecycle(event, state.host, pluginRoot, message.payload.adapter_occurrence_id);
           state = readJson(path) as MainSessionState;
           if (!result.stop_request || state.status !== 'ACTIVE' || state.phase === 'RECOVERING') return {};
           const request = result.stop_request;
@@ -264,7 +276,7 @@ export async function runController(path: string, pluginRoot: string, fixturePat
                 if (!valid() || current.abort.signal.aborted) return {};
                 const classification = classifyRecoveryError(error);
                 state = readJson(path) as MainSessionState;
-                state.recovery_failures = recordRecoveryFailure((state.recovery_failures ?? []) as RecoveryFailure[], error);
+                state.recovery_failures = redact(recordRecoveryFailure((state.recovery_failures ?? []) as RecoveryFailure[], error)) as RecoveryFailure[];
                 const backoff = nextBackoff((state.retry.attempt ?? 0) + 1);
                 state.retry = { kind: classification.kind, attempt: backoff.attempt, next_at: backoff.next_at };
                 store.save(state); store.event(state, 'main_session_retry', { ...classification, ...backoff, stop_attempt_id: request.stop_attempt_id });
@@ -318,8 +330,10 @@ export async function runController(path: string, pluginRoot: string, fixturePat
     state.controller = controller; store.save(state);
     process.once('SIGTERM', shutdown); process.once('SIGINT', shutdown);
     await preflightSupervisor(state, fixture, startupAbort.signal);
+    const supervisorVersion = state.codex_version;
     state = readJson(path) as MainSessionState;
     if (closing || state.pause_reason || (state.controller_startup_deadline && Date.now() >= Date.parse(state.controller_startup_deadline))) throw new Error('B startup canceled or deadline expired; explicit recovery required.');
+    state.codex_version = supervisorVersion;
     state.controller = controller; state.status = 'ACTIVE'; state.phase = 'WORKER'; state.continuation_confirmed = false; state.active_checkpoint_at = new Date().toISOString();
     delete state.recovery_condition;
     state.host.reason = 'Bound controller reachable; Stop continuation and actual main-session activity still require evidence.';

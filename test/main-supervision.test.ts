@@ -44,6 +44,7 @@ function setup(name: string, options: Record<string, unknown> = {}, verify = fal
 test('installed Stop creates fresh readonly C for each same-turn stop and confirms only subsequent A tool activity', (t) => {
   const f = setup('fresh-C', { judge_actions: ['CONTINUE', 'CONTINUE'] });
   t.after(() => f.run('pause'));
+  assert.equal(f.status().codex_version, 'codex-cli 0.166.0', 'Installed status must retain the independently probed supervisor CLI version.');
   f.activity('phase-one', 'phase-one.txt exists; phases two and three missing.');
   assert.equal(f.stop().decision, 'block');
   assert.equal(f.status().continuation_confirmed, false);
@@ -208,4 +209,52 @@ test('a recoverable invalid judgment retries inside the original Stop deadline w
   assert.equal(status.judge_thread_ids.length, 2);
   assert.ok(status.recovery_failures.length >= 1);
   assert.equal(status.retry.kind, null);
+});
+
+test('recoverable model errors remove credential canaries from public state and the next supervisor input', (t) => {
+  const canary = 'sk-Spec33OnlyFakeCanary000000000000';
+  const f = setup('recovery-redaction', { judge_request_once: `temporary-network-${canary}`, judge_actions: ['CONTINUE'] });
+  t.after(() => f.run('pause'));
+  assert.equal(f.stop().decision, 'block');
+  assert.ok(f.status().recovery_failures.length > 0);
+  assert.equal(readFileSync(f.state, 'utf8').includes(canary), false);
+  assert.equal(f.run('status').stdout.includes(canary), false);
+  const inputs = f.protocol().filter((entry) => entry.message?.method === 'turn/start');
+  assert.ok(inputs.length >= 2);
+  assert.equal(JSON.stringify(inputs.at(-1).message.params.input).includes(canary), false);
+});
+
+test('an adapter occurrence accepts one C and delivery while separate identical native invocations each judge', async (t) => {
+  const f = setup('adapter-occurrence', { judge_actions: ['CONTINUE'], judge_delay_ms: 500 });
+  t.after(() => f.run('pause'));
+  const relay = (id: string) => new Promise<any>((done, reject) => {
+    const child = spawn(process.execPath, [resolve('test/fixtures/hook-relay.mjs'), f.state, id], { windowsHide: true });
+    let stdout = '', stderr = '';
+    child.stdout.on('data', (chunk) => stdout += chunk);
+    child.stderr.on('data', (chunk) => stderr += chunk);
+    child.on('error', reject); child.on('exit', (code) => code ? reject(new Error(stderr)) : done(JSON.parse(stdout)));
+  });
+  const first = relay('c7c0d493-29bf-4f16-9aa8-aa860756640e');
+  await delay(200);
+  const duplicate = await relay('c7c0d493-29bf-4f16-9aa8-aa860756640e');
+  assert.match(duplicate.error, /occurrence.*(accepted|invalid|replay)/i);
+  assert.equal((await first).decision, 'block');
+  const delivery = f.status().pending_action.delivery_id;
+  const replay = await relay('c7c0d493-29bf-4f16-9aa8-aa860756640e');
+  assert.match(replay.error, /occurrence.*(accepted|invalid|replay)/i);
+  assert.equal(f.status().judge_thread_ids.length, 1);
+  assert.equal(f.status().pending_action.delivery_id, delivery);
+  for (let i = 0; i < 3; i++) assert.equal(f.stop().decision, 'block');
+  assert.equal(f.status().judge_thread_ids.length, 4);
+  f.hook({ hook_event_name: 'UserPromptSubmit', prompt: 'Use current evidence.' });
+  assert.match((await relay('c7c0d493-29bf-4f16-9aa8-aa860756640e')).error, /occurrence.*(accepted|invalid|replay)/i);
+  assert.equal(f.run('pause').status, 0);
+  const control = join(f.plugin, 'scripts/main-session.mjs');
+  const tool = { tool_use_id: 'occurrence-resume', tool_input: { command: `node "${control}" resume --state "${f.state}" --test-fixture "${f.fixture}"` } };
+  assert.equal(f.hook({ ...tool, hook_event_name: 'PreToolUse' }).status, 0);
+  const resumed = f.run('resume', ['--test-fixture', f.fixture]);
+  assert.equal(resumed.status, 0, resumed.stderr);
+  assert.equal(f.hook({ ...tool, hook_event_name: 'PostToolUse', tool_response: resumed.stdout }).status, 0);
+  assert.match((await relay('c7c0d493-29bf-4f16-9aa8-aa860756640e')).error, /occurrence.*(accepted|invalid|replay)/i);
+  assert.equal(f.status().judge_thread_ids.length, 4);
 });

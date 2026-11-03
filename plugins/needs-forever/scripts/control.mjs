@@ -213,7 +213,7 @@ async function main() {
     const result = spawnSync(argv[0], [...argv.slice(1), '--version'], { encoding: 'utf8', windowsHide: true, timeout: 10_000 });
     const version = result.stdout?.trim();
     if (Number(process.versions.node.split('.')[0]) < 24 || result.status !== 0 || version !== PROTOCOL_VERSION) throw new Error(`Requires Node.js >=24 and ${PROTOCOL_VERSION}; found Node ${process.versions.node}, Codex ${version ?? 'unavailable'}.`);
-    return emit({ ready: true, node: process.version, codex: version, plugin_version: read(fileURLToPath(new URL('../plugin.json', import.meta.url))).version });
+    return emit({ ready: true, node: process.version, codex: version, plugin_version: read(fileURLToPath(new URL('../.codex-plugin/plugin.json', import.meta.url))).version });
   }
   const flags = options(args);
   // Route before any legacy lease/checkpoint/process mutation. Missing mode in

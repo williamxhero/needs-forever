@@ -1,9 +1,13 @@
-import { readdirSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readdirSync, readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
+const plugin = resolve(root, 'plugins/needs-forever');
+// Desktop 0.159 deliberately skips hooks for the AgentPlugin root format.
+if (existsSync(resolve(plugin, 'plugin.json'))) throw new Error('Keep the hook-enabled .codex-plugin/plugin.json format; root plugin.json suppresses native hooks.');
+if (JSON.parse(readFileSync(resolve(plugin, '.codex-plugin/plugin.json'), 'utf8')).version !== JSON.parse(readFileSync(resolve(plugin, 'package.json'), 'utf8')).version) throw new Error('Plugin package and manifest versions must match.');
 const source = resolve(root, 'dist/src');
 const target = resolve(root, 'plugins/needs-forever/runtime/src');
 const files = readdirSync(source).filter((name) => name.endsWith('.js')).sort();

@@ -35,10 +35,11 @@ async function until(condition: () => boolean, message: string) {
 }
 
 test('plugin ships the exact executable core and resolves all marketplace/skill resources locally', () => {
-  const manifest = json(join(source, 'plugin.json'));
+  const manifest = json(join(source, 'package.json'));
   const legacy = json(join(source, '.codex-plugin/plugin.json'));
   const market = json('.agents/plugins/marketplace.json');
-  assert.equal(manifest.name, legacy.name);
+  assert.equal(existsSync(join(source, 'plugin.json')), false, 'The AgentPlugin format suppresses hooks in supported Desktop 0.159.');
+  assert.equal(legacy.name, 'needs-forever');
   assert.equal(manifest.version, legacy.version);
   assert.equal(resolve(market.plugins[0].source.path), source);
   assert.ok(existsSync(join(source, 'skills/supervise/SKILL.md')));

@@ -99,7 +99,7 @@ function snapshotFor(state, request, store) {
         snapshot.omissions.push(`${omitted} earlier evidence/direction entries omitted to preserve the 24k budget; gather concise current proof before a terminal decision.`);
     if (snapshot.evidence_complete === false)
         snapshot.omissions.push('At least one tool result was truncated or omitted. Worker wording cannot replace missing proof.');
-    snapshot.repeated_failure = state.recovery_failures?.slice(-3) ?? [];
+    snapshot.repeated_failure = redact(state.recovery_failures?.slice(-3) ?? []);
     if (JSON.stringify(snapshot).length > budget) {
         snapshot.repeated_failure = 'Earlier recovery details omitted for size.';
         snapshot.evidence_complete = false;

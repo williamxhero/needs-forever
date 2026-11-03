@@ -25,6 +25,7 @@ export interface MainSessionState extends State {
   observed_turn_ids?: string[];
   active_checkpoint_at?: string;
   processed_event_ids?: string[];
+  accepted_stop_occurrences?: string[];
   processed_tool_ids?: string[];
   recovery_history?: unknown[];
   controller_startup_deadline?: string;

@@ -24,7 +24,7 @@ function strings(value) {
 function isAgent(event) {
     return event.agent_id != null || event.agent_type != null || event.agent_transcript_path != null || event.hook_event_name === 'SubagentStop' || event.hook_event_name === 'SubagentStart';
 }
-export function handleLifecycle(input, host, pluginRoot) {
+export function handleLifecycle(input, host, pluginRoot, adapterOccurrenceId) {
     const event = record(input);
     const name = text(event.hook_event_name, 'hook_event_name');
     if (isAgent(event))
@@ -103,7 +103,7 @@ export function handleLifecycle(input, host, pluginRoot) {
             const request = {
                 schema_version: 1, task_id: state.task_id, task_version: state.task_version, contract_sha256: state.contract_sha256,
                 run_generation: state.run_generation, session_id: session, turn_id: typeof event.turn_id === 'string' ? event.turn_id : null,
-                stop_attempt_id: randomUUID(), stop_hook_active: event.stop_hook_active === true,
+                stop_attempt_id: adapterOccurrenceId ?? randomUUID(), stop_hook_active: event.stop_hook_active === true,
                 created_at: new Date().toISOString(), deadline_at: new Date(Date.now() + 590_000).toISOString(), mode: state.mode,
                 last_assistant_message: typeof event.last_assistant_message === 'string' ? String(redact(event.last_assistant_message)).slice(0, 32_000) : null,
             };

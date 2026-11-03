@@ -73,6 +73,12 @@ for await (const line of lines) {
   } else if (message.method === 'turn/start') {
     if (judgeThreads.has(message.params.threadId)) {
       const turnId = `judge-turn-${judges}`;
+      if (scenario.judge_request_once && !scenario.judge_request_consumed) {
+        scenario.judge_request_consumed = true;
+        writeFileSync(process.argv[2], JSON.stringify(scenario));
+        send({ id: message.id, result: { turn: { id: turnId, status: 'inProgress', items: [] } } });
+        send({ id: 'malicious-request', method: scenario.judge_request_once, params: {} }); continue;
+      }
       if (scenario.judge_send_error) { send({ id: message.id, error: { code: -32000, message: 'Judge send outcome is uncertain.' } }); continue; }
       send({ id: message.id, result: { turn: { id: turnId, status: 'inProgress', items: [] } } });
       if (scenario.judge_disconnect) process.exit(0);

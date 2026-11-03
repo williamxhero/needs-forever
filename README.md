@@ -22,6 +22,10 @@ The compatibility manifest and portable manifest live under `plugins/needs-forev
 
 Desktop and CLI versions are checked separately: the private C protocol remains pinned to CLI 0.166.0, while native Desktop hooks require their own actual-host verification and trust. `doctor` alone does not prove native hook support or trust. Main-session implementation evidence is under `docs/evidence/spec33/`; process-level replacement-host/model tests are simulated. Required real Desktop acceptance remains a separate release gate. See [the current architecture](docs/main-session-architecture.md) for boundaries and host limitations.
 
+Candidate 0.3.0 uses `plugins/needs-forever/.codex-plugin/plugin.json` as its canonical manifest. Do not add an AgentPlugin root `plugin.json`: Desktop 0.159 selects that format first and deliberately omits plugin hooks. Fresh isolated installations using Desktop binary 0.159 and CLI 0.166 discover all six packaged hooks with `enabled=true, trustStatus=untrusted`; this proves discovery and package integrity only. Native execution in the running Desktop still requires the user's Hooks review and live acceptance.
+
+For a no-model installation receipt, run `node scripts/verify-plugin-install.mjs --candidate ABSOLUTE_MARKETPLACE_ROOT --directory FRESH_PROBE_DIRECTORY --codex-argv '["ABSOLUTE_CODEX_EXECUTABLE"]'`. The script installs only into its isolated `CODEX_HOME`, records exact argv and package hashes, and reads skills/hooks without changing trust. Prepare the three-stage Desktop exercise with `node scripts/prepare-main-session-demo.mjs --directory FRESH_DEMO_DIRECTORY --plugin ABSOLUTE_INSTALLED_PLUGIN`; use its saved `desktop-launch-prompt.txt` in the intended Desktop chat after reviewing hooks. Preparation does not start a model or bind a chat.
+
 Checkpoints without `control_mode` retain the original independent-worker behavior. New compatibility tasks require explicit `start --control-mode independent-worker`. The core CLI below is that legacy execution entry and rejects main-session checkpoints before acquiring or changing their worker state.
 
 ## Core CLI
