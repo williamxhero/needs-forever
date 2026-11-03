@@ -1,0 +1,11 @@
+✔ Windows discovered hook commands stay neutral through PowerShell and cmd in a Chinese path with spaces (3579.2774ms)
+✔ Windows discovered powershell hook commands correlate simulated preparation and bind the original session (1691.7246ms)
+✔ Windows discovered cmd hook commands correlate simulated preparation and bind the original session (763.8921ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 6115.1272

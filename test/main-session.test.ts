@@ -216,16 +216,55 @@ test('bound Stop callback records distinct attempt identities without subagent r
   assert.equal(JSON.parse(f.run('status').stdout).last_stop.turn_id, null);
 });
 
-test('Windows native hook command resolves the installed package in a path with spaces and Chinese characters', { skip: process.platform !== 'win32' }, () => {
-  const f = setup('windows-hook-command');
+function windowsShell(f: ReturnType<typeof setup>, shell: 'powershell' | 'cmd', command: string, input?: string) {
+  return spawnSync(shell === 'powershell' ? 'pwsh.exe' : process.env.ComSpec ?? 'cmd.exe',
+    shell === 'powershell' ? ['-NoLogo', '-NoProfile', '-NonInteractive', '-Command', command] : ['/d', '/s', '/c', `"${command}"`], {
+      windowsVerbatimArguments: shell === 'cmd', windowsHide: true, cwd: f.workspace, encoding: 'utf8', timeout: 20_000,
+      // Plugin discovery also supplies PLUGIN_ROOT to the child environment.
+      input, env: { ...process.env, PLUGIN_ROOT: f.plugin },
+    });
+}
+
+function windowsHook(f: ReturnType<typeof setup>, shell: 'powershell' | 'cmd', event: Record<string, unknown>, simulated = false) {
   const config = JSON.parse(readFileSync(join(f.plugin, 'hooks/hooks.json'), 'utf8'));
-  const handler = config.hooks.Stop[0].hooks[0];
-  const invoked = spawnSync(process.env.ComSpec ?? 'cmd.exe', ['/d', '/s', '/c', `"${handler.commandWindows ?? handler.command}"`], {
-    windowsVerbatimArguments: true, windowsHide: true, cwd: f.workspace, encoding: 'utf8', timeout: 20_000,
-    input: JSON.stringify({ session_id: 'unbound-session', cwd: f.workspace, hook_event_name: 'Stop', stop_hook_active: false }),
-    env: { ...process.env, PLUGIN_ROOT: f.plugin },
-  });
-  assert.equal(invoked.status, 0, invoked.stderr);
-  assert.deepEqual(JSON.parse(invoked.stdout), {});
-  assert.equal(existsSync(join(f.workspace, '.codex-supervisor')), false);
+  const handler = config.hooks[String(event.hook_event_name)][0].hooks[0];
+  // Codex plugin discovery substitutes this placeholder before the configured
+  // user shell executes the command; it is not cmd environment expansion.
+  const command = (handler.commandWindows ?? handler.command).replaceAll('${PLUGIN_ROOT}', f.plugin)
+    + (simulated ? ` --test-fixture "${f.fixture}"` : '');
+  return windowsShell(f, shell, command, JSON.stringify({ session_id: 'shell-main-session', cwd: f.workspace, turn_id: 'shell-turn', ...event }));
+}
+
+test('Windows discovered hook commands stay neutral through PowerShell and cmd in a Chinese path with spaces', { skip: process.platform !== 'win32' }, () => {
+  const failures: string[] = [];
+  for (const shell of ['powershell', 'cmd'] as const) {
+    const f = setup(`windows-hook-command-${shell}`);
+    for (const hook_event_name of ['SessionStart', 'PreToolUse', 'PostToolUse', 'Stop', 'UserPromptSubmit', 'Interrupt']) {
+      const result = windowsHook(f, shell, { hook_event_name, tool_use_id: 'ordinary-call', tool_input: { cmd: 'git status --short' }, stop_hook_active: false });
+      if (result.status !== 0 || result.stdout.trim() !== '{}' || result.stderr !== '' || readdirSync(f.workspace).length !== 0) {
+        failures.push(`${shell}/${hook_event_name}: status=${result.status}, stdout=${result.stdout}, stderr=${result.stderr}`);
+      }
+    }
+  }
+  assert.deepEqual(failures, [], 'Every discovered handler must execute in the native user shell without activating an uninvoked chat.');
+});
+
+for (const shell of ['powershell', 'cmd'] as const) test(`Windows discovered ${shell} hook commands correlate simulated preparation and bind the original session`, { skip: process.platform !== 'win32' }, (t) => {
+  const f = setup(`windows-binding-${shell}`);
+  t.after(() => f.run('pause'));
+  const command = `node "${f.control}" prepare --task "${f.task}" --state "${f.state}" --test-fixture "${f.fixture}"`;
+  const tool = { tool_use_id: 'shell-prepare', tool_name: 'Bash', tool_input: { command } };
+  const before = windowsHook(f, shell, { ...tool, hook_event_name: 'PreToolUse' }, true);
+  assert.equal(before.status, 0, before.stderr);
+  const prepared = windowsShell(f, shell, command);
+  assert.equal(prepared.status, 0, prepared.stderr);
+  assert.equal(JSON.parse(f.run('status').stdout).main_session_id, null, 'Preparation alone must still wait for its host receipt.');
+  const after = windowsHook(f, shell, { ...tool, hook_event_name: 'PostToolUse', tool_response: { stdout: prepared.stdout } }, true);
+  assert.equal(after.status, 0, after.stderr);
+  const state = JSON.parse(f.run('status').stdout);
+  assert.equal(state.main_session_id, 'shell-main-session');
+  assert.equal(state.binding.status, 'BOUND');
+  assert.equal(state.live, true);
+  assert.equal(state.host.source, 'simulated');
+  assert.equal(state.host.hook_effective, false, 'A shell fixture cannot establish native Desktop execution.');
 });

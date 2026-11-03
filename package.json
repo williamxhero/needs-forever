@@ -1,6 +1,6 @@
 {
   "name": "codex-supervisor",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "private": true,
   "description": "A local, single-task, recoverable Codex app-server supervisor.",
   "type": "module",
