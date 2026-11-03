@@ -1,0 +1,278 @@
+{
+  "schema_version": 1,
+  "observed_at": "2026-11-03T13:01:09.236602+00:00",
+  "kind": "read-only-before-genuine-desktop-exit-reopen",
+  "task_id": "spec33-native-restart-and-human-input-20261103",
+  "original_a": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+  "native_turn": "01a1a177-35bd-7b42-86bd-62255b85ad81",
+  "task": {
+    "schema_version": 1,
+    "task_id": "spec33-native-restart-and-human-input-20261103",
+    "workspace": "C:/Users/will/Documents/Codex/2026-11-03/needs-forever-spec33-desktop",
+    "goal": "Preserve an unfinished bound native task across a genuine Desktop exit/reopen, explicitly resume the exact original A, invalidate an in-flight old judgment on actual Desktop human input, and finish through unchanged independent verification.",
+    "acceptance": [
+      {
+        "id": "S1",
+        "text": "Execute node .spec33-restart-input/hold.mjs exactly once to create stage1.json {\"stage\":1,\"value\":\"preserved\"}. Preserve it across parent public pause, actual Desktop close/reopen, and explicit same-A resume. First response does only this stage and ends; do not create stage2 or human-note yet."
+      },
+      {
+        "id": "S2",
+        "text": "Only after actual supervisor guidance following explicit same-A resume, create stage2.json as {\"stage\":2,\"value\":\"resumed-original-A\"}. Do not rerun hold.mjs. Give concise actual structured tool/file proof of stages and preserved protected hashes."
+      },
+      {
+        "id": "S3",
+        "text": "Only when an actual new Desktop human input instructs it, write human-note.txt as exact human-input-observed plus newline. Supervisor direction alone must not authorize creating this note. All original .spec33-fixture and .spec33-recovery task outputs and scripts remain unchanged."
+      }
+    ],
+    "authorization": "Local isolated .spec33-restart-input fixture only, installed public Needs Forever control, parent-authorized work/JUDGE/VERIFY pause, human Desktop close/reopen, and explicit resume in original A. No replacement worker, network, original file changes or self-resume after pause. First response runs only protected hold.mjs once then ends; parent will pause during its bounded command. On a later explicit resume, genuine C guidance may authorize stage2. The human-note must wait for a real new human UI message; do not manufacture it or treat this preparation/delegation or C guidance as that message. Keep original acceptance, fixed verifier and protected baseline. Do not pre-run the independent verifier. Status queries do not activate supervision.",
+    "verify": {
+      "argv": [
+        "node",
+        ".spec33-restart-input/verify.mjs"
+      ],
+      "timeout_seconds": 30,
+      "protected_files": [
+        ".spec33-restart-input/hold.mjs",
+        ".spec33-restart-input/verify.mjs"
+      ]
+    },
+    "limits": {
+      "max_worker_turns": null,
+      "max_minutes": null
+    }
+  },
+  "contract_sha256": "e19326fa99516e3017f54b032a6928ce1a7d3f86b7e8e0e11e55ba773ff53dcd",
+  "checkpoint": {
+    "task_version": 1,
+    "control_mode": "main-session",
+    "run_generation": "1fc4e521-308c-4743-8f45-e664db8d3350",
+    "status": "PAUSED",
+    "phase": "IDLE",
+    "updated_at": "2026-11-03T12:53:51.841Z",
+    "input_epoch": 1,
+    "active_worker_turn_id": null,
+    "worker_thread_id": null,
+    "pending_action": null
+  },
+  "binding": {
+    "status": "BOUND",
+    "tool_use_id": "exec-b17d6c26-83b1-4a5e-9fd0-25fad9a415f8",
+    "bound_at": "2026-11-03T12:52:42.230Z"
+  },
+  "native_owner_before": {
+    "hook_receipt_backend_pid": 12328,
+    "actualOwnerDesktopPid": 54032,
+    "ancestry": [
+      {
+        "pid": 12328,
+        "ppid": 54032,
+        "name": "codex.exe",
+        "exe": "C:\\Users\\will\\AppData\\Local\\OpenAI\\Codex\\bin\\ca9abb0b4d8ac692\\codex.exe",
+        "created_at": "2026-11-03T11:23:32.146499+00:00"
+      },
+      {
+        "pid": 54032,
+        "ppid": 13184,
+        "name": "ChatGPT.exe",
+        "exe": "C:\\Program Files\\WindowsApps\\OpenAI.Codex_26.928.1915.0_x64__2p2nqsd0c76g0\\app\\ChatGPT.exe",
+        "created_at": "2026-11-03T11:23:26.683587+00:00"
+      },
+      {
+        "pid": 13184,
+        "ppid": 13156,
+        "name": "explorer.exe",
+        "exe": "C:\\Windows\\explorer.exe",
+        "created_at": "2026-10-31T11:06:49.752454+00:00"
+      }
+    ],
+    "host": {
+      "source": "native-desktop",
+      "desktop_version": "codex-cli 0.159.0",
+      "cli_version": "codex-cli 0.166.0",
+      "desktop_pid": 12328,
+      "desktop_binary": "C:\\Users\\will\\AppData\\Local\\OpenAI\\Codex\\bin\\ca9abb0b4d8ac692\\codex.exe",
+      "hook_effective": false
+    }
+  },
+  "controller_before": {
+    "id": "a3b8bffb-3046-430d-aedc-3f3fb4d8d7c5",
+    "pid": 51328,
+    "lifecycle": "exited",
+    "started_at": "2026-11-03T12:52:42.351Z",
+    "run_generation": "1fc4e521-308c-4743-8f45-e664db8d3350",
+    "bundle_sha256": "512991da8a03f3ac3cbbaab77916b021ad9f21704fe5b097ad43047b7bb7f9ae"
+  },
+  "controller_process_alive": false,
+  "actual_worker_pause_receipt": {
+    "kind": "native-work-public-pause",
+    "started_unix": 1793710296.5584626,
+    "result": "PAUSED",
+    "before": {
+      "task_id": "spec33-native-restart-and-human-input-20261103",
+      "status": "ACTIVE",
+      "phase": "WORKER",
+      "main_session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+      "run_generation": "1fc4e521-308c-4743-8f45-e664db8d3350",
+      "updated_at": "2026-11-03T12:53:51.067Z"
+    },
+    "actual_worker_processes": [
+      {
+        "pid": 46652,
+        "argv": [
+          "C:\\Program Files\\nodejs\\node.exe",
+          ".spec33-restart-input/hold.mjs"
+        ],
+        "cwd": "C:\\Users\\will\\Documents\\Codex\\2026-11-03\\needs-forever-spec33-desktop"
+      }
+    ],
+    "observed_unix": 1793710431.335007,
+    "control_exit": 0,
+    "after": {
+      "task_id": "spec33-native-restart-and-human-input-20261103",
+      "status": "PAUSED",
+      "phase": "IDLE",
+      "main_session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+      "run_generation": "1fc4e521-308c-4743-8f45-e664db8d3350",
+      "updated_at": "2026-11-03T12:53:51.841Z"
+    },
+    "duration_seconds": 135.32236671447754
+  },
+  "hold_tool": {
+    "native_item_id": "exec-31ada042-8ae2-482b-a54e-0f71bc10f7ff",
+    "status": "completed",
+    "exitCode": 0,
+    "durationMs": 31349,
+    "stdout": "STAGE1_WRITTEN; bounded native-work observation\nBOUNDED_WORK_FINISHED\n",
+    "observed_live_process_pid": 46652,
+    "live_process_now_alive": false,
+    "limit": "Public pause stopped supervision; already-running bounded A tool completed naturally. No claim that pause terminated that worker command."
+  },
+  "a_after_pause": {
+    "thread_status": "idle",
+    "turn_status": "completed",
+    "completedAt_unix": 1793710486,
+    "completedAt": "2026-11-03T12:54:46Z"
+  },
+  "artifact_before": {
+    "path": "C:\\Users\\will\\Documents\\Codex\\2026-11-03\\needs-forever-spec33-desktop\\.spec33-restart-input\\stage1.json",
+    "exact_text": "{\"stage\":1,\"value\":\"preserved\"}\n",
+    "sha256": "04edbf3462cef1680c5ae3a88a137b5001212bb0641557fe09fbd264acf3daae",
+    "stage2_exists": false,
+    "human_note_exists": false
+  },
+  "protected_files": [
+    {
+      "file": "hold.mjs",
+      "expected_sha256": "e2e564ee61c489678749dad814fca394900950f3be8dc77ff6df2c2be2a71397",
+      "current_sha256": "e2e564ee61c489678749dad814fca394900950f3be8dc77ff6df2c2be2a71397",
+      "unchanged": true
+    },
+    {
+      "file": "verify.mjs",
+      "expected_sha256": "30603e204ced630e1c1ae4a6440dff1765ba8acea3c81dc51b78c074df49e1f2",
+      "current_sha256": "30603e204ced630e1c1ae4a6440dff1765ba8acea3c81dc51b78c074df49e1f2",
+      "unchanged": true
+    }
+  ],
+  "original_prior_task_files": [
+    {
+      "file": "stage1.json",
+      "expected_sha256": "188890e0ddf7d05c7fca15f25d88dd5e58cf7b6031eb9a9adde78d2d0a7b9141",
+      "current_sha256": "188890e0ddf7d05c7fca15f25d88dd5e58cf7b6031eb9a9adde78d2d0a7b9141",
+      "unchanged": true
+    },
+    {
+      "file": "stage2.json",
+      "expected_sha256": "b40f2acac630927ebb147f73b884af3c521962896e96eabf1284ecc4bfa3a190",
+      "current_sha256": "b40f2acac630927ebb147f73b884af3c521962896e96eabf1284ecc4bfa3a190",
+      "unchanged": true
+    },
+    {
+      "file": "final.json",
+      "expected_sha256": "58e721c3ff39508a983fd081f5c4c8e5cf6e305f9cf359ba288fb015d3dd7287",
+      "current_sha256": "58e721c3ff39508a983fd081f5c4c8e5cf6e305f9cf359ba288fb015d3dd7287",
+      "unchanged": true
+    },
+    {
+      "file": "verify.mjs",
+      "expected_sha256": "67e694431651f1d05641c54bb582a52d955c19caee859bcd4af51bf2f4e7f4cb",
+      "current_sha256": "67e694431651f1d05641c54bb582a52d955c19caee859bcd4af51bf2f4e7f4cb",
+      "unchanged": true
+    },
+    {
+      "file": "unavailable-route.mjs",
+      "expected_sha256": "6913afee30405571d3e098aca045a61b68b7ae0967afd87bbc6ab8eedcf0add8",
+      "current_sha256": "6913afee30405571d3e098aca045a61b68b7ae0967afd87bbc6ab8eedcf0add8",
+      "unchanged": true
+    },
+    {
+      "file": "route-attempted.txt",
+      "expected_sha256": "40d5cf8c040ef0b473e4af2a22aa31a47860274bdbbbdf01b57d39ed83397a1a",
+      "current_sha256": "40d5cf8c040ef0b473e4af2a22aa31a47860274bdbbbdf01b57d39ed83397a1a",
+      "unchanged": true
+    },
+    {
+      "file": ".spec33-recovery/route-fails.mjs",
+      "expected_sha256": "8fa19d650733d9a8dece96aad8399f7888ceb7bbd064692737a6ce93c2b25e82",
+      "current_sha256": "8fa19d650733d9a8dece96aad8399f7888ceb7bbd064692737a6ce93c2b25e82",
+      "unchanged": true
+    },
+    {
+      "file": ".spec33-recovery/verify-recovery.mjs",
+      "expected_sha256": "13e4574bc56b72f315dd1e178b08ce0b50e123ae857496604ae3e2dd67c00b27",
+      "current_sha256": "13e4574bc56b72f315dd1e178b08ce0b50e123ae857496604ae3e2dd67c00b27",
+      "unchanged": true
+    }
+  ],
+  "selected_events": [
+    {
+      "event_id": "7a3591a7-7287-4c3b-9f89-a1898be8fe51",
+      "at": "2026-11-03T12:52:35.232Z",
+      "type": "protected_baseline_recorded"
+    },
+    {
+      "event_id": "a31aca2a-17ec-4ebd-8a38-a87bfeabe274",
+      "at": "2026-11-03T12:52:35.293Z",
+      "type": "main_session_prepared"
+    },
+    {
+      "event_id": "6c476c96-1955-4570-9ac8-76149ad2df7f",
+      "at": "2026-11-03T12:52:42.234Z",
+      "type": "main_session_bound",
+      "main_session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+      "tool_use_id": "exec-b17d6c26-83b1-4a5e-9fd0-25fad9a415f8"
+    },
+    {
+      "event_id": "54d41b16-5bbd-42a3-ae6a-e9b2b72bbefd",
+      "at": "2026-11-03T12:52:44.014Z",
+      "type": "main_session_controller_started",
+      "main_session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+      "pid": 51328
+    },
+    {
+      "event_id": "788ee4bf-1705-4b97-a9d6-44255ffec901",
+      "at": "2026-11-03T12:53:38.266Z",
+      "type": "main_tool_result",
+      "session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+      "turn_id": "01a1a177-35bd-7b42-86bd-62255b85ad81",
+      "tool_use_id": "exec-e161a1b8-8acc-4770-b5e7-1d0c92bb7205",
+      "run_generation": "1fc4e521-308c-4743-8f45-e664db8d3350"
+    }
+  ],
+  "no_supervisor_continuation_after_pause": true,
+  "source_digests": {
+    "task.json": "dc84bd90405f978b87ff3f6f3e131b98032887f4dceb8efe60518ecbc236b9b0",
+    "state.json": "e6fe00841442ff2b22f0b5cbe8e939ba0140b3f56f3019c2afdd04959557fc70",
+    "events.jsonl": "9bb889bdb51280d45b10560de69704028d04a864b07a0f54a2efd130f5fbbc77",
+    "preparation.json": "43e71b747a3324d71585cadcf23e56e9455602728ffa5c4153a5fe970e5c7fd5",
+    "hold.mjs": "e2e564ee61c489678749dad814fca394900950f3be8dc77ff6df2c2be2a71397",
+    "verify.mjs": "30603e204ced630e1c1ae4a6440dff1765ba8acea3c81dc51b78c074df49e1f2",
+    "stage1.json": "04edbf3462cef1680c5ae3a88a137b5001212bb0641557fe09fbd264acf3daae"
+  },
+  "receipt_sha256": "d47733e6ca5ec372514df92f39b46f356b30468014a1d11024b168a1a7e48eeb",
+  "limits": [
+    "Observer performed no resume, UI action, control command, task mutation, or new task creation.",
+    "This before snapshot does not prove genuine Desktop exit/reopen, human-input interruption or final completion.",
+    "Current independent verifier has not been run."
+  ]
+}

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "observed_at": "2026-11-03T12:40:44.041705+00:00",
+  "observed_at": "2026-11-03T12:51:13.360387+00:00",
   "task_id": "spec33-native-route-and-verifier-recovery-20261103",
   "original_a": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
   "native_turn": "01a1a156-2103-7da1-8e73-b3f6dd81a78d",
@@ -37,37 +37,49 @@
         "file": "stage1.json",
         "historical_sha256": "188890e0ddf7d05c7fca15f25d88dd5e58cf7b6031eb9a9adde78d2d0a7b9141",
         "current_sha256": "188890e0ddf7d05c7fca15f25d88dd5e58cf7b6031eb9a9adde78d2d0a7b9141",
-        "unchanged": true
+        "unchanged": true,
+        "final_sha256": "188890e0ddf7d05c7fca15f25d88dd5e58cf7b6031eb9a9adde78d2d0a7b9141",
+        "final_unchanged": true
       },
       {
         "file": "stage2.json",
         "historical_sha256": "b40f2acac630927ebb147f73b884af3c521962896e96eabf1284ecc4bfa3a190",
         "current_sha256": "b40f2acac630927ebb147f73b884af3c521962896e96eabf1284ecc4bfa3a190",
-        "unchanged": true
+        "unchanged": true,
+        "final_sha256": "b40f2acac630927ebb147f73b884af3c521962896e96eabf1284ecc4bfa3a190",
+        "final_unchanged": true
       },
       {
         "file": "final.json",
         "historical_sha256": "58e721c3ff39508a983fd081f5c4c8e5cf6e305f9cf359ba288fb015d3dd7287",
         "current_sha256": "58e721c3ff39508a983fd081f5c4c8e5cf6e305f9cf359ba288fb015d3dd7287",
-        "unchanged": true
+        "unchanged": true,
+        "final_sha256": "58e721c3ff39508a983fd081f5c4c8e5cf6e305f9cf359ba288fb015d3dd7287",
+        "final_unchanged": true
       },
       {
         "file": "verify.mjs",
         "historical_sha256": "67e694431651f1d05641c54bb582a52d955c19caee859bcd4af51bf2f4e7f4cb",
         "current_sha256": "67e694431651f1d05641c54bb582a52d955c19caee859bcd4af51bf2f4e7f4cb",
-        "unchanged": true
+        "unchanged": true,
+        "final_sha256": "67e694431651f1d05641c54bb582a52d955c19caee859bcd4af51bf2f4e7f4cb",
+        "final_unchanged": true
       },
       {
         "file": "unavailable-route.mjs",
         "historical_sha256": "6913afee30405571d3e098aca045a61b68b7ae0967afd87bbc6ab8eedcf0add8",
         "current_sha256": "6913afee30405571d3e098aca045a61b68b7ae0967afd87bbc6ab8eedcf0add8",
-        "unchanged": true
+        "unchanged": true,
+        "final_sha256": "6913afee30405571d3e098aca045a61b68b7ae0967afd87bbc6ab8eedcf0add8",
+        "final_unchanged": true
       },
       {
         "file": "route-attempted.txt",
         "historical_sha256": "40d5cf8c040ef0b473e4af2a22aa31a47860274bdbbbdf01b57d39ed83397a1a",
         "current_sha256": "40d5cf8c040ef0b473e4af2a22aa31a47860274bdbbbdf01b57d39ed83397a1a",
-        "unchanged": true
+        "unchanged": true,
+        "final_sha256": "40d5cf8c040ef0b473e4af2a22aa31a47860274bdbbbdf01b57d39ed83397a1a",
+        "final_unchanged": true
       }
     ],
     "limit": "Historical independent hashes cover these six original files; nineteen-file evidence is A mtime plus before/after comparison, not an independently captured full original hash manifest."
@@ -89,7 +101,21 @@
     "a_repair_event": "69a8df61-1897-41fa-b586-d657edb5139c",
     "a_local_same_argv_exit": 0,
     "ready_exact_text": "ready\n",
-    "limit": "A local verifier success is not a final independent B success."
+    "limit": "A local success was provisional; final supervisor-owned B verification later passed.",
+    "final_b_gate": {
+      "event_id": "736673d5-3d3b-481d-8bf2-9c31472553d4",
+      "at": "2026-11-03T12:45:44.591Z",
+      "type": "verification_result",
+      "argv": [
+        "node",
+        ".spec33-recovery/verify-recovery.mjs"
+      ],
+      "exitCode": 0,
+      "stdout": "PASS original failed route; PASS direct-file recovery; PASS independent repair gate\n",
+      "stderr": "",
+      "workspace_changed": false,
+      "passed": true
+    }
   },
   "t08_pause_observation": {
     "status": "PAUSED",
@@ -104,7 +130,19 @@
     "a_turn_status_via_read_thread": "completed",
     "a_turn_completed_at": "2026-11-03T12:38:08Z",
     "late_delivery_decision_verification_events": [],
-    "auto_resume_performed_by_observer": false
+    "auto_resume_performed_by_observer": false,
+    "stability_recheck_at": "2026-11-03T12:42:24.633630Z",
+    "stability_recheck": {
+      "status": "PAUSED",
+      "phase": "IDLE",
+      "state_updated_at": "2026-11-03T12:38:08.290Z",
+      "event_count": 53,
+      "late_delivery_decision_verification_events": [],
+      "c5_archived": false
+    },
+    "explicit_resume_completed": true,
+    "verify_phase_pause_passed": false,
+    "verify_phase_pause_limitation": "No successful VERIFY-phase pause was observed. Parent reported the second watcher exited with PermissionError during state atomic replacement and produced no pause receipt. Do not count it as a pass."
   },
   "selected_events": [
     {
@@ -269,15 +307,170 @@
       "type": "judge_terminated",
       "thread_id": "01a1a169-63e0-7b12-8175-5c4cfa3175c5",
       "turn_id": "01a1a169-64f9-7b71-8c19-84825dbfec3c"
+    },
+    {
+      "event_id": "bca6d5f7-f9ab-47fe-8977-4156c024b9fd",
+      "at": "2026-11-03T12:42:58.973Z",
+      "type": "main_session_resume_prepared",
+      "main_session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+      "run_generation": "6d90ebe1-95d0-4c47-bd99-43bf2739ba81"
+    },
+    {
+      "event_id": "03d80b9b-d9a7-4920-9374-41c7afa5b9d6",
+      "at": "2026-11-03T12:43:03.450Z",
+      "type": "main_session_bound",
+      "tool_use_id": "exec-9a779b50-f796-4343-8a9c-f84690602dd6",
+      "main_session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7"
+    },
+    {
+      "event_id": "257e3c5f-d098-4040-b42a-8fe8bef14c9c",
+      "at": "2026-11-03T12:43:04.932Z",
+      "type": "main_session_controller_started",
+      "main_session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+      "pid": 47668
+    },
+    {
+      "event_id": "f6e747d1-6eaa-4e1d-a746-d8ff2020e526",
+      "at": "2026-11-03T12:44:17.185Z",
+      "type": "main_tool_result",
+      "session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+      "turn_id": "01a1a16e-b0eb-7581-9fbe-34889a730f62",
+      "tool_use_id": "exec-c68b76fb-2ea6-454a-95fe-c37d2f584c0f",
+      "run_generation": "6d90ebe1-95d0-4c47-bd99-43bf2739ba81"
+    },
+    {
+      "event_id": "d32a86e3-cf2b-4303-bdb9-3f6eef5f7bcb",
+      "at": "2026-11-03T12:44:37.992Z",
+      "type": "main_session_stop_observed",
+      "session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+      "turn_id": "01a1a16e-b0eb-7581-9fbe-34889a730f62",
+      "run_generation": "6d90ebe1-95d0-4c47-bd99-43bf2739ba81"
+    },
+    {
+      "event_id": "e8fcbfa4-4278-4b7f-b4e4-76d06ded6172",
+      "at": "2026-11-03T12:44:41.473Z",
+      "type": "judge_created",
+      "thread_id": "01a1a170-b5df-7250-aaa5-c7adece96582",
+      "main_session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7"
+    },
+    {
+      "event_id": "c94042af-fde1-4718-9c6a-299d8d373e5d",
+      "at": "2026-11-03T12:45:36.188Z",
+      "type": "judge_output",
+      "thread_id": "01a1a170-b5df-7250-aaa5-c7adece96582",
+      "turn_id": "01a1a170-b8a2-7141-96e9-e69d2263e434",
+      "main_session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7"
+    },
+    {
+      "event_id": "da5a4d76-db30-4408-98a9-c98e0e0f3ac2",
+      "at": "2026-11-03T12:45:36.240Z",
+      "type": "judge_archived",
+      "thread_id": "01a1a170-b5df-7250-aaa5-c7adece96582",
+      "main_session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7"
+    },
+    {
+      "event_id": "da51bca6-eaf6-418e-81d4-8976ec223334",
+      "at": "2026-11-03T12:45:36.241Z",
+      "type": "decision",
+      "thread_id": "01a1a170-b5df-7250-aaa5-c7adece96582",
+      "decision": {
+        "action": "DONE",
+        "reason": "Command/file evidence supports R1–R3: original exit23 and sequencing, exact preserved marker and payload, and unchanged baselines. B's expected exit17 and exact repair marker are recorded; final verifier execution is supervisor-owned.",
+        "evidence_ids": [
+          "f6e747d1-6eaa-4e1d-a746-d8ff2020e526"
+        ]
+      }
+    },
+    {
+      "event_id": "736673d5-3d3b-481d-8bf2-9c31472553d4",
+      "at": "2026-11-03T12:45:44.591Z",
+      "type": "verification_result",
+      "argv": [
+        "node",
+        ".spec33-recovery/verify-recovery.mjs"
+      ],
+      "exitCode": 0,
+      "stdout": "PASS original failed route; PASS direct-file recovery; PASS independent repair gate\n",
+      "stderr": "",
+      "workspace_changed": false,
+      "passed": true
+    },
+    {
+      "event_id": "752d55d1-167b-4cad-bd27-cc753c9c0f3c",
+      "at": "2026-11-03T12:45:44.649Z",
+      "type": "main_session_terminal",
+      "action": "DONE"
     }
   ],
   "source_digests": {
-    "events.jsonl": "ed1f922fa84f56ee60286503ff7d4d0f176077f65f64a92ad0152ef15528f677",
+    "events.jsonl": "aa883b3def9cbf5c049635312c558cca5efb8711bb909d9e349d6b5e825de9a5",
     "original_a_rollout": "d530ad7c6cc599eb167bd24115dd96b0b738f3f7ee1079adcebc95b653a89412"
   },
   "limits": [
     "Read-only observer; no task state, acceptance, protected scripts, hooks, trust, chats, or runtime modified.",
-    "C5 cancellation confirmed; C5 archive not yet observed.",
-    "Task intentionally paused before C5 accepted repair and B reran independent gate."
-  ]
+    "Original C5 cancellation confirmed and remains unarchived; resumed C6 completed and was archived.",
+    "No successful VERIFY-phase pause is claimed. The completed T08 path pauses JUDGE then explicitly resumes the original A.",
+    "T06 actual independent B gate failure and subsequent actual independent B pass are both recorded."
+  ],
+  "completion_classification": "T04 actual guided alternative and T06 actual independent verification failure/repair/pass observed; T08 actual JUDGE pause and explicit same-A resume observed; VERIFY-phase pause not proven",
+  "explicit_resume_completion": {
+    "authorized_by": "Parent explicitly sent original A a resume instruction; observed original A executed the installed resume control.",
+    "original_a": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+    "new_native_turn": "01a1a16e-b0eb-7581-9fbe-34889a730f62",
+    "previous_run_generation": "f83458ad-78ac-4512-ad14-60011ff7dcba",
+    "run_generation": "6d90ebe1-95d0-4c47-bd99-43bf2739ba81",
+    "resume_command_original_rollout": {
+      "call_line": 656,
+      "at": "2026-11-03T12:42:50.747Z",
+      "result_line": 659,
+      "result_at": "2026-11-03T12:43:05.463Z",
+      "chunk_id": "b43b97",
+      "exit_code": 0,
+      "prepared": true,
+      "binding_status_before_correlated_hook": "PENDING_NATIVE_HOOK"
+    },
+    "fresh_binding": {
+      "tool_use_id": "exec-9a779b50-f796-4343-8a9c-f84690602dd6",
+      "bound_at": "2026-11-03T12:43:03.444Z",
+      "operation": "resume"
+    },
+    "host": {
+      "source": "native-desktop",
+      "desktop_version": "codex-cli 0.159.0",
+      "cli_version": "codex-cli 0.166.0",
+      "hook_effective": true
+    },
+    "a_recheck_event": "f6e747d1-6eaa-4e1d-a746-d8ff2020e526",
+    "a_recheck_tool": "exec-c68b76fb-2ea6-454a-95fe-c37d2f584c0f",
+    "new_c": "01a1a170-b5df-7250-aaa5-c7adece96582",
+    "new_c_turn": "01a1a170-b8a2-7141-96e9-e69d2263e434",
+    "new_c_turn_status": "completed",
+    "new_c_archived": true,
+    "c_decision_event": "da51bca6-eaf6-418e-81d4-8976ec223334",
+    "terminal_event": "752d55d1-167b-4cad-bd27-cc753c9c0f3c",
+    "terminal_at": "2026-11-03T12:45:44.649Z",
+    "final_state": {
+      "status": "DONE",
+      "phase": "IDLE",
+      "binding": "RELEASED",
+      "updated_at": "2026-11-03T12:45:44.650Z"
+    },
+    "controller": {
+      "id": "09bd1ec6-75d2-4f14-93c9-4eb6e1b1077f",
+      "pid": 47668,
+      "lifecycle": "exited",
+      "started_at": "2026-11-03T12:43:03.577Z",
+      "run_generation": "6d90ebe1-95d0-4c47-bd99-43bf2739ba81",
+      "bundle_sha256": "512991da8a03f3ac3cbbaab77916b021ad9f21704fe5b097ad43047b7bb7f9ae"
+    },
+    "controller_process_alive_via_GetProcess": false,
+    "a_thread_status_via_read_thread": "idle",
+    "a_turn_status_via_read_thread": "completed",
+    "a_turn_completed_at": "2026-11-03T12:45:44Z",
+    "previous_c5_archived": false
+  },
+  "protected_recovery_final_hashes": {
+    "route-fails.mjs": "8fa19d650733d9a8dece96aad8399f7888ceb7bbd064692737a6ce93c2b25e82",
+    "verify-recovery.mjs": "13e4574bc56b72f315dd1e178b08ce0b50e123ae857496604ae3e2dd67c00b27"
+  }
 }

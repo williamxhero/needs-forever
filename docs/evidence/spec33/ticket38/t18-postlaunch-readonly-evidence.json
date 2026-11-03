@@ -1,0 +1,24 @@
+{
+  "log": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\main-session-supervision\\t18-diagnostic-20261103T124717038877Z\\stderr.log",
+  "log_bytes": 145263,
+  "exact_safe_message_counts": {
+    "Sign in to ChatGPT to start a durable thread.": 55,
+    "Sign in to ChatGPT to check remote control authorization.": 4,
+    "rendererWindowVisible=true": 13,
+    "rendererWindowVisible=false": 1,
+    "Exiting second desktop instance": 0,
+    "Desktop network requirements prevented startup": 0
+  },
+  "bundle_second_instance": [
+    {
+      "file": "bootstrap-Bj_1Kfw1.js",
+      "offset": 2202166,
+      "snippet": "_WINDOWS_SANDBOX_PACKAGE_FAMILY,p.app.setAppUserModelId(vY(Q9)));var $9=Swe({isMacOS:RTe,isPackaged:p.app.isPackaged,hasExplicitUserDataPath:!!process.env.CODEX_ELECTRON_USER_DATA_PATH?.trim()});if($9&&!p.app.requestSingleInstanceLock())l.n().info(`Exiting second desktop instance`,{safe:{packaged:p.app.isPackaged,platform:process.platform}}),p.app.exit(0);else{rTe()&&l.n().info(`Repaired renamed Dock tile`,{safe:{platform:process.platform,version:p.app.getVersion()}});let e=q7(Z9);$9&&p.app.on(`second-instance`,(t,n)=>{e.queueSecondInstanceArgs(n)}),p.app.whenReady().then(async()=>{let{desktopSentry:t,sparkleManager:n}=e;if(!await oY({appName:p.app.getName(),environment:{arch:process.arch,isPackaged:p.app.isPackaged,platform:process.platform}})){p.app.quit();return}if(await Fwe()||!await uTe(zTe))return;let r=TTe(),i=W9(Z9,process.platform),a=!1;if(r||i)try{let e=v7(),t=e?.getCurrentPackageFamily();p.app.isPackaged&&t==null&&l.n().warning(`windows_runtime_framework_identity_unavailable`,{safe:{buildFlavor:Z9,appVersion:p.app.getVersion(),architecture:process.arch,failureReason:e==null?`native-addon-unavailable`:`no-package-identity`,appContainedCoreBuild:r,shouldUseWindowsRuntimeFrameworks:i,hasDoNotDeElevateSwitch:p.app.commandLine.hasSwitch(`do-not-de-elevate`)}}),t&&r&&(process.env.CODEX_WINDOWS_SANDBOX_PACKAGE_FAMILY=t);let n=gCe(D7(o.rt()),await N9()!=null);a=t!=null&&n.core,o.kt(n.core),U9(n.primary)}catch(e){o.kt(null),U9(!1),l.n().warning(`windows_runtime_framework_gate_hydration_failed`,{safe:{buildFlavor:Z9,...F9(e)},sensitive:{error:e}})}let s={phase:`bootstrap-import-main`};try{if(await n.initialize(),r&&a&&ETe(),r||i){let e=r&&a?`app-package`:`bundled`;l.n().info(`windows_core_runtime_launch_selected`,{safe:{buildFlavor:Z9,architecture:process.arch,coreGateEnabledAtStartup:a,selectedRuntimeSource:e}})}await G9({buildFlavor:Z9}).catch(e=>{l.n().warning(`wi"
+    },
+    {
+      "file": "main-BGDKyzfM.js",
+      "offset": 3691711,
+      "snippet": "_ELECTRON_START_IN_BACKGROUND===`1`,qe=(e,t=!0)=>{if(!t){e.showInactive();return}let n=L&&!e.isVisible()&&!e.isMinimized();n&&e.setOpacity(0),e.isMinimized()&&e.restore(),e.show(),e.focus(),n&&setImmediate(()=>{e.isDestroyed()||e.setOpacity(1)})},Je=async e=>{if(Se)try{H.hotkeyWindowLifecycleManager.hide();let t=H.getPrimaryWindow()??await we(`/`);if(t==null)return;qe(t),e!=null&&ye(e,t.webContents)}catch(e){c.reportNonFatal(e instanceof Error?e:`Failed to open window on second instance`,{kind:`second-instance-open-window-failed`})}};w(e=>{let t=Wf(e),n=f.r(t);if(We.deepLinks.queueProcessArgs(e)){n&&Je();return}if(n){Je();return}Je({channel:`shortcut`,source:`shortcut`})});let Ye=async(e,t)=>{if(!Se)return null;H.hotkeyWindowLifecycleManager.hide();let n=H.getPrimaryWindow(),r=n??await we(e);return r==null?null:(Re.desktopNotificationManager.dismissByNavigationPath(e),n!=null&&t.navigateExistingWindow&&We.navigateToRoute(r,e),qe(r),r)},Xe=async(e,t)=>{let n=await Ye(e,t);n!=null&&ye({channel:`shortcut`,source:`shortcut`},n.webContents)};ee&&(Me=new Sie(e=>Xe(e,{navigateExistingWindow:!0}),s.p()),Me.setCompletedThreads(je));let Ze=e=>{he.push({type:`computer-use-analytics-event`,event:e}),ge()},Qe=async()=>{try{await cQe({buildFlavor:i,repoRoot:V.repoRoot,settingsStore:V.settingsStore,onOpenMainWindow:()=>Xe(`/`,{navigateExistingWindow:!1}),onTrayMenuOpenNewThread:()=>Xe(`/`,{navigateExistingWindow:!0}),onTrayMenuOpenRecentThread:e=>Xe(e,{navigateExistingWindow:!0}),onTrayMenuSendFeedback:async()=>{await Xe(`/`,{navigateExistingWindow:!1});let e=H.getPrimaryWindow();e!=null&&H.sendMessageToWindow(e,{type:`run-command`,id:`feedback`})},...rQe({getConnection:()=>W.appServerConnectionRegistry.getMaybeConnection(`local`)??null,getFeatureAvailability:K,getManagedService:()=>ce,getRecorder:()=>Oe,invalidateQuery:e=>H.broadcastQueryCacheInvalidation(e),logComputerHistoryStatu"
+    }
+  ]
+}
