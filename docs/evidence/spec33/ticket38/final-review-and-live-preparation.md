@@ -29,3 +29,7 @@ At the receipt snapshot, the next required step is the user's own **Settings > H
 **T01 has not passed.** T01/T02/T03/T04/T06/T07/T08/T09/T11/T15/T18/T20 remain live `not_run`; neither real-home discovery nor creating A replaces those observations. Begin with T01 → T02 → T07, then expand the required native fault/recovery matrix. Required main merge, worktree cleanup, push/remote equality and tracker completion/closure remain outstanding. Ticket #38 and SPEC #33 must stay open until all required gates pass.
 
 This documentation-only update uses the existing successful tests/review receipts. The full branch-range whitespace check is `git diff --check 1bae005697e902a9fc3b93f5f04bb333f8ccd87d...HEAD`; no unrelated full regression was repeated.
+
+## Subsequent negative-entry evidence
+
+The later `live-preparation/native-untrusted-entry.json` receipt records actual A's completed native tool turn `01a1a0c8-1b67-7943-b778-18323acaf758`: installed doctor/start/status ran successfully at the correct cwd, but the task stayed PAUSED/RECOVERING with PENDING_NATIVE_HOOK, no bound main session/controller and hook_effective false. This advances only the T16 pending-entry branch to **live_partial**. It does not establish why the current owner skipped binding, prove trusted hook execution, or pass T01/continuation/DONE. PAUSED is an initial pending checkpoint, not an observed user pause; the checkpoint and protected baseline are preserved. The detailed matrix and limits are updated in `report.md`; all required native completion and delivery gates remain open.
