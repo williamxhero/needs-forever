@@ -106,8 +106,10 @@ function snapshotFor(state, request, store) {
     }
     return snapshot;
 }
-async function workspaceDigest(state, signal) {
+async function workspaceDigest(state, store, signal) {
     const hash = createHash('sha256');
+    const statePath = resolve(store.path);
+    const temporaryState = /^\.[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.tmp$/i;
     let visited = 0;
     const walk = async (directory) => {
         signal.throwIfAborted();
@@ -118,6 +120,12 @@ async function workspaceDigest(state, signal) {
             const path = resolve(directory, item.name);
             const name = relative(state.task.workspace, path).replaceAll('\\', '/');
             if (name === '.codex-supervisor' || name === '.git')
+                continue;
+            // A checkpoint can live beside task files in any configured directory.
+            // Omit only Store-owned writes, not that whole directory or its verifier.
+            const local = relative(store.directory, path).replaceAll('\\', '/');
+            if (relative(statePath, path) === '' || local === 'summary.md' || local === 'events.jsonl'
+                || (path.startsWith(statePath) && temporaryState.test(path.slice(statePath.length))))
                 continue;
             hash.update(name);
             if (item.isSymbolicLink())
@@ -147,7 +155,7 @@ async function verification(state, store, rpc, signal) {
     state.phase = 'VERIFY';
     store.save(state);
     const before = store.protectedChanges(state);
-    const workspaceBefore = await workspaceDigest(state, signal);
+    const workspaceBefore = await workspaceDigest(state, store, signal);
     let timer;
     let result;
     if (before.length)
@@ -175,7 +183,7 @@ async function verification(state, store, rpc, signal) {
     }
     signal.throwIfAborted();
     const after = store.protectedChanges(state);
-    const workspaceChanged = workspaceBefore !== await workspaceDigest(state, signal);
+    const workspaceChanged = workspaceBefore !== await workspaceDigest(state, store, signal);
     signal.throwIfAborted();
     const passed = result.exitCode === 0 && !before.length && !after.length && !workspaceChanged;
     const evidence = redact({ argv: verify.argv, ...result, protected_before: before, protected_after: after, workspace_changed: workspaceChanged, passed });

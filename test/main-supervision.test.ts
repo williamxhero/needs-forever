@@ -3,21 +3,25 @@ import assert from 'node:assert/strict';
 import { spawnSync, spawn } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
 import { cpSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 
-function setup(name: string, options: Record<string, unknown> = {}, verify = false) {
+function setup(name: string, options: Record<string, unknown> = {}, verify = false, stateDirectory = join('.codex-supervisor', name), protectedFiles = ['verify.mjs']) {
   const directory = resolve('runs/main-supervision', `${name}-${Date.now()}`);
   const workspace = join(directory, '工作 空间');
   const plugin = join(directory, '插件 安装副本');
   mkdirSync(workspace, { recursive: true });
   cpSync(resolve('plugins/needs-forever'), plugin, { recursive: true });
   const task = join(directory, 'task.json');
-  const state = join(workspace, '.codex-supervisor', name, 'state.json');
+  const state = join(workspace, stateDirectory, 'state.json');
   const fixture = join(directory, 'host.json');
   const scenario = join(directory, 'server.json');
   const trace = join(directory, 'protocol.jsonl');
   writeFileSync(join(workspace, 'verify.mjs'), "console.log('independent acceptance');\n");
-  writeFileSync(task, JSON.stringify({ schema_version: 1, task_id: name, workspace, goal: 'Three stages', acceptance: [{ id: 'all', text: 'Three stages complete' }], authorization: 'Local files only', ...(verify ? { verify: { argv: [process.execPath, 'verify.mjs', 'literal;argument'], timeout_seconds: 2, protected_files: ['verify.mjs'] } } : {}), limits: {} }));
+  for (const file of protectedFiles.filter((file) => file !== 'verify.mjs')) {
+    mkdirSync(dirname(join(workspace, file)), { recursive: true });
+    writeFileSync(join(workspace, file), '{"acceptance":"original"}\n');
+  }
+  writeFileSync(task, JSON.stringify({ schema_version: 1, task_id: name, workspace, goal: 'Three stages', acceptance: [{ id: 'all', text: 'Three stages complete' }], authorization: 'Local files only', ...(verify ? { verify: { argv: [process.execPath, 'verify.mjs', 'literal;argument'], timeout_seconds: 2, protected_files: protectedFiles } } : {}), limits: {} }));
   writeFileSync(scenario, JSON.stringify({ trace, ...options }));
   writeFileSync(fixture, JSON.stringify({ desktop_version: 'simulated', cli_version: 'simulated', app_server_argv: [process.execPath, resolve('test/fixtures/app-server.mjs'), scenario] }));
   const control = join(plugin, 'scripts/main-session.mjs');
@@ -161,6 +165,57 @@ test('workspace changes during an otherwise successful fixed check invalidate DO
   assert.match(refused.reason, /workspace_changed.*true/);
   assert.equal(f.status().status, 'ACTIVE');
   f.activity('recheck', 'Current stage-three.txt and all other outputs checked after the change.');
+  assert.deepEqual(f.stop(), {});
+  assert.equal(f.status().status, 'DONE');
+});
+
+test('custom checkpoint paths do not make controller heartbeat writes invalidate a stable fixed check', (t) => {
+  const f = setup('custom-checkpoint-stable', { judge_actions: ['DONE'], verification_delay_ms: 600 }, true, '.spec33-fixture');
+  t.after(() => { if (f.status().live) f.run('pause'); });
+  writeFileSync(join(f.workspace, '.spec33-fixture', 'task-output.txt'), 'stable acceptance output');
+  f.activity('check-custom', 'All outputs independently checked; task-output.txt is stable.');
+  assert.deepEqual(f.stop(), {}, 'B accounting writes in a configured checkpoint location are not task workspace changes.');
+  assert.equal(f.status().status, 'DONE');
+});
+
+test('task files beside a custom checkpoint still invalidate DONE when they change during verification', (t) => {
+  const f = setup('custom-checkpoint-output', { judge_actions: ['DONE', 'DONE'], verification_changes: [[{ path: '.spec33-fixture/task-output.txt', content: 'changed while verifier ran' }], []] }, true, '.spec33-fixture');
+  t.after(() => { if (f.status().live) f.run('pause'); });
+  f.activity('check-before', 'All task outputs checked before independent verification.');
+  assert.match(f.stop().reason, /workspace_changed.*true/);
+  assert.equal(f.status().status, 'ACTIVE');
+  f.activity('check-after', 'The changed task-output.txt and all other outputs independently rechecked.');
+  assert.deepEqual(f.stop(), {});
+  assert.equal(f.status().status, 'DONE');
+});
+
+test('unprotected UUID-named business JSON beside a custom checkpoint remains in the workspace change gate', (t) => {
+  const businessFile = '.spec33-fixture/snapshots/22222222-2222-2222-2222-222222222222.json';
+  const f = setup('custom-checkpoint-business-json', { judge_actions: ['DONE', 'DONE'], verification_changes: [[{ path: businessFile, content: '{"business":"changed during verification"}' }], []] }, true, '.spec33-fixture');
+  t.after(() => { if (f.status().live) f.run('pause'); });
+  mkdirSync(dirname(join(f.workspace, businessFile)), { recursive: true });
+  writeFileSync(join(f.workspace, businessFile), '{"business":"original"}');
+  f.activity('business-before', 'All task outputs, including business JSON, independently checked.');
+  const refused = f.stop();
+  assert.equal(refused.decision, 'block', 'A business file change must refuse DONE even when its name resembles a generated snapshot.');
+  assert.match(refused.reason, /workspace_changed.*true/);
+  assert.equal(f.status().status, 'ACTIVE');
+  f.activity('business-after', 'Business JSON and all other outputs independently rechecked after the change.');
+  assert.deepEqual(f.stop(), {});
+  assert.equal(f.status().status, 'DONE');
+});
+
+test('protected files with checkpoint artifact names retain their fixed baseline enforcement', (t) => {
+  const protectedArtifact = '.spec33-fixture/snapshots/11111111-1111-1111-1111-111111111111.json';
+  const f = setup('custom-checkpoint-protected', { judge_actions: ['DONE', 'DONE'] }, true, '.spec33-fixture', ['verify.mjs', protectedArtifact]);
+  t.after(() => { if (f.status().live) f.run('pause'); });
+  const original = readFileSync(join(f.workspace, protectedArtifact), 'utf8');
+  writeFileSync(join(f.workspace, protectedArtifact), '{"acceptance":"changed"}\n');
+  f.activity('protected-changed', 'Task outputs checked.');
+  assert.match(f.stop().reason, /Protected files changed before verification/);
+  assert.equal(f.protocol().filter((entry) => entry.message?.method === 'command/exec').length, 0);
+  writeFileSync(join(f.workspace, protectedArtifact), original);
+  f.activity('protected-restored', 'Original protected acceptance content restored and task outputs checked.');
   assert.deepEqual(f.stop(), {});
   assert.equal(f.status().status, 'DONE');
 });
