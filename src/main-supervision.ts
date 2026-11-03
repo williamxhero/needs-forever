@@ -77,8 +77,11 @@ function snapshotFor(state: MainSessionState, request: StopRequest, store: Store
   if (JSON.stringify(snapshot).length > budget) { snapshot.repeated_failure = 'Earlier recovery details omitted for size.'; snapshot.evidence_complete = false; }
   return snapshot;
 }
-async function workspaceDigest(state: MainSessionState, signal: AbortSignal): Promise<string> {
+async function workspaceDigest(state: MainSessionState, store: Store, signal: AbortSignal): Promise<string> {
   const hash = createHash('sha256');
+  const statePath = resolve(store.path);
+  const generatedJson = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.json$/i;
+  const temporaryState = /^\.[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.tmp$/i;
   let visited = 0;
   const walk = async (directory: string): Promise<void> => {
     signal.throwIfAborted();
@@ -88,6 +91,12 @@ async function workspaceDigest(state: MainSessionState, signal: AbortSignal): Pr
       const path = resolve(directory, item.name);
       const name = relative(state.task.workspace, path).replaceAll('\\', '/');
       if (name === '.codex-supervisor' || name === '.git') continue;
+      // A checkpoint can live beside task files in any configured directory.
+      // Omit only Store-owned writes, not that whole directory or its verifier.
+      const local = relative(store.directory, path).replaceAll('\\', '/');
+      if (relative(statePath, path) === '' || local === 'summary.md' || local === 'events.jsonl'
+        || (local.startsWith('snapshots/') && generatedJson.test(local.slice('snapshots/'.length)))
+        || (path.startsWith(statePath) && temporaryState.test(path.slice(statePath.length)))) continue;
       hash.update(name);
       if (item.isSymbolicLink()) hash.update(`link:${await readlink(path)}`);
       else if (item.isDirectory()) await walk(path);
@@ -109,7 +118,7 @@ async function verification(state: MainSessionState, store: Store, rpc: Rpc, sig
   if (!state.protected_baseline) throw new Error('Missing initial protected baseline; a resumed verifier baseline must never be invented.');
   state.phase = 'VERIFY'; store.save(state);
   const before = store.protectedChanges(state);
-  const workspaceBefore = await workspaceDigest(state, signal);
+  const workspaceBefore = await workspaceDigest(state, store, signal);
   let timer: ReturnType<typeof setTimeout> | undefined;
   let result: { exitCode: number | null; stdout: string; stderr: string; timed_out?: boolean };
   if (before.length) result = { exitCode: null, stdout: '', stderr: 'Protected files changed before verification.' };
@@ -128,7 +137,7 @@ async function verification(state: MainSessionState, store: Store, rpc: Rpc, sig
   }
   signal.throwIfAborted();
   const after = store.protectedChanges(state);
-  const workspaceChanged = workspaceBefore !== await workspaceDigest(state, signal);
+  const workspaceChanged = workspaceBefore !== await workspaceDigest(state, store, signal);
   signal.throwIfAborted();
   const passed = result.exitCode === 0 && !before.length && !after.length && !workspaceChanged;
   const evidence = redact({ argv: verify.argv, ...result, protected_before: before, protected_after: after, workspace_changed: workspaceChanged, passed });
