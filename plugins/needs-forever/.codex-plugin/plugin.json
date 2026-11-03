@@ -1,6 +1,6 @@
 {
   "name": "needs-forever",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "持续推进一个本地 Codex 任务，支持状态查询、暂停与恢复。",
   "author": { "name": "williamxhero" },
   "skills": "./skills/"
