@@ -258,3 +258,24 @@ test('an adapter occurrence accepts one C and delivery while separate identical 
   assert.match((await relay('c7c0d493-29bf-4f16-9aa8-aa860756640e')).error, /occurrence.*(accepted|invalid|replay)/i);
   assert.equal(f.status().judge_thread_ids.length, 4);
 });
+
+test('released main-session binding leaves later ordinary native lifecycle completely neutral', async () => {
+  const f = setup('released-neutral', { judge_actions: ['DONE'] });
+  f.activity('all-three-stages', 'Independent evidence for all three completed stages.');
+  assert.deepEqual(f.stop(), {});
+  for (let attempt = 0; attempt < 50 && f.status().controller.lifecycle !== 'exited'; attempt++) await delay(50);
+  const final = f.status();
+  assert.equal(final.status, 'DONE');
+  assert.equal(final.binding.status, 'RELEASED');
+  assert.equal(final.controller.lifecycle, 'exited');
+  const bytes = readFileSync(f.state, 'utf8');
+  const protocol = readFileSync(join(f.directory, 'protocol.jsonl'), 'utf8');
+  for (const hook_event_name of ['SessionStart', 'PreToolUse', 'PostToolUse', 'Stop', 'Interrupt', 'UserPromptSubmit']) {
+    const response = f.hook({ hook_event_name, tool_use_id: 'ordinary-after-done', tool_input: { command: 'git status --short' }, tool_response: 'ordinary output', prompt: 'Continue ordinary chat work.' });
+    assert.equal(response.status, 0, response.stderr);
+    assert.equal(response.stdout.trim(), '{}');
+    assert.equal(response.stderr, '');
+  }
+  assert.equal(readFileSync(f.state, 'utf8'), bytes);
+  assert.equal(readFileSync(join(f.directory, 'protocol.jsonl'), 'utf8'), protocol, 'Released callbacks cannot start B/C or deliver another instruction.');
+});
