@@ -1,0 +1,283 @@
+{
+  "schema_version": 1,
+  "observed_at": "2026-11-03T12:40:44.041705+00:00",
+  "task_id": "spec33-native-route-and-verifier-recovery-20261103",
+  "original_a": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+  "native_turn": "01a1a156-2103-7da1-8e73-b3f6dd81a78d",
+  "run_generation": "f83458ad-78ac-4512-ad14-60011ff7dcba",
+  "actual_first_failure": {
+    "line": 469,
+    "at": "2026-11-03T12:18:06.703Z",
+    "chunk_id": "0496ae",
+    "exit_code": 23,
+    "output": "Deliberate acceptance fixture: this route is unavailable. An authorized direct-file route is available.\nroute_native_exit=23\r\n{\"route_argv\":[\"node\",\".spec33-recovery/route-fails.mjs\"],\"exitCode\":23,\"marker\":\"unavailable-route exit 23\\n\"}\r\n"
+  },
+  "single_failed_route_tool_events": 1,
+  "response_order": {
+    "first_response_line": 474,
+    "first_response_at": "2026-11-03T12:18:24.542Z",
+    "genuine_c_hook_prompt_line": 477,
+    "genuine_c_hook_prompt_at": "2026-11-03T12:18:52.261Z",
+    "response_precedes_guidance": true
+  },
+  "guided_alternative": {
+    "c_decision": "d2f2b3c1-f434-4c16-a721-435c9c58125d",
+    "a_tool_event": "d5bde17a-7158-4e68-b8b8-82b2b8fb4bbb",
+    "a_tool_id": "exec-d521bae6-b32e-4533-8114-e7b84e0bc616",
+    "continuation_event": "e95e1642-5183-414c-98c5-d808eb694f64",
+    "payload_exact_text": "{\"route\":\"direct-file\",\"value\":\"recovered\"}",
+    "marker_exact_text": "unavailable-route exit 23\n"
+  },
+  "baseline_evidence": {
+    "historical_receipt": "native-minimal-runtime-fix033.json",
+    "historical_observed_at": "2026-11-03T12:16:35.419Z",
+    "before_first_recovery_tool_at": "2026-11-03T12:17:30.221Z",
+    "verified_original_files": [
+      {
+        "file": "stage1.json",
+        "historical_sha256": "188890e0ddf7d05c7fca15f25d88dd5e58cf7b6031eb9a9adde78d2d0a7b9141",
+        "current_sha256": "188890e0ddf7d05c7fca15f25d88dd5e58cf7b6031eb9a9adde78d2d0a7b9141",
+        "unchanged": true
+      },
+      {
+        "file": "stage2.json",
+        "historical_sha256": "b40f2acac630927ebb147f73b884af3c521962896e96eabf1284ecc4bfa3a190",
+        "current_sha256": "b40f2acac630927ebb147f73b884af3c521962896e96eabf1284ecc4bfa3a190",
+        "unchanged": true
+      },
+      {
+        "file": "final.json",
+        "historical_sha256": "58e721c3ff39508a983fd081f5c4c8e5cf6e305f9cf359ba288fb015d3dd7287",
+        "current_sha256": "58e721c3ff39508a983fd081f5c4c8e5cf6e305f9cf359ba288fb015d3dd7287",
+        "unchanged": true
+      },
+      {
+        "file": "verify.mjs",
+        "historical_sha256": "67e694431651f1d05641c54bb582a52d955c19caee859bcd4af51bf2f4e7f4cb",
+        "current_sha256": "67e694431651f1d05641c54bb582a52d955c19caee859bcd4af51bf2f4e7f4cb",
+        "unchanged": true
+      },
+      {
+        "file": "unavailable-route.mjs",
+        "historical_sha256": "6913afee30405571d3e098aca045a61b68b7ae0967afd87bbc6ab8eedcf0add8",
+        "current_sha256": "6913afee30405571d3e098aca045a61b68b7ae0967afd87bbc6ab8eedcf0add8",
+        "unchanged": true
+      },
+      {
+        "file": "route-attempted.txt",
+        "historical_sha256": "40d5cf8c040ef0b473e4af2a22aa31a47860274bdbbbdf01b57d39ed83397a1a",
+        "current_sha256": "40d5cf8c040ef0b473e4af2a22aa31a47860274bdbbbdf01b57d39ed83397a1a",
+        "unchanged": true
+      }
+    ],
+    "limit": "Historical independent hashes cover these six original files; nineteen-file evidence is A mtime plus before/after comparison, not an independently captured full original hash manifest."
+  },
+  "why_c_continued": [
+    {
+      "c": 2,
+      "reason": "Earlier tool hardcoded historical exit and only compared files within its own command."
+    },
+    {
+      "c": 3,
+      "reason": "Snapshot evidence_complete=false: older tools and budget truncation. A later gathered one concise proof; C4 accepted R1-R3."
+    }
+  ],
+  "independent_failure_repair": {
+    "first_b_gate_event": "dd851fc0-2ef0-45e1-9be1-26e934855ac8",
+    "actual_exit": 17,
+    "marker": "INDEPENDENT_GATE_NOT_READY",
+    "a_repair_event": "69a8df61-1897-41fa-b586-d657edb5139c",
+    "a_local_same_argv_exit": 0,
+    "ready_exact_text": "ready\n",
+    "limit": "A local verifier success is not a final independent B success."
+  },
+  "t08_pause_observation": {
+    "status": "PAUSED",
+    "phase": "IDLE",
+    "binding": "BOUND",
+    "pause_state_at": "2026-11-03T12:38:08.290Z",
+    "c5": "01a1a169-63e0-7b12-8175-5c4cfa3175c5",
+    "c5_turn_status_via_read_thread": "interrupted",
+    "c5_archived": false,
+    "c5_archived_at": null,
+    "a_thread_status_via_read_thread": "idle",
+    "a_turn_status_via_read_thread": "completed",
+    "a_turn_completed_at": "2026-11-03T12:38:08Z",
+    "late_delivery_decision_verification_events": [],
+    "auto_resume_performed_by_observer": false
+  },
+  "selected_events": [
+    {
+      "event_id": "73ab4bbf-61ef-46c4-a296-88b8d0fc8112",
+      "at": "2026-11-03T12:18:52.182Z",
+      "type": "judge_archived",
+      "thread_id": "01a1a158-b2af-73b0-bdbc-1db70f7b5371"
+    },
+    {
+      "event_id": "d2f2b3c1-f434-4c16-a721-435c9c58125d",
+      "at": "2026-11-03T12:18:52.183Z",
+      "type": "decision",
+      "thread_id": "01a1a158-b2af-73b0-bdbc-1db70f7b5371",
+      "decision": {
+        "action": "CONTINUE",
+        "reason": "The exit23 failure and exact marker are evidenced. R2 and the remaining R3 checks are incomplete; the authorized alternative can now proceed under supervisor guidance.",
+        "evidence_ids": [
+          "8e1f01c0-3d90-489a-990a-6a92047351f2"
+        ]
+      }
+    },
+    {
+      "event_id": "8984029a-1c39-49c5-baa6-a07cba5184da",
+      "at": "2026-11-03T12:18:52.209Z",
+      "type": "stop_hook_direction_returned",
+      "session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+      "delivery_id": "fe736a47-124e-4348-bea2-add263a54393",
+      "execution_confirmed": false
+    },
+    {
+      "event_id": "e95e1642-5183-414c-98c5-d808eb694f64",
+      "at": "2026-11-03T12:20:04.933Z",
+      "type": "main_session_continuation_confirmed",
+      "session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+      "turn_id": "01a1a156-2103-7da1-8e73-b3f6dd81a78d",
+      "tool_use_id": "exec-d521bae6-b32e-4533-8114-e7b84e0bc616",
+      "delivery_id": "fe736a47-124e-4348-bea2-add263a54393"
+    },
+    {
+      "event_id": "80633190-e9bc-4e15-8b74-95216abe19f3",
+      "at": "2026-11-03T12:20:56.770Z",
+      "type": "judge_archived",
+      "thread_id": "01a1a15a-712a-7881-93ed-9ae151afadaa"
+    },
+    {
+      "event_id": "eaf8e099-7100-4475-ba94-71c4570beb78",
+      "at": "2026-11-03T12:20:56.772Z",
+      "type": "decision",
+      "thread_id": "01a1a15a-712a-7881-93ed-9ae151afadaa",
+      "decision": {
+        "action": "CONTINUE",
+        "reason": "Marker and exact payload are verified, but historical exit23 is hard-coded in this command; unrelated-file comparison covers only this command, not the original task baseline.",
+        "evidence_ids": [
+          "d5bde17a-7158-4e68-b8b8-82b2b8fb4bbb"
+        ]
+      }
+    },
+    {
+      "event_id": "b2f01c0c-5bfa-4c53-a9c8-ca10e8bd90e5",
+      "at": "2026-11-03T12:20:56.820Z",
+      "type": "stop_hook_direction_returned",
+      "session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+      "delivery_id": "441f9e8d-35ea-41b8-8611-8113b8dcb202",
+      "execution_confirmed": false
+    },
+    {
+      "event_id": "98e95a28-b92f-4dee-95b9-1af9133aef40",
+      "at": "2026-11-03T12:21:44.160Z",
+      "type": "main_session_continuation_confirmed",
+      "session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+      "turn_id": "01a1a156-2103-7da1-8e73-b3f6dd81a78d",
+      "tool_use_id": "exec-b2f82b5a-abd5-4e55-94a9-cdd854b3d0a2",
+      "delivery_id": "441f9e8d-35ea-41b8-8611-8113b8dcb202"
+    },
+    {
+      "event_id": "1fc30566-417f-4ab1-bb87-6d81df321887",
+      "at": "2026-11-03T12:30:12.433Z",
+      "type": "judge_archived",
+      "thread_id": "01a1a162-66c9-7330-81b9-15d525e0e30a"
+    },
+    {
+      "event_id": "48eab71f-7c1d-4f4a-981b-98821ea0f502",
+      "at": "2026-11-03T12:30:12.435Z",
+      "type": "decision",
+      "thread_id": "01a1a162-66c9-7330-81b9-15d525e0e30a",
+      "decision": {
+        "action": "CONTINUE",
+        "reason": "Supervisor terminal decision lacked sufficient independent evidence.",
+        "evidence_ids": []
+      }
+    },
+    {
+      "event_id": "0316ef7e-7f25-4d7c-9988-fef7468b2b25",
+      "at": "2026-11-03T12:30:12.553Z",
+      "type": "stop_hook_direction_returned",
+      "session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+      "delivery_id": "150cd6d2-9fe2-43ca-9e46-6b2894f14063",
+      "execution_confirmed": false
+    },
+    {
+      "event_id": "e4c65883-8aa2-40e1-8f52-32d84ad324c2",
+      "at": "2026-11-03T12:31:41.564Z",
+      "type": "main_session_continuation_confirmed",
+      "session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+      "turn_id": "01a1a156-2103-7da1-8e73-b3f6dd81a78d",
+      "tool_use_id": "exec-49d8b459-6d0d-4426-9a32-9197a7a19bd0",
+      "delivery_id": "150cd6d2-9fe2-43ca-9e46-6b2894f14063"
+    },
+    {
+      "event_id": "cafcc743-845c-4bb3-9cab-559aaf47002c",
+      "at": "2026-11-03T12:34:04.217Z",
+      "type": "judge_archived",
+      "thread_id": "01a1a166-9ceb-7151-af10-515a0f4cdae3"
+    },
+    {
+      "event_id": "33d37ac9-8f1e-4a50-8c23-dc2e2186aec8",
+      "at": "2026-11-03T12:34:04.221Z",
+      "type": "decision",
+      "thread_id": "01a1a166-9ceb-7151-af10-515a0f4cdae3",
+      "decision": {
+        "action": "DONE",
+        "reason": "Structured command evidence supports R1–R3: single original exit23 execution, response-before-guidance ordering, exact preserved marker and payload, and unchanged original/protected files. The configured independent verifier is the subsequent supervisor-owned gate.",
+        "evidence_ids": [
+          "f3752f12-5b97-4242-9f62-bf02b9b79d92"
+        ]
+      }
+    },
+    {
+      "event_id": "dd851fc0-2ef0-45e1-9be1-26e934855ac8",
+      "at": "2026-11-03T12:34:14.494Z",
+      "type": "verification_result",
+      "argv": [
+        "node",
+        ".spec33-recovery/verify-recovery.mjs"
+      ],
+      "exitCode": 17,
+      "stdout": "",
+      "stderr": "INDEPENDENT_GATE_NOT_READY: preserve payload; create .spec33-recovery/repair-ready.txt with exact text ready\n, then retry unchanged argv.\n",
+      "workspace_changed": false,
+      "passed": false
+    },
+    {
+      "event_id": "17320876-0658-46bc-849f-fc324b198638",
+      "at": "2026-11-03T12:34:14.582Z",
+      "type": "stop_hook_direction_returned",
+      "session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+      "delivery_id": "7907a33f-fbac-4111-a728-3c1829551f82",
+      "execution_confirmed": false
+    },
+    {
+      "event_id": "bb2658ff-ddf4-490e-9ceb-815fc7234cec",
+      "at": "2026-11-03T12:35:57.842Z",
+      "type": "main_session_continuation_confirmed",
+      "session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+      "turn_id": "01a1a156-2103-7da1-8e73-b3f6dd81a78d",
+      "tool_use_id": "exec-1194a65e-bb9d-4f46-8c81-4286e5d13066",
+      "delivery_id": "7907a33f-fbac-4111-a728-3c1829551f82"
+    },
+    {
+      "event_id": "352d04c8-5ad7-4033-be28-d94dfd152473",
+      "at": "2026-11-03T12:38:08.340Z",
+      "type": "judge_terminated",
+      "thread_id": "01a1a169-63e0-7b12-8175-5c4cfa3175c5",
+      "turn_id": "01a1a169-64f9-7b71-8c19-84825dbfec3c"
+    }
+  ],
+  "source_digests": {
+    "events.jsonl": "ed1f922fa84f56ee60286503ff7d4d0f176077f65f64a92ad0152ef15528f677",
+    "original_a_rollout": "d530ad7c6cc599eb167bd24115dd96b0b738f3f7ee1079adcebc95b653a89412"
+  },
+  "limits": [
+    "Read-only observer; no task state, acceptance, protected scripts, hooks, trust, chats, or runtime modified.",
+    "C5 cancellation confirmed; C5 archive not yet observed.",
+    "Task intentionally paused before C5 accepted repair and B reran independent gate."
+  ]
+}
