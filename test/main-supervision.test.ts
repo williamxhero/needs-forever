@@ -235,6 +235,40 @@ test('truncated old tool output requests concise proof but cannot poison a later
   assert.equal(snapshots[1].evidence.some((entry: any) => entry.source?.item_id === 'oversized-result'), false);
 });
 
+test('installed pause returns before bounded C cleanup and cleanup failure cannot restart A', async (t) => {
+  const f = setup('pause-C-cleanup', { judge_actions: ['CONTINUE'], hold_judge: true, hold_archive: true });
+  t.after(() => { if (f.status().status === 'ACTIVE') f.run('pause'); });
+  f.activity('before-pause', 'Stage three remains incomplete.');
+  const callback = spawn(process.execPath, [join(f.plugin, 'scripts/lifecycle.mjs'), '--test-fixture', f.fixture], { cwd: f.workspace, env: { ...process.env, PLUGIN_ROOT: f.plugin }, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
+  let output = ''; callback.stdout.on('data', (chunk) => { output += chunk; });
+  const exited = new Promise<void>((done) => callback.once('exit', () => done()));
+  callback.stdin.end(JSON.stringify({ hook_event_name: 'Stop', session_id: 'pause-C-cleanup', cwd: f.workspace, turn_id: 'same-turn' }));
+  for (let i = 0; i < 100 && !f.protocol().some((entry) => entry.message?.method === 'turn/start'); i++) await delay(25);
+  const judgeStart = f.protocol().find((entry) => entry.message?.method === 'turn/start');
+  assert.ok(judgeStart, 'Pause must cancel an actual started C.');
+  const started = Date.now();
+  assert.equal(f.run('pause').status, 0);
+  assert.ok(Date.now() - started < 2_500, 'Public pause must not await the independent 3-second cleanup deadline.');
+  await exited;
+  assert.deepEqual(JSON.parse(output), {});
+  assert.equal(f.status().status, 'PAUSED');
+  const events = () => readFileSync(join(dirname(f.state), 'events.jsonl'), 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+  for (let i = 0; i < 160 && !events().some((entry) => entry.type === 'judge_archive_failed'); i++) await delay(25);
+  assert.ok(events().some((entry) => entry.type === 'judge_archive_failed' && entry.thread_id === judgeStart.message.params.threadId));
+  const trace = f.protocol();
+  const archives = trace.filter((entry) => entry.message?.method === 'thread/archive');
+  assert.deepEqual(archives.map((entry) => entry.message.params.threadId), [judgeStart.message.params.threadId]);
+  const cleanup = trace.filter((entry) => entry.pid === archives[0].pid && entry.message?.method);
+  assert.deepEqual(cleanup.map((entry) => entry.message.method), ['initialize', 'initialized', 'config/read', 'thread/archive']);
+  assert.throws(() => process.kill(judgeStart.pid, 0), 'The interrupted judge server must be gone.');
+  assert.throws(() => process.kill(archives[0].pid, 0), 'The timed-out cleanup server must be gone.');
+  assert.equal(trace.filter((entry) => entry.message?.method === 'turn/start').length, 1);
+  assert.equal(trace.filter((entry) => entry.message?.method === 'thread/resume').length, 0);
+  assert.equal(events().some((entry) => entry.type === 'decision' || entry.type === 'send_confirmed'), false);
+  assert.equal(f.status().pending_action, null);
+  assert.equal(f.status().status, 'PAUSED');
+});
+
 for (const phase of ['JUDGE', 'VERIFY']) test(`human input during delayed ${phase} invalidates late success and current evidence must be gathered again`, async (t) => {
   const f = setup(`input-during-${phase}`, { judge_actions: ['DONE', 'DONE'], ...(phase === 'JUDGE' ? { judge_delay_ms: 1_500 } : { verification_delay_ms: 1_500 }) }, phase === 'VERIFY');
   t.after(() => f.run('pause'));

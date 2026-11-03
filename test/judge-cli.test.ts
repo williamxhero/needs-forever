@@ -128,7 +128,7 @@ test('streamed completed items supply worker evidence and judge JSON when termin
 });
 
 test('a timed out judge terminates the owned connection without a second judge or inferred completion', () => {
-  const fixture = scenario('judge-timeout', { hold_judge: true });
+  const fixture = scenario('judge-timeout', { hold_judge: true, mcp_servers: ['boundary.example'] });
   writeFileSync(fixture.fixture, JSON.stringify({ ...json(fixture.fixture), judge_timeout_ms: 100 }));
   const result = fixture.run();
   assert.equal(result.status, 1, result.stderr);
@@ -139,6 +139,42 @@ test('a timed out judge terminates the owned connection without a second judge o
   const pid = fixture.protocol().findLast((entry) => entry.kind === 'spawn').pid;
   assert.throws(() => process.kill(pid, 0));
   assert.ok(fixture.events().some((entry) => entry.type === 'judge_terminated'));
+  const trace = fixture.protocol();
+  const archives = trace.filter((entry) => entry.message?.method === 'thread/archive');
+  assert.deepEqual(archives.map((entry) => entry.message.params.threadId), ['judge-1'], 'The cancelled C must be archived even after its owned connection exits.');
+  const cleanupPid = archives[0].pid;
+  const cleanupRequests = trace.filter((entry) => entry.pid === cleanupPid && entry.message?.method);
+  assert.deepEqual(cleanupRequests.map((entry) => entry.message.method), ['initialize', 'initialized', 'config/read', 'thread/archive']);
+  assert.notEqual(cleanupPid, trace.find((entry) => entry.message?.method === 'turn/start' && entry.message.params.threadId === 'judge-1').pid);
+  const ownerPid = trace.find((entry) => entry.message?.method === 'turn/start' && entry.message.params.threadId === 'judge-1').pid;
+  const cleanupSpawn = trace.find((entry) => entry.kind === 'spawn' && entry.pid === cleanupPid);
+  assert.deepEqual(cleanupSpawn.argv, trace.find((entry) => entry.kind === 'spawn' && entry.pid === ownerPid).argv, 'Cleanup must preserve the guarded features and disabled MCP configuration.');
+  assert.equal(cleanupSpawn.cwd, fixture.workspace);
+  assert.throws(() => process.kill(ownerPid, 0));
+  assert.ok(fixture.events().some((entry) => entry.type === 'judge_archived' && entry.thread_id === 'judge-1'));
+});
+
+test('terminated judge archive rejection or timeout is bounded and never restarts a model or infers completion', () => {
+  for (const options of [{ archive_failure: true }, { hold_archive: true }]) {
+    const fixture = scenario(`judge-cleanup-${Object.keys(options)[0]}`, { hold_judge: true, ...options });
+    writeFileSync(fixture.fixture, JSON.stringify({ ...json(fixture.fixture), judge_timeout_ms: 100 }));
+    const started = Date.now();
+    const result = fixture.run();
+    assert.equal(result.status, 1, result.stderr);
+    assert.match(result.stderr, /judge.*timeout/i);
+    assert.ok(Date.now() - started < 7_000, 'Cleanup must have its own short deadline.');
+    assert.equal(json(fixture.state).phase, 'RECOVERING');
+    assert.equal(json(fixture.state).last_decision, null);
+    const requests = fixture.protocol().filter((entry) => entry.message?.method);
+    assert.deepEqual(requests.filter((entry) => entry.message.method === 'thread/archive').map((entry) => entry.message.params.threadId), ['judge-1']);
+    assert.equal(requests.filter((entry) => entry.message.method === 'thread/start').length, 2);
+    assert.equal(requests.filter((entry) => entry.message.method === 'turn/start').length, 2);
+    assert.equal(requests.filter((entry) => entry.message.method === 'thread/resume').length, 0);
+    assert.ok(fixture.events().some((entry) => entry.type === 'judge_archive_failed' && entry.thread_id === 'judge-1' && typeof entry.error === 'string'));
+    if ('hold_archive' in options) assert.match(String(fixture.events().find((entry) => entry.type === 'judge_archive_failed')?.error), /cleanup deadline exceeded/);
+    assert.equal(fixture.events().some((entry) => entry.type === 'judge_archived'), false);
+    for (const entry of fixture.protocol().filter((entry) => entry.kind === 'spawn' && entry.argv.includes('app-server'))) assert.throws(() => process.kill(entry.pid, 0));
+  }
 });
 
 test('T06 WAIT_EXTERNAL cites an actual failed route, stays idle and notifies once despite duplicates', () => {
@@ -199,6 +235,9 @@ test('PAUSED wins over a real judge that is in flight and the owned judge connec
   const pid = trace.findLast((entry) => entry.kind === 'spawn').pid;
   assert.throws(() => process.kill(pid, 0));
   assert.ok(fixture.events().some((entry) => entry.type === 'stale_judge_result_ignored'));
+  assert.deepEqual(trace.filter((entry) => entry.message?.method === 'thread/archive').map((entry) => entry.message.params.threadId), ['judge-1']);
+  assert.equal(trace.filter((entry) => entry.message?.method === 'turn/start').length, 2, 'PAUSED cannot launch another model.');
+  assert.equal(trace.filter((entry) => entry.message?.method === 'thread/resume').length, 0);
 });
 
 test('only the expected judge turn can supply the result even if a foreign completion arrives first', () => {
