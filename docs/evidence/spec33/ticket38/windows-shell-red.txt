@@ -14,7 +14,7 @@ test at dist\test\main-session.test.js:239:1
 ✖ Windows discovered hook commands stay neutral through PowerShell and cmd in a Chinese path with spaces (3210.9276ms)
   AssertionError [ERR_ASSERTION]: Every discovered handler must execute in the native user shell without activating an uninvoked chat.
   + actual - expected
-  
+
   + [
   +   'powershell/SessionStart: status=1, stdout=, stderr=node:internal/modules/cjs/loader:1520\r\n' +
   +     '  throw err;\r\n' +
@@ -126,7 +126,7 @@ test at dist\test\main-session.test.js:239:1
   +     'Node.js v24.19.0\r\n'
   + ]
   - []
-  
+
       at TestContext.<anonymous> (file:///D:/WILL/TOOLS/needs-forever/.scratch/spec33-worktrees/ticket38/dist/test/main-session.test.js:250:12)
       at Test.runInAsyncScope (node:async_hooks:227:14)
       at Test.run (node:internal/test_runner/test:1382:25)
