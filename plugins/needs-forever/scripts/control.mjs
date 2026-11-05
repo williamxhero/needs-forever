@@ -37,9 +37,10 @@ function options(args) {
   const flags = {};
   for (let i = 0; i < args.length; i += 2) {
     const key = args[i];
-    if (!['--task', '--state', '--test-fixture', '--control-mode'].includes(key) || flags[key] || !args[i + 1] || args[i + 1].startsWith('--')) throw new Error('Expected unique --task, --state, --test-fixture or --control-mode flags.');
-    if (key === '--control-mode') { if (!['main-session', 'independent-worker'].includes(args[i + 1])) throw new Error('Invalid control mode.'); flags[key] = args[i + 1]; }
-    else flags[key] = absolute(args[i + 1], key);
+    const value = args[i + 1];
+    if (!['--task', '--state', '--test-fixture', '--control-mode', '--workspace', '--port'].includes(key) || flags[key] || !value || value.startsWith('--')) throw new Error('Expected unique --task, --state, --test-fixture, --control-mode, --workspace or --port flags.');
+    if (key === '--control-mode') { if (!['main-session', 'independent-worker'].includes(value)) throw new Error('Invalid control mode.'); flags[key] = value; }
+    else flags[key] = key === '--port' ? value : absolute(value, key);
   }
   return flags;
 }
@@ -217,6 +218,16 @@ async function main() {
     return emit({ ready: true, node: process.version, codex: version, plugin_version: read(fileURLToPath(new URL('../.codex-plugin/plugin.json', import.meta.url))).version });
   }
   const flags = options(args);
+  if (command === 'web') {
+    if (!flags['--workspace']) throw new Error('web requires --workspace DIRECTORY.');
+    const port = flags['--port'] === undefined ? '8787' : flags['--port'];
+    if (!/^\d+$/.test(port) || Number(port) > 65535) throw new Error('--port must be an integer between 0 and 65535.');
+    const child = spawn(process.execPath, [cli, 'web', '--workspace', flags['--workspace'], '--port', port], { cwd: flags['--workspace'], stdio: 'inherit', windowsHide: true });
+    const [code, signal] = await new Promise((done) => child.once('exit', (exitCode, exitSignal) => done([exitCode, exitSignal])));
+    if (signal) throw new Error(`Web UI exited from signal ${signal}.`);
+    if (code !== 0) throw new Error(`Web UI exited with code ${code ?? 'unknown'}.`);
+    return;
+  }
   // Route before any legacy lease/checkpoint/process mutation. Missing mode in
   // saved checkpoints is the original independent-worker contract.
   const saved = flags['--state'] && existsSync(flags['--state']) ? read(flags['--state']) : null;
@@ -235,10 +246,10 @@ async function main() {
     if (command === 'pause') {
       return emit(await pauseMainController(path));
     }
-    throw new Error('Commands: start/status/pause/resume.');
+    throw new Error('Commands: start/status/pause/resume/web.');
   }
   if (command === 'start' || command === 'resume') return emit(await launch(command, flags));
-  if (command !== 'status' && command !== 'pause') throw new Error('Commands: doctor | start --task FILE [--state FILE] | status/pause/resume --state FILE.');
+  if (command !== 'status' && command !== 'pause') throw new Error('Commands: doctor | web --workspace DIRECTORY [--port PORT] | start --task FILE [--state FILE] | status/pause/resume --state FILE.');
   const statePath = absolute(flags['--state'], '--state');
   const state = read(statePath);
   const receipt = existsSync(receiptPath(statePath)) ? read(receiptPath(statePath)) : null;

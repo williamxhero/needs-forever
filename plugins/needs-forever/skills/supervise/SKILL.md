@@ -16,6 +16,7 @@ description: 仅在用户显式调用本技能执行任务，或明确要求启�
 - **暂停**：按用户明确暂停请求执行 `node <control> pause --state <绝对路径>`。确认返回 `paused:true` 与持久状态 `PAUSED` 后报告成功；控制句柄失效时保留检查点并报告，不能按旧 PID 杀进程。
 - **命令入口**：绑定只接受单条字面量 `node`/`node.exe` 命令（可用绝对 Node 路径和 PowerShell `&`）。Code Mode 使用顶层 `text(await tools.exec_command({cmd: "完整命令"}));`，也支持 `const result = await tools.exec_command({...}); text(result);`，对象参数须为字面量。不要用动态字符串、模板字符串、条件/循环/函数包装或复合 shell；这些形式保持 neutral，真实 prepare 若已执行则仍待绑定，按回执提示用直接 `resume --state FILE` 重试。读取、搜索、打印命令示例不会启用监督。
 - **恢复**：用户明确要求恢复 Needs Forever 监督后，在原 A 及原 workspace 执行 `node <control> resume --state <绝对路径>`。原 A 的新 native 回执完成后才启动新 B，并等待新的真实 Stop；旧未知方向不会重发。可用 `--task <绝对配置路径>` 明确更新合同或提高/取消累计限制；目标/授权变化须先 PAUSED，固定验收及原保护基线保持不变。其他聊天可以查询和暂停，不能代替已经绑定的 A 恢复。`DONE` 的新增工作使用新的 task_id。
+- **记录页面**：需要观察一个工作区的任务记录时执行 `node <control> web --workspace <绝对工作区路径> [--port 8787]`。页面只读，默认监听 `127.0.0.1`，从 `.codex-supervisor/*/state.json`、`events.jsonl` 和快照读取数据，不提供启动、暂停或恢复按钮。
 
 完成条件是脚本结果与持久状态一致。`PENDING_NATIVE_HOOK` 或 `RECOVERING` 不能报告监督已生效。待信任时请用户在 Codex Settings > Hooks 审阅插件定义并按宿主要求重载；doctor 只检查 Node/CLI，不能证明 Desktop hook 能力或信任。只有真实 Stop 返回后的原 A 匹配工具活动才能确认续跑。身份、hook、版本或宿主不支持时保留检查点，清楚说明原因及待验证步骤。
 

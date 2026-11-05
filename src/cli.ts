@@ -7,12 +7,33 @@ import { Supervisor } from './supervisor.js';
 import { codexCommand } from './transport.js';
 import { reachedLimits } from './rules.js';
 import { validateTask as taskInput } from './main-session.js';
+import { startWebServer } from './web.js';
 import { record, text } from './types.js';
 import type { Decision, State, Task } from './types.js';
 
 function readJson(path: string): unknown { return JSON.parse(readFileSync(path, 'utf8')); }
 async function main(): Promise<void> {
   const [command, ...args] = process.argv.slice(2);
+  if (command === 'web') {
+    const flags = new Map<string, string>();
+    for (let index = 0; index < args.length; index += 2) {
+      const key = args[index]; const value = args[index + 1];
+      if (!key || !['--workspace', '--port'].includes(key) || !value || value.startsWith('--') || flags.has(key)) throw new Error('Usage: web --workspace DIRECTORY [--port PORT].');
+      flags.set(key, value);
+    }
+    const workspace = resolve(text(flags.get('--workspace'), '--workspace'));
+    const portText = flags.get('--port');
+    const port = portText === undefined ? 8787 : Number(portText);
+    if (!Number.isInteger(port) || port < 0 || port > 65535) throw new Error('--port must be an integer between 0 and 65535.');
+    const running = await startWebServer({ workspace, port });
+    console.log(`Needs Forever Web UI listening at ${running.url}`);
+    await new Promise<void>((resolvePromise) => {
+      const stop = () => { void running.close().finally(resolvePromise); };
+      process.once('SIGINT', stop);
+      process.once('SIGTERM', stop);
+    });
+    return;
+  }
   const flags = new Map<string, string>();
   for (let index = 0; index < args.length; index += 2) {
     const key = args[index]; const value = args[index + 1];
@@ -24,7 +45,7 @@ async function main(): Promise<void> {
     console.log(JSON.stringify(store.read(), null, 2));
     return;
   }
-  if (command !== 'start' && command !== 'resume') throw new Error('Usage: codex-supervisor start --task FILE [--state FILE] [--test-fixture FILE] | resume --state FILE [--task FILE] [--test-fixture FILE] | status --state FILE.');
+  if (command !== 'start' && command !== 'resume') throw new Error('Usage: codex-supervisor web --workspace DIRECTORY [--port PORT] | start --task FILE [--state FILE] [--test-fixture FILE] | resume --state FILE [--task FILE] [--test-fixture FILE] | status --state FILE.');
   // Before exclusivity, a resume checkpoint supplies only the lock identity.
   // Another owner may still update its status, contract or counters.
   const initial = command === 'resume' ? new Store(resolve(text(flags.get('--state'), '--state'))).read() : undefined;
