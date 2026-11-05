@@ -13,7 +13,7 @@ export interface MainSessionState extends State {
   run_generation: string;
   contract_sha256: string;
   binding: { status: 'PENDING_NATIVE_HOOK' | 'BOUND' | 'RELEASED'; tool_use_id: string | null; bound_at: string | null; challenge: string; task_path: string; operation?: 'prepare' | 'resume' };
-  host: { desktop_version: string | null; cli_version: string | null; hook_effective: boolean; source: 'unverified' | 'native-desktop' | 'simulated'; reason: string };
+  host: { desktop_version: string | null; cli_version: string | null; hook_effective: boolean; source: 'unverified' | 'native-desktop' | 'simulated'; reason: string; desktop_pid?: number; desktop_binary?: string };
   last_stop?: StopRequest;
   controller?: { id: string; pid: number; endpoint: string; token: string; lifecycle: 'running' | 'exited'; started_at: string; run_generation: string; plugin_root: string; bundle_sha256?: string };
   stop_transport?: { request: StopRequest; outcome: 'pending' | 'returned' | 'unknown' | 'failed'; error?: string; delivery_id?: string };

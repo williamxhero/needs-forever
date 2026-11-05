@@ -5,7 +5,7 @@ import { cpSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 
-function installed(name: string, transport: unknown = {}, sessionId = name, boundStatus = 0, limits: Record<string, number> = {}, appServer?: Record<string, unknown>) {
+function installed(name: string, transport: unknown = {}, sessionId = name, boundStatus = 0, limits: Record<string, number> = {}, appServer?: Record<string, unknown>, desktopPid?: number) {
   const directory = resolve('runs/main-controller', `${name}-${Date.now()}`);
   const workspace = join(directory, '工作 空间');
   const plugin = join(directory, '插件 安装副本');
@@ -18,7 +18,7 @@ function installed(name: string, transport: unknown = {}, sessionId = name, boun
   const scenario = join(directory, 'server.json');
   if (appServer) writeFileSync(scenario, JSON.stringify({ trace, ...appServer }));
   writeFileSync(task, JSON.stringify({ schema_version: 1, task_id: name, workspace, goal: 'Three stages', acceptance: [{ id: 'all', text: 'Three stages complete' }], authorization: 'Local files', limits }));
-  writeFileSync(fixture, JSON.stringify({ desktop_version: 'simulated', cli_version: 'simulated', transport, ...(appServer ? { app_server_argv: [process.execPath, resolve('test/fixtures/app-server.mjs'), scenario] } : {}) }));
+  writeFileSync(fixture, JSON.stringify({ desktop_version: 'simulated', cli_version: 'simulated', transport, ...(desktopPid ? { desktop_pid: desktopPid } : {}), ...(appServer ? { app_server_argv: [process.execPath, resolve('test/fixtures/app-server.mjs'), scenario] } : {}) }));
   const control = join(plugin, 'scripts/main-session.mjs');
   const run = (command: string, args: string[] = []) => spawnSync(process.execPath, [control, command, '--state', state, ...args], { cwd: workspace, encoding: 'utf8', timeout: 20_000 });
   const hook = (event: Record<string, unknown>) => spawnSync(process.execPath, [join(plugin, 'scripts/lifecycle.mjs'), '--test-fixture', fixture], { cwd: workspace, env: { ...process.env, PLUGIN_ROOT: plugin }, input: JSON.stringify({ session_id: sessionId, cwd: workspace, turn_id: 'same-turn', ...event }), encoding: 'utf8', timeout: 20_000 });
@@ -28,7 +28,8 @@ function installed(name: string, transport: unknown = {}, sessionId = name, boun
   assert.equal(prepared.status, 0, prepared.stderr);
   const bound = hook({ ...tool, hook_event_name: 'PostToolUse', tool_response: prepared.stdout });
   assert.equal(bound.status, boundStatus, bound.stderr);
-  return { directory, workspace, plugin, task, state, fixture, trace, run, hook };
+  const setDesktopPid = (pid: number) => writeFileSync(fixture, JSON.stringify({ ...JSON.parse(readFileSync(fixture, 'utf8')), desktop_pid: pid }));
+  return { directory, workspace, plugin, task, state, fixture, trace, run, hook, setDesktopPid };
 }
 
 test('installed bound main session automatically owns an independent B and synchronous Stop returns direction without claiming execution', (t) => {
@@ -222,10 +223,13 @@ test('foreign and stale generation Stop events do not replace a returned directi
 });
 
 test('native host restart requires explicit same-A resume and never replays a prior direction', async (t) => {
-  const f = installed('host-restarted', { decision: { action: 'CONTINUE', next_message: 'Original direction' } });
+  const f = installed('host-restarted', { decision: { action: 'CONTINUE', next_message: 'Original direction' } }, 'host-restarted', 0, {}, undefined, process.pid);
   t.after(() => f.run('pause'));
   f.hook({ hook_event_name: 'Stop' });
   const original = JSON.parse(f.run('status').stdout);
+  assert.equal(f.hook({ hook_event_name: 'SessionStart' }).status, 0);
+  assert.equal(JSON.parse(f.run('status').stdout).phase, 'WORKER', 'A same-Desktop SessionStart does not masquerade as a host restart.');
+  f.setDesktopPid(process.ppid);
   assert.equal(f.hook({ hook_event_name: 'SessionStart' }).status, 0);
   const recovering = JSON.parse(f.run('status').stdout);
   assert.equal(recovering.phase, 'RECOVERING');
@@ -233,6 +237,7 @@ test('native host restart requires explicit same-A resume and never replays a pr
   assert.deepEqual(JSON.parse(f.hook({ hook_event_name: 'Stop' }).stdout), {});
   const control = join(f.plugin, 'scripts/main-session.mjs');
   const tool = { tool_use_id: 'host-resume', tool_input: { command: `node "${control}" resume --state "${f.state}" --test-fixture "${f.fixture}"` } };
+  f.setDesktopPid(process.pid);
   f.hook({ ...tool, hook_event_name: 'PreToolUse' });
   const resumed = f.run('resume', ['--test-fixture', f.fixture]);
   assert.equal(resumed.status, 0, resumed.stderr);

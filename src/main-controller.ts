@@ -111,13 +111,13 @@ export function boundStateForEvent(input: any, pluginRoot: string, simulated: bo
   }
   return null;
 }
-export async function dispatchBoundLifecycle(path: string, input: unknown, pluginRoot?: string, bundleHash?: string): Promise<HookReply> {
+export async function dispatchBoundLifecycle(path: string, input: unknown, pluginRoot?: string, bundleHash?: string, desktopPid?: number): Promise<HookReply> {
   const state = readJson(path) as MainSessionState;
   if (!state.controller || state.controller.lifecycle !== 'running') return {};
   // The adapter owns occurrence identity. It is not a field supplied by native
   // stdin. One native command invocation sends exactly once on the pinned host.
   const adapterOccurrenceId = randomUUID();
-  return controllerRequest(state.controller, 'lifecycle', { adapter_occurrence_id: adapterOccurrenceId, event: { ...(input as object), ...(pluginRoot ? { callback_plugin_root: canonicalPath(pluginRoot) } : {}), ...(bundleHash ? { callback_bundle_sha256: bundleHash } : {}) } }, 590_000);
+  return controllerRequest(state.controller, 'lifecycle', { adapter_occurrence_id: adapterOccurrenceId, event: { ...(input as object), ...(pluginRoot ? { callback_plugin_root: canonicalPath(pluginRoot) } : {}), ...(bundleHash ? { callback_bundle_sha256: bundleHash } : {}), ...(desktopPid ? { callback_desktop_pid: desktopPid } : {}) } }, 590_000);
 }
 
 // Stop judgments share the existing schema/readonly judge. Transport-only
@@ -211,7 +211,8 @@ export async function runController(path: string, pluginRoot: string, fixturePat
           if (message.command !== 'lifecycle') throw new Error('Unknown B command.');
           const event = message.payload?.event;
           if (event?.session_id !== state.main_session_id || canonicalPath(event.cwd) !== canonicalPath(state.task.workspace) || event.agent_id != null || event.agent_type != null || event.agent_transcript_path != null) return {};
-          if (event.hook_event_name === 'SessionStart' || (event.callback_plugin_root && canonicalPath(event.callback_plugin_root) !== controller.plugin_root) || (event.callback_bundle_sha256 && event.callback_bundle_sha256 !== controller.bundle_sha256)) {
+          const desktopRestarted = event.hook_event_name === 'SessionStart' && Number.isInteger(event.callback_desktop_pid) && Number.isInteger(state.host.desktop_pid) && event.callback_desktop_pid !== state.host.desktop_pid;
+          if (desktopRestarted || (event.callback_plugin_root && canonicalPath(event.callback_plugin_root) !== controller.plugin_root) || (event.callback_bundle_sha256 && event.callback_bundle_sha256 !== controller.bundle_sha256)) {
             cancelActive('Native host restarted or installed plugin changed.'); recover('Native host restarted or installed plugin changed; explicit resume must revalidate the original A.'); store.save(state); return {};
           }
           if (event.run_generation != null && event.run_generation !== state.run_generation) return {};

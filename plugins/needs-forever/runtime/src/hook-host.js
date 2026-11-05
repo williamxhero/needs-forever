@@ -6,7 +6,7 @@ import { codexCommand } from './transport.js';
 export function inspectHookHost(pluginRoot, fixture) {
     if (fixture) {
         const value = readJson(fixture);
-        return { source: 'simulated', desktop_version: String(value.desktop_version ?? 'simulated'), cli_version: String(value.cli_version ?? 'simulated'), reason: 'Explicit external hook-host fixture; not native effectiveness evidence.' };
+        return { source: 'simulated', desktop_version: String(value.desktop_version ?? 'simulated'), cli_version: String(value.cli_version ?? 'simulated'), reason: 'Explicit external hook-host fixture; not native effectiveness evidence.', ...(Number.isInteger(value.desktop_pid) ? { desktop_pid: value.desktop_pid } : {}) };
     }
     const unavailable = (reason) => ({ source: 'unverified', desktop_version: null, cli_version: null, reason });
     if (!process.env.PLUGIN_ROOT)

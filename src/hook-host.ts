@@ -15,7 +15,7 @@ export interface HookHost {
 export function inspectHookHost(pluginRoot: string, fixture?: string): HookHost {
   if (fixture) {
     const value = readJson(fixture);
-    return { source: 'simulated', desktop_version: String(value.desktop_version ?? 'simulated'), cli_version: String(value.cli_version ?? 'simulated'), reason: 'Explicit external hook-host fixture; not native effectiveness evidence.' };
+    return { source: 'simulated', desktop_version: String(value.desktop_version ?? 'simulated'), cli_version: String(value.cli_version ?? 'simulated'), reason: 'Explicit external hook-host fixture; not native effectiveness evidence.', ...(Number.isInteger(value.desktop_pid) ? { desktop_pid: value.desktop_pid as number } : {}) };
   }
   const unavailable = (reason: string): HookHost => ({ source: 'unverified', desktop_version: null, cli_version: null, reason });
   if (!process.env.PLUGIN_ROOT) return unavailable('PLUGIN_ROOT missing; this is not an attributable installed-plugin callback.');

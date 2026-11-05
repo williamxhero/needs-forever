@@ -3,11 +3,11 @@
   "files": {
     "src/cli.js": "4c6777ebadd6d7b700dafa6d049b77fb2773495238ceb1ea13f92f8255c1ce75",
     "src/control-intent.js": "33c80a172debd1fb149606b3623e19d6fb50216f5fbab80a343f60456a066f70",
-    "src/hook-host.js": "1cd9e46ce63d753fd8e4962652461e544da97c8ac032c884092415942aab94a8",
+    "src/hook-host.js": "b01a45383ab017f55cc3a1445b40effa21434fa29b8bacd935571e68c12115e1",
     "src/index.js": "b2f837f519ecc8bed51c3938f677fdb3802da0e76814f37b6dbb5ac945056973",
     "src/judge.js": "92af03583763a9b0b656c58a193c6b9420754a8cede4040326b666733fd6f404",
     "src/lifecycle.js": "2dd0c97ac38b3351bc4901ecce0e9efb6b4e0ce11f2a6d1f4acda833d4091ad9",
-    "src/main-controller.js": "59edcb9fb5fedba0511650f037b3888351777f2d0f37c7aa84576845db172f39",
+    "src/main-controller.js": "d91eb0e4ab44005cfe3ce2b0fd703bfe74e6e4f458db65af4a87fb34e193cc9e",
     "src/main-session.js": "6363d142d23b5373eb94af7e623cd81ed8f697201eb460495c06cdbccc0661bc",
     "src/main-supervision.js": "165fad03f93d53263d4f59fe6a76b6a4a3de318da135d9665b133f22642ad433",
     "src/recovery.js": "db606a6e5674c70e4f70b56d794e14576ae0d4473d15a6ef4e8a72ab4aa9da2e",
