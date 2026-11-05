@@ -1,0 +1,40 @@
+{
+  "mode": "main-session preparation only",
+  "directory": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\corrected-desktop-demo",
+  "workspace": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\corrected-desktop-demo\\workspace",
+  "task_file": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\corrected-desktop-demo\\task.json",
+  "state_file": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\corrected-desktop-demo\\state.json",
+  "command": [
+    "C:\\Program Files\\nodejs\\node.exe",
+    "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\desktop0159-release\\codex-home\\plugins\\cache\\needs-forever-local\\needs-forever\\0.3.0\\scripts\\control.mjs",
+    "start",
+    "--task",
+    "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\corrected-desktop-demo\\task.json",
+    "--state",
+    "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\corrected-desktop-demo\\state.json"
+  ],
+  "status_command": [
+    "C:\\Program Files\\nodejs\\node.exe",
+    "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\desktop0159-release\\codex-home\\plugins\\cache\\needs-forever-local\\needs-forever\\0.3.0\\scripts\\control.mjs",
+    "status",
+    "--state",
+    "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\corrected-desktop-demo\\state.json"
+  ],
+  "live_desktop_acceptance": "not_run",
+  "pause_command": [
+    "C:\\Program Files\\nodejs\\node.exe",
+    "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\desktop0159-release\\codex-home\\plugins\\cache\\needs-forever-local\\needs-forever\\0.3.0\\scripts\\control.mjs",
+    "pause",
+    "--state",
+    "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\corrected-desktop-demo\\state.json"
+  ],
+  "resume_command": [
+    "C:\\Program Files\\nodejs\\node.exe",
+    "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\desktop0159-release\\codex-home\\plugins\\cache\\needs-forever-local\\needs-forever\\0.3.0\\scripts\\control.mjs",
+    "resume",
+    "--state",
+    "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\corrected-desktop-demo\\state.json"
+  ],
+  "launch_prompt": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\corrected-desktop-demo\\desktop-launch-prompt.txt",
+  "required_gate": "Install candidate in actual Desktop, review and trust hooks through Settings > Hooks, reload if required, then execute the prompt in an authorized Desktop A."
+}

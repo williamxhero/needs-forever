@@ -1,0 +1,14 @@
+{
+  "classification": "Integration build/archive/source/integrity parity; no installation or native acceptance",
+  "reviewed_implementation": "5e5c32b6b872057bc9ae7f20c07f540ea81df28e",
+  "archive": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\cancelled-judge-archive\\runs\\spec33-candidate\\candidate-033-cancelled-judge-archive.tar.gz",
+  "archive_sha256": "395c8b568c97823d734bd0ed6567237235c077f81f0e2fce36f766ce8f2dda46",
+  "archive_file_count": 28,
+  "source_file_count": 28,
+  "integrity_module_count": 17,
+  "all_archive_receipt_source_hashes_match": true,
+  "all_runtime_integrity_hashes_match": true,
+  "receipt_change": "LF normalization only; parsed JSON unchanged from reviewed commit",
+  "native_acceptance": "not_run_by_integrator",
+  "trust_written": false
+}

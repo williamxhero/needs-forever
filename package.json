@@ -1,6 +1,6 @@
 {
   "name": "codex-supervisor",
-  "version": "0.1.0",
+  "version": "0.3.3",
   "private": true,
   "description": "A local, single-task, recoverable Codex app-server supervisor.",
   "type": "module",
@@ -9,7 +9,7 @@
   "exports": "./dist/src/index.js",
   "scripts": {
     "build": "tsc",
-    "test": "npm run build && node scripts/build-plugin.mjs && node --test \"dist/test/*.test.js\"",
+    "test": "npm run build && node scripts/build-plugin.mjs && node --test --test-concurrency=2 \"dist/test/*.test.js\"",
     "plugin:build": "npm run build && node scripts/build-plugin.mjs",
     "start": "node dist/src/cli.js"
   },

@@ -1,0 +1,46 @@
+{
+  "mode": "main-session preparation only",
+  "directory": "C:\\Users\\will\\Documents\\Codex\\2026-11-03\\needs-forever-spec33-desktop\\.spec33-fixture",
+  "workspace": "C:/Users/will/Documents/Codex/2026-11-03/needs-forever-spec33-desktop",
+  "task_file": "C:\\Users\\will\\Documents\\Codex\\2026-11-03\\needs-forever-spec33-desktop\\.spec33-fixture\\task.json",
+  "state_file": "C:\\Users\\will\\Documents\\Codex\\2026-11-03\\needs-forever-spec33-desktop\\.spec33-fixture\\state.json",
+  "command": [
+    "C:\\Program Files\\nodejs\\node.exe",
+    "C:\\Users\\will\\.codex\\plugins\\cache\\needs-forever-spec33\\needs-forever\\0.3.0\\scripts\\control.mjs",
+    "start",
+    "--task",
+    "C:\\Users\\will\\Documents\\Codex\\2026-11-03\\needs-forever-spec33-desktop\\.spec33-fixture\\task.json",
+    "--state",
+    "C:\\Users\\will\\Documents\\Codex\\2026-11-03\\needs-forever-spec33-desktop\\.spec33-fixture\\state.json"
+  ],
+  "status_command": [
+    "C:\\Program Files\\nodejs\\node.exe",
+    "C:\\Users\\will\\.codex\\plugins\\cache\\needs-forever-spec33\\needs-forever\\0.3.0\\scripts\\control.mjs",
+    "status",
+    "--state",
+    "C:\\Users\\will\\Documents\\Codex\\2026-11-03\\needs-forever-spec33-desktop\\.spec33-fixture\\state.json"
+  ],
+  "live_desktop_acceptance": "not_run",
+  "pause_command": [
+    "C:\\Program Files\\nodejs\\node.exe",
+    "C:\\Users\\will\\.codex\\plugins\\cache\\needs-forever-spec33\\needs-forever\\0.3.0\\scripts\\control.mjs",
+    "pause",
+    "--state",
+    "C:\\Users\\will\\Documents\\Codex\\2026-11-03\\needs-forever-spec33-desktop\\.spec33-fixture\\state.json"
+  ],
+  "resume_command": [
+    "C:\\Program Files\\nodejs\\node.exe",
+    "C:\\Users\\will\\.codex\\plugins\\cache\\needs-forever-spec33\\needs-forever\\0.3.0\\scripts\\control.mjs",
+    "resume",
+    "--state",
+    "C:\\Users\\will\\Documents\\Codex\\2026-11-03\\needs-forever-spec33-desktop\\.spec33-fixture\\state.json"
+  ],
+  "launch_prompt": "C:\\Users\\will\\Documents\\Codex\\2026-11-03\\needs-forever-spec33-desktop\\.spec33-fixture\\desktop-launch-prompt.txt",
+  "required_gate": "Install candidate in actual Desktop, review and trust hooks through Settings > Hooks, reload if required, then execute the prompt in an authorized Desktop A.",
+  "actual_a_thread_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+  "preparation_note": "Generated fixture relocated BEFORE task start to the bootstrap-observed actual Desktop event cwd. Three acceptance items and both protected script bytes are unchanged. Merely changing shell workdir is not used for binding.",
+  "protected_sha256": {
+    "verify.mjs": "67e694431651f1d05641c54bb582a52d955c19caee859bcd4af51bf2f4e7f4cb",
+    "unavailable-route.mjs": "6913afee30405571d3e098aca045a61b68b7ae0967afd87bbc6ab8eedcf0add8"
+  }
+}

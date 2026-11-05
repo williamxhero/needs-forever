@@ -1,0 +1,23 @@
+2026-11-03 - ticket #36, Windows installed-copy simulation evidence
+
+Targeted public boundary checks:
+node --test dist/test/main-supervision.test.js dist/test/main-session.test.js
+13 tests, 13 pass, 0 fail (before final replacement-proof regression was added).
+
+Final complete regression, including the replacement-proof regression:
+npm test
+TypeScript build: pass
+Self-contained plugin build: pass, 16 runtime modules
+Node tests: 92
+Pass: 92
+Fail: 0
+Cancelled: 0
+Skipped: 0
+Duration: 26037.4798 ms
+
+git merge codex/spec33-main-session: Already up to date (base 3272db5).
+git diff --check: pass
+
+Native host/model boundary replacement: simulated.
+Actual Desktop hook trust and same-session continuation: not_run, required by #38.
+No global install/config/trust changes, actual Desktop chat creation, push, issue closure or main merge.

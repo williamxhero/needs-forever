@@ -1,0 +1,249 @@
+✖ Windows discovered hook commands stay neutral through PowerShell and cmd in a Chinese path with spaces (3877.9031ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3968.5392
+
+✖ failing tests:
+
+test at dist\test\main-session.test.js:236:1
+✖ Windows discovered hook commands stay neutral through PowerShell and cmd in a Chinese path with spaces (3877.9031ms)
+  AssertionError [ERR_ASSERTION]: Every discovered handler must execute in the native user shell without activating an uninvoked chat.
+  + actual - expected
+
+  + [
+  +   'powershell/SessionStart: status=1, stdout=, stderr=node:internal/modules/cjs/loader:1520\r\n' +
+  +     '  throw err;\r\n' +
+  +     '  ^\r\n' +
+  +     '\r\n' +
+  +     "Error: Cannot find module 'D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\main-session\\windows-hook-command-powershell-1793705503116\\任务 空间\\%PLUGIN_ROOT%\\scripts\\lifecycle.mjs'\r\n" +
+  +     '    at Module._resolveFilename (node:internal/modules/cjs/loader:1517:15)\r\n' +
+  +     '    at wrapResolveFilename (node:internal/modules/cjs/loader:1071:27)\r\n' +
+  +     '    at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1095:10)\r\n' +
+  +     '    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1122:12)\r\n' +
+  +     '    at Module._load (node:internal/modules/cjs/loader:1294:5)\r\n' +
+  +     '    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)\r\n' +
+  +     '    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)\r\n' +
+  +     '    at node:internal/main/run_main_module:33:47 {\r\n' +
+  +     "  code: 'MODULE_NOT_FOUND',\r\n" +
+  +     '  requireStack: []\r\n' +
+  +     '}\r\n' +
+  +     '\r\n' +
+  +     'Node.js v24.19.0\r\n',
+  +   'powershell/PreToolUse: status=1, stdout=, stderr=node:internal/modules/cjs/loader:1520\r\n' +
+  +     '  throw err;\r\n' +
+  +     '  ^\r\n' +
+  +     '\r\n' +
+  +     "Error: Cannot find module 'D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\main-session\\windows-hook-command-powershell-1793705503116\\任务 空间\\%PLUGIN_ROOT%\\scripts\\lifecycle.mjs'\r\n" +
+  +     '    at Module._resolveFilename (node:internal/modules/cjs/loader:1517:15)\r\n' +
+  +     '    at wrapResolveFilename (node:internal/modules/cjs/loader:1071:27)\r\n' +
+  +     '    at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1095:10)\r\n' +
+  +     '    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1122:12)\r\n' +
+  +     '    at Module._load (node:internal/modules/cjs/loader:1294:5)\r\n' +
+  +     '    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)\r\n' +
+  +     '    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)\r\n' +
+  +     '    at node:internal/main/run_main_module:33:47 {\r\n' +
+  +     "  code: 'MODULE_NOT_FOUND',\r\n" +
+  +     '  requireStack: []\r\n' +
+  +     '}\r\n' +
+  +     '\r\n' +
+  +     'Node.js v24.19.0\r\n',
+  +   'powershell/PostToolUse: status=1, stdout=, stderr=node:internal/modules/cjs/loader:1520\r\n' +
+  +     '  throw err;\r\n' +
+  +     '  ^\r\n' +
+  +     '\r\n' +
+  +     "Error: Cannot find module 'D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\main-session\\windows-hook-command-powershell-1793705503116\\任务 空间\\%PLUGIN_ROOT%\\scripts\\lifecycle.mjs'\r\n" +
+  +     '    at Module._resolveFilename (node:internal/modules/cjs/loader:1517:15)\r\n' +
+  +     '    at wrapResolveFilename (node:internal/modules/cjs/loader:1071:27)\r\n' +
+  +     '    at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1095:10)\r\n' +
+  +     '    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1122:12)\r\n' +
+  +     '    at Module._load (node:internal/modules/cjs/loader:1294:5)\r\n' +
+  +     '    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)\r\n' +
+  +     '    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)\r\n' +
+  +     '    at node:internal/main/run_main_module:33:47 {\r\n' +
+  +     "  code: 'MODULE_NOT_FOUND',\r\n" +
+  +     '  requireStack: []\r\n' +
+  +     '}\r\n' +
+  +     '\r\n' +
+  +     'Node.js v24.19.0\r\n',
+  +   'powershell/Stop: status=1, stdout=, stderr=node:internal/modules/cjs/loader:1520\r\n' +
+  +     '  throw err;\r\n' +
+  +     '  ^\r\n' +
+  +     '\r\n' +
+  +     "Error: Cannot find module 'D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\main-session\\windows-hook-command-powershell-1793705503116\\任务 空间\\%PLUGIN_ROOT%\\scripts\\lifecycle.mjs'\r\n" +
+  +     '    at Module._resolveFilename (node:internal/modules/cjs/loader:1517:15)\r\n' +
+  +     '    at wrapResolveFilename (node:internal/modules/cjs/loader:1071:27)\r\n' +
+  +     '    at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1095:10)\r\n' +
+  +     '    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1122:12)\r\n' +
+  +     '    at Module._load (node:internal/modules/cjs/loader:1294:5)\r\n' +
+  +     '    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)\r\n' +
+  +     '    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)\r\n' +
+  +     '    at node:internal/main/run_main_module:33:47 {\r\n' +
+  +     "  code: 'MODULE_NOT_FOUND',\r\n" +
+  +     '  requireStack: []\r\n' +
+  +     '}\r\n' +
+  +     '\r\n' +
+  +     'Node.js v24.19.0\r\n',
+  +   'powershell/UserPromptSubmit: status=1, stdout=, stderr=node:internal/modules/cjs/loader:1520\r\n' +
+  +     '  throw err;\r\n' +
+  +     '  ^\r\n' +
+  +     '\r\n' +
+  +     "Error: Cannot find module 'D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\main-session\\windows-hook-command-powershell-1793705503116\\任务 空间\\%PLUGIN_ROOT%\\scripts\\lifecycle.mjs'\r\n" +
+  +     '    at Module._resolveFilename (node:internal/modules/cjs/loader:1517:15)\r\n' +
+  +     '    at wrapResolveFilename (node:internal/modules/cjs/loader:1071:27)\r\n' +
+  +     '    at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1095:10)\r\n' +
+  +     '    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1122:12)\r\n' +
+  +     '    at Module._load (node:internal/modules/cjs/loader:1294:5)\r\n' +
+  +     '    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)\r\n' +
+  +     '    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)\r\n' +
+  +     '    at node:internal/main/run_main_module:33:47 {\r\n' +
+  +     "  code: 'MODULE_NOT_FOUND',\r\n" +
+  +     '  requireStack: []\r\n' +
+  +     '}\r\n' +
+  +     '\r\n' +
+  +     'Node.js v24.19.0\r\n',
+  +   'powershell/Interrupt: status=1, stdout=, stderr=node:internal/modules/cjs/loader:1520\r\n' +
+  +     '  throw err;\r\n' +
+  +     '  ^\r\n' +
+  +     '\r\n' +
+  +     "Error: Cannot find module 'D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\main-session\\windows-hook-command-powershell-1793705503116\\任务 空间\\%PLUGIN_ROOT%\\scripts\\lifecycle.mjs'\r\n" +
+  +     '    at Module._resolveFilename (node:internal/modules/cjs/loader:1517:15)\r\n' +
+  +     '    at wrapResolveFilename (node:internal/modules/cjs/loader:1071:27)\r\n' +
+  +     '    at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1095:10)\r\n' +
+  +     '    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1122:12)\r\n' +
+  +     '    at Module._load (node:internal/modules/cjs/loader:1294:5)\r\n' +
+  +     '    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)\r\n' +
+  +     '    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)\r\n' +
+  +     '    at node:internal/main/run_main_module:33:47 {\r\n' +
+  +     "  code: 'MODULE_NOT_FOUND',\r\n" +
+  +     '  requireStack: []\r\n' +
+  +     '}\r\n' +
+  +     '\r\n' +
+  +     'Node.js v24.19.0\r\n',
+  +   'cmd/SessionStart: status=1, stdout=, stderr=node:internal/modules/cjs/loader:1520\r\n' +
+  +     '  throw err;\r\n' +
+  +     '  ^\r\n' +
+  +     '\r\n' +
+  +     "Error: Cannot find module 'D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\main-session\\windows-hook-command-cmd-1793705506511\\任务 空间\\%PLUGIN_ROOT%\\scripts\\lifecycle.mjs'\r\n" +
+  +     '    at Module._resolveFilename (node:internal/modules/cjs/loader:1517:15)\r\n' +
+  +     '    at wrapResolveFilename (node:internal/modules/cjs/loader:1071:27)\r\n' +
+  +     '    at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1095:10)\r\n' +
+  +     '    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1122:12)\r\n' +
+  +     '    at Module._load (node:internal/modules/cjs/loader:1294:5)\r\n' +
+  +     '    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)\r\n' +
+  +     '    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)\r\n' +
+  +     '    at node:internal/main/run_main_module:33:47 {\r\n' +
+  +     "  code: 'MODULE_NOT_FOUND',\r\n" +
+  +     '  requireStack: []\r\n' +
+  +     '}\r\n' +
+  +     '\r\n' +
+  +     'Node.js v24.19.0\r\n',
+  +   'cmd/PreToolUse: status=1, stdout=, stderr=node:internal/modules/cjs/loader:1520\r\n' +
+  +     '  throw err;\r\n' +
+  +     '  ^\r\n' +
+  +     '\r\n' +
+  +     "Error: Cannot find module 'D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\main-session\\windows-hook-command-cmd-1793705506511\\任务 空间\\%PLUGIN_ROOT%\\scripts\\lifecycle.mjs'\r\n" +
+  +     '    at Module._resolveFilename (node:internal/modules/cjs/loader:1517:15)\r\n' +
+  +     '    at wrapResolveFilename (node:internal/modules/cjs/loader:1071:27)\r\n' +
+  +     '    at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1095:10)\r\n' +
+  +     '    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1122:12)\r\n' +
+  +     '    at Module._load (node:internal/modules/cjs/loader:1294:5)\r\n' +
+  +     '    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)\r\n' +
+  +     '    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)\r\n' +
+  +     '    at node:internal/main/run_main_module:33:47 {\r\n' +
+  +     "  code: 'MODULE_NOT_FOUND',\r\n" +
+  +     '  requireStack: []\r\n' +
+  +     '}\r\n' +
+  +     '\r\n' +
+  +     'Node.js v24.19.0\r\n',
+  +   'cmd/PostToolUse: status=1, stdout=, stderr=node:internal/modules/cjs/loader:1520\r\n' +
+  +     '  throw err;\r\n' +
+  +     '  ^\r\n' +
+  +     '\r\n' +
+  +     "Error: Cannot find module 'D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\main-session\\windows-hook-command-cmd-1793705506511\\任务 空间\\%PLUGIN_ROOT%\\scripts\\lifecycle.mjs'\r\n" +
+  +     '    at Module._resolveFilename (node:internal/modules/cjs/loader:1517:15)\r\n' +
+  +     '    at wrapResolveFilename (node:internal/modules/cjs/loader:1071:27)\r\n' +
+  +     '    at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1095:10)\r\n' +
+  +     '    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1122:12)\r\n' +
+  +     '    at Module._load (node:internal/modules/cjs/loader:1294:5)\r\n' +
+  +     '    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)\r\n' +
+  +     '    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)\r\n' +
+  +     '    at node:internal/main/run_main_module:33:47 {\r\n' +
+  +     "  code: 'MODULE_NOT_FOUND',\r\n" +
+  +     '  requireStack: []\r\n' +
+  +     '}\r\n' +
+  +     '\r\n' +
+  +     'Node.js v24.19.0\r\n',
+  +   'cmd/Stop: status=1, stdout=, stderr=node:internal/modules/cjs/loader:1520\r\n' +
+  +     '  throw err;\r\n' +
+  +     '  ^\r\n' +
+  +     '\r\n' +
+  +     "Error: Cannot find module 'D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\main-session\\windows-hook-command-cmd-1793705506511\\任务 空间\\%PLUGIN_ROOT%\\scripts\\lifecycle.mjs'\r\n" +
+  +     '    at Module._resolveFilename (node:internal/modules/cjs/loader:1517:15)\r\n' +
+  +     '    at wrapResolveFilename (node:internal/modules/cjs/loader:1071:27)\r\n' +
+  +     '    at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1095:10)\r\n' +
+  +     '    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1122:12)\r\n' +
+  +     '    at Module._load (node:internal/modules/cjs/loader:1294:5)\r\n' +
+  +     '    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)\r\n' +
+  +     '    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)\r\n' +
+  +     '    at node:internal/main/run_main_module:33:47 {\r\n' +
+  +     "  code: 'MODULE_NOT_FOUND',\r\n" +
+  +     '  requireStack: []\r\n' +
+  +     '}\r\n' +
+  +     '\r\n' +
+  +     'Node.js v24.19.0\r\n',
+  +   'cmd/UserPromptSubmit: status=1, stdout=, stderr=node:internal/modules/cjs/loader:1520\r\n' +
+  +     '  throw err;\r\n' +
+  +     '  ^\r\n' +
+  +     '\r\n' +
+  +     "Error: Cannot find module 'D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\main-session\\windows-hook-command-cmd-1793705506511\\任务 空间\\%PLUGIN_ROOT%\\scripts\\lifecycle.mjs'\r\n" +
+  +     '    at Module._resolveFilename (node:internal/modules/cjs/loader:1517:15)\r\n' +
+  +     '    at wrapResolveFilename (node:internal/modules/cjs/loader:1071:27)\r\n' +
+  +     '    at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1095:10)\r\n' +
+  +     '    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1122:12)\r\n' +
+  +     '    at Module._load (node:internal/modules/cjs/loader:1294:5)\r\n' +
+  +     '    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)\r\n' +
+  +     '    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)\r\n' +
+  +     '    at node:internal/main/run_main_module:33:47 {\r\n' +
+  +     "  code: 'MODULE_NOT_FOUND',\r\n" +
+  +     '  requireStack: []\r\n' +
+  +     '}\r\n' +
+  +     '\r\n' +
+  +     'Node.js v24.19.0\r\n',
+  +   'cmd/Interrupt: status=1, stdout=, stderr=node:internal/modules/cjs/loader:1520\r\n' +
+  +     '  throw err;\r\n' +
+  +     '  ^\r\n' +
+  +     '\r\n' +
+  +     "Error: Cannot find module 'D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\main-session\\windows-hook-command-cmd-1793705506511\\任务 空间\\%PLUGIN_ROOT%\\scripts\\lifecycle.mjs'\r\n" +
+  +     '    at Module._resolveFilename (node:internal/modules/cjs/loader:1517:15)\r\n' +
+  +     '    at wrapResolveFilename (node:internal/modules/cjs/loader:1071:27)\r\n' +
+  +     '    at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1095:10)\r\n' +
+  +     '    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1122:12)\r\n' +
+  +     '    at Module._load (node:internal/modules/cjs/loader:1294:5)\r\n' +
+  +     '    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)\r\n' +
+  +     '    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)\r\n' +
+  +     '    at node:internal/main/run_main_module:33:47 {\r\n' +
+  +     "  code: 'MODULE_NOT_FOUND',\r\n" +
+  +     '  requireStack: []\r\n' +
+  +     '}\r\n' +
+  +     '\r\n' +
+  +     'Node.js v24.19.0\r\n'
+  + ]
+  - []
+
+      at TestContext.<anonymous> (file:///D:/WILL/TOOLS/needs-forever/.scratch/spec33-worktrees/ticket38/dist/test/main-session.test.js:247:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.start (node:internal/test_runner/test:1242:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: [ "powershell/SessionStart: status=1, stdout=, stderr=node:internal/modules/cjs/loader:1520\r\n  throw err;\r\n  ^\r\n\r\nError: Cannot find module 'D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\main-session\\windows-hook-command-powershell-1793705503116\\任务 空间\\%PLUGIN_ROOT%\\scripts\\lifecycle.mjs'\r\n    at Module._resolveFilename (node:internal/modules/cjs/loader:1517:15)\r\n    at wrapResolveFilename (node:internal/modules/cjs/loader:1071:27)\r\n    at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1095:10)\r\n    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1122:12)\r\n    at Module._load (node:internal/modules/cjs/loader:1294:5)\r\n    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)\r\n    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)\r\n    at node:internal/main/run_main_module:33:47 {\r\n  code: 'MODULE_NOT_FOUND',\r\n  requireStack: []\r\n}\r\n\r\nNode.js v24.19.0\r\n", "powershell/PreToolUse: status=1, stdout=, stderr=node:internal/modules/cjs/loader:1520\r\n  throw err;\r\n  ^\r\n\r\nError: Cannot find module 'D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\main-session\\windows-hook-command-powershell-1793705503116\\任务 空间\\%PLUGIN_ROOT%\\scripts\\lifecycle.mjs'\r\n    at Module._resolveFilename (node:internal/modules/cjs/loader:1517:15)\r\n    at wrapResolveFilename (node:internal/modules/cjs/loader:1071:27)\r\n    at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1095:10)\r\n    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1122:12)\r\n    at Module._load (node:internal/modules/cjs/loader:1294:5)\r\n    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)\r\n    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)\r\n    at node:internal/main/run_main_module:33:47 {\r\n  code: 'MODULE_NOT_FOUND',\r\n  requireStack: []\r\n}\r\n\r\nNode.js v24.19.0\r\n", "powershell/PostToolUse: status=1, stdout=, stderr=node:internal/modules/cjs/loader:1520\r\n  throw err;\r\n  ^\r\n\r\nError: Cannot find module 'D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\main-session\\windows-hook-command-powershell-1793705503116\\任务 空间\\%PLUGIN_ROOT%\\scripts\\lifecycle.mjs'\r\n    at Module._resolveFilename (node:internal/modules/cjs/loader:1517:15)\r\n    at wrapResolveFilename (node:internal/modules/cjs/loader:1071:27)\r\n    at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1095:10)\r\n    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1122:12)\r\n    at Module._load (node:internal/modules/cjs/loader:1294:5)\r\n    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)\r\n    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)\r\n    at node:internal/main/run_main_module:33:47 {\r\n  code: 'MODULE_NOT_FOUND',\r\n  requireStack: []\r\n}\r\n\r\nNode.js v24.19.0\r\n", "powershell/Stop: status=1, stdout=, stderr=node:internal/modules/cjs/loader:1520\r\n  throw err;\r\n  ^\r\n\r\nError: Cannot find module 'D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\main-session\\windows-hook-command-powershell-1793705503116\\任务 空间\\%PLUGIN_ROOT%\\scripts\\lifecycle.mjs'\r\n    at Module._resolveFilename (node:internal/modules/cjs/loader:1517:15)\r\n    at wrapResolveFilename (node:internal/modules/cjs/loader:1071:27)\r\n    at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1095:10)\r\n    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1122:12)\r\n    at Module._load (node:internal/modules/cjs/loader:1294:5)\r\n    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)\r\n    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)\r\n    at node:internal/main/run_main_module:33:47 {\r\n  code: 'MODULE_NOT_FOUND',\r\n  requireStack: []\r\n}\r\n\r\nNode.js v24.19.0\r\n", "powershell/UserPromptSubmit: status=1, stdout=, stderr=node:internal/modules/cjs/loader:1520\r\n  throw err;\r\n  ^\r\n\r\nError: Cannot find module 'D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\main-session\\windows-hook-command-powershell-1793705503116\\任务 空间\\%PLUGIN_ROOT%\\scripts\\lifecycle.mjs'\r\n    at Module._resolveFilename (node:internal/modules/cjs/loader:1517:15)\r\n    at wrapResolveFilename (node:internal/modules/cjs/loader:1071:27)\r\n    at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1095:10)\r\n    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1122:12)\r\n    at Module._load (node:internal/modules/cjs/loader:1294:5)\r\n    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)\r\n    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)\r\n    at node:internal/main/run_main_module:33:47 {\r\n  code: 'MODULE_NOT_FOUND',\r\n  requireStack: []\r\n}\r\n\r\nNode.js v24.19.0\r\n", "powershell/Interrupt: status=1, stdout=, stderr=node:internal/modules/cjs/loader:1520\r\n  throw err;\r\n  ^\r\n\r\nError: Cannot find module 'D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\main-session\\windows-hook-command-powershell-1793705503116\\任务 空间\\%PLUGIN_ROOT%\\scripts\\lifecycle.mjs'\r\n    at Module._resolveFilename (node:internal/modules/cjs/loader:1517:15)\r\n    at wrapResolveFilename (node:internal/modules/cjs/loader:1071:27)\r\n    at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1095:10)\r\n    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1122:12)\r\n    at Module._load (node:internal/modules/cjs/loader:1294:5)\r\n    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)\r\n    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)\r\n    at node:internal/main/run_main_module:33:47 {\r\n  code: 'MODULE_NOT_FOUND',\r\n  requireStack: []\r\n}\r\n\r\nNode.js v24.19.0\r\n", "cmd/SessionStart: status=1, stdout=, stderr=node:internal/modules/cjs/loader:1520\r\n  throw err;\r\n  ^\r\n\r\nError: Cannot find module 'D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\main-session\\windows-hook-command-cmd-1793705506511\\任务 空间\\%PLUGIN_ROOT%\\scripts\\lifecycle.mjs'\r\n    at Module._resolveFilename (node:internal/modules/cjs/loader:1517:15)\r\n    at wrapResolveFilename (node:internal/modules/cjs/loader:1071:27)\r\n    at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1095:10)\r\n    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1122:12)\r\n    at Module._load (node:internal/modules/cjs/loader:1294:5)\r\n    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)\r\n    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)\r\n    at node:internal/main/run_main_module:33:47 {\r\n  code: 'MODULE_NOT_FOUND',\r\n  requireStack: []\r\n}\r\n\r\nNode.js v24.19.0\r\n", "cmd/PreToolUse: status=1, stdout=, stderr=node:internal/modules/cjs/loader:1520\r\n  throw err;\r\n  ^\r\n\r\nError: Cannot find module 'D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\main-session\\windows-hook-command-cmd-1793705506511\\任务 空间\\%PLUGIN_ROOT%\\scripts\\lifecycle.mjs'\r\n    at Module._resolveFilename (node:internal/modules/cjs/loader:1517:15)\r\n    at wrapResolveFilename (node:internal/modules/cjs/loader:1071:27)\r\n    at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1095:10)\r\n    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1122:12)\r\n    at Module._load (node:internal/modules/cjs/loader:1294:5)\r\n    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)\r\n    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)\r\n    at node:internal/main/run_main_module:33:47 {\r\n  code: 'MODULE_NOT_FOUND',\r\n  requireStack: []\r\n}\r\n\r\nNode.js v24.19.0\r\n", "cmd/PostToolUse: status=1, stdout=, stderr=node:internal/modules/cjs/loader:1520\r\n  throw err;\r\n  ^\r\n\r\nError: Cannot find module 'D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\main-session\\windows-hook-command-cmd-1793705506511\\任务 空间\\%PLUGIN_ROOT%\\scripts\\lifecycle.mjs'\r\n    at Module._resolveFilename (node:internal/modules/cjs/loader:1517:15)\r\n    at wrapResolveFilename (node:internal/modules/cjs/loader:1071:27)\r\n    at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1095:10)\r\n    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1122:12)\r\n    at Module._load (node:internal/modules/cjs/loader:1294:5)\r\n    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)\r\n    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)\r\n    at node:internal/main/run_main_module:33:47 {\r\n  code: 'MODULE_NOT_FOUND',\r\n  requireStack: []\r\n}\r\n\r\nNode.js v24.19.0\r\n", "cmd/Stop: status=1, stdout=, stderr=node:internal/modules/cjs/loader:1520\r\n  throw err;\r\n  ^\r\n\r\nError: Cannot find module 'D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\main-session\\windows-hook-command-cmd-1793705506511\\任务 空间\\%PLUGIN_ROOT%\\scripts\\lifecycle.mjs'\r\n    at Module._resolveFilename (node:internal/modules/cjs/loader:1517:15)\r\n    at wrapResolveFilename (node:internal/modules/cjs/loader:1071:27)\r\n    at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1095:10)\r\n    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1122:12)\r\n    at Module._load (node:internal/modules/cjs/loader:1294:5)\r\n    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)\r\n    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)\r\n    at node:internal/main/run_main_module:33:47 {\r\n  code: 'MODULE_NOT_FOUND',\r\n  requireStack: []\r\n}\r\n\r\nNode.js v24.19.0\r\n", "cmd/UserPromptSubmit: status=1, stdout=, stderr=node:internal/modules/cjs/loader:1520\r\n  throw err;\r\n  ^\r\n\r\nError: Cannot find module 'D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\main-session\\windows-hook-command-cmd-1793705506511\\任务 空间\\%PLUGIN_ROOT%\\scripts\\lifecycle.mjs'\r\n    at Module._resolveFilename (node:internal/modules/cjs/loader:1517:15)\r\n    at wrapResolveFilename (node:internal/modules/cjs/loader:1071:27)\r\n    at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1095:10)\r\n    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1122:12)\r\n    at Module._load (node:internal/modules/cjs/loader:1294:5)\r\n    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)\r\n    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)\r\n    at node:internal/main/run_main_module:33:47 {\r\n  code: 'MODULE_NOT_FOUND',\r\n  requireStack: []\r\n}\r\n\r\nNode.js v24.19.0\r\n", "cmd/Interrupt: status=1, stdout=, stderr=node:internal/modules/cjs/loader:1520\r\n  throw err;\r\n  ^\r\n\r\nError: Cannot find module 'D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\main-session\\windows-hook-command-cmd-1793705506511\\任务 空间\\%PLUGIN_ROOT%\\scripts\\lifecycle.mjs'\r\n    at Module._resolveFilename (node:internal/modules/cjs/loader:1517:15)\r\n    at wrapResolveFilename (node:internal/modules/cjs/loader:1071:27)\r\n    at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1095:10)\r\n    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1122:12)\r\n    at Module._load (node:internal/modules/cjs/loader:1294:5)\r\n    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)\r\n    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)\r\n    at node:internal/main/run_main_module:33:47 {\r\n  code: 'MODULE_NOT_FOUND',\r\n  requireStack: []\r\n}\r\n\r\nNode.js v24.19.0\r\n" ],
+    expected: [],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }

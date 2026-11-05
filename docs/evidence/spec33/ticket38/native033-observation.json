@@ -1,0 +1,1058 @@
+{
+  "schema_version": 1,
+  "evidence_classification": "actual native Desktop execution; diagnostic rollouts are not a binding protocol",
+  "observed_at": "2026-11-03T11:59:03.197Z",
+  "original_a": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+  "native_turn": "01a1a13a-6c80-7970-90c1-2485e1b09511",
+  "run_generation": "d547e22c-9d88-460a-ab1d-ee23c1b575c0",
+  "sources": {
+    "events": {
+      "path": "C:/Users/will/Documents/Codex/2026-11-03/needs-forever-spec33-desktop/.spec33-fixture/events.jsonl",
+      "sha256": "35cb1f61ae046e6d0c66e83174da5f8b1296b060ee8a7693b00c1ea6ccf03086"
+    },
+    "state": {
+      "path": "C:/Users/will/Documents/Codex/2026-11-03/needs-forever-spec33-desktop/.spec33-fixture/state.json",
+      "sha256": "72dc86f1ce7056074773835f829f88d24fa9162747fed36a3655d4e5f28211aa"
+    },
+    "a_rollout": {
+      "path": "C:/Users/will/.codex/sessions/2026/11/03/rollout-2026-11-03T17-31-25-01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7.jsonl",
+      "sha256": "066d3512ad16d40263473f6603417e6ea420bce747c3f48dfc0cf4d8e1942c58"
+    }
+  },
+  "state_selected": {
+    "status": "PAUSED",
+    "phase": "IDLE",
+    "binding_status": "BOUND",
+    "main_session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+    "run_generation": "d547e22c-9d88-460a-ab1d-ee23c1b575c0",
+    "host_source": "native-desktop",
+    "desktop_version": "codex-cli 0.159.0",
+    "cli_version": "codex-cli 0.166.0",
+    "hook_effective": true,
+    "pause_reason": "user",
+    "updated_at": "2026-11-03T11:54:37.182Z",
+    "controller_lifecycle": "exited",
+    "worker_turn_count": 1
+  },
+  "a_before_during_contexts": [
+    {
+      "turn_id": "01a1a127-8db6-71e2-be86-2d1bda46922a",
+      "disabled_plugin_ids": [],
+      "cwd": "C:\\Users\\will\\Documents\\Codex\\2026-11-03\\needs-forever-spec33-desktop",
+      "workspace_roots": [
+        "C:\\Users\\will\\Documents\\Codex",
+        "C:\\Users\\will\\Documents\\Codex\\2026-11-03\\needs-forever-spec33-desktop",
+        "C:\\Users\\will\\.codex\\visualizations\\2026\\11\\03\\01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7"
+      ],
+      "approval_policy": "never",
+      "approvals_reviewer": "user",
+      "sandbox_policy": {
+        "type": "danger-full-access"
+      },
+      "permission_profile": {
+        "type": "disabled"
+      },
+      "active_permission_profile": {
+        "id": ":danger-full-access"
+      },
+      "model": "gpt-6.1-sol",
+      "effort": "xhigh"
+    },
+    {
+      "turn_id": "01a1a13a-6c80-7970-90c1-2485e1b09511",
+      "disabled_plugin_ids": [],
+      "cwd": "C:\\Users\\will\\Documents\\Codex\\2026-11-03\\needs-forever-spec33-desktop",
+      "workspace_roots": [
+        "C:\\Users\\will\\Documents\\Codex",
+        "C:\\Users\\will\\Documents\\Codex\\2026-11-03\\needs-forever-spec33-desktop",
+        "C:\\Users\\will\\.codex\\visualizations\\2026\\11\\03\\01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7"
+      ],
+      "approval_policy": "never",
+      "approvals_reviewer": "user",
+      "sandbox_policy": {
+        "type": "danger-full-access"
+      },
+      "permission_profile": {
+        "type": "disabled"
+      },
+      "active_permission_profile": {
+        "id": ":danger-full-access"
+      },
+      "model": "gpt-6.1-sol",
+      "effort": "xhigh"
+    }
+  ],
+  "c_threads": [
+    {
+      "path": "C:/Users/will/.codex/archived_sessions/rollout-2026-11-03T19-47-33-01a1a13c-69a9-7833-a44e-51533296fa8c.jsonl",
+      "sha256": "b0aa26e200ec0ed2867003f9522142f83fba3a0a6f036bbb74282c36b48c4ae9",
+      "archived_file_exists": true,
+      "thread_id": "01a1a13c-69a9-7833-a44e-51533296fa8c",
+      "cli_version": "0.166.0",
+      "contexts": [
+        {
+          "turn_id": "01a1a13c-6a65-7bf0-a753-496453e724fd",
+          "disabled_plugin_ids": [],
+          "cwd": "C:\\Users\\will\\Documents\\Codex\\2026-11-03\\needs-forever-spec33-desktop",
+          "approval_policy": "never",
+          "approvals_reviewer": "user",
+          "sandbox_policy": {
+            "type": "read-only"
+          },
+          "permission_profile": {
+            "type": "managed",
+            "file_system": {
+              "type": "restricted",
+              "entries": [
+                {
+                  "path": {
+                    "type": "special",
+                    "value": {
+                      "kind": "root"
+                    }
+                  },
+                  "access": "read"
+                }
+              ]
+            },
+            "network": "restricted"
+          },
+          "model": "gpt-6.1-sol",
+          "effort": "xhigh"
+        }
+      ],
+      "permissions": {
+        "approval_policy": "never",
+        "permission_profile": {
+          "type": "managed",
+          "file_system": {
+            "type": "restricted",
+            "entries": [
+              {
+                "path": {
+                  "type": "special",
+                  "value": {
+                    "kind": "root"
+                  }
+                },
+                "access": "read"
+              }
+            ]
+          },
+          "network": "restricted"
+        }
+      },
+      "task_started_count": 1,
+      "task_complete_count": 1,
+      "tool_call_count": 0
+    },
+    {
+      "path": "C:/Users/will/.codex/archived_sessions/rollout-2026-11-03T19-48-21-01a1a13d-254c-7940-a797-4f608f0ddca9.jsonl",
+      "sha256": "19c842344ab30197c5362e3aed44a8d4a51e3f2d7772b22ad6bb98fe57b70810",
+      "archived_file_exists": true,
+      "thread_id": "01a1a13d-254c-7940-a797-4f608f0ddca9",
+      "cli_version": "0.166.0",
+      "contexts": [
+        {
+          "turn_id": "01a1a13d-25f7-7ea0-94fd-0d5560e2e822",
+          "disabled_plugin_ids": [],
+          "cwd": "C:\\Users\\will\\Documents\\Codex\\2026-11-03\\needs-forever-spec33-desktop",
+          "approval_policy": "never",
+          "approvals_reviewer": "user",
+          "sandbox_policy": {
+            "type": "read-only"
+          },
+          "permission_profile": {
+            "type": "managed",
+            "file_system": {
+              "type": "restricted",
+              "entries": [
+                {
+                  "path": {
+                    "type": "special",
+                    "value": {
+                      "kind": "root"
+                    }
+                  },
+                  "access": "read"
+                }
+              ]
+            },
+            "network": "restricted"
+          },
+          "model": "gpt-6.1-sol",
+          "effort": "xhigh"
+        }
+      ],
+      "permissions": {
+        "approval_policy": "never",
+        "permission_profile": {
+          "type": "managed",
+          "file_system": {
+            "type": "restricted",
+            "entries": [
+              {
+                "path": {
+                  "type": "special",
+                  "value": {
+                    "kind": "root"
+                  }
+                },
+                "access": "read"
+              }
+            ]
+          },
+          "network": "restricted"
+        }
+      },
+      "task_started_count": 1,
+      "task_complete_count": 1,
+      "tool_call_count": 0
+    },
+    {
+      "path": "C:/Users/will/.codex/archived_sessions/rollout-2026-11-03T19-49-26-01a1a13e-2216-72b1-bf20-254829bd7d44.jsonl",
+      "sha256": "680bab432d27bc3d674bb2551e20ba0f705a1e20f45bd9a303f77993d1ba3ffd",
+      "archived_file_exists": true,
+      "thread_id": "01a1a13e-2216-72b1-bf20-254829bd7d44",
+      "cli_version": "0.166.0",
+      "contexts": [
+        {
+          "turn_id": "01a1a13e-22b1-79e0-af8c-aefd6ea72cb3",
+          "disabled_plugin_ids": [],
+          "cwd": "C:\\Users\\will\\Documents\\Codex\\2026-11-03\\needs-forever-spec33-desktop",
+          "approval_policy": "never",
+          "approvals_reviewer": "user",
+          "sandbox_policy": {
+            "type": "read-only"
+          },
+          "permission_profile": {
+            "type": "managed",
+            "file_system": {
+              "type": "restricted",
+              "entries": [
+                {
+                  "path": {
+                    "type": "special",
+                    "value": {
+                      "kind": "root"
+                    }
+                  },
+                  "access": "read"
+                }
+              ]
+            },
+            "network": "restricted"
+          },
+          "model": "gpt-6.1-sol",
+          "effort": "xhigh"
+        }
+      ],
+      "permissions": {
+        "approval_policy": "never",
+        "permission_profile": {
+          "type": "managed",
+          "file_system": {
+            "type": "restricted",
+            "entries": [
+              {
+                "path": {
+                  "type": "special",
+                  "value": {
+                    "kind": "root"
+                  }
+                },
+                "access": "read"
+              }
+            ]
+          },
+          "network": "restricted"
+        }
+      },
+      "task_started_count": 1,
+      "task_complete_count": 1,
+      "tool_call_count": 0
+    },
+    {
+      "path": "C:/Users/will/.codex/archived_sessions/rollout-2026-11-03T19-53-38-01a1a141-f9f7-7481-9772-b3040cca4dbb.jsonl",
+      "sha256": "918081f0e3d7941e29630e4da5a9a3c26f34fe95878a62a4daab5e17a525c8e4",
+      "archived_file_exists": true,
+      "thread_id": "01a1a141-f9f7-7481-9772-b3040cca4dbb",
+      "cli_version": "0.166.0",
+      "contexts": [
+        {
+          "turn_id": "01a1a141-faeb-7001-9b97-81130b9c7d7e",
+          "disabled_plugin_ids": [],
+          "cwd": "C:\\Users\\will\\Documents\\Codex\\2026-11-03\\needs-forever-spec33-desktop",
+          "approval_policy": "never",
+          "approvals_reviewer": "user",
+          "sandbox_policy": {
+            "type": "read-only"
+          },
+          "permission_profile": {
+            "type": "managed",
+            "file_system": {
+              "type": "restricted",
+              "entries": [
+                {
+                  "path": {
+                    "type": "special",
+                    "value": {
+                      "kind": "root"
+                    }
+                  },
+                  "access": "read"
+                }
+              ]
+            },
+            "network": "restricted"
+          },
+          "model": "gpt-6.1-sol",
+          "effort": "xhigh"
+        }
+      ],
+      "permissions": {
+        "approval_policy": "never",
+        "permission_profile": {
+          "type": "managed",
+          "file_system": {
+            "type": "restricted",
+            "entries": [
+              {
+                "path": {
+                  "type": "special",
+                  "value": {
+                    "kind": "root"
+                  }
+                },
+                "access": "read"
+              }
+            ]
+          },
+          "network": "restricted"
+        }
+      },
+      "task_started_count": 1,
+      "task_complete_count": 1,
+      "tool_call_count": 0
+    }
+  ],
+  "events": [
+    {
+      "source_line": 10,
+      "event_id": "c3ffab73-2219-4951-869c-24537f24251d",
+      "at": "2026-11-03T11:45:35.689Z",
+      "type": "main_session_resume_prepared",
+      "mode": "live",
+      "main_session_id": null,
+      "run_generation": "d547e22c-9d88-460a-ab1d-ee23c1b575c0"
+    },
+    {
+      "source_line": 11,
+      "event_id": "8104ee6b-23dc-473e-84ce-0d0de5de3b09",
+      "at": "2026-11-03T11:45:39.292Z",
+      "type": "main_session_bound",
+      "mode": "live",
+      "main_session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+      "tool_use_id": "exec-5f4b0ef3-7d2e-4662-afeb-3d4a24e0212e",
+      "host_source": "native-desktop"
+    },
+    {
+      "source_line": 12,
+      "event_id": "40d88ef4-bde0-4148-8c05-249353fc82d3",
+      "at": "2026-11-03T11:45:40.356Z",
+      "type": "main_session_controller_started",
+      "mode": "live",
+      "main_session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7"
+    },
+    {
+      "source_line": 13,
+      "event_id": "029db86f-a43f-4fd8-ba22-02dafaff1343",
+      "at": "2026-11-03T11:45:49.656Z",
+      "type": "main_tool_result",
+      "mode": "live",
+      "session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+      "turn_id": "01a1a13a-6c80-7970-90c1-2485e1b09511",
+      "tool_use_id": "exec-c066c79e-26c8-4581-bb79-5de8ef61d4a1",
+      "run_generation": "d547e22c-9d88-460a-ab1d-ee23c1b575c0",
+      "input_epoch": 8,
+      "original_event": "PostToolUse",
+      "complete": false
+    },
+    {
+      "source_line": 14,
+      "event_id": "7f35aaee-fe9d-4508-b9d2-8b6ae12baf7d",
+      "at": "2026-11-03T11:46:15.379Z",
+      "type": "main_tool_result",
+      "mode": "live",
+      "session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+      "turn_id": "01a1a13a-6c80-7970-90c1-2485e1b09511",
+      "tool_use_id": "exec-036f4d3c-4862-4eff-9f0f-c32bf88c7e9e",
+      "run_generation": "d547e22c-9d88-460a-ab1d-ee23c1b575c0",
+      "input_epoch": 8,
+      "original_event": "PostToolUse",
+      "tool_name": "Bash",
+      "complete": true
+    },
+    {
+      "source_line": 15,
+      "event_id": "cdaa1b9e-7c9e-41cc-b041-504bcad5fd86",
+      "at": "2026-11-03T11:46:23.717Z",
+      "type": "main_tool_result",
+      "mode": "live",
+      "session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+      "turn_id": "01a1a13a-6c80-7970-90c1-2485e1b09511",
+      "tool_use_id": "exec-b9a4f7a9-158a-49e2-8b59-941a76ee598f",
+      "run_generation": "d547e22c-9d88-460a-ab1d-ee23c1b575c0",
+      "input_epoch": 8,
+      "original_event": "PostToolUse",
+      "tool_name": "Bash",
+      "complete": true
+    },
+    {
+      "source_line": 16,
+      "event_id": "30bde785-3b9a-42af-a82e-79e1f3bb2ced",
+      "at": "2026-11-03T11:47:14.785Z",
+      "type": "main_tool_result",
+      "mode": "live",
+      "session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+      "turn_id": "01a1a13a-6c80-7970-90c1-2485e1b09511",
+      "tool_use_id": "exec-c71f6d1a-46c6-46a8-ad70-d56c107ef371",
+      "run_generation": "d547e22c-9d88-460a-ab1d-ee23c1b575c0",
+      "input_epoch": 8,
+      "original_event": "PostToolUse",
+      "tool_name": "Bash",
+      "complete": true
+    },
+    {
+      "source_line": 17,
+      "event_id": "7885ad7b-5e53-4a41-bcdb-7855cb14187a",
+      "at": "2026-11-03T11:47:32.624Z",
+      "type": "main_session_stop_observed",
+      "mode": "live",
+      "session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+      "turn_id": "01a1a13a-6c80-7970-90c1-2485e1b09511",
+      "stop_attempt_id": "1953ce54-572e-48e5-961f-7ad13b84602d",
+      "run_generation": "d547e22c-9d88-460a-ab1d-ee23c1b575c0",
+      "host_source": "native-desktop"
+    },
+    {
+      "source_line": 18,
+      "event_id": "909b7f86-52f8-4b69-8fbf-461cd760973b",
+      "at": "2026-11-03T11:47:33.592Z",
+      "type": "judge_created",
+      "mode": "live",
+      "thread_id": "01a1a13c-69a9-7833-a44e-51533296fa8c",
+      "snapshot_id": "918eed36-924e-4af3-94c0-9a02a6e0758f",
+      "stop_attempt_id": "1953ce54-572e-48e5-961f-7ad13b84602d",
+      "main_session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7"
+    },
+    {
+      "source_line": 19,
+      "event_id": "719d4df0-b10d-4ea4-a2c4-df8d9580669e",
+      "at": "2026-11-03T11:47:44.362Z",
+      "type": "judge_output",
+      "mode": "live",
+      "thread_id": "01a1a13c-69a9-7833-a44e-51533296fa8c",
+      "turn_id": "01a1a13c-6a65-7bf0-a753-496453e724fd",
+      "snapshot_id": "918eed36-924e-4af3-94c0-9a02a6e0758f",
+      "stop_attempt_id": "1953ce54-572e-48e5-961f-7ad13b84602d",
+      "main_session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7"
+    },
+    {
+      "source_line": 20,
+      "event_id": "c8357818-1ded-4cfd-8c48-0fa929fe86e5",
+      "at": "2026-11-03T11:47:44.435Z",
+      "type": "judge_archived",
+      "mode": "live",
+      "thread_id": "01a1a13c-69a9-7833-a44e-51533296fa8c",
+      "stop_attempt_id": "1953ce54-572e-48e5-961f-7ad13b84602d",
+      "main_session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7"
+    },
+    {
+      "source_line": 21,
+      "event_id": "516ca91d-620c-4c21-a388-711d184916b4",
+      "at": "2026-11-03T11:47:44.437Z",
+      "type": "decision",
+      "mode": "live",
+      "thread_id": "01a1a13c-69a9-7833-a44e-51533296fa8c",
+      "snapshot_id": "918eed36-924e-4af3-94c0-9a02a6e0758f",
+      "stop_attempt_id": "1953ce54-572e-48e5-961f-7ad13b84602d",
+      "action": "CONTINUE",
+      "next_message": "Perform Stage 2 now, even if still in the same native turn: read and validate stage1.json, write stage2.json exactly {\"stage\":2,\"value\":\"alpha-beta\"}, then reread it and report command/file evidence. Preserve Stage 1, the failed-route marker, and both protected scripts. End this response after Stage 2; leave Stage 3 for the next Stop continuation."
+    },
+    {
+      "source_line": 22,
+      "event_id": "00ddcb32-fc82-4cdc-9fc5-f1433516ef37",
+      "at": "2026-11-03T11:47:44.499Z",
+      "type": "stop_hook_direction_returned",
+      "mode": "live",
+      "stop_attempt_id": "1953ce54-572e-48e5-961f-7ad13b84602d",
+      "delivery_id": "f2994727-1be7-4f2b-83c1-f0ecdac60124",
+      "session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+      "execution_confirmed": false
+    },
+    {
+      "source_line": 23,
+      "event_id": "257689b1-f3b4-4a64-bc9b-11a2df2851b4",
+      "at": "2026-11-03T11:48:10.744Z",
+      "type": "main_tool_result",
+      "mode": "live",
+      "session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+      "turn_id": "01a1a13a-6c80-7970-90c1-2485e1b09511",
+      "tool_use_id": "exec-153f4e87-aa42-4365-b3ed-d617e672cc19",
+      "run_generation": "d547e22c-9d88-460a-ab1d-ee23c1b575c0",
+      "input_epoch": 8,
+      "original_event": "PostToolUse",
+      "tool_name": "Bash",
+      "complete": true
+    },
+    {
+      "source_line": 24,
+      "event_id": "cb34005d-81d4-4e3c-9e76-bcb08e724574",
+      "at": "2026-11-03T11:48:10.744Z",
+      "type": "main_session_continuation_confirmed",
+      "mode": "live",
+      "session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+      "turn_id": "01a1a13a-6c80-7970-90c1-2485e1b09511",
+      "delivery_id": "f2994727-1be7-4f2b-83c1-f0ecdac60124",
+      "tool_use_id": "exec-153f4e87-aa42-4365-b3ed-d617e672cc19",
+      "original_event": "PostToolUse"
+    },
+    {
+      "source_line": 25,
+      "event_id": "20335baf-ef21-4971-9184-b6d36aa6249a",
+      "at": "2026-11-03T11:48:20.640Z",
+      "type": "main_session_stop_observed",
+      "mode": "live",
+      "session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+      "turn_id": "01a1a13a-6c80-7970-90c1-2485e1b09511",
+      "stop_attempt_id": "e3b6873f-4a37-4b92-aacd-e5b6a774cb52",
+      "run_generation": "d547e22c-9d88-460a-ab1d-ee23c1b575c0",
+      "host_source": "native-desktop"
+    },
+    {
+      "source_line": 26,
+      "event_id": "a1fc4e78-97e4-45c7-9221-f06eef083b60",
+      "at": "2026-11-03T11:48:21.609Z",
+      "type": "judge_created",
+      "mode": "live",
+      "thread_id": "01a1a13d-254c-7940-a797-4f608f0ddca9",
+      "snapshot_id": "0c376fef-3880-4057-853f-15def9ac8395",
+      "stop_attempt_id": "e3b6873f-4a37-4b92-aacd-e5b6a774cb52",
+      "main_session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7"
+    },
+    {
+      "source_line": 27,
+      "event_id": "438834f1-ec52-45c8-acdb-65d556dfe789",
+      "at": "2026-11-03T11:48:39.748Z",
+      "type": "judge_output",
+      "mode": "live",
+      "thread_id": "01a1a13d-254c-7940-a797-4f608f0ddca9",
+      "turn_id": "01a1a13d-25f7-7ea0-94fd-0d5560e2e822",
+      "snapshot_id": "0c376fef-3880-4057-853f-15def9ac8395",
+      "stop_attempt_id": "e3b6873f-4a37-4b92-aacd-e5b6a774cb52",
+      "main_session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7"
+    },
+    {
+      "source_line": 28,
+      "event_id": "cb082564-e1e3-45aa-9dae-74ec89d08986",
+      "at": "2026-11-03T11:48:39.788Z",
+      "type": "judge_archived",
+      "mode": "live",
+      "thread_id": "01a1a13d-254c-7940-a797-4f608f0ddca9",
+      "stop_attempt_id": "e3b6873f-4a37-4b92-aacd-e5b6a774cb52",
+      "main_session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7"
+    },
+    {
+      "source_line": 29,
+      "event_id": "5b50368e-2357-4189-b864-ab91adf645de",
+      "at": "2026-11-03T11:48:39.789Z",
+      "type": "decision",
+      "mode": "live",
+      "thread_id": "01a1a13d-254c-7940-a797-4f608f0ddca9",
+      "snapshot_id": "0c376fef-3880-4057-853f-15def9ac8395",
+      "stop_attempt_id": "e3b6873f-4a37-4b92-aacd-e5b6a774cb52",
+      "action": "CONTINUE",
+      "next_message": "Perform Stage 3 now, even if still in the same native turn: read and validate stage2.json, then write final.json exactly {\"stage\":3,\"value\":\"alpha-beta-gamma\"}. Reread it and report command/file evidence. Preserve both earlier stages, the failed-route marker, and both protected scripts. End the response with Stage 3 evidence."
+    },
+    {
+      "source_line": 30,
+      "event_id": "d3254b2a-66eb-42fe-a844-5d342f950986",
+      "at": "2026-11-03T11:48:39.816Z",
+      "type": "stop_hook_direction_returned",
+      "mode": "live",
+      "stop_attempt_id": "e3b6873f-4a37-4b92-aacd-e5b6a774cb52",
+      "delivery_id": "58eb5527-d5df-4f1f-9ed0-0f79661adc98",
+      "session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+      "execution_confirmed": false
+    },
+    {
+      "source_line": 31,
+      "event_id": "6b86bede-ec08-4fc2-8a60-0683cdb1f578",
+      "at": "2026-11-03T11:49:05.402Z",
+      "type": "main_tool_result",
+      "mode": "live",
+      "session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+      "turn_id": "01a1a13a-6c80-7970-90c1-2485e1b09511",
+      "tool_use_id": "exec-d579b60b-c21a-4a31-b31d-740690f2f30b",
+      "run_generation": "d547e22c-9d88-460a-ab1d-ee23c1b575c0",
+      "input_epoch": 8,
+      "original_event": "PostToolUse",
+      "tool_name": "Bash",
+      "complete": true
+    },
+    {
+      "source_line": 32,
+      "event_id": "f9ad4dbd-b78b-48de-9a7e-12ff4ad50977",
+      "at": "2026-11-03T11:49:05.402Z",
+      "type": "main_session_continuation_confirmed",
+      "mode": "live",
+      "session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+      "turn_id": "01a1a13a-6c80-7970-90c1-2485e1b09511",
+      "delivery_id": "58eb5527-d5df-4f1f-9ed0-0f79661adc98",
+      "tool_use_id": "exec-d579b60b-c21a-4a31-b31d-740690f2f30b",
+      "original_event": "PostToolUse"
+    },
+    {
+      "source_line": 33,
+      "event_id": "55eb77d4-0092-40ec-a152-6bc0b6c67244",
+      "at": "2026-11-03T11:49:13.332Z",
+      "type": "main_tool_result",
+      "mode": "live",
+      "session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+      "turn_id": "01a1a13a-6c80-7970-90c1-2485e1b09511",
+      "tool_use_id": "exec-5b36bc95-41d1-42ce-ae03-a32dcd0f7326",
+      "run_generation": "d547e22c-9d88-460a-ab1d-ee23c1b575c0",
+      "input_epoch": 8,
+      "original_event": "PostToolUse",
+      "tool_name": "Bash",
+      "complete": true
+    },
+    {
+      "source_line": 34,
+      "event_id": "d0062609-f96c-42d6-a179-1aa50303e782",
+      "at": "2026-11-03T11:49:25.157Z",
+      "type": "main_session_stop_observed",
+      "mode": "live",
+      "session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+      "turn_id": "01a1a13a-6c80-7970-90c1-2485e1b09511",
+      "stop_attempt_id": "7b14145f-5af0-4f4b-8f60-30321649505b",
+      "run_generation": "d547e22c-9d88-460a-ab1d-ee23c1b575c0",
+      "host_source": "native-desktop"
+    },
+    {
+      "source_line": 35,
+      "event_id": "9ed13577-1c49-4dc9-9b8c-7ab14987a3ae",
+      "at": "2026-11-03T11:49:26.312Z",
+      "type": "judge_created",
+      "mode": "live",
+      "thread_id": "01a1a13e-2216-72b1-bf20-254829bd7d44",
+      "snapshot_id": "62d74ee3-3fff-4cb7-8770-7ada45a6dad5",
+      "stop_attempt_id": "7b14145f-5af0-4f4b-8f60-30321649505b",
+      "main_session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7"
+    },
+    {
+      "source_line": 36,
+      "event_id": "47750860-97eb-40ec-a349-e736395ef09f",
+      "at": "2026-11-03T11:49:47.192Z",
+      "type": "judge_output",
+      "mode": "live",
+      "thread_id": "01a1a13e-2216-72b1-bf20-254829bd7d44",
+      "turn_id": "01a1a13e-22b1-79e0-af8c-aefd6ea72cb3",
+      "snapshot_id": "62d74ee3-3fff-4cb7-8770-7ada45a6dad5",
+      "stop_attempt_id": "7b14145f-5af0-4f4b-8f60-30321649505b",
+      "main_session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7"
+    },
+    {
+      "source_line": 37,
+      "event_id": "fa5e979a-f479-41df-b1c0-a431a8255291",
+      "at": "2026-11-03T11:49:47.250Z",
+      "type": "judge_archived",
+      "mode": "live",
+      "thread_id": "01a1a13e-2216-72b1-bf20-254829bd7d44",
+      "stop_attempt_id": "7b14145f-5af0-4f4b-8f60-30321649505b",
+      "main_session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7"
+    },
+    {
+      "source_line": 38,
+      "event_id": "8df9dd4f-ae36-48db-ad43-e6e1272ad5e7",
+      "at": "2026-11-03T11:49:47.252Z",
+      "type": "decision",
+      "mode": "live",
+      "thread_id": "01a1a13e-2216-72b1-bf20-254829bd7d44",
+      "snapshot_id": "62d74ee3-3fff-4cb7-8770-7ada45a6dad5",
+      "stop_attempt_id": "7b14145f-5af0-4f4b-8f60-30321649505b",
+      "action": "DONE"
+    },
+    {
+      "source_line": 39,
+      "event_id": "727f3f18-6856-4333-b4cf-108bfa100094",
+      "at": "2026-11-03T11:49:47.499Z",
+      "type": "verification_result",
+      "mode": "live",
+      "exitCode": 0,
+      "workspace_changed": true,
+      "passed": false,
+      "stdout": "All three independent stage checks PASS; the failed first route was attempted.\n",
+      "stderr": "",
+      "protected_before_count": 0,
+      "protected_after_count": 0
+    },
+    {
+      "source_line": 40,
+      "event_id": "423a195a-d008-49a2-ad4c-e7594c0d5f86",
+      "at": "2026-11-03T11:49:47.549Z",
+      "type": "stop_hook_direction_returned",
+      "mode": "live",
+      "stop_attempt_id": "7b14145f-5af0-4f4b-8f60-30321649505b",
+      "delivery_id": "f60515c8-cc2f-4311-856c-27941bc51e85",
+      "session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+      "execution_confirmed": false
+    },
+    {
+      "source_line": 41,
+      "event_id": "503e85aa-267f-408d-b23d-f0662bd36fbf",
+      "at": "2026-11-03T11:50:27.015Z",
+      "type": "main_tool_result",
+      "mode": "live",
+      "session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+      "turn_id": "01a1a13a-6c80-7970-90c1-2485e1b09511",
+      "tool_use_id": "exec-69b88dc9-9fb9-4f2b-98d9-6be2726c4cea",
+      "run_generation": "d547e22c-9d88-460a-ab1d-ee23c1b575c0",
+      "input_epoch": 8,
+      "original_event": "PostToolUse",
+      "complete": false
+    },
+    {
+      "source_line": 42,
+      "event_id": "39555bf1-fdc2-4e90-8e5d-8e973f9ac2ce",
+      "at": "2026-11-03T11:50:27.016Z",
+      "type": "main_session_continuation_confirmed",
+      "mode": "live",
+      "session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+      "turn_id": "01a1a13a-6c80-7970-90c1-2485e1b09511",
+      "delivery_id": "f60515c8-cc2f-4311-856c-27941bc51e85",
+      "tool_use_id": "exec-69b88dc9-9fb9-4f2b-98d9-6be2726c4cea",
+      "original_event": "PostToolUse"
+    },
+    {
+      "source_line": 43,
+      "event_id": "943801af-ba6f-4f56-857a-8402764ffe87",
+      "at": "2026-11-03T11:51:38.904Z",
+      "type": "main_tool_result",
+      "mode": "live",
+      "session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+      "turn_id": "01a1a13a-6c80-7970-90c1-2485e1b09511",
+      "tool_use_id": "exec-5af4333f-c88f-4375-8ef6-25e1ee653079",
+      "run_generation": "d547e22c-9d88-460a-ab1d-ee23c1b575c0",
+      "input_epoch": 8,
+      "original_event": "PostToolUse",
+      "tool_name": "Bash",
+      "complete": true
+    },
+    {
+      "source_line": 44,
+      "event_id": "76df6748-129f-46ae-bb22-6f94fa1ca0f0",
+      "at": "2026-11-03T11:52:16.317Z",
+      "type": "main_tool_result",
+      "mode": "live",
+      "session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+      "turn_id": "01a1a13a-6c80-7970-90c1-2485e1b09511",
+      "tool_use_id": "exec-df12e193-3118-44d5-abca-484144bb043f",
+      "run_generation": "d547e22c-9d88-460a-ab1d-ee23c1b575c0",
+      "input_epoch": 8,
+      "original_event": "PostToolUse",
+      "tool_name": "Bash",
+      "complete": true
+    },
+    {
+      "source_line": 45,
+      "event_id": "3f023a3a-d640-4c10-b6d6-5b29537c6b76",
+      "at": "2026-11-03T11:52:28.985Z",
+      "type": "main_tool_result",
+      "mode": "live",
+      "session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+      "turn_id": "01a1a13a-6c80-7970-90c1-2485e1b09511",
+      "tool_use_id": "exec-3288be13-3674-4e9e-82f1-7b368acf14c7",
+      "run_generation": "d547e22c-9d88-460a-ab1d-ee23c1b575c0",
+      "input_epoch": 8,
+      "original_event": "PostToolUse",
+      "tool_name": "Bash",
+      "complete": true
+    },
+    {
+      "source_line": 46,
+      "event_id": "d469aa91-06e7-4ca1-9fdb-10e1bf346caa",
+      "at": "2026-11-03T11:52:29.001Z",
+      "type": "main_tool_result",
+      "mode": "live",
+      "session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+      "turn_id": "01a1a13a-6c80-7970-90c1-2485e1b09511",
+      "tool_use_id": "exec-ae0442c0-eb76-4b1c-9153-6b7498ec29f5",
+      "run_generation": "d547e22c-9d88-460a-ab1d-ee23c1b575c0",
+      "input_epoch": 8,
+      "original_event": "PostToolUse",
+      "tool_name": "Bash",
+      "complete": true
+    },
+    {
+      "source_line": 47,
+      "event_id": "5efa7a16-f2eb-4c4f-81a4-30bbf6b0ebab",
+      "at": "2026-11-03T11:52:41.202Z",
+      "type": "main_tool_result",
+      "mode": "live",
+      "session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+      "turn_id": "01a1a13a-6c80-7970-90c1-2485e1b09511",
+      "tool_use_id": "exec-94eb0b41-b1a1-42b8-bb50-2f791c88dad3",
+      "run_generation": "d547e22c-9d88-460a-ab1d-ee23c1b575c0",
+      "input_epoch": 8,
+      "original_event": "PostToolUse",
+      "tool_name": "Bash",
+      "complete": true
+    },
+    {
+      "source_line": 48,
+      "event_id": "052e6bb7-fa7e-4b01-930b-7d37add6ad4d",
+      "at": "2026-11-03T11:52:54.276Z",
+      "type": "main_tool_result",
+      "mode": "live",
+      "session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+      "turn_id": "01a1a13a-6c80-7970-90c1-2485e1b09511",
+      "tool_use_id": "exec-6d9759b0-8de0-4636-8074-c8467ee5f0f9",
+      "run_generation": "d547e22c-9d88-460a-ab1d-ee23c1b575c0",
+      "input_epoch": 8,
+      "original_event": "PostToolUse",
+      "tool_name": "Bash",
+      "complete": true
+    },
+    {
+      "source_line": 49,
+      "event_id": "33515c4e-6a93-4c17-b1ee-01b5a3ebffcd",
+      "at": "2026-11-03T11:53:37.126Z",
+      "type": "main_session_stop_observed",
+      "mode": "live",
+      "session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+      "turn_id": "01a1a13a-6c80-7970-90c1-2485e1b09511",
+      "stop_attempt_id": "82de0c76-1c9d-46a8-9487-498a7fb6de4d",
+      "run_generation": "d547e22c-9d88-460a-ab1d-ee23c1b575c0",
+      "host_source": "native-desktop"
+    },
+    {
+      "source_line": 50,
+      "event_id": "0f9fd20c-5160-4d04-aee9-f9520a203b52",
+      "at": "2026-11-03T11:53:38.267Z",
+      "type": "judge_created",
+      "mode": "live",
+      "thread_id": "01a1a141-f9f7-7481-9772-b3040cca4dbb",
+      "snapshot_id": "9ea9e559-5c21-4ae0-bb9c-6d3beee4a674",
+      "stop_attempt_id": "82de0c76-1c9d-46a8-9487-498a7fb6de4d",
+      "main_session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7"
+    },
+    {
+      "source_line": 51,
+      "event_id": "debe17c5-0530-4fc3-9dd4-7544438f2c7f",
+      "at": "2026-11-03T11:54:34.474Z",
+      "type": "judge_output",
+      "mode": "live",
+      "thread_id": "01a1a141-f9f7-7481-9772-b3040cca4dbb",
+      "turn_id": "01a1a141-faeb-7001-9b97-81130b9c7d7e",
+      "snapshot_id": "9ea9e559-5c21-4ae0-bb9c-6d3beee4a674",
+      "stop_attempt_id": "82de0c76-1c9d-46a8-9487-498a7fb6de4d",
+      "main_session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7"
+    },
+    {
+      "source_line": 52,
+      "event_id": "7e3ef621-48f5-4b88-9ccc-734e33b44843",
+      "at": "2026-11-03T11:54:34.524Z",
+      "type": "judge_archived",
+      "mode": "live",
+      "thread_id": "01a1a141-f9f7-7481-9772-b3040cca4dbb",
+      "stop_attempt_id": "82de0c76-1c9d-46a8-9487-498a7fb6de4d",
+      "main_session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7"
+    },
+    {
+      "source_line": 53,
+      "event_id": "c1626fc4-fc5c-4e61-88af-b3f9fc5c96ae",
+      "at": "2026-11-03T11:54:34.525Z",
+      "type": "decision",
+      "mode": "live",
+      "thread_id": "01a1a141-f9f7-7481-9772-b3040cca4dbb",
+      "snapshot_id": "9ea9e559-5c21-4ae0-bb9c-6d3beee4a674",
+      "stop_attempt_id": "82de0c76-1c9d-46a8-9487-498a7fb6de4d",
+      "action": "CONTINUE"
+    },
+    {
+      "source_line": 54,
+      "event_id": "23609440-e087-4992-ab28-7794601b99bc",
+      "at": "2026-11-03T11:54:34.557Z",
+      "type": "stop_hook_direction_returned",
+      "mode": "live",
+      "stop_attempt_id": "82de0c76-1c9d-46a8-9487-498a7fb6de4d",
+      "delivery_id": "ebee8c8f-6701-4b43-b7bb-2f7e6ef8912b",
+      "session_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+      "execution_confirmed": false
+    }
+  ],
+  "pause_observation": {
+    "persisted_at": "2026-11-03T11:54:37.182Z",
+    "most_recent_direction_returned_at": "2026-11-03T11:54:34.557Z",
+    "pause_was_after_direction": true,
+    "direction_returns_after_pause": 0,
+    "task_complete": [
+      {
+        "at": "2026-11-03T11:55:45.612Z",
+        "turn_id": "01a1a13a-6c80-7970-90c1-2485e1b09511"
+      }
+    ],
+    "judgement_race_pass_claimed": false
+  },
+  "limitations": [
+    "No full dynamic A tool-inventory comparison is available.",
+    "T06 observed exitCode=0 plus workspace_changed rejection; nonzero verifier/protected mutation live branches not established.",
+    "T07 DONE release was not established.",
+    "Pause happened after direction returned; it does not establish cancellation of an in-flight judge."
+  ],
+  "effective_feature_log_evidence": {
+    "source": "C:/Users/will/.codex/logs_2.sqlite; read-only URI",
+    "rows": [
+      {
+        "log_id": 184721715,
+        "thread_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+        "unix_time": 1793705088,
+        "features": {
+          "apps": "true",
+          "browser_use": "true",
+          "computer_use": "true",
+          "hooks": "true",
+          "multi_agent_mode": "false",
+          "multi_agent_v2": "false",
+          "plugins": "true",
+          "web_search_cached": "false",
+          "web_search_request": "false"
+        }
+      },
+      {
+        "log_id": 184782829,
+        "thread_id": "01a1a13c-69a9-7833-a44e-51533296fa8c",
+        "unix_time": 1793706454,
+        "features": {
+          "apps": "false",
+          "browser_use": "false",
+          "computer_use": "false",
+          "hooks": "false",
+          "multi_agent_mode": "false",
+          "multi_agent_v2": "false",
+          "plugins": "false",
+          "web_search_cached": "false",
+          "web_search_request": "false"
+        }
+      },
+      {
+        "log_id": 184784764,
+        "thread_id": "01a1a13d-254c-7940-a797-4f608f0ddca9",
+        "unix_time": 1793706502,
+        "features": {
+          "apps": "false",
+          "browser_use": "false",
+          "computer_use": "false",
+          "hooks": "false",
+          "multi_agent_mode": "false",
+          "multi_agent_v2": "false",
+          "plugins": "false",
+          "web_search_cached": "false",
+          "web_search_request": "false"
+        }
+      },
+      {
+        "log_id": 184788174,
+        "thread_id": "01a1a13e-2216-72b1-bf20-254829bd7d44",
+        "unix_time": 1793706566,
+        "features": {
+          "apps": "false",
+          "browser_use": "false",
+          "computer_use": "false",
+          "hooks": "false",
+          "multi_agent_mode": "false",
+          "multi_agent_v2": "false",
+          "plugins": "false",
+          "web_search_cached": "false",
+          "web_search_request": "false"
+        }
+      },
+      {
+        "log_id": 184789931,
+        "thread_id": "01a1a0bf-c5d2-74e0-9eae-cf2d38a20cb7",
+        "unix_time": 1793706587,
+        "features": {
+          "apps": "true",
+          "browser_use": "true",
+          "computer_use": "true",
+          "hooks": "true",
+          "multi_agent_mode": "false",
+          "multi_agent_v2": "false",
+          "plugins": "true",
+          "web_search_cached": "false",
+          "web_search_request": "false"
+        }
+      },
+      {
+        "log_id": 184800896,
+        "thread_id": "01a1a141-f9f7-7481-9772-b3040cca4dbb",
+        "unix_time": 1793706819,
+        "features": {
+          "apps": "false",
+          "browser_use": "false",
+          "computer_use": "false",
+          "hooks": "false",
+          "multi_agent_mode": "false",
+          "multi_agent_v2": "false",
+          "plugins": "false",
+          "web_search_cached": "false",
+          "web_search_request": "false"
+        }
+      }
+    ]
+  },
+  "ordinary_chat_observation": {
+    "observed_at": "2026-11-03T12:02:04.066340+00:00",
+    "thread_id": "01a1a147-3fc3-7b20-9a00-b9c01549fb5a",
+    "native_turn": "01a1a147-440a-7872-ae08-5b416ec1f547",
+    "cwd": "C:\\Users\\will\\Documents\\Codex\\2026-11-03\\spec33-ordinary-neutral",
+    "rollout_path": "C:\\Users\\will\\.codex\\sessions\\2026\\11\\03\\rollout-2026-11-03T19-59-23-01a1a147-3fc3-7b20-9a00-b9c01549fb5a.jsonl",
+    "rollout_sha256": "8bc45f1eb18d35bbad4e5298196d6927c935032dcae467e211166c110b48e626",
+    "task_complete": [
+      {
+        "at": "2026-11-03T11:59:36.344Z",
+        "turn_id": "01a1a147-440a-7872-ae08-5b416ec1f547"
+      }
+    ],
+    "task_started_count": 1,
+    "tool_call_count": 0,
+    "workspace_entries": [
+      {
+        "relative_path": "outputs",
+        "type": "directory"
+      },
+      {
+        "relative_path": "work",
+        "type": "directory"
+      }
+    ],
+    "supervision_registry_exists": false,
+    "attributable_controller_count": 0,
+    "attributable_controllers": [],
+    "effective_feature_log_evidence": [
+      {
+        "log_id": 184818026,
+        "features": {
+          "apps": "true",
+          "browser_use": "true",
+          "computer_use": "true",
+          "hooks": "true",
+          "plugins": "true"
+        }
+      }
+    ],
+    "limit": "Point-in-time metadata and this exact completed thread only. Does not assert zero generic host hook launches or no global B/C processes. HookStarted/Completed are transient and absent durable rollout cannot establish a handler invocation."
+  }
+}

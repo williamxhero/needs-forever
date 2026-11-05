@@ -1,0 +1,12 @@
+✔ custom checkpoint paths do not make controller heartbeat writes invalidate a stable fixed check (2116.1592ms)
+✔ task files beside a custom checkpoint still invalidate DONE when they change during verification (2694.0664ms)
+✔ unprotected UUID-named business JSON beside a custom checkpoint remains in the workspace change gate (4402.7831ms)
+✔ protected files with checkpoint artifact names retain their fixed baseline enforcement (3204.2377ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 12542.6368

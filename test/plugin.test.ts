@@ -25,7 +25,7 @@ function setup(name: string, options: Record<string, unknown> = {}) {
   const control = join(plugin, 'scripts/control.mjs');
   const run = (command: string, extra: string[] = []) => spawnSync(process.execPath, [control, command, '--state', state, ...extra], { cwd: workspace, encoding: 'utf8', timeout: 20_000 });
   return { directory, plugin, workspace, state, task, fixture, scenario, trace, run,
-    start() { return run('start', ['--task', task, '--test-fixture', fixture]); },
+    start() { return run('start', ['--control-mode', 'independent-worker', '--task', task, '--test-fixture', fixture]); },
     resume() { return run('resume', ['--test-fixture', fixture]); },
   };
 }
@@ -35,11 +35,15 @@ async function until(condition: () => boolean, message: string) {
 }
 
 test('plugin ships the exact executable core and resolves all marketplace/skill resources locally', () => {
-  const manifest = json(join(source, 'plugin.json'));
+  const manifest = json(join(source, 'package.json'));
   const legacy = json(join(source, '.codex-plugin/plugin.json'));
   const market = json('.agents/plugins/marketplace.json');
-  assert.equal(manifest.name, legacy.name);
+  assert.equal(existsSync(join(source, 'plugin.json')), false, 'The AgentPlugin format suppresses hooks in supported Desktop 0.159.');
+  assert.equal(legacy.name, 'needs-forever');
   assert.equal(manifest.version, legacy.version);
+  assert.equal(manifest.version, json('package.json').version);
+  assert.equal(manifest.version, json('package-lock.json').version);
+  assert.equal(manifest.version, json('package-lock.json').packages[''].version);
   assert.equal(resolve(market.plugins[0].source.path), source);
   assert.ok(existsSync(join(source, 'skills/supervise/SKILL.md')));
   for (const [path, hash] of Object.entries(json(join(source, 'runtime/integrity.json')).files)) {

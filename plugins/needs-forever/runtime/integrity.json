@@ -1,16 +1,22 @@
 {
   "generated_by": "npm run plugin:build",
   "files": {
-    "src/cli.js": "675111518bcedcbf03f194b9eac717ab3f4b47d4064a9ce32f15737ab43fe7a5",
+    "src/cli.js": "a9e9d85dd6b9fef1a77b50f5c62bdd31ba8819f9fbfc7e097a026c4084ab1d34",
+    "src/control-intent.js": "33c80a172debd1fb149606b3623e19d6fb50216f5fbab80a343f60456a066f70",
+    "src/hook-host.js": "1cd9e46ce63d753fd8e4962652461e544da97c8ac032c884092415942aab94a8",
     "src/index.js": "03e898ec1f5980e9758d1fc83bd8a03cd746d8f42a8bea4a46e9d766e1563283",
-    "src/judge.js": "d9b2d933d7902462ea9c196ff8c8d8811ca17c295fd393537d2092d120de5af7",
+    "src/judge.js": "92af03583763a9b0b656c58a193c6b9420754a8cede4040326b666733fd6f404",
+    "src/lifecycle.js": "2dd0c97ac38b3351bc4901ecce0e9efb6b4e0ce11f2a6d1f4acda833d4091ad9",
+    "src/main-controller.js": "59edcb9fb5fedba0511650f037b3888351777f2d0f37c7aa84576845db172f39",
+    "src/main-session.js": "6363d142d23b5373eb94af7e623cd81ed8f697201eb460495c06cdbccc0661bc",
+    "src/main-supervision.js": "165fad03f93d53263d4f59fe6a76b6a4a3de318da135d9665b133f22642ad433",
     "src/recovery.js": "db606a6e5674c70e4f70b56d794e14576ae0d4473d15a6ef4e8a72ab4aa9da2e",
     "src/redact.js": "cd943daa4180f8c87b091babc0160dedab3432b471624710e67926fbfe779db6",
     "src/rules.js": "e743c10107cb043bf2c06957b2646cb9fc723474bd456d0f96a02861d5d376fc",
     "src/snapshot.js": "6b815e1bc90f42d4dbb5672ee314e17b71763c7baeced3a119ec91aa36193427",
     "src/store.js": "23067b5e1642728050960f5dcea17b2b7c7ff8172fa2f58175f6df786a544629",
-    "src/supervisor.js": "0c2f586924c38c8b82a4cc75af23ec9bfdfea2a9306c3a1870319ba6cd927652",
-    "src/transport.js": "bb10bff3680a7937e37cb3b829ff385fb59f9a57862d834814796e92185b37a8",
+    "src/supervisor.js": "48ec372d5895d2c5f3060ebf1b799b5e7fe3ab453c99255a12adbfd8b1f03c9c",
+    "src/transport.js": "70edcbafcac34b37db9e796982167f9a5c9084761c081688528abf31c34baf39",
     "src/types.js": "1d776e8997c21eccad34b1b01358b1a3f8df090b5647a855ba3972d361311f08"
   }
 }

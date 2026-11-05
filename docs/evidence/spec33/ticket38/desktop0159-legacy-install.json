@@ -1,0 +1,532 @@
+{
+  "mode": "isolated-install-discovery-no-model",
+  "directory": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\desktop0159-legacy",
+  "candidate": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38",
+  "codex_home": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\desktop0159-legacy\\codex-home",
+  "workspace": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\desktop0159-legacy\\workspace",
+  "os": {
+    "platform": "win32",
+    "release": "10.0.26300"
+  },
+  "node": "v24.19.0",
+  "commands": [
+    {
+      "argv": [
+        "C:/Users/will/AppData/Local/OpenAI/Codex/bin/ca9abb0b4d8ac692/codex.exe",
+        "--version"
+      ],
+      "cwd": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\desktop0159-legacy\\workspace",
+      "codex_home": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\desktop0159-legacy\\codex-home",
+      "exit_code": 0,
+      "stdout": "codex-cli 0.159.0\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "C:/Users/will/AppData/Local/OpenAI/Codex/bin/ca9abb0b4d8ac692/codex.exe",
+        "plugin",
+        "marketplace",
+        "add",
+        "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38",
+        "--json"
+      ],
+      "cwd": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\desktop0159-legacy\\workspace",
+      "codex_home": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\desktop0159-legacy\\codex-home",
+      "exit_code": 0,
+      "stdout": "{\n  \"marketplaceName\": \"needs-forever-local\",\n  \"installedRoot\": \"D:\\\\WILL\\\\TOOLS\\\\needs-forever\\\\.scratch\\\\spec33-worktrees\\\\ticket38\",\n  \"alreadyAdded\": false\n}\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "C:/Users/will/AppData/Local/OpenAI/Codex/bin/ca9abb0b4d8ac692/codex.exe",
+        "plugin",
+        "add",
+        "needs-forever@needs-forever-local",
+        "--json"
+      ],
+      "cwd": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\desktop0159-legacy\\workspace",
+      "codex_home": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\desktop0159-legacy\\codex-home",
+      "exit_code": 0,
+      "stdout": "{\n  \"pluginId\": \"needs-forever@needs-forever-local\",\n  \"name\": \"needs-forever\",\n  \"marketplaceName\": \"needs-forever-local\",\n  \"version\": \"0.3.0\",\n  \"installedPath\": \"D:\\\\WILL\\\\TOOLS\\\\needs-forever\\\\.scratch\\\\spec33-worktrees\\\\ticket38\\\\runs\\\\spec33-candidate\\\\desktop0159-legacy\\\\codex-home\\\\plugins\\\\cache\\\\needs-forever-local\\\\needs-forever\\\\0.3.0\",\n  \"authPolicy\": \"ON_USE\"\n}\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "C:/Users/will/AppData/Local/OpenAI/Codex/bin/ca9abb0b4d8ac692/codex.exe",
+        "plugin",
+        "list",
+        "--marketplace",
+        "needs-forever-local",
+        "--json"
+      ],
+      "cwd": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\desktop0159-legacy\\workspace",
+      "codex_home": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\desktop0159-legacy\\codex-home",
+      "exit_code": 0,
+      "stdout": "{\n  \"installed\": [\n    {\n      \"pluginId\": \"needs-forever@needs-forever-local\",\n      \"name\": \"needs-forever\",\n      \"marketplaceName\": \"needs-forever-local\",\n      \"version\": \"0.3.0\",\n      \"installed\": true,\n      \"enabled\": true,\n      \"source\": {\n        \"source\": \"local\",\n        \"path\": \"D:\\\\WILL\\\\TOOLS\\\\needs-forever\\\\.scratch\\\\spec33-worktrees\\\\ticket38\\\\plugins\\\\needs-forever\"\n      },\n      \"marketplaceSource\": {\n        \"sourceType\": \"local\",\n        \"source\": \"\\\\\\\\?\\\\D:\\\\WILL\\\\TOOLS\\\\needs-forever\\\\.scratch\\\\spec33-worktrees\\\\ticket38\"\n      },\n      \"installPolicy\": \"AVAILABLE\",\n      \"authPolicy\": \"ON_USE\"\n    }\n  ],\n  \"available\": []\n}\n",
+      "stderr": ""
+    }
+  ],
+  "native_effectiveness": "not_run",
+  "discovery_pass": false,
+  "candidate_hashes": {
+    ".codex-plugin/plugin.json": "d6eb13bf2505fdc9ed532c81a6c140872e2d439ad03b648c57b807a2798c4058",
+    "hooks/hooks.json": "d5ace2523deea5f112f0ea6b8691f1d6a092358d85aff94d9153da861b068c16",
+    "package.json": "86e5f6abc0de911ff52f13e994ebb263fdd027c3f165797ee6b41af565c8ef17",
+    "runtime/integrity.json": "7c7c4ea7b6f9c00061d261c870b3469d9635f60ce8e3e8baa658dda4de8eb2fc",
+    "runtime/src/cli.js": "a9e9d85dd6b9fef1a77b50f5c62bdd31ba8819f9fbfc7e097a026c4084ab1d34",
+    "runtime/src/hook-host.js": "1cd9e46ce63d753fd8e4962652461e544da97c8ac032c884092415942aab94a8",
+    "runtime/src/index.js": "03e898ec1f5980e9758d1fc83bd8a03cd746d8f42a8bea4a46e9d766e1563283",
+    "runtime/src/judge.js": "d9b2d933d7902462ea9c196ff8c8d8811ca17c295fd393537d2092d120de5af7",
+    "runtime/src/lifecycle.js": "1ee5b1ecbcab415bdb69cc3972ee61176343b0fad74b75066c00316a75d25f89",
+    "runtime/src/main-controller.js": "7e2c87970a53184ae136f347966dcdf011c08ef0b2c42e5b70994a4a2f87fe44",
+    "runtime/src/main-session.js": "6363d142d23b5373eb94af7e623cd81ed8f697201eb460495c06cdbccc0661bc",
+    "runtime/src/main-supervision.js": "5871495380c6749c0dc7dd0a79ba425afe2296e3c6021251e1a4104bf668bcef",
+    "runtime/src/recovery.js": "db606a6e5674c70e4f70b56d794e14576ae0d4473d15a6ef4e8a72ab4aa9da2e",
+    "runtime/src/redact.js": "cd943daa4180f8c87b091babc0160dedab3432b471624710e67926fbfe779db6",
+    "runtime/src/rules.js": "e743c10107cb043bf2c06957b2646cb9fc723474bd456d0f96a02861d5d376fc",
+    "runtime/src/snapshot.js": "6b815e1bc90f42d4dbb5672ee314e17b71763c7baeced3a119ec91aa36193427",
+    "runtime/src/store.js": "23067b5e1642728050960f5dcea17b2b7c7ff8172fa2f58175f6df786a544629",
+    "runtime/src/supervisor.js": "0c2f586924c38c8b82a4cc75af23ec9bfdfea2a9306c3a1870319ba6cd927652",
+    "runtime/src/transport.js": "bb10bff3680a7937e37cb3b829ff385fb59f9a57862d834814796e92185b37a8",
+    "runtime/src/types.js": "1d776e8997c21eccad34b1b01358b1a3f8df090b5647a855ba3972d361311f08",
+    "scripts/control.mjs": "f52617495e79ce6914894633a74f9c2de6f29ea691b063eba05a5a71f7f2f959",
+    "scripts/controller.mjs": "96138daed420a09c9aa2c946c8ec3939447ebb27f171ddc3edd5ba8a846afa36",
+    "scripts/lifecycle.mjs": "ad061a1b2dc4b1c986be2511a780222e3d5774c442f37602aa867ce12a0bcdb8",
+    "scripts/main-session.mjs": "77347f866a4439df0b97c6f83f1cdc77d71f7be9bd8f38ee910c8ffa57e1c5fc",
+    "skills/supervise/references/task.md": "abab1a597f3d3afefa6259bee4d3a7044e79ff8cf935139519327bb971de975b",
+    "skills/supervise/SKILL.md": "86e9fcd5ae5a6d7d98bcef2d1aa1f838cd9ce1697792fca82b57a8bac5782d16"
+  },
+  "plugin_version": "0.3.0",
+  "codex_version": "codex-cli 0.159.0",
+  "installed_path": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\desktop0159-legacy\\codex-home\\plugins\\cache\\needs-forever-local\\needs-forever\\0.3.0",
+  "installed_hashes": {
+    ".codex-plugin/plugin.json": "d6eb13bf2505fdc9ed532c81a6c140872e2d439ad03b648c57b807a2798c4058",
+    "hooks/hooks.json": "d5ace2523deea5f112f0ea6b8691f1d6a092358d85aff94d9153da861b068c16",
+    "package.json": "86e5f6abc0de911ff52f13e994ebb263fdd027c3f165797ee6b41af565c8ef17",
+    "runtime/integrity.json": "7c7c4ea7b6f9c00061d261c870b3469d9635f60ce8e3e8baa658dda4de8eb2fc",
+    "runtime/src/cli.js": "a9e9d85dd6b9fef1a77b50f5c62bdd31ba8819f9fbfc7e097a026c4084ab1d34",
+    "runtime/src/hook-host.js": "1cd9e46ce63d753fd8e4962652461e544da97c8ac032c884092415942aab94a8",
+    "runtime/src/index.js": "03e898ec1f5980e9758d1fc83bd8a03cd746d8f42a8bea4a46e9d766e1563283",
+    "runtime/src/judge.js": "d9b2d933d7902462ea9c196ff8c8d8811ca17c295fd393537d2092d120de5af7",
+    "runtime/src/lifecycle.js": "1ee5b1ecbcab415bdb69cc3972ee61176343b0fad74b75066c00316a75d25f89",
+    "runtime/src/main-controller.js": "7e2c87970a53184ae136f347966dcdf011c08ef0b2c42e5b70994a4a2f87fe44",
+    "runtime/src/main-session.js": "6363d142d23b5373eb94af7e623cd81ed8f697201eb460495c06cdbccc0661bc",
+    "runtime/src/main-supervision.js": "5871495380c6749c0dc7dd0a79ba425afe2296e3c6021251e1a4104bf668bcef",
+    "runtime/src/recovery.js": "db606a6e5674c70e4f70b56d794e14576ae0d4473d15a6ef4e8a72ab4aa9da2e",
+    "runtime/src/redact.js": "cd943daa4180f8c87b091babc0160dedab3432b471624710e67926fbfe779db6",
+    "runtime/src/rules.js": "e743c10107cb043bf2c06957b2646cb9fc723474bd456d0f96a02861d5d376fc",
+    "runtime/src/snapshot.js": "6b815e1bc90f42d4dbb5672ee314e17b71763c7baeced3a119ec91aa36193427",
+    "runtime/src/store.js": "23067b5e1642728050960f5dcea17b2b7c7ff8172fa2f58175f6df786a544629",
+    "runtime/src/supervisor.js": "0c2f586924c38c8b82a4cc75af23ec9bfdfea2a9306c3a1870319ba6cd927652",
+    "runtime/src/transport.js": "bb10bff3680a7937e37cb3b829ff385fb59f9a57862d834814796e92185b37a8",
+    "runtime/src/types.js": "1d776e8997c21eccad34b1b01358b1a3f8df090b5647a855ba3972d361311f08",
+    "scripts/control.mjs": "f52617495e79ce6914894633a74f9c2de6f29ea691b063eba05a5a71f7f2f959",
+    "scripts/controller.mjs": "96138daed420a09c9aa2c946c8ec3939447ebb27f171ddc3edd5ba8a846afa36",
+    "scripts/lifecycle.mjs": "ad061a1b2dc4b1c986be2511a780222e3d5774c442f37602aa867ce12a0bcdb8",
+    "scripts/main-session.mjs": "77347f866a4439df0b97c6f83f1cdc77d71f7be9bd8f38ee910c8ffa57e1c5fc",
+    "skills/supervise/references/task.md": "abab1a597f3d3afefa6259bee4d3a7044e79ff8cf935139519327bb971de975b",
+    "skills/supervise/SKILL.md": "86e9fcd5ae5a6d7d98bcef2d1aa1f838cd9ce1697792fca82b57a8bac5782d16"
+  },
+  "package_matches_candidate": true,
+  "app_server_argv": [
+    "C:/Users/will/AppData/Local/OpenAI/Codex/bin/ca9abb0b4d8ac692/codex.exe",
+    "app-server"
+  ],
+  "initialize": {
+    "userAgent": "Codex Desktop/0.159.0 (Windows 10.0.26300; x86_64) dumb (needs-forever-install-check; 0.3.0)",
+    "codexHome": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\desktop0159-legacy\\codex-home",
+    "platformFamily": "windows",
+    "platformOs": "windows"
+  },
+  "skills_raw": {
+    "data": [
+      {
+        "cwd": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\desktop0159-legacy\\workspace",
+        "skills": [
+          {
+            "name": "browser-skill",
+            "description": "Automate the user's logged-in Chromium browser: read pages, fill forms, scrape data, operate tabs, test a UI, or debug a website. Requires the bsk CLI and browser extension.",
+            "path": "C:\\Users\\will\\.agents\\skills\\browser-skill\\SKILL.md",
+            "scope": "user",
+            "enabled": true,
+            "pluginId": null
+          },
+          {
+            "name": "needs-forever:supervise",
+            "description": "持续执行一个已授权的本地任务，或查询、暂停、恢复 Needs Forever 管理的任务。用于用户要求自动推进到验收通过、启动监督任务或管理其检查点。",
+            "path": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\desktop0159-legacy\\codex-home\\plugins\\cache\\needs-forever-local\\needs-forever\\0.3.0\\skills\\supervise\\SKILL.md",
+            "scope": "user",
+            "enabled": true,
+            "pluginId": "needs-forever@needs-forever-local"
+          },
+          {
+            "name": "to-spec",
+            "description": "Turn the current conversation into a spec and publish it to the project issue tracker: no interview, just synthesis of what you've already discussed.",
+            "interface": {
+              "displayName": "To Spec",
+              "shortDescription": "Turn a conversation into a spec",
+              "iconSmall": null,
+              "iconLarge": null,
+              "iconSmallUrl": null,
+              "iconLargeUrl": null,
+              "brandColor": null,
+              "defaultPrompt": null
+            },
+            "path": "C:\\Users\\will\\.agents\\skills\\to-spec\\SKILL.md",
+            "scope": "user",
+            "enabled": true,
+            "pluginId": null
+          },
+          {
+            "name": "imagegen",
+            "description": "Generate or edit raster images when the task benefits from AI-created bitmap visuals such as photos, illustrations, textures, sprites, mockups, or transparent-background cutouts. Use when Codex should create a brand-new image, transform an existing image, or derive visual variants from references, and the output should be a bitmap asset rather than repo-native code or vector. Do not use when the task is better handled by editing existing SVG/vector/code-native assets, extending an established icon or logo system, or building the visual directly in HTML/CSS/canvas.",
+            "interface": {
+              "displayName": "Image Gen",
+              "shortDescription": "Generate or edit images for websites, games, and more",
+              "iconSmall": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\desktop0159-legacy\\codex-home\\skills\\.system\\imagegen\\assets\\imagegen-small.svg",
+              "iconLarge": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\desktop0159-legacy\\codex-home\\skills\\.system\\imagegen\\assets\\imagegen.png",
+              "iconSmallUrl": null,
+              "iconLargeUrl": null,
+              "brandColor": null,
+              "defaultPrompt": "Use $imagegen to make or edit an image for this project."
+            },
+            "path": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\desktop0159-legacy\\codex-home\\skills\\.system\\imagegen\\SKILL.md",
+            "scope": "system",
+            "enabled": true,
+            "pluginId": null
+          },
+          {
+            "name": "openai-docs",
+            "description": "Use for Codex models/pricing, scheduled tasks, skills, settings, setup, troubleshooting, customization, automations, and self-knowledge—including 'you,' 'your,' 'this app,' or 'this coding agent' when they refer to Codex—and for OpenAI APIs/products and ChatGPT Work. Also use for model choice/migration, prompting, SDKs, Responses, Realtime, agents, evals, and Chat/Work/Codex comparisons. Do not use for generic app/software tasks that merely mention Codex.",
+            "shortDescription": "Codex models/pricing, scheduled tasks, skills, settings, setup, troubleshooting, and self-knowledge; OpenAI APIs and ChatGPT Work. 'You'/'this app' means Codex only.",
+            "interface": {
+              "displayName": "OpenAI Docs",
+              "shortDescription": "OpenAI and Codex docs for models, skills, tasks, and setup",
+              "iconSmall": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\desktop0159-legacy\\codex-home\\skills\\.system\\openai-docs\\assets\\openai-small.svg",
+              "iconLarge": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\desktop0159-legacy\\codex-home\\skills\\.system\\openai-docs\\assets\\openai.png",
+              "iconSmallUrl": null,
+              "iconLargeUrl": null,
+              "brandColor": null,
+              "defaultPrompt": "Use OpenAI Docs for official docs lookup, questions about Codex itself or Codex surfaces, model selection, model migration, and prompt-upgrade work."
+            },
+            "path": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\desktop0159-legacy\\codex-home\\skills\\.system\\openai-docs\\SKILL.md",
+            "scope": "system",
+            "enabled": true,
+            "pluginId": null
+          },
+          {
+            "name": "review-agent",
+            "description": "Perform a read-only, defect-first review of a specified code change and return every actionable finding. Use when another agent delegates review of uncommitted changes, a base-branch diff, a commit, or custom review instructions.",
+            "interface": {
+              "displayName": "Review Agent",
+              "shortDescription": "Find actionable bugs in code changes",
+              "iconSmall": null,
+              "iconLarge": null,
+              "iconSmallUrl": null,
+              "iconLargeUrl": null,
+              "brandColor": null,
+              "defaultPrompt": "Use $review-agent to review the requested code changes and return actionable findings."
+            },
+            "path": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\desktop0159-legacy\\codex-home\\skills\\.system\\review-agent\\SKILL.md",
+            "scope": "system",
+            "enabled": true,
+            "pluginId": null
+          },
+          {
+            "name": "skill-creator",
+            "description": "Create or update a Codex skill with appropriately scoped instructions and any needed supporting resources.",
+            "shortDescription": "Create or update a skill",
+            "interface": {
+              "displayName": "Skill Creator",
+              "shortDescription": "Create or update a skill",
+              "iconSmall": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\desktop0159-legacy\\codex-home\\skills\\.system\\skill-creator\\assets\\skill-creator-small.svg",
+              "iconLarge": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\desktop0159-legacy\\codex-home\\skills\\.system\\skill-creator\\assets\\skill-creator.png",
+              "iconSmallUrl": null,
+              "iconLargeUrl": null,
+              "brandColor": null,
+              "defaultPrompt": null
+            },
+            "path": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\desktop0159-legacy\\codex-home\\skills\\.system\\skill-creator\\SKILL.md",
+            "scope": "system",
+            "enabled": true,
+            "pluginId": null
+          },
+          {
+            "name": "skill-installer",
+            "description": "Install Codex skills into $CODEX_HOME/skills from a curated list or a GitHub repo path. Use when a user asks to list installable skills, install a curated skill, or install a skill from another repo (including private repos).",
+            "shortDescription": "Install curated skills from openai/skills or other repos",
+            "interface": {
+              "displayName": "Skill Installer",
+              "shortDescription": "Install curated skills from openai/skills or other repos",
+              "iconSmall": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\desktop0159-legacy\\codex-home\\skills\\.system\\skill-installer\\assets\\skill-installer-small.svg",
+              "iconLarge": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\desktop0159-legacy\\codex-home\\skills\\.system\\skill-installer\\assets\\skill-installer.png",
+              "iconSmallUrl": null,
+              "iconLargeUrl": null,
+              "brandColor": null,
+              "defaultPrompt": null
+            },
+            "path": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\desktop0159-legacy\\codex-home\\skills\\.system\\skill-installer\\SKILL.md",
+            "scope": "system",
+            "enabled": true,
+            "pluginId": null
+          }
+        ],
+        "errors": []
+      }
+    ]
+  },
+  "hooks_raw": {
+    "data": [
+      {
+        "cwd": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\desktop0159-legacy\\workspace",
+        "hooks": [
+          {
+            "key": "needs-forever@needs-forever-local:hooks/hooks.json:pre_tool_use:0:0",
+            "eventName": "preToolUse",
+            "handlerType": "command",
+            "command": "node \"%PLUGIN_ROOT%\\scripts\\lifecycle.mjs\"",
+            "async": false,
+            "matcher": null,
+            "timeoutSec": 30,
+            "statusMessage": null,
+            "additionalContextLimit": null,
+            "sourcePath": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\desktop0159-legacy\\codex-home\\plugins\\cache\\needs-forever-local\\needs-forever\\0.3.0\\hooks\\hooks.json",
+            "source": "plugin",
+            "pluginId": "needs-forever@needs-forever-local",
+            "displayOrder": 0,
+            "enabled": true,
+            "isManaged": false,
+            "currentHash": "sha256:dc5d5817b246a99aaba97443e6143f75889f02ba70c9a031645e985c88697b8c",
+            "trustStatus": "untrusted"
+          },
+          {
+            "key": "needs-forever@needs-forever-local:hooks/hooks.json:post_tool_use:0:0",
+            "eventName": "postToolUse",
+            "handlerType": "command",
+            "command": "node \"%PLUGIN_ROOT%\\scripts\\lifecycle.mjs\"",
+            "async": false,
+            "matcher": null,
+            "timeoutSec": 30,
+            "statusMessage": null,
+            "additionalContextLimit": null,
+            "sourcePath": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\desktop0159-legacy\\codex-home\\plugins\\cache\\needs-forever-local\\needs-forever\\0.3.0\\hooks\\hooks.json",
+            "source": "plugin",
+            "pluginId": "needs-forever@needs-forever-local",
+            "displayOrder": 1,
+            "enabled": true,
+            "isManaged": false,
+            "currentHash": "sha256:f915cbb78d8033da57db3c212671f6a6d83a4e8955c7418ffa9fd74162f48d5c",
+            "trustStatus": "untrusted"
+          },
+          {
+            "key": "needs-forever@needs-forever-local:hooks/hooks.json:session_start:0:0",
+            "eventName": "sessionStart",
+            "handlerType": "command",
+            "command": "node \"%PLUGIN_ROOT%\\scripts\\lifecycle.mjs\"",
+            "async": false,
+            "matcher": null,
+            "timeoutSec": 30,
+            "statusMessage": null,
+            "additionalContextLimit": null,
+            "sourcePath": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\desktop0159-legacy\\codex-home\\plugins\\cache\\needs-forever-local\\needs-forever\\0.3.0\\hooks\\hooks.json",
+            "source": "plugin",
+            "pluginId": "needs-forever@needs-forever-local",
+            "displayOrder": 2,
+            "enabled": true,
+            "isManaged": false,
+            "currentHash": "sha256:4ca51893cf53e1c6629362b21d76893d810a09c431aecb74bc5e9157b5792d84",
+            "trustStatus": "untrusted"
+          },
+          {
+            "key": "needs-forever@needs-forever-local:hooks/hooks.json:user_prompt_submit:0:0",
+            "eventName": "userPromptSubmit",
+            "handlerType": "command",
+            "command": "node \"%PLUGIN_ROOT%\\scripts\\lifecycle.mjs\"",
+            "async": false,
+            "matcher": null,
+            "timeoutSec": 30,
+            "statusMessage": null,
+            "additionalContextLimit": null,
+            "sourcePath": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\desktop0159-legacy\\codex-home\\plugins\\cache\\needs-forever-local\\needs-forever\\0.3.0\\hooks\\hooks.json",
+            "source": "plugin",
+            "pluginId": "needs-forever@needs-forever-local",
+            "displayOrder": 3,
+            "enabled": true,
+            "isManaged": false,
+            "currentHash": "sha256:1d32e18687412e71edfc443ebec9b86ceb4bf3bb04315b5bb816bb7fe4f6dd72",
+            "trustStatus": "untrusted"
+          },
+          {
+            "key": "needs-forever@needs-forever-local:hooks/hooks.json:stop:0:0",
+            "eventName": "stop",
+            "handlerType": "command",
+            "command": "node \"%PLUGIN_ROOT%\\scripts\\lifecycle.mjs\"",
+            "async": false,
+            "matcher": null,
+            "timeoutSec": 600,
+            "statusMessage": "Checking Needs Forever acceptance",
+            "additionalContextLimit": null,
+            "sourcePath": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\desktop0159-legacy\\codex-home\\plugins\\cache\\needs-forever-local\\needs-forever\\0.3.0\\hooks\\hooks.json",
+            "source": "plugin",
+            "pluginId": "needs-forever@needs-forever-local",
+            "displayOrder": 4,
+            "enabled": true,
+            "isManaged": false,
+            "currentHash": "sha256:a8fb8358c03cece1e26acb9d751d4ecdaa87ecceaaebe66f00aa4e7dc762b69e",
+            "trustStatus": "untrusted"
+          },
+          {
+            "key": "needs-forever@needs-forever-local:hooks/hooks.json:interrupt:0:0",
+            "eventName": "interrupt",
+            "handlerType": "command",
+            "command": "node \"%PLUGIN_ROOT%\\scripts\\lifecycle.mjs\"",
+            "async": false,
+            "matcher": null,
+            "timeoutSec": 3,
+            "statusMessage": null,
+            "additionalContextLimit": null,
+            "sourcePath": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\desktop0159-legacy\\codex-home\\plugins\\cache\\needs-forever-local\\needs-forever\\0.3.0\\hooks\\hooks.json",
+            "source": "plugin",
+            "pluginId": "needs-forever@needs-forever-local",
+            "displayOrder": 5,
+            "enabled": true,
+            "isManaged": false,
+            "currentHash": "sha256:498a59139160264e3a4a92e41898cdcaf81b587b8a12d609cf32397229e09277",
+            "trustStatus": "untrusted"
+          }
+        ],
+        "warnings": [],
+        "errors": []
+      }
+    ]
+  },
+  "skills": [
+    {
+      "name": "needs-forever:supervise",
+      "description": "持续执行一个已授权的本地任务，或查询、暂停、恢复 Needs Forever 管理的任务。用于用户要求自动推进到验收通过、启动监督任务或管理其检查点。",
+      "path": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\desktop0159-legacy\\codex-home\\plugins\\cache\\needs-forever-local\\needs-forever\\0.3.0\\skills\\supervise\\SKILL.md",
+      "scope": "user",
+      "enabled": true,
+      "pluginId": "needs-forever@needs-forever-local"
+    }
+  ],
+  "hooks": [
+    {
+      "key": "needs-forever@needs-forever-local:hooks/hooks.json:pre_tool_use:0:0",
+      "eventName": "preToolUse",
+      "handlerType": "command",
+      "command": "node \"%PLUGIN_ROOT%\\scripts\\lifecycle.mjs\"",
+      "async": false,
+      "matcher": null,
+      "timeoutSec": 30,
+      "statusMessage": null,
+      "additionalContextLimit": null,
+      "sourcePath": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\desktop0159-legacy\\codex-home\\plugins\\cache\\needs-forever-local\\needs-forever\\0.3.0\\hooks\\hooks.json",
+      "source": "plugin",
+      "pluginId": "needs-forever@needs-forever-local",
+      "displayOrder": 0,
+      "enabled": true,
+      "isManaged": false,
+      "currentHash": "sha256:dc5d5817b246a99aaba97443e6143f75889f02ba70c9a031645e985c88697b8c",
+      "trustStatus": "untrusted"
+    },
+    {
+      "key": "needs-forever@needs-forever-local:hooks/hooks.json:post_tool_use:0:0",
+      "eventName": "postToolUse",
+      "handlerType": "command",
+      "command": "node \"%PLUGIN_ROOT%\\scripts\\lifecycle.mjs\"",
+      "async": false,
+      "matcher": null,
+      "timeoutSec": 30,
+      "statusMessage": null,
+      "additionalContextLimit": null,
+      "sourcePath": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\desktop0159-legacy\\codex-home\\plugins\\cache\\needs-forever-local\\needs-forever\\0.3.0\\hooks\\hooks.json",
+      "source": "plugin",
+      "pluginId": "needs-forever@needs-forever-local",
+      "displayOrder": 1,
+      "enabled": true,
+      "isManaged": false,
+      "currentHash": "sha256:f915cbb78d8033da57db3c212671f6a6d83a4e8955c7418ffa9fd74162f48d5c",
+      "trustStatus": "untrusted"
+    },
+    {
+      "key": "needs-forever@needs-forever-local:hooks/hooks.json:session_start:0:0",
+      "eventName": "sessionStart",
+      "handlerType": "command",
+      "command": "node \"%PLUGIN_ROOT%\\scripts\\lifecycle.mjs\"",
+      "async": false,
+      "matcher": null,
+      "timeoutSec": 30,
+      "statusMessage": null,
+      "additionalContextLimit": null,
+      "sourcePath": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\desktop0159-legacy\\codex-home\\plugins\\cache\\needs-forever-local\\needs-forever\\0.3.0\\hooks\\hooks.json",
+      "source": "plugin",
+      "pluginId": "needs-forever@needs-forever-local",
+      "displayOrder": 2,
+      "enabled": true,
+      "isManaged": false,
+      "currentHash": "sha256:4ca51893cf53e1c6629362b21d76893d810a09c431aecb74bc5e9157b5792d84",
+      "trustStatus": "untrusted"
+    },
+    {
+      "key": "needs-forever@needs-forever-local:hooks/hooks.json:user_prompt_submit:0:0",
+      "eventName": "userPromptSubmit",
+      "handlerType": "command",
+      "command": "node \"%PLUGIN_ROOT%\\scripts\\lifecycle.mjs\"",
+      "async": false,
+      "matcher": null,
+      "timeoutSec": 30,
+      "statusMessage": null,
+      "additionalContextLimit": null,
+      "sourcePath": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\desktop0159-legacy\\codex-home\\plugins\\cache\\needs-forever-local\\needs-forever\\0.3.0\\hooks\\hooks.json",
+      "source": "plugin",
+      "pluginId": "needs-forever@needs-forever-local",
+      "displayOrder": 3,
+      "enabled": true,
+      "isManaged": false,
+      "currentHash": "sha256:1d32e18687412e71edfc443ebec9b86ceb4bf3bb04315b5bb816bb7fe4f6dd72",
+      "trustStatus": "untrusted"
+    },
+    {
+      "key": "needs-forever@needs-forever-local:hooks/hooks.json:stop:0:0",
+      "eventName": "stop",
+      "handlerType": "command",
+      "command": "node \"%PLUGIN_ROOT%\\scripts\\lifecycle.mjs\"",
+      "async": false,
+      "matcher": null,
+      "timeoutSec": 600,
+      "statusMessage": "Checking Needs Forever acceptance",
+      "additionalContextLimit": null,
+      "sourcePath": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\desktop0159-legacy\\codex-home\\plugins\\cache\\needs-forever-local\\needs-forever\\0.3.0\\hooks\\hooks.json",
+      "source": "plugin",
+      "pluginId": "needs-forever@needs-forever-local",
+      "displayOrder": 4,
+      "enabled": true,
+      "isManaged": false,
+      "currentHash": "sha256:a8fb8358c03cece1e26acb9d751d4ecdaa87ecceaaebe66f00aa4e7dc762b69e",
+      "trustStatus": "untrusted"
+    },
+    {
+      "key": "needs-forever@needs-forever-local:hooks/hooks.json:interrupt:0:0",
+      "eventName": "interrupt",
+      "handlerType": "command",
+      "command": "node \"%PLUGIN_ROOT%\\scripts\\lifecycle.mjs\"",
+      "async": false,
+      "matcher": null,
+      "timeoutSec": 3,
+      "statusMessage": null,
+      "additionalContextLimit": null,
+      "sourcePath": "D:\\WILL\\TOOLS\\needs-forever\\.scratch\\spec33-worktrees\\ticket38\\runs\\spec33-candidate\\desktop0159-legacy\\codex-home\\plugins\\cache\\needs-forever-local\\needs-forever\\0.3.0\\hooks\\hooks.json",
+      "source": "plugin",
+      "pluginId": "needs-forever@needs-forever-local",
+      "displayOrder": 5,
+      "enabled": true,
+      "isManaged": false,
+      "currentHash": "sha256:498a59139160264e3a4a92e41898cdcaf81b587b8a12d609cf32397229e09277",
+      "trustStatus": "untrusted"
+    }
+  ],
+  "human_trust_required": true,
+  "effective_hooks_claimed": false,
+  "error": "Candidate discovery failed: missing=SessionStart,PreToolUse,PostToolUse,Stop,UserPromptSubmit,Interrupt; candidate errors=[]"
+}

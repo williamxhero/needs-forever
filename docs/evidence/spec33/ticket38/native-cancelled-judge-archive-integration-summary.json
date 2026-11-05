@@ -1,0 +1,55 @@
+{
+  "classification": "Actual native cancelled-C pause/archive and same-A resume evidence; evidence-only integration; remaining native gates open",
+  "product_integration_head": "70a2439011b83c925d9ae0df5fcc524f0f1f1b07",
+  "candidate_integration_head": "77d13e60a24a8fafaf32cb1873c233d240a6fd05",
+  "candidate_update_receipt": "candidate-archive-fix033-update.json",
+  "candidate_update_result": "PASS",
+  "candidate_installed_plugin_files": 27,
+  "legacy_0_2_unchanged": true,
+  "isolated_profile_plugin_files": 27,
+  "isolated_profile_source_parity": true,
+  "isolated_profile_auth_copied": false,
+  "isolated_profile_trust_written": false,
+  "default_real_home_discovery_six_hooks_trusted": true,
+  "default_discovery_native_execution": "not_run",
+  "native_pause_archive": {
+    "task": "spec33-native-cancelled-judge-archive-20261103",
+    "A": "01a1a1a6-547e-7540-b838-e157cfebff71",
+    "C": "01a1a1ba-15f6-7471-80a9-c0c4623ea167",
+    "pause_result": "PAUSED_AND_AUTOMATICALLY_ARCHIVED",
+    "events": [
+      "judge_terminated via owned_app_server_exit",
+      "judge_archived via isolated_cleanup"
+    ],
+    "sqlite_archived": true
+  },
+  "after_explicit_same_A_resume": {
+    "state": "DONE",
+    "phase": "IDLE",
+    "input_epoch": 2,
+    "stage2": "after-explicit-resume",
+    "verification": "PASS",
+    "binding": "RELEASED"
+  },
+  "not_claimed_as_pass": [
+    "T09 human input during active JUDGE",
+    "T15 genuine Desktop close/reopen and recovery",
+    "T18 authenticated isolated profile with actual plugin lifecycle"
+  ],
+  "evidence_files": [
+    "native-cancelled-judge-archive-pause.json",
+    "native-cancelled-judge-archive-before-resume.json",
+    "native-cancelled-judge-archive-after-resume.json",
+    "archive-live-route-record.json",
+    "archive-live-route-readback.json",
+    "archive-live-route-receipt.json",
+    "candidate-archive-fix033-update.json",
+    "isolated-archive-fix033-update.json",
+    "real-home-discovery.json",
+    "archive-native-fixture-preparation.json",
+    "archive-live-start-prompt.md"
+  ],
+  "sensitive_scan": "PASS; no credentials, auth tokens, controller secrets or private key material found",
+  "trust_changes_by_integrator": false,
+  "main_merge_push_issue_closure": false
+}

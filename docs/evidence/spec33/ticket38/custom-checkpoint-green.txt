@@ -1,0 +1,11 @@
+✔ custom checkpoint paths do not make controller heartbeat writes invalidate a stable fixed check (1923.8995ms)
+✔ task files beside a custom checkpoint still invalidate DONE when they change during verification (2661.6894ms)
+✔ protected files with checkpoint artifact names retain their fixed baseline enforcement (2129.1084ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 6801.9495
