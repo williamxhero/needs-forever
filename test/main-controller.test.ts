@@ -249,6 +249,30 @@ test('native host restart requires explicit same-A resume and never replays a pr
   assert.equal(after.recovery_history.at(-1).pending_action.delivery_id, original.pending_action.delivery_id);
 });
 
+test('a second installed plugin package cannot dispatch callbacks to the first package controller', (t) => {
+  const f = installed('plugin-package-isolation', { decision: { action: 'CONTINUE', next_message: 'Continue from the owning package.' } });
+  t.after(() => f.run('pause'));
+  const first = JSON.parse(f.run('status').stdout);
+  assert.equal(first.live, true);
+  const otherPlugin = join(f.directory, 'other-plugin');
+  cpSync(f.plugin, otherPlugin, { recursive: true });
+  const foreign = spawnSync(process.execPath, [join(otherPlugin, 'scripts/lifecycle.mjs'), '--test-fixture', f.fixture], {
+    cwd: f.workspace,
+    env: { ...process.env, PLUGIN_ROOT: otherPlugin },
+    input: JSON.stringify({ session_id: 'plugin-package-isolation', cwd: f.workspace, hook_event_name: 'Stop', turn_id: 'same-turn' }),
+    encoding: 'utf8', timeout: 20_000,
+  });
+  assert.equal(foreign.status, 0, foreign.stderr);
+  assert.deepEqual(JSON.parse(foreign.stdout), {});
+  const afterForeign = JSON.parse(f.run('status').stdout);
+  assert.equal(afterForeign.phase, 'WORKER');
+  assert.equal(afterForeign.live, true);
+  assert.equal(afterForeign.last_stop, undefined);
+  const owned = f.hook({ hook_event_name: 'Stop' });
+  assert.equal(owned.status, 0, owned.stderr);
+  assert.deepEqual(JSON.parse(owned.stdout), { decision: 'block', reason: 'Continue from the owning package.' });
+});
+
 test('explicit cumulative turn and ACTIVE time limits pause durably without inventing a hidden limit', async (t) => {
   const turns = installed('limit-turn', { decision: { action: 'CONTINUE', next_message: 'Beyond the user limit' } }, 'limit-turn', 0, { max_worker_turns: 1 });
   t.after(() => turns.run('pause'));

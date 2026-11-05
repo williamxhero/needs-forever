@@ -104,10 +104,15 @@ export async function launchController(path: string, pluginRoot: string, fixture
 export function boundStateForEvent(input: any, pluginRoot: string, simulated: boolean): string | null {
   if (!input || input.agent_id != null || input.agent_type != null || input.agent_transcript_path != null || typeof input.session_id !== 'string' || typeof input.cwd !== 'string') return null;
   if (canonicalPath(input.cwd) !== canonicalPath(process.cwd())) return null;
+  const callbackPluginRoot = canonicalPath(pluginRoot);
   for (const path of registeredStatePaths(input.cwd)) {
     if (!existsSync(path)) continue;
     const state = readJson(path) as MainSessionState;
-    if (state.control_mode === 'main-session' && state.status !== 'DONE' && state.binding.status === 'BOUND' && state.main_session_id === input.session_id && (state.mode === 'simulated') === simulated && state.controller?.lifecycle === 'running') return path;
+    // A workspace may contain checkpoints created by multiple installed plugin
+    // versions. Only the package that owns B may dispatch callbacks to it;
+    // otherwise a second installation can make B report a false plugin change
+    // and strand the task in RECOVERING.
+    if (state.control_mode === 'main-session' && state.status !== 'DONE' && state.binding.status === 'BOUND' && state.main_session_id === input.session_id && (state.mode === 'simulated') === simulated && state.controller?.lifecycle === 'running' && canonicalPath(state.controller.plugin_root) === callbackPluginRoot) return path;
   }
   return null;
 }

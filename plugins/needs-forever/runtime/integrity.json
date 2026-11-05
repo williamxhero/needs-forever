@@ -7,7 +7,7 @@
     "src/index.js": "b2f837f519ecc8bed51c3938f677fdb3802da0e76814f37b6dbb5ac945056973",
     "src/judge.js": "92af03583763a9b0b656c58a193c6b9420754a8cede4040326b666733fd6f404",
     "src/lifecycle.js": "2dd0c97ac38b3351bc4901ecce0e9efb6b4e0ce11f2a6d1f4acda833d4091ad9",
-    "src/main-controller.js": "d91eb0e4ab44005cfe3ce2b0fd703bfe74e6e4f458db65af4a87fb34e193cc9e",
+    "src/main-controller.js": "5f4993b1da22a96f5a78ff4e523dadcb31c3eb9f4d7816bd26aee5649d051bfb",
     "src/main-session.js": "6363d142d23b5373eb94af7e623cd81ed8f697201eb460495c06cdbccc0661bc",
     "src/main-supervision.js": "165fad03f93d53263d4f59fe6a76b6a4a3de318da135d9665b133f22642ad433",
     "src/recovery.js": "db606a6e5674c70e4f70b56d794e14576ae0d4473d15a6ef4e8a72ab4aa9da2e",
