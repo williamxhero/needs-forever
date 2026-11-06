@@ -1,0 +1,24 @@
+{
+  "date": "2026-11-06",
+  "classification": "Current 0.3.4 native entry attempt; pending native hook binding",
+  "plugin_version": "0.3.4",
+  "git_head": "07afdc5aae0a39dcb048195fcc865e178041655c",
+  "task_id": "spec33-034-root-live",
+  "state_path": ".scratch/spec33-0.3.4-root-live/state.json",
+  "workspace": "D:/WILL/TOOLS/needs-forever",
+  "status": "PAUSED",
+  "phase": "RECOVERING",
+  "control_mode": "main-session",
+  "binding_status": "PENDING_NATIVE_HOOK",
+  "main_session_id": null,
+  "host": {
+    "source": "unverified",
+    "desktop_version": null,
+    "cli_version": null,
+    "hook_effective": false
+  },
+  "continuation_confirmed": false,
+  "recovery_required": true,
+  "events": ["protected_baseline_recorded", "main_session_prepared"],
+  "interpretation": "The 0.3.4 start command prepared the contract but no correlated native Desktop hook bound this current A. This receipt is not live acceptance evidence and does not claim supervision is active."
+}
