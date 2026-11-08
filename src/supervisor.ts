@@ -18,6 +18,7 @@ import { redact } from './redact.js';
 import { buildSnapshot } from './snapshot.js';
 import { classifyRecoveryError, nextBackoff, recordRecoveryFailure } from './recovery.js';
 import { setTimeout as delay } from 'node:timers/promises';
+import { armRecovery, cancelRecovery } from './recovery-coordinator.js';
 
 type TurnsListResponse = { data: Array<import('./protocol/generated/v2/Turn.js').Turn>; nextCursor: string | null };
 
@@ -85,6 +86,7 @@ export class Supervisor {
     this.state.last_error = classification.message;
     this.state.phase = 'RECOVERING';
     this.state.retry = { kind: classification.kind, attempt, next_at: nextAt };
+    armRecovery(this.state, this.state.recovery_condition ?? { kind: classification.kind, message: classification.message, resume_when: 'Retry the saved task after the persisted delay.' });
     const latest = this.state.recovery_failures.at(-1)!;
     this.store.event(this.state, 'recovery_retry_scheduled', { kind: classification.kind, error: classification.message, attempt, next_at: nextAt, delay_seconds: delayMs / 1000, instruction: latest.instruction });
     this.save();
@@ -155,6 +157,7 @@ export class Supervisor {
     this.state.phase = 'IDLE';
     if (this.state.pending_action?.stage !== 'sent') this.state.pending_action = null;
     this.state.retry = { kind: null, attempt: 0, next_at: null };
+    cancelRecovery(this.state, reason === 'user_limit' ? 'pause' : 'pause');
     this.save();
     this.store.event(this.state, 'paused', { reason, active_turn_id: turn });
     console.log(`PAUSED: ${reason}`);
@@ -662,6 +665,7 @@ export class Supervisor {
           }
           this.accrue();
           this.state.status = decision.action;
+          if (decision.action === 'DONE') cancelRecovery(this.state, 'done');
           this.state.phase = 'IDLE';
           this.state.pending_action = null;
           this.state.retry = { kind: null, attempt: 0, next_at: null };

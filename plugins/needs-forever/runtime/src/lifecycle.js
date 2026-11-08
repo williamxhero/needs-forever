@@ -6,6 +6,7 @@ import { Store } from './store.js';
 import { record, text } from './types.js';
 import { redact } from './redact.js';
 import { controlIntent } from './control-intent.js';
+import { createRecoveryPlan } from './recovery-coordinator.js';
 const hash = (value) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 function strings(value) {
     if (typeof value === 'string')
@@ -79,6 +80,13 @@ export function handleLifecycle(input, host, pluginRoot, adapterOccurrenceId) {
         if (!existsSync(path))
             continue;
         const state = readJson(path);
+        if (!state.recovery_plan && state.status !== 'DONE' && state.binding.status === 'PENDING_NATIVE_HOOK') {
+            const condition = state.recovery_condition ?? { kind: 'native_hook_required', message: 'Awaiting a correlated native receipt from the original A.', resume_when: 'Complete the supported native binding command in the original A.' };
+            state.recovery_plan = createRecoveryPlan(state, condition, true);
+            const store = new Store(path);
+            store.save(state);
+            store.event(state, 'recovery_plan_rehydrated', { generation: state.recovery_plan.generation, task_version: state.task_version });
+        }
         if (state.control_mode !== 'main-session' || state.status === 'DONE' || canonicalPath(state.task.workspace) !== canonicalPath(workspace))
             continue;
         if (state.contract_sha256 !== contractHash(state.task))

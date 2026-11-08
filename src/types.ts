@@ -23,6 +23,22 @@ export interface PendingAction {
   stage: 'prepared' | 'sent' | 'confirmed';
   target_turn_id: string | null;
 }
+/** Durable ownership and retry contract for the automatic recovery loop.
+ *
+ * The plan deliberately lives beside the ordinary retry field.  `retry` is
+ * the short lived C/judge backoff; this record is the cross-process lifecycle
+ * boundary used when B, the host, or the installed plugin disappears.
+ */
+export interface RecoveryPlan {
+  owner: { id: string; pid: number; lease_path: string; task_version: number; generation: string; heartbeat_at: string } | null;
+  generation: string;
+  task_version: number;
+  attempt: number;
+  next_retry_at: string | null;
+  reason: { kind: string; message: string; resume_when: string };
+  status: 'armed' | 'waiting_native' | 'running' | 'cancelled';
+  cancellation_boundary: { kind: 'pause' | 'delete' | 'done'; at: string; generation: string } | null;
+}
 export interface State {
   schema_version: 1;
   task_id: string;
@@ -48,6 +64,7 @@ export interface State {
   protected_baseline?: { path: string; sha256: string; content_base64: string }[];
   recovery_failures?: { signature: string; kind: string; count: number; message: string; instruction: string; at: string }[];
   recovery_condition?: { kind: string; message: string; resume_when: string };
+  recovery_plan?: RecoveryPlan;
 }
 export interface Snapshot {
   snapshot_id: string;
