@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { createRecoveryPlan, armRecovery, waitForNativeReceipt, cancelRecovery, recoveryCurrent, acquireRecoveryOwner, reconcileStaleOwner } from '../src/recovery-coordinator.js';
+import { createRecoveryPlan, armRecovery, waitForNativeReceipt, cancelRecovery, recoveryCurrent, acquireRecoveryOwner, reconcileStaleOwner, reconcileRecoveryTick } from '../src/recovery-coordinator.js';
 import type { MainSessionState } from '../src/main-session.js';
 
 function state(name: string): MainSessionState {
@@ -69,4 +69,24 @@ test('a restarted process reconciles a dead owner into a pending native receipt 
   assert.equal(value.binding.status, 'PENDING_NATIVE_HOOK');
   assert.equal(value.recovery_plan.status, 'armed');
   assert.equal(value.recovery_plan.cancellation_boundary, null);
+});
+
+test('a detached coordinator consumes a due retry and rotates the native receipt fence without starting B/C', () => {
+  const value = state('watchdog-tick');
+  value.recovery_plan = createRecoveryPlan(value, { kind: 'controller_exit', message: 'B exited', resume_when: 'receipt' });
+  value.recovery_plan.owner = null;
+  value.recovery_plan.status = 'armed';
+  value.recovery_plan.next_retry_at = new Date(0).toISOString();
+  value.controller = { id: 'old-controller', pid: 2_147_483_647, endpoint: 'old', token: 'old', lifecycle: 'running', started_at: new Date(0).toISOString(), run_generation: value.run_generation, plugin_root: value.task.workspace };
+  const statePath = resolve(value.task.workspace, 'state.json');
+  writeFileSync(statePath, JSON.stringify(value));
+  const oldGeneration = value.run_generation;
+  const tick = reconcileRecoveryTick(statePath, 1_000);
+  const saved = JSON.parse(readFileSync(statePath, 'utf8')) as MainSessionState;
+  assert.equal(tick.waitingNative, true);
+  assert.equal(saved.binding.status, 'PENDING_NATIVE_HOOK');
+  assert.equal(saved.binding.operation, 'rebind');
+  assert.equal(saved.recovery_plan?.status, 'waiting_native');
+  assert.notEqual(saved.run_generation, oldGeneration);
+  assert.equal(saved.controller?.lifecycle, 'exited');
 });

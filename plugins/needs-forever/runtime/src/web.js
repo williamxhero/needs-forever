@@ -1,7 +1,7 @@
 import { createServer } from 'node:http';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { spawn } from 'node:child_process';
-import { existsSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { dirname, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 function asRecord(value) {
@@ -440,6 +440,15 @@ function runControl(command, statePath, workspace) {
         child.once('close', (code) => resolveRun({ code: code ?? 1, stdout, stderr }));
     });
 }
+function archiveDeletedTaskAudit(root, directory, taskId, statePath) {
+    const auditDirectory = resolve(root, 'system-audit');
+    mkdirSync(auditDirectory, { recursive: true });
+    const eventsPath = resolve(directory, 'events.jsonl');
+    const events = existsSync(eventsPath) ? readFileSync(eventsPath, 'utf8') : '';
+    const state = existsSync(statePath) ? JSON.parse(readFileSync(statePath, 'utf8')) : null;
+    const audit = { event_id: randomUUID(), at: new Date().toISOString(), type: 'task_deleted', task_id: taskId, task_version: state?.task_version ?? null, status: state?.status ?? null, event_count: events.split('\n').filter(Boolean).length, preserved_events: events ? events.split('\n').filter(Boolean).map((line) => JSON.parse(line)) : [] };
+    appendFileSync(resolve(auditDirectory, 'events.jsonl'), `${JSON.stringify(audit)}\n`, 'utf8');
+}
 function html(response) {
     response.statusCode = 200;
     response.setHeader('content-type', 'text/html; charset=utf-8');
@@ -498,8 +507,16 @@ export async function startWebServer(options) {
                         return json(response, 404, { error: 'Task not found.' });
                     if (operation === 'delete') {
                         const paused = await runControl('pause', statePath, workspace).catch(() => null);
-                        if (paused && paused.code !== 0 && !/already paused|PAUSED/i.test(paused.stderr + paused.stdout))
-                            return json(response, 409, { error: paused.stderr || paused.stdout || 'Unable to pause task before delete.' });
+                        if (paused && paused.code !== 0) {
+                            let persistedStatus = null;
+                            try {
+                                persistedStatus = JSON.parse(readFileSync(statePath, 'utf8')).status;
+                            }
+                            catch { /* deletion below reports the real filesystem outcome */ }
+                            if (persistedStatus !== 'PAUSED' && !/already paused|PAUSED/i.test(paused.stderr + paused.stdout))
+                                return json(response, 409, { error: paused.stderr || paused.stdout || 'Unable to pause task before delete.' });
+                        }
+                        archiveDeletedTaskAudit(catalog.root, directory, taskId, statePath);
                         rmSync(directory, { recursive: true, force: true });
                         return json(response, 200, { deleted: true, taskId });
                     }

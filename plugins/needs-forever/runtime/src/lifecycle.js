@@ -55,7 +55,7 @@ function stopReason(message) {
     }
     return candidate;
 }
-export function handleLifecycle(input, host, pluginRoot, adapterOccurrenceId) {
+export function handleLifecycle(input, host, pluginRoot, adapterOccurrenceId, nativeReceipt) {
     const event = record(input);
     const name = text(event.hook_event_name, 'hook_event_name');
     if (isAgent(event))
@@ -183,8 +183,18 @@ export function handleLifecycle(input, host, pluginRoot, adapterOccurrenceId) {
                 continue;
             if (typeof event.run_generation === 'string' && event.run_generation !== expectedGeneration)
                 continue;
+            // A callback that was already in flight before armNativeRebind must not
+            // become the fresh receipt merely because it omitted run_generation.
+            // The installed adapter stamps the process-start occurrence and time;
+            // only a receipt issued after this generation was armed is eligible.
+            const armedAt = state.binding.armed_at ? Date.parse(state.binding.armed_at) : NaN;
+            const issuedAt = nativeReceipt ? Date.parse(nativeReceipt.issued_at) : NaN;
+            if (!nativeReceipt || !nativeReceipt.occurrence_id || !Number.isFinite(issuedAt) || !Number.isFinite(armedAt) || issuedAt < armedAt)
+                continue;
+            if (state.binding.accepted_receipt?.occurrence_id === nativeReceipt.occurrence_id)
+                continue;
             const store = new Store(path);
-            state.binding = { ...state.binding, status: 'BOUND', tool_use_id: null, bound_at: new Date().toISOString() };
+            state.binding = { ...state.binding, status: 'BOUND', tool_use_id: null, bound_at: new Date().toISOString(), accepted_receipt: { ...nativeReceipt, generation: expectedGeneration } };
             state.host = { ...host, hook_effective: false, reason: 'Original main-session lifecycle receipt correlated; awaiting exactly one replacement controller.' };
             state.recovery_condition = { kind: 'rebind_controller_required', message: 'Original main session re-bound; supervision is not active until the replacement controller is ready.', resume_when: 'Allow the replacement B to start, then wait for a native Stop callback.' };
             store.save(state);
@@ -192,6 +202,8 @@ export function handleLifecycle(input, host, pluginRoot, adapterOccurrenceId) {
                 main_session_id: session,
                 task_version: state.task_version,
                 run_generation: state.run_generation,
+                receipt_occurrence_id: nativeReceipt.occurrence_id,
+                receipt_issued_at: nativeReceipt.issued_at,
                 hook_event_name: name,
                 host_source: host.source,
             });

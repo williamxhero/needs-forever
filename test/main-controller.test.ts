@@ -297,6 +297,8 @@ test('legacy pending resume checkpoints migrate to automatic rebind on the next 
   assert.equal(pending.binding.status, 'PENDING_NATIVE_HOOK');
   assert.equal(pending.binding.operation, 'resume');
   assert.equal(f.hook({ hook_event_name: 'UserPromptSubmit', prompt: 'Original A resumed normally.' }).status, 0);
+  assert.equal(JSON.parse(f.run('status').stdout).binding.status, 'PENDING_NATIVE_HOOK');
+  assert.equal(f.hook({ hook_event_name: 'UserPromptSubmit', prompt: 'Original A emitted a fresh lifecycle receipt.' }).status, 0);
   let rebound: any;
   for (let attempt = 0; attempt < 80; attempt++) {
     rebound = JSON.parse(f.run('status').stdout);
@@ -322,6 +324,28 @@ test('foreign and late native rebind receipts cannot wake a paused or completed 
   assert.deepEqual(JSON.parse(f.hook({ hook_event_name: 'SessionStart' }).stdout), {});
   assert.equal(JSON.parse(f.run('status').stdout).status, 'PAUSED');
   await delay(50);
+});
+
+test('a lifecycle receipt issued before armNativeRebind is rejected when run_generation is omitted', async (t) => {
+  const f = installed('stale-receipt-fence', { decision: { action: 'CONTINUE', next_message: 'Continue once.' } }, 'stale-receipt-fence', 0, {}, undefined, process.pid);
+  t.after(() => f.run('pause'));
+  const callback = spawn(process.execPath, [join(f.plugin, 'scripts/lifecycle.mjs'), '--test-fixture', f.fixture], { cwd: f.workspace, env: { ...process.env, PLUGIN_ROOT: f.plugin }, stdio: ['pipe', 'ignore', 'ignore'], windowsHide: true });
+  await delay(150);
+  f.setDesktopPid(process.ppid);
+  assert.equal(f.hook({ hook_event_name: 'SessionStart' }).status, 0);
+  callback.stdin.end(JSON.stringify({ hook_event_name: 'UserPromptSubmit', session_id: 'stale-receipt-fence', cwd: f.workspace, prompt: 'delayed callback' }));
+  await new Promise<void>((resolve) => callback.once('exit', () => resolve()));
+  const pending = JSON.parse(f.run('status').stdout);
+  assert.equal(pending.binding.status, 'PENDING_NATIVE_HOOK');
+  assert.equal(f.hook({ hook_event_name: 'UserPromptSubmit', prompt: 'fresh callback' }).status, 0);
+  let rebound: any;
+  for (let attempt = 0; attempt < 80; attempt++) {
+    rebound = JSON.parse(f.run('status').stdout);
+    if (rebound.controller?.lifecycle === 'running') break;
+    await delay(25);
+  }
+  assert.equal(rebound.binding.status, 'BOUND');
+  assert.equal(rebound.controller?.lifecycle, 'running');
 });
 
 test('a second installed plugin package cannot dispatch callbacks to the first package controller', (t) => {

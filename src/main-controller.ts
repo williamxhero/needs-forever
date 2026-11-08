@@ -89,9 +89,33 @@ export async function prepareControllerResume(path: string): Promise<void> {
   }
 }
 export async function launchController(path: string, pluginRoot: string, fixture?: string): Promise<void> {
+  const launchLock = `${path}.controller-launch.lock`;
+  let launchFd: number | undefined;
+  const releaseLaunchLock = () => {
+    if (launchFd === undefined) return;
+    closeSync(launchFd); launchFd = undefined;
+    try { unlinkSync(launchLock); } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
+  };
+  try {
+    launchFd = openSync(launchLock, 'wx', 0o600);
+    writeFileSync(launchFd, JSON.stringify({ pid: process.pid, state_path: path, started_at: new Date().toISOString() }));
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+    // Another lifecycle callback owns the launch transition. Let its winner
+    // finish; never mark that winner exited from this losing callback. Reclaim
+    // only a lock whose owner is provably gone.
+    try {
+      const owner = JSON.parse(readFileSync(launchLock, 'utf8')) as { pid?: number };
+      if (Number.isInteger(owner.pid)) { try { process.kill(owner.pid!, 0); return; } catch (probe) { if ((probe as NodeJS.ErrnoException).code !== 'ESRCH') return; } }
+      const guard = `${launchLock}.reclaim`;
+      let guardFd: number | undefined;
+      try { guardFd = openSync(guard, 'wx', 0o600); unlinkSync(launchLock); launchFd = openSync(launchLock, 'wx', 0o600); writeFileSync(launchFd, JSON.stringify({ pid: process.pid, state_path: path, started_at: new Date().toISOString() })); }
+      finally { if (guardFd !== undefined) closeSync(guardFd); try { unlinkSync(guard); } catch (cleanup) { if ((cleanup as NodeJS.ErrnoException).code !== 'ENOENT') throw cleanup; } }
+    } catch { return; }
+  }
   const state = readJson(path) as MainSessionState;
   if (state.controller?.lifecycle === 'running') {
-    if (!processAbsent(state.controller.pid)) throw new Error('A controller receipt already exists; use explicit resume, never silently replace it.');
+    if (!processAbsent(state.controller.pid)) { releaseLaunchLock(); throw new Error('A controller receipt already exists; use explicit resume, never silently replace it.'); }
     state.controller = { ...state.controller, lifecycle: 'exited' };
   }
   if (state.controller?.lifecycle === 'exited') delete state.controller;
@@ -131,9 +155,20 @@ export async function launchController(path: string, pluginRoot: string, fixture
       saved.controller = { ...saved.controller, lifecycle: 'exited' };
       new Store(path).save(saved);
     }
+    releaseLaunchLock();
     throw error;
   }
   child.unref();
+  try {
+    const coordinator = resolve(pluginRoot, 'scripts/recovery-coordinator.mjs');
+    const watchdog = spawn(process.execPath, [coordinator, path], { cwd: state.task.workspace, detached: true, windowsHide: true, stdio: 'ignore' });
+    watchdog.unref();
+  } catch {
+    // B is already live; a later lifecycle/status path can restart the
+    // coordinator. Do not turn a successful binding into a false failure.
+  } finally {
+    releaseLaunchLock();
+  }
 }
 export function boundStateForEvent(input: any, pluginRoot: string, simulated: boolean): string | null {
   if (!input || input.agent_id != null || input.agent_type != null || input.agent_transcript_path != null || typeof input.session_id !== 'string' || typeof input.cwd !== 'string') return null;

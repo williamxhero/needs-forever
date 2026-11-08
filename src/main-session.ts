@@ -26,6 +26,7 @@ export interface MainSessionState extends State {
     expected_task_version?: number;
     expected_run_generation?: string;
     armed_at?: string;
+    accepted_receipt?: { occurrence_id: string; issued_at: string; generation: string };
   };
   host: { desktop_version: string | null; cli_version: string | null; hook_effective: boolean; source: 'unverified' | 'native-desktop' | 'simulated'; reason: string; desktop_pid?: number; desktop_binary?: string };
   last_stop?: StopRequest;

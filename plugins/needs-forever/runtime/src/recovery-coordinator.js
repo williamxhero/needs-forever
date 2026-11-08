@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { resolve } from 'node:path';
 import { tmpdir } from 'node:os';
-import { existsSync, openSync, closeSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, openSync, closeSync, readFileSync, unlinkSync, writeFileSync, renameSync } from 'node:fs';
 import { nextBackoff } from './recovery.js';
 const DELAYS = [5, 15, 60, 300];
 function leasePath(statePath) {
@@ -179,4 +179,109 @@ export function reconcileStaleOwner(state, now = Date.now()) {
     state.recovery_condition = { kind: 'controller_exit', message: state.last_error, resume_when: 'A real native receipt from the original A must be correlated before B/C can restart.' };
     armRecovery(state, state.recovery_condition, now);
     return true;
+}
+/**
+ * Consume one persisted recovery deadline from a process that is independent
+ * of hooks and B. This is deliberately a state-only coordinator: when the
+ * deadline is reached it rotates the native receipt fence and leaves the task
+ * waiting for a real callback from the original A. It never starts B or C.
+ */
+function reconcileRecoveryTickUnlocked(statePath, now) {
+    if (!existsSync(statePath))
+        return { changed: false, waitingNative: false, nextRetryAt: null };
+    let state = readFileSync(statePath, 'utf8');
+    let parsed;
+    try {
+        parsed = JSON.parse(state);
+    }
+    catch {
+        return { changed: false, waitingNative: false, nextRetryAt: null };
+    }
+    if (!parsed.recovery_plan || parsed.status === 'DONE' || parsed.status === 'PAUSED' || parsed.recovery_plan.status === 'cancelled')
+        return { changed: false, waitingNative: false, nextRetryAt: parsed.recovery_plan?.next_retry_at ?? null };
+    const plan = parsed.recovery_plan;
+    const owner = plan.owner;
+    if (owner) {
+        try {
+            process.kill(owner.pid, 0);
+            return { changed: false, waitingNative: false, nextRetryAt: plan.next_retry_at };
+        }
+        catch (error) {
+            if (error.code !== 'ESRCH')
+                return { changed: false, waitingNative: false, nextRetryAt: plan.next_retry_at };
+        }
+    }
+    const changed = reconcileStaleOwner(parsed, now);
+    const current = parsed.recovery_plan;
+    if (!current || current.status === 'cancelled' || parsed.status === 'DONE' || parsed.status === 'PAUSED')
+        return { changed, waitingNative: false, nextRetryAt: null };
+    if (current.next_retry_at && Date.parse(current.next_retry_at) <= now && parsed.binding.status === 'BOUND' && parsed.main_session_id) {
+        const generation = randomUUID();
+        const armedAt = new Date(now).toISOString();
+        parsed.run_generation = generation;
+        parsed.input_epoch = (parsed.input_epoch ?? 0) + 1;
+        parsed.pending_action = null;
+        delete parsed.direction_context;
+        delete parsed.last_stop;
+        parsed.tool_starts = {};
+        parsed.continuation_confirmed = false;
+        parsed.phase = 'RECOVERING';
+        parsed.host.hook_effective = false;
+        parsed.binding = {
+            ...parsed.binding,
+            status: 'PENDING_NATIVE_HOOK', tool_use_id: null, bound_at: null,
+            challenge: randomUUID(), operation: 'rebind',
+            expected_main_session_id: parsed.main_session_id,
+            expected_workspace: resolve(parsed.task.workspace), expected_task_version: parsed.task_version,
+            expected_run_generation: generation, armed_at: armedAt,
+        };
+        if (parsed.controller)
+            parsed.controller = { ...parsed.controller, lifecycle: 'exited' };
+        parsed.recovery_condition = { kind: 'native_rebind', message: current.reason.message, resume_when: 'A real native receipt from the original A must be correlated before B/C can restart.' };
+        current.owner = null;
+        current.generation = generation;
+        current.next_retry_at = null;
+        current.status = 'waiting_native';
+        current.reason = parsed.recovery_condition;
+        current.cancellation_boundary = null;
+        current.attempt = Math.max(current.attempt, 1);
+        const temporary = `${statePath}.${randomUUID()}.tmp`;
+        writeFileSync(temporary, `${JSON.stringify(parsed, null, 2)}\n`, 'utf8');
+        // Atomic replacement is enough here: the detached loop never holds the
+        // controller lock, and a fresh tick will retry if another writer wins.
+        renameSync(temporary, statePath);
+        return { changed: true, waitingNative: true, nextRetryAt: null };
+    }
+    if (changed) {
+        const temporary = `${statePath}.${randomUUID()}.tmp`;
+        writeFileSync(temporary, `${JSON.stringify(parsed, null, 2)}\n`, 'utf8');
+        renameSync(temporary, statePath);
+    }
+    return { changed, waitingNative: current.status === 'waiting_native', nextRetryAt: current.next_retry_at };
+}
+/** Cross-process CAS boundary for detached coordinators. */
+export function reconcileRecoveryTick(statePath, now = Date.now()) {
+    const lock = `${statePath}.recovery-tick.lock`;
+    let fd;
+    try {
+        fd = openSync(lock, 'wx', 0o600);
+    }
+    catch (error) {
+        if (error.code === 'EEXIST')
+            return { changed: false, waitingNative: false, nextRetryAt: null };
+        throw error;
+    }
+    try {
+        return reconcileRecoveryTickUnlocked(statePath, now);
+    }
+    finally {
+        closeSync(fd);
+        try {
+            unlinkSync(lock);
+        }
+        catch (error) {
+            if (error.code !== 'ENOENT')
+                throw error;
+        }
+    }
 }

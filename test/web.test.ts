@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { TaskCatalog, startWebServer } from '../src/web.js';
 
@@ -296,6 +296,30 @@ test('web server exposes task, record and validated control endpoints', async ()
     assert.equal(invalidControl.status, 400);
     const missing = await fetch(`${running.url}api/tasks/does-not-exist`);
     assert.equal(missing.status, 404);
+  } finally {
+    await running.close();
+    data.cleanup();
+  }
+});
+
+test('web delete removes the task directory while preserving a system audit record and root system events', async () => {
+  const data = fixture();
+  const systemEvents = resolve(data.workspace, '.codex-supervisor', 'system-events.jsonl');
+  writeFileSync(systemEvents, '{"type":"system_health","scope":"workspace"}\n');
+  const statePath = resolve(data.directory, 'state.json');
+  const state = JSON.parse(readFileSync(statePath, 'utf8'));
+  state.status = 'PAUSED'; state.pause_reason = 'user';
+  writeFileSync(statePath, `${JSON.stringify(state)}\n`);
+  const running = await startWebServer({ workspace: data.workspace, port: 0 });
+  try {
+    const response = await fetch(`${running.url}api/tasks/demo-001/control`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'delete' }) });
+    assert.equal(response.status, 200);
+    assert.equal(existsSync(data.directory), false);
+    assert.equal(readFileSync(systemEvents, 'utf8'), '{"type":"system_health","scope":"workspace"}\n');
+    const audit = readFileSync(resolve(data.workspace, '.codex-supervisor', 'system-audit', 'events.jsonl'), 'utf8');
+    assert.match(audit, /"type":"task_deleted"/);
+    assert.match(audit, /"task_id":"demo-001"/);
+    assert.match(audit, /"type":"worker_started"/);
   } finally {
     await running.close();
     data.cleanup();
