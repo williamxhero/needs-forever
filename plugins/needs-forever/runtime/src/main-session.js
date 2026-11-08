@@ -34,6 +34,48 @@ export function canonicalPath(path) {
     return process.platform === 'win32' ? result.toLowerCase() : result;
 }
 export function contractHash(task) { return createHash('sha256').update(JSON.stringify(task)).digest('hex'); }
+/**
+ * Re-arm the native binding after a recoverable controller/host invalidation.
+ * The original A identity and contract remain fixed; only the generation and
+ * challenge rotate. Callers must persist this state before accepting any new
+ * lifecycle receipt.
+ */
+export function armNativeRebind(state, reason) {
+    if (state.status === 'DONE' || state.pause_reason)
+        return;
+    if (!state.main_session_id)
+        throw new Error('Cannot rebind a main session before the original A is bound.');
+    const now = new Date().toISOString();
+    const generation = randomUUID();
+    state.run_generation = generation;
+    state.input_epoch = (state.input_epoch ?? 0) + 1;
+    state.pending_action = null;
+    delete state.direction_context;
+    delete state.last_stop;
+    state.tool_starts = {};
+    state.continuation_confirmed = false;
+    state.phase = 'RECOVERING';
+    state.last_error = reason;
+    state.host.hook_effective = false;
+    state.binding = {
+        ...state.binding,
+        status: 'PENDING_NATIVE_HOOK',
+        tool_use_id: null,
+        bound_at: null,
+        challenge: randomUUID(),
+        operation: 'rebind',
+        expected_main_session_id: state.main_session_id,
+        expected_workspace: canonicalPath(state.task.workspace),
+        expected_task_version: state.task_version,
+        expected_run_generation: generation,
+        armed_at: now,
+    };
+    state.recovery_condition = {
+        kind: 'native_rebind',
+        message: reason,
+        resume_when: 'Wait for a trusted lifecycle callback from the original main session; B and C remain stopped until its receipt is accepted.',
+    };
+}
 export function indexPath(workspace) { return resolve(workspace, '.codex-supervisor', 'main-session-index.json'); }
 export function mainLeasePath(session) { return resolve(tmpdir(), 'codex-supervisor-locks', `main-session-${createHash('sha256').update(session).digest('hex')}.lock`); }
 function registerState(workspace, statePath) {

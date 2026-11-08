@@ -12,7 +12,20 @@ export interface MainSessionState extends State {
   main_session_id: string | null;
   run_generation: string;
   contract_sha256: string;
-  binding: { status: 'PENDING_NATIVE_HOOK' | 'BOUND' | 'RELEASED'; tool_use_id: string | null; bound_at: string | null; challenge: string; task_path: string; operation?: 'prepare' | 'resume' };
+  binding: {
+    status: 'PENDING_NATIVE_HOOK' | 'BOUND' | 'RELEASED';
+    tool_use_id: string | null;
+    bound_at: string | null;
+    challenge: string;
+    task_path: string;
+    operation?: 'prepare' | 'resume' | 'rebind';
+    /** Durable identity fence for an automatic native rebind. */
+    expected_main_session_id?: string | null;
+    expected_workspace?: string;
+    expected_task_version?: number;
+    expected_run_generation?: string;
+    armed_at?: string;
+  };
   host: { desktop_version: string | null; cli_version: string | null; hook_effective: boolean; source: 'unverified' | 'native-desktop' | 'simulated'; reason: string; desktop_pid?: number; desktop_binary?: string };
   last_stop?: StopRequest;
   controller?: { id: string; pid: number; endpoint: string; token: string; lifecycle: 'running' | 'exited'; started_at: string; run_generation: string; plugin_root: string; bundle_sha256?: string };
@@ -71,6 +84,47 @@ export function canonicalPath(path: string): string {
   return process.platform === 'win32' ? result.toLowerCase() : result;
 }
 export function contractHash(task: Task): string { return createHash('sha256').update(JSON.stringify(task)).digest('hex'); }
+
+/**
+ * Re-arm the native binding after a recoverable controller/host invalidation.
+ * The original A identity and contract remain fixed; only the generation and
+ * challenge rotate. Callers must persist this state before accepting any new
+ * lifecycle receipt.
+ */
+export function armNativeRebind(state: MainSessionState, reason: string): void {
+  if (state.status === 'DONE' || state.pause_reason) return;
+  if (!state.main_session_id) throw new Error('Cannot rebind a main session before the original A is bound.');
+  const now = new Date().toISOString();
+  const generation = randomUUID();
+  state.run_generation = generation;
+  state.input_epoch = (state.input_epoch ?? 0) + 1;
+  state.pending_action = null;
+  delete state.direction_context;
+  delete state.last_stop;
+  state.tool_starts = {};
+  state.continuation_confirmed = false;
+  state.phase = 'RECOVERING';
+  state.last_error = reason;
+  state.host.hook_effective = false;
+  state.binding = {
+    ...state.binding,
+    status: 'PENDING_NATIVE_HOOK',
+    tool_use_id: null,
+    bound_at: null,
+    challenge: randomUUID(),
+    operation: 'rebind',
+    expected_main_session_id: state.main_session_id,
+    expected_workspace: canonicalPath(state.task.workspace),
+    expected_task_version: state.task_version,
+    expected_run_generation: generation,
+    armed_at: now,
+  };
+  state.recovery_condition = {
+    kind: 'native_rebind',
+    message: reason,
+    resume_when: 'Wait for a trusted lifecycle callback from the original main session; B and C remain stopped until its receipt is accepted.',
+  };
+}
 export function indexPath(workspace: string): string { return resolve(workspace, '.codex-supervisor', 'main-session-index.json'); }
 export function mainLeasePath(session: string): string { return resolve(tmpdir(), 'codex-supervisor-locks', `main-session-${createHash('sha256').update(session).digest('hex')}.lock`); }
 function registerState(workspace: string, statePath: string): void {
