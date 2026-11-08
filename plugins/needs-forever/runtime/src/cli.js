@@ -9,6 +9,7 @@ import { reachedLimits } from './rules.js';
 import { validateTask as taskInput } from './main-session.js';
 import { startWebServer } from './web.js';
 import { record, text } from './types.js';
+import { createRecoveryPlan } from './recovery-coordinator.js';
 function readJson(path) { return JSON.parse(readFileSync(path, 'utf8')); }
 async function main() {
     const [command, ...args] = process.argv.slice(2);
@@ -93,6 +94,8 @@ async function main() {
         else
             commandArgv = argv();
         const state = saved ?? { schema_version: 1, task_id: task.task_id, task_version: 1, task, worker_thread_id: null, status: 'ACTIVE', phase: 'WORKER', active_worker_turn_id: null, reviewing_turn_id: null, handled_turn_ids: [], pending_action: null, retry: { kind: null, attempt: 0, next_at: null }, last_decision: null, worker_turn_count: 0, elapsed_active_seconds: 0, updated_at: new Date().toISOString(), codex_version: null, mode: fixture ? 'simulated' : 'live' };
+        if (!state.recovery_plan)
+            state.recovery_plan = createRecoveryPlan(state, { kind: 'worker_start', message: 'Automatic recovery is armed for this task.', resume_when: 'Continue the saved worker identity after a recoverable failure.' });
         if (saved) {
             if (state.mode !== (fixture ? 'simulated' : 'live'))
                 throw new Error('Resume must preserve simulated/live mode.');
@@ -101,6 +104,7 @@ async function main() {
             state.status = 'ACTIVE';
             delete state.pause_reason;
             state.retry = { kind: null, attempt: 0, next_at: null };
+            state.recovery_plan = createRecoveryPlan(state, { kind: 'worker_resume', message: 'Automatic recovery was re-armed by explicit resume.', resume_when: 'Continue the saved worker identity.' });
         }
         const judgeDelay = fixture?.judge_delay_ms ?? 0;
         if (typeof judgeDelay !== 'number' || !Number.isFinite(judgeDelay) || judgeDelay < 0)

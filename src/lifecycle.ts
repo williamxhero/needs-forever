@@ -1,13 +1,14 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { atomicJson, canonicalPath, contractHash, registeredStatePaths, readJson } from './main-session.js';
+import { armNativeRebind, atomicJson, canonicalPath, contractHash, registeredStatePaths, readJson } from './main-session.js';
 import type { MainSessionState, StopRequest } from './main-session.js';
 import type { HookHost } from './hook-host.js';
 import { Store } from './store.js';
 import { record, text } from './types.js';
 import { redact } from './redact.js';
 import { controlIntent } from './control-intent.js';
+import { createRecoveryPlan } from './recovery-coordinator.js';
 
 const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 function strings(value: unknown): string[] {
@@ -19,12 +20,44 @@ function strings(value: unknown): string[] {
 function isAgent(event: Record<string, unknown>): boolean {
   return event.agent_id != null || event.agent_type != null || event.agent_transcript_path != null || event.hook_event_name === 'SubagentStop' || event.hook_event_name === 'SubagentStart';
 }
+function reasonValue(value: unknown): string | null {
+  if (typeof value === 'string') return value.trim() || null;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  for (const key of ['reason', 'message', 'text', 'value']) {
+    const field = (value as Record<string, unknown>)[key];
+    if (typeof field === 'string' && field.trim()) return field.trim();
+  }
+  return null;
+}
+function stopReason(message: unknown): string | null {
+  if (typeof message !== 'string') return reasonValue(message);
+  const value = String(redact(message));
+  // The worker may emit one explicit structured field in the hook payload or
+  // final message: `STOP_REASON: ...`. Keep the value verbatim and never infer
+  // a reason from ordinary prose; an unmarked Stop must remain blank in the UI.
+  const match = value.match(/(?:^|\r?\n)\s*STOP_REASON\s*[:=]\s*([^\r\n]+)\s*(?:\r?\n|$)/i);
+  if (!match) return null;
+  const candidate = match[1]?.trim() ?? '';
+  if (!candidate) return null;
+  try {
+    const structured = JSON.parse(candidate) as unknown;
+    const parsed = reasonValue(structured);
+    return parsed;
+  } catch {
+    // Plain text is the normal structured field value.
+  }
+  return candidate;
+}
 export interface LifecycleResult {
   bound?: boolean;
   stop_request?: StopRequest;
   state_path?: string;
 }
-export function handleLifecycle(input: unknown, host: HookHost, pluginRoot: string, adapterOccurrenceId?: string): LifecycleResult {
+export interface NativeLifecycleReceipt {
+  occurrence_id: string;
+  issued_at: string;
+}
+export function handleLifecycle(input: unknown, host: HookHost, pluginRoot: string, adapterOccurrenceId?: string, nativeReceipt?: NativeLifecycleReceipt): LifecycleResult {
   const event = record(input);
   const name = text(event.hook_event_name, 'hook_event_name');
   if (isAgent(event)) return {};
@@ -45,6 +78,19 @@ export function handleLifecycle(input: unknown, host: HookHost, pluginRoot: stri
   for (const path of entries) {
     if (!existsSync(path)) continue;
     const state = readJson(path) as MainSessionState;
+    if (!state.recovery_plan && state.status !== 'DONE' && state.binding.status === 'PENDING_NATIVE_HOOK') {
+      const condition = state.recovery_condition ?? { kind: 'native_hook_required', message: 'Awaiting a correlated native receipt from the original A.', resume_when: 'Complete the supported native binding command in the original A.' };
+      state.recovery_plan = createRecoveryPlan(state, condition, true);
+      const store = new Store(path); store.save(state); store.event(state, 'recovery_plan_rehydrated', { generation: state.recovery_plan.generation, task_version: state.task_version });
+    }
+    // Checkpoints created before automatic rebind used operation=resume. Once
+    // the original A is known and no user pause exists, migrate that pending
+    // checkpoint to the fenced automatic-rebind protocol on its next trusted
+    // lifecycle callback. The callback itself remains the real receipt.
+    if (!state.pause_reason && state.status !== 'DONE' && state.binding.status === 'PENDING_NATIVE_HOOK' && state.binding.operation === 'resume' && state.main_session_id === session && ['SessionStart', 'UserPromptSubmit'].includes(name)) {
+      armNativeRebind(state, 'Migrated pending resume to automatic native rebind.');
+      const store = new Store(path); store.save(state); store.event(state, 'native_rebind_migrated', { main_session_id: session, task_version: state.task_version, run_generation: state.run_generation });
+    }
     if (state.control_mode !== 'main-session' || state.status === 'DONE' || canonicalPath(state.task.workspace) !== canonicalPath(workspace)) continue;
     if (state.contract_sha256 !== contractHash(state.task)) continue;
     if ((state.mode === 'simulated') !== (host.source === 'simulated')) continue;
@@ -94,12 +140,53 @@ export function handleLifecycle(input: unknown, host: HookHost, pluginRoot: stri
       state.last_stop = request;
       const store = new Store(path);
       store.save(state);
-      store.event(state, 'main_session_stop_observed', { session_id: session, turn_id: request.turn_id, stop_attempt_id: request.stop_attempt_id, run_generation: state.run_generation, host_source: host.source });
+      const stopReasonValue = stopReason(event.stop_reason ?? event.STOP_REASON) ?? stopReason(request.last_assistant_message);
+      store.event(state, 'main_session_stop_observed', { session_id: session, turn_id: request.turn_id, stop_attempt_id: request.stop_attempt_id, run_generation: state.run_generation, host_source: host.source, ...(stopReasonValue ? { stop_reason: stopReasonValue } : {}) });
       // This only creates the request. The B adapter must validate an active
       // lease and return a supported host decision before claiming readiness.
       return state.status === 'ACTIVE' ? { state_path: path, stop_request: request } : {};
     }
-    if (state.pause_reason || state.binding.status !== 'PENDING_NATIVE_HOOK' || name !== 'PostToolUse' || !observation || !existsSync(observation)) continue;
+    if (state.pause_reason || state.binding.status !== 'PENDING_NATIVE_HOOK') continue;
+
+    // Automatic recovery never trusts an old prepare/resume receipt. Once B
+    // or its host identity is invalidated, the checkpoint carries a fresh
+    // generation and the original A identity. Only a real lifecycle callback
+    // from that same A can rebind it; no controller or C is started before
+    // this branch returns `bound` to the native adapter.
+    if (state.binding.operation === 'rebind') {
+      if (!['SessionStart', 'UserPromptSubmit'].includes(name)) continue;
+      if (state.main_session_id !== session) continue;
+      const expectedWorkspace = state.binding.expected_workspace;
+      const expectedTaskVersion = state.binding.expected_task_version;
+      const expectedSession = state.binding.expected_main_session_id;
+      const expectedGeneration = state.binding.expected_run_generation;
+      if (expectedSession !== session || (expectedWorkspace && canonicalPath(expectedWorkspace) !== canonicalPath(workspace)) || expectedTaskVersion !== state.task_version || expectedGeneration !== state.run_generation) continue;
+      if (typeof event.run_generation === 'string' && event.run_generation !== expectedGeneration) continue;
+      // A callback that was already in flight before armNativeRebind must not
+      // become the fresh receipt merely because it omitted run_generation.
+      // The installed adapter stamps the process-start occurrence and time;
+      // only a receipt issued after this generation was armed is eligible.
+      const armedAt = state.binding.armed_at ? Date.parse(state.binding.armed_at) : NaN;
+      const issuedAt = nativeReceipt ? Date.parse(nativeReceipt.issued_at) : NaN;
+      if (!nativeReceipt || !nativeReceipt.occurrence_id || !Number.isFinite(issuedAt) || !Number.isFinite(armedAt) || issuedAt < armedAt) continue;
+      if (state.binding.accepted_receipt?.occurrence_id === nativeReceipt.occurrence_id) continue;
+      const store = new Store(path);
+      state.binding = { ...state.binding, status: 'BOUND', tool_use_id: null, bound_at: new Date().toISOString(), accepted_receipt: { ...nativeReceipt, generation: expectedGeneration! } };
+      state.host = { ...host, hook_effective: false, reason: 'Original main-session lifecycle receipt correlated; awaiting exactly one replacement controller.' };
+      state.recovery_condition = { kind: 'rebind_controller_required', message: 'Original main session re-bound; supervision is not active until the replacement controller is ready.', resume_when: 'Allow the replacement B to start, then wait for a native Stop callback.' };
+      store.save(state);
+      store.event(state, 'main_session_rebind_receipt', {
+        main_session_id: session,
+        task_version: state.task_version,
+        run_generation: state.run_generation,
+        receipt_occurrence_id: nativeReceipt.occurrence_id,
+        receipt_issued_at: nativeReceipt.issued_at,
+        hook_event_name: name,
+        host_source: host.source,
+      });
+      return { bound: true, state_path: path };
+    }
+    if (name !== 'PostToolUse' || !observation || !existsSync(observation)) continue;
     const prior = readJson(observation);
     if (prior.session_id !== session || prior.tool_use_id !== toolId || prior.input_sha256 !== hash(event.tool_input) || prior.source !== host.source || prior.cwd !== canonicalPath(workspace) || prior.plugin_root !== canonicalPath(pluginRoot) || Date.now() - prior.at > 10 * 60_000) continue;
     const intent = controlIntent(event.tool_input, pluginRoot);

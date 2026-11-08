@@ -5,13 +5,14 @@ import { createConnection, createServer } from 'node:net';
 import { resolve, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
 import { setTimeout as delay } from 'node:timers/promises';
-import { canonicalPath, registeredStatePaths, readJson, mainLeasePath, contractHash } from './main-session.js';
+import { armNativeRebind, canonicalPath, registeredStatePaths, readJson, mainLeasePath, contractHash } from './main-session.js';
 import { handleLifecycle } from './lifecycle.js';
 import { Store } from './store.js';
 import { redact } from './redact.js';
 import { preflightSupervisor, superviseStop } from './main-supervision.js';
 import { classifyRecoveryError, nextBackoff, recordRecoveryFailure } from './recovery.js';
 import { reachedLimits } from './rules.js';
+import { armRecovery, cancelRecovery, createRecoveryPlan, markRecoveryRunning, acquireRecoveryOwner, waitForNativeReceipt, reconcileStaleOwner } from './recovery-coordinator.js';
 export function controllerRequest(controller, command, payload = null, timeout = 2_000) {
     return new Promise((done, reject) => {
         const socket = createConnection(controller.endpoint);
@@ -84,8 +85,20 @@ export async function pauseMainController(path) {
     const state = readJson(path);
     if (state.status === 'PAUSED' && state.controller && !processAbsent(state.controller.pid))
         return controllerRequest(state.controller, 'pause');
-    if (state.status === 'PAUSED' && state.pause_reason)
+    if (state.status === 'PAUSED' && state.pause_reason) {
+        const store = new Store(path);
+        store.lock(state.task, true);
+        try {
+            const latest = readJson(path);
+            cancelRecovery(latest, 'pause');
+            latest.host.hook_effective = false;
+            store.save(latest);
+        }
+        finally {
+            store.release();
+        }
         return { paused: true, status: 'PAUSED', state_path: path };
+    }
     if (state.status !== 'ACTIVE' && state.status !== 'PAUSED')
         throw new Error(`Task is ${state.status}; no active task to pause.`);
     if (state.controller && !processAbsent(state.controller.pid))
@@ -101,6 +114,7 @@ export async function pauseMainController(path) {
         latest.phase = 'IDLE';
         latest.input_epoch = (latest.input_epoch ?? 0) + 1;
         latest.pending_action = null;
+        cancelRecovery(latest, 'pause');
         delete latest.direction_context;
         latest.host.hook_effective = false;
         store.save(latest);
@@ -124,9 +138,77 @@ export async function prepareControllerResume(path) {
     }
 }
 export async function launchController(path, pluginRoot, fixture) {
+    const launchLock = `${path}.controller-launch.lock`;
+    let launchFd;
+    const releaseLaunchLock = () => {
+        if (launchFd === undefined)
+            return;
+        closeSync(launchFd);
+        launchFd = undefined;
+        try {
+            unlinkSync(launchLock);
+        }
+        catch (error) {
+            if (error.code !== 'ENOENT')
+                throw error;
+        }
+    };
+    try {
+        launchFd = openSync(launchLock, 'wx', 0o600);
+        writeFileSync(launchFd, JSON.stringify({ pid: process.pid, state_path: path, started_at: new Date().toISOString() }));
+    }
+    catch (error) {
+        if (error.code !== 'EEXIST')
+            throw error;
+        // Another lifecycle callback owns the launch transition. Let its winner
+        // finish; never mark that winner exited from this losing callback. Reclaim
+        // only a lock whose owner is provably gone.
+        try {
+            const owner = JSON.parse(readFileSync(launchLock, 'utf8'));
+            if (Number.isInteger(owner.pid)) {
+                try {
+                    process.kill(owner.pid, 0);
+                    return;
+                }
+                catch (probe) {
+                    if (probe.code !== 'ESRCH')
+                        return;
+                }
+            }
+            const guard = `${launchLock}.reclaim`;
+            let guardFd;
+            try {
+                guardFd = openSync(guard, 'wx', 0o600);
+                unlinkSync(launchLock);
+                launchFd = openSync(launchLock, 'wx', 0o600);
+                writeFileSync(launchFd, JSON.stringify({ pid: process.pid, state_path: path, started_at: new Date().toISOString() }));
+            }
+            finally {
+                if (guardFd !== undefined)
+                    closeSync(guardFd);
+                try {
+                    unlinkSync(guard);
+                }
+                catch (cleanup) {
+                    if (cleanup.code !== 'ENOENT')
+                        throw cleanup;
+                }
+            }
+        }
+        catch {
+            return;
+        }
+    }
     const state = readJson(path);
-    if (state.controller)
-        throw new Error('A controller receipt already exists; use explicit resume, never silently replace it.');
+    if (state.controller?.lifecycle === 'running') {
+        if (!processAbsent(state.controller.pid)) {
+            releaseLaunchLock();
+            throw new Error('A controller receipt already exists; use explicit resume, never silently replace it.');
+        }
+        state.controller = { ...state.controller, lifecycle: 'exited' };
+    }
+    if (state.controller?.lifecycle === 'exited')
+        delete state.controller;
     state.controller_startup_deadline = new Date(Date.now() + 25_000).toISOString();
     new Store(path).save(state);
     const script = resolve(pluginRoot, 'scripts/controller.mjs');
@@ -142,14 +224,50 @@ export async function launchController(path, pluginRoot, fixture) {
     catch (error) {
         const saved = readJson(path);
         if (!saved.controller) {
-            saved.phase = 'RECOVERING';
-            saved.last_error = String(redact(error.message));
-            saved.recovery_condition = { kind: 'controller_startup', message: saved.last_error, resume_when: 'Resolve the existing ownership or startup failure, then explicitly resume the bound main session.' };
+            const message = String(redact(error.message));
+            if (saved.control_mode === 'main-session' && saved.binding.status === 'BOUND' && saved.main_session_id && saved.status !== 'DONE') {
+                armNativeRebind(saved, message);
+                waitForNativeReceipt(saved, {
+                    kind: 'native_rebind',
+                    message,
+                    resume_when: 'A real native receipt from the original A must be correlated before B/C can restart.',
+                });
+            }
+            else {
+                saved.phase = 'RECOVERING';
+                saved.last_error = message;
+                saved.recovery_condition = { kind: 'controller_startup', message: saved.last_error, resume_when: 'Resolve the existing ownership or startup failure, then explicitly resume the bound main session.' };
+                armRecovery(saved, saved.recovery_condition);
+            }
             new Store(path).save(saved);
         }
+        else if (saved.control_mode === 'main-session' && saved.binding.status === 'BOUND' && saved.main_session_id && saved.status !== 'DONE') {
+            const message = String(redact(error.message));
+            armNativeRebind(saved, message);
+            waitForNativeReceipt(saved, {
+                kind: 'native_rebind',
+                message,
+                resume_when: 'A real native receipt from the original A must be correlated before B/C can restart.',
+            });
+            saved.controller = { ...saved.controller, lifecycle: 'exited' };
+            new Store(path).save(saved);
+        }
+        releaseLaunchLock();
         throw error;
     }
     child.unref();
+    try {
+        const coordinator = resolve(pluginRoot, 'scripts/recovery-coordinator.mjs');
+        const watchdog = spawn(process.execPath, [coordinator, path], { cwd: state.task.workspace, detached: true, windowsHide: true, stdio: 'ignore' });
+        watchdog.unref();
+    }
+    catch {
+        // B is already live; a later lifecycle/status path can restart the
+        // coordinator. Do not turn a successful binding into a false failure.
+    }
+    finally {
+        releaseLaunchLock();
+    }
 }
 export function boundStateForEvent(input, pluginRoot, simulated) {
     if (!input || input.agent_id != null || input.agent_type != null || input.agent_transcript_path != null || typeof input.session_id !== 'string' || typeof input.cwd !== 'string')
@@ -161,6 +279,11 @@ export function boundStateForEvent(input, pluginRoot, simulated) {
         if (!existsSync(path))
             continue;
         const state = readJson(path);
+        if (state.controller?.lifecycle === 'running' && reconcileStaleOwner(state)) {
+            const store = new Store(path);
+            store.save(state);
+            store.event(state, 'recovery_owner_reconciled', { generation: state.recovery_plan?.generation, task_version: state.task_version, binding_status: state.binding.status });
+        }
         // A workspace may contain checkpoints created by multiple installed plugin
         // versions. Only the package that owns B may dispatch callbacks to it;
         // otherwise a second installation can make B report a false plugin change
@@ -209,6 +332,7 @@ export async function runController(path, pluginRoot, fixturePath) {
     const id = randomUUID();
     const controller = { id, pid: process.pid, token: randomUUID(), endpoint: process.platform === 'win32' ? `\\\\.\\pipe\\needs-forever-main-${id}` : resolve(tmpdir(), `nf-main-${id}.sock`), lifecycle: 'running', started_at: new Date().toISOString(), run_generation: state.run_generation, plugin_root: canonicalPath(pluginRoot), bundle_sha256: createHash('sha256').update(readFileSync(resolve(pluginRoot, 'runtime/integrity.json'))).digest('hex') };
     let active = null;
+    let recoveryOwner;
     const accrue = () => {
         const now = Date.now();
         if (state.status === 'ACTIVE' && state.active_checkpoint_at)
@@ -236,6 +360,7 @@ export async function runController(path, pluginRoot, fixturePath) {
         state.pending_action = null;
         delete state.direction_context;
         state.continuation_confirmed = false;
+        cancelRecovery(state, 'pause');
         store.save(state);
         cancelActive('Paused before cancellation.');
     };
@@ -250,6 +375,22 @@ export async function runController(path, pluginRoot, fixturePath) {
         state.last_error = String(redact(message));
         state.host.hook_effective = false;
         state.recovery_condition = { kind: 'stop_transport', message: state.last_error, resume_when: 'Inspect the preserved Stop outcome and explicitly resume the same main session.' };
+        armRecovery(state, state.recovery_condition);
+    };
+    const rearmBinding = (message, desktopPid) => {
+        if (state.status === 'PAUSED' || state.status === 'DONE' || state.binding.status !== 'BOUND' || !state.main_session_id)
+            return;
+        if (desktopPid)
+            state.host.desktop_pid = desktopPid;
+        const reason = String(redact(message));
+        armNativeRebind(state, reason);
+        waitForNativeReceipt(state, {
+            kind: 'native_rebind',
+            message: reason,
+            resume_when: 'A real native receipt from the original A must be correlated before B/C can restart.',
+        });
+        state.controller = { ...controller, lifecycle: 'exited' };
+        store.save(state);
     };
     const shutdown = () => {
         if (closing)
@@ -263,6 +404,10 @@ export async function runController(path, pluginRoot, fixturePath) {
             active.abort.abort();
         }
         state.controller = { ...controller, lifecycle: 'exited' };
+        if (state.status !== 'PAUSED' && state.status !== 'DONE' && state.recovery_plan?.status !== 'cancelled' && state.recovery_plan?.status !== 'waiting_native') {
+            const reason = { kind: 'controller_exit', message: 'Controller exited before the supervision task reached a terminal state.', resume_when: 'Wait for the persisted recovery plan to re-arm the original main session.' };
+            armRecovery(state, reason);
+        }
         store.save(state);
         server?.close();
         for (const socket of sockets)
@@ -277,6 +422,13 @@ export async function runController(path, pluginRoot, fixturePath) {
             throw new Error('This main session already has a controller lease; explicit recovery is required.');
         }
         writeFileSync(lease, JSON.stringify({ pid: process.pid, controller_id: id, state_path: path, main_session_id: state.main_session_id }));
+        if (!state.recovery_plan) {
+            const reason = state.recovery_condition ?? { kind: 'controller_startup', message: 'Controller recovery plan initialized.', resume_when: 'Revalidate the original native binding before resuming.' };
+            state.recovery_plan = createRecoveryPlan(state, reason, false);
+        }
+        recoveryOwner = acquireRecoveryOwner(path, state);
+        markRecoveryRunning(state, recoveryOwner.owner);
+        store.save(state);
         server = createServer((socket) => {
             sockets.add(socket);
             socket.on('error', () => { });
@@ -292,8 +444,14 @@ export async function runController(path, pluginRoot, fixturePath) {
                 socket.removeAllListeners('data');
                 void (async () => {
                     const message = JSON.parse(input.split('\n')[0]);
-                    if (message.token !== controller.token || message.controller_id !== id || message.run_generation !== state.run_generation)
+                    const latest = readJson(path);
+                    // Re-read the checkpoint at the IPC boundary. A controller can stay
+                    // alive while an explicit pause/resume replaces its generation; an
+                    // old socket must fail closed before it can append a lifecycle event.
+                    const lifecycleCommand = message.command === 'lifecycle';
+                    if (message.token !== controller.token || message.controller_id !== id || message.run_generation !== state.run_generation || latest.run_generation !== message.run_generation || latest.controller?.id !== id || latest.status === 'DONE' || (lifecycleCommand && (latest.status === 'PAUSED' || latest.recovery_plan?.cancellation_boundary)))
                         throw new Error('Owned controller handle identity mismatch.');
+                    state = latest;
                     if (message.command === 'ping')
                         return { live: true, controller_id: id };
                     if (message.command === 'release-for-resume') {
@@ -319,8 +477,8 @@ export async function runController(path, pluginRoot, fixturePath) {
                     const desktopRestarted = event.hook_event_name === 'SessionStart' && Number.isInteger(event.callback_desktop_pid) && Number.isInteger(state.host.desktop_pid) && event.callback_desktop_pid !== state.host.desktop_pid;
                     if (desktopRestarted || (event.callback_plugin_root && canonicalPath(event.callback_plugin_root) !== controller.plugin_root) || (event.callback_bundle_sha256 && event.callback_bundle_sha256 !== controller.bundle_sha256)) {
                         cancelActive('Native host restarted or installed plugin changed.');
-                        recover('Native host restarted or installed plugin changed; explicit resume must revalidate the original A.');
-                        store.save(state);
+                        rearmBinding('Native host restarted or installed plugin changed; awaiting a trusted lifecycle receipt from the original A.', event.callback_desktop_pid);
+                        setImmediate(shutdown);
                         return {};
                     }
                     if (event.run_generation != null && event.run_generation !== state.run_generation)
@@ -396,19 +554,22 @@ export async function runController(path, pluginRoot, fixturePath) {
                     const timer = setTimeout(() => { invalidate('Stop hook deadline elapsed; late supervisor output is invalid.'); socket.end('{}\n'); }, Math.max(1, Date.parse(request.deadline_at) - Date.now()));
                     try {
                         const valid = () => {
-                            const saved = readJson(path);
+                            // The controller owns the task lock for the entire Stop. Read
+                            // the in-process checkpoint here instead of reopening
+                            // state.json while C/verification is active; Windows readers
+                            // can otherwise remain in a sharing violation indefinitely.
+                            const saved = state;
                             return current.valid && active === current && !closing && !socket.destroyed && saved.status === 'ACTIVE' && saved.phase !== 'RECOVERING' && saved.run_generation === request.run_generation && saved.task_version === request.task_version && saved.contract_sha256 === request.contract_sha256 && saved.contract_sha256 === contractHash(saved.task) && (saved.input_epoch ?? 0) === current.epoch && saved.last_stop?.stop_attempt_id === request.stop_attempt_id && Date.now() < Date.parse(request.deadline_at);
                         };
                         const guarded = new class extends Store {
                             save(candidate) {
                                 if (!valid())
                                     throw new Error('Obsolete judgment checkpoint rejected.');
-                                const saved = readJson(path);
-                                saved.phase = candidate.phase;
+                                state.phase = candidate.phase;
                                 if (candidate.judge_thread_ids)
-                                    saved.judge_thread_ids = candidate.judge_thread_ids;
-                                saved.codex_version = candidate.codex_version;
-                                super.save(saved);
+                                    state.judge_thread_ids = candidate.judge_thread_ids;
+                                state.codex_version = candidate.codex_version;
+                                super.save(state);
                             }
                         }(path);
                         let decision;
@@ -423,7 +584,6 @@ export async function runController(path, pluginRoot, fixturePath) {
                                 if (!valid() || current.abort.signal.aborted)
                                     return {};
                                 const classification = classifyRecoveryError(error);
-                                state = readJson(path);
                                 state.recovery_failures = redact(recordRecoveryFailure((state.recovery_failures ?? []), error));
                                 const backoff = nextBackoff((state.retry.attempt ?? 0) + 1);
                                 state.retry = { kind: classification.kind, attempt: backoff.attempt, next_at: backoff.next_at };
@@ -436,7 +596,6 @@ export async function runController(path, pluginRoot, fixturePath) {
                         }
                         if (!valid())
                             return {};
-                        state = readJson(path);
                         accrue();
                         const limits = reachedLimits(state.task.limits, state);
                         if (limits.time || (decision.action === 'CONTINUE' && limits.turns)) {
@@ -448,9 +607,16 @@ export async function runController(path, pluginRoot, fixturePath) {
                         state.host.hook_effective = state.mode === 'live' && state.host.source === 'native-desktop';
                         state.host.reason = 'Correlated synchronous Stop judged and returned; actual main-session continuation requires subsequent matching activity.';
                         if (decision.action !== 'CONTINUE') {
+                            // Do not let the 250 ms checkpoint writer race the terminal
+                            // checkpoint. On Windows that race can keep the state file in
+                            // a sharing window long enough for a valid DONE judgment to be
+                            // misclassified as an unknown recovery.
+                            clearInterval(checkpointTimer);
                             state.status = decision.action;
                             state.phase = 'IDLE';
                             state.pending_action = null;
+                            if (decision.action === 'DONE')
+                                cancelRecovery(state, 'done');
                             state.stop_transport = { request, outcome: 'returned' };
                             if (decision.action === 'DONE')
                                 state.binding.status = 'RELEASED';
@@ -515,14 +681,18 @@ export async function runController(path, pluginRoot, fixturePath) {
         store.save(state);
         store.event(state, 'main_session_controller_started', { controller_id: id, main_session_id: state.main_session_id, pid: process.pid });
         checkpointTimer = setInterval(() => {
-            if (closing)
+            // A Stop owns the checkpoint while judge/verification is in flight.
+            // Repeated heartbeat renames during that window can keep Windows
+            // readers in a sharing violation and strand a valid terminal decision.
+            if (closing || active)
                 return;
             state = readJson(path);
             accrue();
             const hostPid = state.host.desktop_pid;
             if (state.status === 'ACTIVE' && state.phase !== 'RECOVERING' && hostPid && processAbsent(hostPid)) {
                 cancelActive('Desktop owner exited.');
-                recover('Desktop owner exited; explicit same-A resume required.');
+                rearmBinding('Desktop owner exited; awaiting a trusted lifecycle receipt from the original A.');
+                setImmediate(shutdown);
             }
             if (state.status === 'ACTIVE' && reachedLimits(state.task.limits, state).time)
                 pause('user_limit');
@@ -535,11 +705,15 @@ export async function runController(path, pluginRoot, fixturePath) {
         await new Promise((done) => server.once('close', done));
     }
     catch (error) {
-        if (!closing && state.controller?.id === id) {
+        if (!closing && state.binding.status === 'BOUND' && state.main_session_id && state.status !== 'DONE') {
+            rearmBinding(String(redact(error.message)));
+        }
+        else if (!closing && state.controller?.id === id) {
             state.phase = 'RECOVERING';
             state.host.hook_effective = false;
             state.last_error = String(redact(error.message));
-            state.recovery_condition = { kind: 'controller_startup', message: state.last_error, resume_when: 'Resolve the startup failure, then explicitly resume the original A.' };
+            state.recovery_condition = { kind: 'controller_startup', message: state.last_error, resume_when: 'Resolve the startup failure, then wait for the persisted recovery plan.' };
+            armRecovery(state, state.recovery_condition);
             state.controller.lifecycle = 'exited';
             store.save(state);
         }
@@ -551,10 +725,20 @@ export async function runController(path, pluginRoot, fixturePath) {
     finally {
         clearInterval(checkpointTimer);
         if (lease !== undefined) {
+            // This process created the exclusive lease and no recovery can reclaim
+            // it while the controller is alive. Reading the lease again during
+            // shutdown is both unnecessary and vulnerable to Windows sharing
+            // violations, so release the owned path directly after closing it.
             closeSync(lease);
-            if (JSON.parse(readFileSync(leasePath, 'utf8')).controller_id === id)
+            try {
                 unlinkSync(leasePath);
+            }
+            catch (error) {
+                if (error.code !== 'ENOENT')
+                    throw error;
+            }
         }
+        recoveryOwner?.release();
         store.release();
         if (process.platform !== 'win32' && existsSync(controller.endpoint))
             unlinkSync(controller.endpoint);

@@ -5,7 +5,25 @@ import { tmpdir } from 'node:os';
 import { reachedLimits } from './rules.js';
 import { Store } from './store.js';
 import { record, text } from './types.js';
-export function readJson(path) { return JSON.parse(readFileSync(path, 'utf8')); }
+import { createRecoveryPlan, waitForNativeReceipt } from './recovery-coordinator.js';
+export function readJson(path) {
+    // Windows can briefly deny a read while the state checkpoint is being
+    // atomically replaced by another owner. Keep the previous checkpoint
+    // intact and retry transient sharing errors instead of turning a completed
+    // judgment into an unknown recovery state.
+    const deadline = Date.now() + 5_000;
+    while (true) {
+        try {
+            return JSON.parse(readFileSync(path, 'utf8'));
+        }
+        catch (error) {
+            const code = error.code;
+            if (process.platform !== 'win32' || !['EPERM', 'EACCES', 'EBUSY'].includes(code ?? '') || Date.now() >= deadline)
+                throw error;
+            Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 10 + Math.floor(Math.random() * 40));
+        }
+    }
+}
 export function atomicJson(path, value) {
     mkdirSync(dirname(path), { recursive: true });
     const temporary = `${path}.${randomUUID()}.tmp`;
@@ -17,6 +35,49 @@ export function canonicalPath(path) {
     return process.platform === 'win32' ? result.toLowerCase() : result;
 }
 export function contractHash(task) { return createHash('sha256').update(JSON.stringify(task)).digest('hex'); }
+/**
+ * Re-arm the native binding after a recoverable controller/host invalidation.
+ * The original A identity and contract remain fixed; only the generation and
+ * challenge rotate. Callers must persist this state before accepting any new
+ * lifecycle receipt.
+ */
+export function armNativeRebind(state, reason) {
+    if (state.status === 'DONE' || state.pause_reason)
+        return;
+    if (!state.main_session_id)
+        throw new Error('Cannot rebind a main session before the original A is bound.');
+    const now = new Date().toISOString();
+    const generation = randomUUID();
+    state.run_generation = generation;
+    state.input_epoch = (state.input_epoch ?? 0) + 1;
+    state.pending_action = null;
+    delete state.direction_context;
+    delete state.last_stop;
+    state.tool_starts = {};
+    state.continuation_confirmed = false;
+    state.phase = 'RECOVERING';
+    state.last_error = reason;
+    state.host.hook_effective = false;
+    state.binding = {
+        ...state.binding,
+        status: 'PENDING_NATIVE_HOOK',
+        tool_use_id: null,
+        bound_at: null,
+        challenge: randomUUID(),
+        operation: 'rebind',
+        expected_main_session_id: state.main_session_id,
+        expected_workspace: canonicalPath(state.task.workspace),
+        expected_task_version: state.task_version,
+        expected_run_generation: generation,
+        armed_at: now,
+    };
+    state.recovery_condition = {
+        kind: 'native_rebind',
+        message: reason,
+        resume_when: 'Wait for a trusted lifecycle callback from the original main session; B and C remain stopped until its receipt is accepted.',
+    };
+    waitForNativeReceipt(state, state.recovery_condition);
+}
 export function indexPath(workspace) { return resolve(workspace, '.codex-supervisor', 'main-session-index.json'); }
 export function mainLeasePath(session) { return resolve(tmpdir(), 'codex-supervisor-locks', `main-session-${createHash('sha256').update(session).digest('hex')}.lock`); }
 function registerState(workspace, statePath) {
@@ -89,6 +150,7 @@ export function prepareMainSession(taskPath, statePath, simulated = false) {
             worker_turn_count: 0, elapsed_active_seconds: 0, updated_at: new Date().toISOString(), codex_version: null, mode: simulated ? 'simulated' : 'live',
             recovery_condition: { kind: 'native_hook_required', message: 'Awaiting a correlated native Desktop hook; supervision is not active.', resume_when: 'Review/trust the plugin hooks and run preparation from the intended main session.' },
         };
+        state.recovery_plan = createRecoveryPlan(state, state.recovery_condition, true);
         store.protect(state);
         store.save(state);
         registerState(task.workspace, statePath);
@@ -175,6 +237,7 @@ export function resumeMainSession(statePath, taskPath, simulated = false) {
         state.host.hook_effective = false;
         state.host.reason = 'Explicit resume awaits a fresh native receipt from the original main session.';
         state.recovery_condition = { kind: 'resume_native_receipt', message: state.host.reason, resume_when: 'Complete resume in the original A, then wait for a new native Stop. Old directions are never replayed.' };
+        state.recovery_plan = createRecoveryPlan(state, state.recovery_condition, true);
         store.save(state);
         store.event(state, 'main_session_resume_prepared', { main_session_id: state.main_session_id, run_generation: state.run_generation });
         registerState(task.workspace, statePath);

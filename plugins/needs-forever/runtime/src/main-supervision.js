@@ -1,13 +1,52 @@
 import { randomUUID, createHash } from 'node:crypto';
-import { createReadStream } from 'node:fs';
-import { readdir, readlink } from 'node:fs/promises';
+import { readdir, readFile, readlink } from 'node:fs/promises';
 import { setImmediate as yieldControl } from 'node:timers/promises';
-import { resolve, relative } from 'node:path';
+import { dirname, isAbsolute, resolve, relative } from 'node:path';
 import { AppServerJudge, archiveTerminatedJudge, validateDecision } from './judge.js';
 import { codexCommand, connect } from './transport.js';
 import { Store } from './store.js';
 import { redact } from './redact.js';
 const budget = 24_000;
+async function retryRead(operation, path, read, signal) {
+    const deadline = Date.now() + 5_000;
+    while (true) {
+        signal.throwIfAborted();
+        try {
+            return await read();
+        }
+        catch (error) {
+            const code = error.code;
+            if (process.platform !== 'win32' || !['EPERM', 'EACCES', 'EBUSY'].includes(code ?? '') || Date.now() >= deadline) {
+                throw new Error(`${operation} ${path}: ${error.message}`, { cause: error });
+            }
+            await new Promise((resolve, reject) => {
+                const timer = setTimeout(resolve, 10 + Math.floor(Math.random() * 40));
+                signal.addEventListener('abort', () => { clearTimeout(timer); reject(signal.reason); }, { once: true });
+            });
+        }
+    }
+}
+async function readFileRetry(path, signal) {
+    return retryRead('read', path, () => readFile(path), signal);
+}
+function verificationWorkspace(state) {
+    const verify = state.task.verify;
+    if (!verify || verify.argv.length < 2 || !isAbsolute(verify.argv[1]))
+        return state.task.workspace;
+    const workspace = resolve(state.task.workspace);
+    const candidates = [dirname(resolve(verify.argv[1])), ...verify.protected_files.map((file) => dirname(resolve(file)))];
+    const first = candidates[0];
+    const prefix = process.platform === 'win32' ? first.toLowerCase() : first;
+    if (candidates.some((candidate) => {
+        const value = process.platform === 'win32' ? candidate.toLowerCase() : candidate;
+        return value !== prefix;
+    }))
+        return state.task.workspace;
+    const suffix = relative(workspace, first);
+    if (suffix === '' || isAbsolute(suffix) || suffix === '..' || suffix.startsWith('../') || suffix.startsWith('..\\'))
+        return state.task.workspace;
+    return first;
+}
 function continueWith(message, reason) {
     return { action: 'CONTINUE', reason, evidence_ids: [], next_message: message, external: null };
 }
@@ -113,7 +152,8 @@ async function workspaceDigest(state, store, signal) {
     let visited = 0;
     const walk = async (directory) => {
         signal.throwIfAborted();
-        for (const item of (await readdir(directory, { withFileTypes: true })).sort((a, b) => a.name.localeCompare(b.name))) {
+        const entries = await retryRead('readdir', directory, () => readdir(directory, { withFileTypes: true }), signal);
+        for (const item of entries.sort((a, b) => a.name.localeCompare(b.name))) {
             signal.throwIfAborted();
             if (++visited % 16 === 0)
                 await yieldControl(undefined, { signal });
@@ -121,23 +161,33 @@ async function workspaceDigest(state, store, signal) {
             const name = relative(state.task.workspace, path).replaceAll('\\', '/');
             if (name === '.codex-supervisor' || name === '.git')
                 continue;
+            // Historical Desktop acceptance profiles are generated supervision
+            // fixtures, not task business files. Chromium keeps files such as
+            // Network/Cookies open with a deny-read handle on Windows; traversing
+            // this directory makes an otherwise valid DONE verification fail with
+            // EBUSY. Keep the current task artifacts hashable while excluding only
+            // this known generated fixture root.
+            const lowerPath = name.toLowerCase();
+            if (lowerPath === '.scratch/main-session-supervision' || lowerPath.startsWith('.scratch/main-session-supervision/'))
+                continue;
+            const lowerName = item.name.toLowerCase();
+            const generatedLock = (lowerName === 'lock' || lowerName === 'lock.reclaim' || lowerName.endsWith('.lock') || lowerName.endsWith('.lock.reclaim'))
+                && !new Set(['cargo.lock', 'flake.lock', 'module.bazel.lock']).has(lowerName);
             // A checkpoint can live beside task files in any configured directory.
             // Omit only Store-owned writes, not that whole directory or its verifier.
             const local = relative(store.directory, path).replaceAll('\\', '/');
             if (relative(statePath, path) === '' || local === 'summary.md' || local === 'events.jsonl'
+                || generatedLock || path === `${statePath}.lock` || path === `${statePath}.lock.reclaim`
                 || (path.startsWith(statePath) && temporaryState.test(path.slice(statePath.length))))
                 continue;
             hash.update(name);
             if (item.isSymbolicLink())
-                hash.update(`link:${await readlink(path)}`);
+                hash.update(`link:${await retryRead('readlink', path, () => readlink(path), signal)}`);
             else if (item.isDirectory())
                 await walk(path);
             else if (item.isFile()) {
-                for await (const chunk of createReadStream(path, { signal })) {
-                    signal.throwIfAborted();
-                    hash.update(chunk);
-                    await yieldControl(undefined, { signal });
-                }
+                hash.update(await readFileRetry(path, signal));
+                await yieldControl(undefined, { signal });
             }
         }
     };
@@ -158,12 +208,13 @@ async function verification(state, store, rpc, signal) {
     const workspaceBefore = await workspaceDigest(state, store, signal);
     let timer;
     let result;
+    const sandboxWorkspace = verificationWorkspace(state);
     if (before.length)
         result = { exitCode: null, stdout: '', stderr: 'Protected files changed before verification.' };
     else {
         try {
             result = await Promise.race([
-                rpc.request('command/exec', { command: verify.argv, cwd: state.task.workspace, timeoutMs: verify.timeout_seconds * 1_000, sandboxPolicy: { type: 'workspaceWrite', writableRoots: [state.task.workspace], networkAccess: false, excludeTmpdirEnvVar: true, excludeSlashTmp: true } }),
+                rpc.request('command/exec', { command: verify.argv, cwd: sandboxWorkspace, timeoutMs: verify.timeout_seconds * 1_000, sandboxPolicy: { type: 'workspaceWrite', writableRoots: [sandboxWorkspace], networkAccess: false, excludeTmpdirEnvVar: true, excludeSlashTmp: true } }),
                 new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('Independent verification timeout.')), verify.timeout_seconds * 1_000 + 1_000); }),
             ]);
             if (!result || (result.exitCode !== null && !Number.isInteger(result.exitCode)) || typeof result.stdout !== 'string' || typeof result.stderr !== 'string')

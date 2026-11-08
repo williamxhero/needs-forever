@@ -216,6 +216,42 @@ test('bound Stop callback records distinct attempt identities without subagent r
   assert.equal(JSON.parse(f.run('status').stdout).last_stop.turn_id, null);
 });
 
+test('bound Stop persists only an explicit structured STOP_REASON', (t) => {
+  const f = setup('structured-stop-reason');
+  t.after(() => f.run('pause'));
+  const tool = { tool_use_id: 'prepare-call', tool_input: { command: `node "${f.control}" prepare --task "${f.task}" --state "${f.state}" --test-fixture "${f.fixture}"` } };
+  assert.equal(hook(f, { ...tool, hook_event_name: 'PreToolUse' }).status, 0);
+  const prepared = f.run('prepare', ['--task', f.task, '--test-fixture', f.fixture]);
+  assert.equal(prepared.status, 0, prepared.stderr);
+  assert.equal(hook(f, { ...tool, hook_event_name: 'PostToolUse', tool_response: prepared.stdout }).status, 0);
+
+  const explicit = hook(f, {
+    hook_event_name: 'Stop',
+    stop_hook_active: false,
+    last_assistant_message: '阶段结束。\nSTOP_REASON: Tushare 返回 HTTP 429，暂时无法完成公共数据读取。\n',
+  });
+  assert.equal(explicit.status, 0, explicit.stderr);
+  const eventsPath = resolve(f.state, '..', 'events.jsonl');
+  const events = readFileSync(eventsPath, 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+  const firstStop = events.find((event) => event.type === 'main_session_stop_observed');
+  assert.equal(firstStop.stop_reason, 'Tushare 返回 HTTP 429，暂时无法完成公共数据读取。');
+
+  const structuredPayload = hook(f, {
+    hook_event_name: 'Stop',
+    stop_hook_active: false,
+    STOP_REASON: { code: 'rate_limit', message: '供应商限频，等待后重试。' },
+    last_assistant_message: '阶段结束。',
+  });
+  assert.equal(structuredPayload.status, 0, structuredPayload.stderr);
+  const secondStop = readFileSync(eventsPath, 'utf8').trim().split('\n').map((line) => JSON.parse(line)).filter((event) => event.type === 'main_session_stop_observed').at(-1);
+  assert.equal(secondStop.stop_reason, '供应商限频，等待后重试。');
+
+  const unmarked = hook(f, { hook_event_name: 'Stop', stop_hook_active: false, last_assistant_message: '阶段结束。工具和证据都已检查。' });
+  assert.equal(unmarked.status, 0, unmarked.stderr);
+  const allStops = readFileSync(eventsPath, 'utf8').trim().split('\n').map((line) => JSON.parse(line)).filter((event) => event.type === 'main_session_stop_observed');
+  assert.equal(Object.hasOwn(allStops.at(-1), 'stop_reason'), false);
+});
+
 function windowsShell(f: ReturnType<typeof setup>, shell: 'powershell' | 'cmd', command: string, input?: string) {
   return spawnSync(shell === 'powershell' ? 'pwsh.exe' : process.env.ComSpec ?? 'cmd.exe',
     shell === 'powershell' ? ['-NoLogo', '-NoProfile', '-NonInteractive', '-Command', command] : ['/d', '/s', '/c', `"${command}"`], {

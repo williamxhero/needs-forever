@@ -95,3 +95,42 @@ This advances the corresponding native binding, continuation, judge, verificatio
 The current repository baseline is `main@07afdc5`, with local and `origin/main` equal and a clean worktree. A fresh 0.3.4 preparation and isolated package discovery were completed on 2026-11-06; details are in [`native-034-preparation.md`](native-034-preparation.md). The preparation and discovery receipts explicitly remain `not_run` for native effectiveness and require Desktop hook trust and a real authorized A. Automated regression is green at 128/128 tests, with 18 generated runtime modules and a passing `git diff --check`. This does not close the native matrix or #38/#33.
 
 The first current-baseline entry attempt is recorded in [`native-034-pending-entry.json`](native-034-pending-entry.json). The 0.3.4 command created a durable `PENDING_NATIVE_HOOK / PAUSED / RECOVERING` checkpoint, but no native Desktop callback bound the current A; `hook_effective=false`, `main_session_id=null` and `continuation_confirmed=false`. The state is therefore retained as a pending external gate, not a failed implementation and not a live pass.
+
+## 2026-11-08 current 0.3.4 live contract closure
+
+The current 0.3.4 live contract is `D:\WILL\TOOLS\needs-forever\.scratch\spec33-0.3.4-root-live` with task ID `spec33-034-root-live`. This is the first current-baseline run that reached a persisted terminal state after the Windows verification fixes.
+
+Authoritative terminal readback from `state.json`:
+
+- `status=DONE`
+- `phase=IDLE`
+- `binding.status=RELEASED`
+- controller lifecycle: `exited`
+- `task_version=29`
+- final `verification_result.passed=true`
+- verifier exit code `0`
+
+The fixed verifier used the original argv without modification:
+
+```text
+C:\Program Files\nodejs\node.exe D:\WILL\TOOLS\needs-forever\.scratch\spec33-0.3.4-root-live\verify.mjs
+```
+
+It returned:
+
+```text
+All three independent stage checks PASS; the failed first route was attempted.
+```
+
+The current artifact checks are exact:
+
+- `route-attempted.txt = required-first-route-failed`
+- `stage1.json = {"stage":1,"value":"alpha"}`
+- `stage2.json = {"stage":2,"value":"alpha-beta"}`
+- `final.json = {"stage":3,"value":"alpha-beta-gamma"}`
+
+The run exercised a real native Desktop Stop, an independent judge, and the fixed independent verifier. The final GUI record is available at `http://127.0.0.1:8787/tasks/spec33-034-root-live/` while the local Web UI server is running.
+
+Implementation changes used by this closure include bounded Windows retries for checkpoint/protected/workspace reads, exclusion of generated supervision fixture roots from the workspace digest, a focused verification sandbox for an absolute verifier and protected-file directory, and read-only Web UI discovery of Windows junction-backed explicit task records. The source and generated runtime are currently uncommitted and still require final review, commit/push, and issue evidence reconciliation.
+
+This closes the current three-stage live contract only. It does not by itself close the complete T01–T20 Desktop acceptance matrix or GitHub #38/#33; those remain open until their required native cases and delivery gates are individually recorded.

@@ -233,7 +233,7 @@ test('native host restart requires explicit same-A resume and never replays a pr
   assert.equal(f.hook({ hook_event_name: 'SessionStart' }).status, 0);
   const recovering = JSON.parse(f.run('status').stdout);
   assert.equal(recovering.phase, 'RECOVERING');
-  assert.equal(recovering.live, true, 'A reachable B cannot stand in for native host readiness.');
+  assert.equal(recovering.live, false, 'The invalidated B must stop while the original A awaits a fresh native receipt.');
   assert.deepEqual(JSON.parse(f.hook({ hook_event_name: 'Stop' }).stdout), {});
   const control = join(f.plugin, 'scripts/main-session.mjs');
   const tool = { tool_use_id: 'host-resume', tool_input: { command: `node "${control}" resume --state "${f.state}" --test-fixture "${f.fixture}"` } };
@@ -246,7 +246,106 @@ test('native host restart requires explicit same-A resume and never replays a pr
   assert.equal(after.live, true);
   assert.notEqual(after.run_generation, original.run_generation);
   assert.equal(after.pending_action, null);
-  assert.equal(after.recovery_history.at(-1).pending_action.delivery_id, original.pending_action.delivery_id);
+  assert.equal(after.recovery_history.at(-1).pending_action, null);
+});
+
+test('recoverable native invalidation re-arms the original A and starts exactly one replacement B after a trusted lifecycle receipt', async (t) => {
+  const f = installed('automatic-native-rebind', { decision: { action: 'CONTINUE', next_message: 'Original direction must not replay.' } }, 'automatic-native-rebind', 0, {}, undefined, process.pid);
+  t.after(() => f.run('pause'));
+  assert.equal(f.hook({ hook_event_name: 'Stop' }).status, 0);
+  const before = JSON.parse(f.run('status').stdout);
+  const oldGeneration = before.run_generation;
+  f.setDesktopPid(process.ppid);
+  assert.equal(f.hook({ hook_event_name: 'SessionStart' }).status, 0);
+  const pending = JSON.parse(f.run('status').stdout);
+  assert.equal(pending.binding.status, 'PENDING_NATIVE_HOOK');
+  assert.equal(pending.binding.operation, 'rebind');
+  assert.equal(pending.phase, 'RECOVERING');
+  assert.equal(pending.main_session_id, 'automatic-native-rebind');
+  assert.equal(pending.pending_action, null);
+  assert.notEqual(pending.run_generation, oldGeneration);
+  assert.equal(pending.controller.lifecycle, 'exited');
+  assert.deepEqual(JSON.parse(f.hook({ hook_event_name: 'UserPromptSubmit', run_generation: oldGeneration, prompt: 'stale lifecycle' }).stdout), {});
+  assert.equal(JSON.parse(f.run('status').stdout).binding.status, 'PENDING_NATIVE_HOOK');
+  assert.equal(f.hook({ hook_event_name: 'UserPromptSubmit', prompt: 'same original A' }).status, 0);
+  let rebound: any;
+  for (let attempt = 0; attempt < 80; attempt++) {
+    rebound = JSON.parse(f.run('status').stdout);
+    if (rebound.controller?.lifecycle === 'running' && rebound.status === 'ACTIVE') break;
+    await delay(25);
+  }
+  assert.equal(rebound.binding.status, 'BOUND');
+  assert.equal(rebound.main_session_id, before.main_session_id);
+  assert.equal(rebound.task_version, before.task_version);
+  assert.equal(rebound.status, 'ACTIVE');
+  assert.equal(rebound.controller.lifecycle, 'running');
+  assert.equal((rebound.judge_thread_ids ?? []).length, (before.judge_thread_ids ?? []).length);
+  assert.equal(rebound.pending_action, null);
+  assert.deepEqual(JSON.parse(f.hook({ hook_event_name: 'Stop' }).stdout), { decision: 'block', reason: 'Original direction must not replay.' });
+  const afterStop = JSON.parse(f.run('status').stdout);
+  assert.notEqual(afterStop.controller.id, pending.controller.id);
+});
+
+test('legacy pending resume checkpoints migrate to automatic rebind on the next original-A lifecycle event', async (t) => {
+  const f = installed('legacy-pending-resume', { decision: { action: 'CONTINUE', next_message: 'Continue after migrated rebind.' } });
+  t.after(() => f.run('pause'));
+  assert.equal(f.run('pause').status, 0);
+  const resumed = f.run('resume', ['--test-fixture', f.fixture]);
+  assert.equal(resumed.status, 0, resumed.stderr);
+  const pending = JSON.parse(f.run('status').stdout);
+  assert.equal(pending.status, 'PAUSED');
+  assert.equal(pending.binding.status, 'PENDING_NATIVE_HOOK');
+  assert.equal(pending.binding.operation, 'resume');
+  assert.equal(f.hook({ hook_event_name: 'UserPromptSubmit', prompt: 'Original A resumed normally.' }).status, 0);
+  assert.equal(JSON.parse(f.run('status').stdout).binding.status, 'PENDING_NATIVE_HOOK');
+  assert.equal(f.hook({ hook_event_name: 'UserPromptSubmit', prompt: 'Original A emitted a fresh lifecycle receipt.' }).status, 0);
+  let rebound: any;
+  for (let attempt = 0; attempt < 80; attempt++) {
+    rebound = JSON.parse(f.run('status').stdout);
+    if (rebound.controller?.lifecycle === 'running' && rebound.status === 'ACTIVE') break;
+    await delay(25);
+  }
+  assert.equal(rebound.binding.status, 'BOUND');
+  assert.equal(rebound.controller.lifecycle, 'running');
+  assert.equal(rebound.recovery_plan.status, 'running');
+  assert.ok(rebound.recovery_plan.generation);
+});
+
+test('foreign and late native rebind receipts cannot wake a paused or completed task', async (t) => {
+  const f = installed('rebind-boundaries', { decision: { action: 'CONTINUE', next_message: 'Continue once.' } }, 'rebind-boundaries', 0, {}, undefined, process.pid);
+  t.after(() => f.run('pause'));
+  f.setDesktopPid(process.ppid);
+  assert.equal(f.hook({ hook_event_name: 'SessionStart' }).status, 0);
+  const pending = JSON.parse(f.run('status').stdout);
+  assert.equal(pending.binding.status, 'PENDING_NATIVE_HOOK');
+  assert.deepEqual(JSON.parse(f.hook({ hook_event_name: 'SessionStart', session_id: 'foreign-A' }).stdout), {});
+  assert.equal(JSON.parse(f.run('status').stdout).binding.status, 'PENDING_NATIVE_HOOK');
+  assert.equal(f.run('pause').status, 0);
+  assert.deepEqual(JSON.parse(f.hook({ hook_event_name: 'SessionStart' }).stdout), {});
+  assert.equal(JSON.parse(f.run('status').stdout).status, 'PAUSED');
+  await delay(50);
+});
+
+test('a lifecycle receipt issued before armNativeRebind is rejected when run_generation is omitted', async (t) => {
+  const f = installed('stale-receipt-fence', { decision: { action: 'CONTINUE', next_message: 'Continue once.' } }, 'stale-receipt-fence', 0, {}, undefined, process.pid);
+  t.after(() => f.run('pause'));
+  const callback = spawn(process.execPath, [join(f.plugin, 'scripts/lifecycle.mjs'), '--test-fixture', f.fixture], { cwd: f.workspace, env: { ...process.env, PLUGIN_ROOT: f.plugin }, stdio: ['pipe', 'ignore', 'ignore'], windowsHide: true });
+  await delay(150);
+  f.setDesktopPid(process.ppid);
+  assert.equal(f.hook({ hook_event_name: 'SessionStart' }).status, 0);
+  callback.stdin.end(JSON.stringify({ hook_event_name: 'UserPromptSubmit', session_id: 'stale-receipt-fence', cwd: f.workspace, prompt: 'delayed callback' }));
+  await new Promise<void>((resolve) => callback.once('exit', () => resolve()));
+  const pending = JSON.parse(f.run('status').stdout);
+  assert.equal(pending.binding.status, 'PENDING_NATIVE_HOOK');
+  assert.equal(f.hook({ hook_event_name: 'UserPromptSubmit', prompt: 'fresh callback' }).status, 0);
+  let rebound: any;
+  for (let attempt = 0; attempt < 80; attempt++) {
+    rebound = JSON.parse(f.run('status').stdout);
+    if (rebound.controller?.lifecycle === 'running') break;
+    await delay(25);
+  }
+  assert.equal(rebound.binding.status, 'BOUND');
+  assert.equal(rebound.controller?.lifecycle, 'running');
 });
 
 test('a second installed plugin package cannot dispatch callbacks to the first package controller', (t) => {

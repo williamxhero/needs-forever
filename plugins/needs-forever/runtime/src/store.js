@@ -3,6 +3,35 @@ import { dirname, resolve, relative, isAbsolute } from 'node:path';
 import { randomUUID, createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { redact } from './redact.js';
+function readJsonRetry(path) {
+    const deadline = Date.now() + 5_000;
+    while (true) {
+        try {
+            return JSON.parse(readFileSync(path, 'utf8'));
+        }
+        catch (error) {
+            const code = error.code;
+            if (process.platform !== 'win32' || !['EPERM', 'EACCES', 'EBUSY'].includes(code ?? '') || Date.now() >= deadline) {
+                throw new Error(`read ${path}: ${error.message}`, { cause: error });
+            }
+            Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 10 + Math.floor(Math.random() * 40));
+        }
+    }
+}
+function readFileRetry(path) {
+    const deadline = Date.now() + 5_000;
+    while (true) {
+        try {
+            return readFileSync(path);
+        }
+        catch (error) {
+            const code = error.code;
+            if (process.platform !== 'win32' || !['EPERM', 'EACCES', 'EBUSY'].includes(code ?? '') || Date.now() >= deadline)
+                throw error;
+            Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 10 + Math.floor(Math.random() * 40));
+        }
+    }
+}
 export class Store {
     path;
     directory;
@@ -29,7 +58,7 @@ export class Store {
                     const guard = `${path}.reclaim`;
                     const guardFd = openSync(guard, 'wx');
                     try {
-                        const owner = JSON.parse(readFileSync(path, 'utf8'));
+                        const owner = readJsonRetry(path);
                         if (!Number.isInteger(owner.pid) || owner.pid <= 0 || owner.task_id !== task.task_id || owner.state_path !== this.path)
                             throw new Error('Existing lock ownership cannot be safely recovered.');
                         try {
@@ -63,11 +92,22 @@ export class Store {
     release() {
         for (const lock of this.locks.splice(0)) {
             closeSync(lock.fd);
-            if (JSON.parse(readFileSync(lock.path, 'utf8')).token === lock.token)
+            try {
+                // The current process created this path with wx and kept the handle
+                // open for the whole ownership interval. Re-reading it during
+                // shutdown only creates a Windows sharing violation; no other owner
+                // can replace it before this process releases the path.
                 unlinkSync(lock.path);
+            }
+            catch (error) {
+                // A concurrent recovery may have already removed this owned lock.
+                // Treat that as successful cleanup; preserve all other failures.
+                if (error.code !== 'ENOENT')
+                    throw error;
+            }
         }
     }
-    read() { return JSON.parse(readFileSync(this.path, 'utf8')); }
+    read() { return readJsonRetry(this.path); }
     protect(state) {
         if (!state.task.verify)
             return;
@@ -80,7 +120,7 @@ export class Store {
             const suffix = relative(realpathSync(state.task.workspace), realpathSync(path));
             if (isAbsolute(suffix) || suffix === '..' || suffix.startsWith('../') || suffix.startsWith('..\\'))
                 throw new Error('Protected files must remain within the task workspace.');
-            const content = readFileSync(path);
+            const content = readFileRetry(path);
             return { path, sha256: createHash('sha256').update(content).digest('hex'), content_base64: content.toString('base64') };
         });
         this.save(state);
@@ -90,7 +130,7 @@ export class Store {
         return (state.protected_baseline ?? []).flatMap((file) => {
             let actual = null;
             try {
-                actual = createHash('sha256').update(readFileSync(file.path)).digest('hex');
+                actual = createHash('sha256').update(readFileRetry(file.path)).digest('hex');
             }
             catch (error) {
                 if (error.code !== 'ENOENT')
