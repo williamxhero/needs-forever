@@ -20,7 +20,7 @@
     "src/snapshot.js": "6b815e1bc90f42d4dbb5672ee314e17b71763c7baeced3a119ec91aa36193427",
     "src/store.js": "99eab41bb05630a15e650de606ec9c57c3acd5fde09c75dd2a9702bc171fec3d",
     "src/supervisor.js": "23b460056e40b13dbf3f614d0bfc44de24a7910665acb8307aa2ec5392597ec5",
-    "src/transport.js": "70edcbafcac34b37db9e796982167f9a5c9084761c081688528abf31c34baf39",
+    "src/transport.js": "fd9a5d847cba0ffcab2744db5d743db5b55c84ec08102b65219f42f155e6cc66",
     "src/types.js": "1d776e8997c21eccad34b1b01358b1a3f8df090b5647a855ba3972d361311f08",
     "src/web.js": "7d4a4b108c34e8c8f5508038e89e152a139ec52f081cfb004a7bbc2c59cf00ab"
   }

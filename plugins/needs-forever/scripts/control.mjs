@@ -8,7 +8,7 @@ import { dirname, resolve, isAbsolute } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
-import { codexCommand, PROTOCOL_VERSION } from '../runtime/src/transport.js';
+import { codexCommand, PROTOCOL_VERSION, SUPPORTED_PROTOCOL_VERSIONS } from '../runtime/src/transport.js';
 import { NATIVE_BINDING_COMMAND_HINT } from '../runtime/src/control-intent.js';
 import { redact } from '../runtime/src/redact.js';
 import { prepareMainSession, resumeMainSession } from '../runtime/src/main-session.js';
@@ -214,7 +214,7 @@ async function main() {
     const argv = codexCommand();
     const result = spawnSync(argv[0], [...argv.slice(1), '--version'], { encoding: 'utf8', windowsHide: true, timeout: 10_000 });
     const version = result.stdout?.trim();
-    if (Number(process.versions.node.split('.')[0]) < 24 || result.status !== 0 || version !== PROTOCOL_VERSION) throw new Error(`Requires Node.js >=24 and ${PROTOCOL_VERSION}; found Node ${process.versions.node}, Codex ${version ?? 'unavailable'}.`);
+    if (Number(process.versions.node.split('.')[0]) < 24 || result.status !== 0 || !SUPPORTED_PROTOCOL_VERSIONS.includes(version)) throw new Error(`Requires Node.js >=24 and one of ${SUPPORTED_PROTOCOL_VERSIONS.join(', ')}; found Node ${process.versions.node}, Codex ${version ?? 'unavailable'}.`);
     return emit({ ready: true, node: process.version, codex: version, plugin_version: read(fileURLToPath(new URL('../.codex-plugin/plugin.json', import.meta.url))).version });
   }
   const flags = options(args);

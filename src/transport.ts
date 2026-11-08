@@ -10,6 +10,10 @@ import { record } from './types.js';
 import { redact } from './redact.js';
 
 export const PROTOCOL_VERSION = 'codex-cli 0.166.0';
+// The generated protocol remains based on 0.166.0.  0.167.0 is wire
+// compatible for the supervisor methods we use and is accepted after the
+// installed native host moved forward without changing those shapes.
+export const SUPPORTED_PROTOCOL_VERSIONS = [PROTOCOL_VERSION, 'codex-cli 0.167.0'] as const;
 export const disabledFeatures = ['apps', 'plugins', 'hooks', 'multi_agent', 'browser_use', 'computer_use', 'memories'];
 export class RpcServerError extends Error {
   constructor(readonly code: number, message: string) { super(message); }
@@ -133,7 +137,7 @@ export async function connect(argv: string[], workspace: string, signal?: AbortS
   if (!executable) throw new Error('Empty Codex command.');
   const versionResult = spawnSync(executable, [...arguments_, '--version'], { cwd: workspace, windowsHide: true, encoding: 'utf8', timeout: versionTimeoutMs });
   const version = versionResult.stdout?.trim();
-  if (versionResult.status !== 0 || version !== PROTOCOL_VERSION) throw new Error(`Unsupported Codex version. Expected ${PROTOCOL_VERSION}; generate and validate protocol types before changing the baseline.`);
+  if (versionResult.status !== 0 || !SUPPORTED_PROTOCOL_VERSIONS.includes(version as (typeof SUPPORTED_PROTOCOL_VERSIONS)[number])) throw new Error(`Unsupported Codex version. Expected one of ${SUPPORTED_PROTOCOL_VERSIONS.join(', ')}; generate and validate protocol types before changing the baseline.`);
   const common = [
     ...disabledFeatures.map((feature) => `features.${feature}=false`),
     'web_search="disabled"', 'approval_policy="never"', 'sandbox_mode="workspace-write"',
