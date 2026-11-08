@@ -66,12 +66,93 @@ test('TaskCatalog presents persisted state and groups events into worker rounds'
     assert.equal(record.state.status, 'ACTIVE');
     assert.equal(record.state.workerThreadId, 'worker-001');
     assert.equal(record.state.lastError, '需要重新验证原始会话。');
+    assert.deepEqual(record.state.recovery, {
+      phase: 'WORKER',
+      source: 'none',
+      reason: '需要重新验证原始会话。',
+      kind: null,
+      attempt: 0,
+      nextRetryAt: null,
+      nativeReceipt: 'not_required',
+      cancellationBoundary: 'none',
+    });
     assert.equal(record.eventCount, 6);
     assert.deepEqual(record.snapshotIds, ['snap-001']);
     assert.equal(record.rounds.length, 1);
     assert.equal(record.rounds[0]?.worker?.eventType, 'worker_started');
     assert.equal(record.rounds[0]?.result?.eventType, 'decision');
     assert.equal(record.rounds[0]?.result?.result, 'CONTINUE');
+  } finally {
+    data.cleanup();
+  }
+});
+
+test('TaskCatalog exposes durable recovery metadata and distinguishes native waiting from user cancellation and DONE', () => {
+  const data = fixture();
+  try {
+    const statePath = resolve(data.directory, 'state.json');
+    const state = JSON.parse(readFileSync(statePath, 'utf8'));
+    state.status = 'ACTIVE';
+    state.phase = 'RECOVERING';
+    state.retry = { kind: 'controller_startup', attempt: 3, next_at: '2026-11-01T08:05:00.000Z' };
+    state.last_error = 'controller exited unexpectedly';
+    state.recovery_condition = { kind: 'controller_startup', message: 'controller exited unexpectedly', resume_when: 'retry automatically' };
+    writeFileSync(statePath, `${JSON.stringify(state)}\n`);
+    let view = new TaskCatalog({ workspace: data.workspace }).read('demo-001').state;
+    assert.equal(view.recovery.source, 'automatic');
+    assert.equal(view.recovery.phase, 'RECOVERING');
+    assert.equal(view.recovery.reason, 'controller exited unexpectedly');
+    assert.equal(view.recovery.kind, 'controller_startup');
+    assert.equal(view.recovery.attempt, 3);
+    assert.equal(view.recovery.nextRetryAt, '2026-11-01T08:05:00.000Z');
+    assert.equal(view.recovery.nativeReceipt, 'not_required');
+    assert.equal(view.recovery.cancellationBoundary, 'none');
+
+    state.recovery = {
+      source: 'automatic', kind: 'controller_crash', reason: 'controller process exited',
+      attempt: 4, next_retry_at: '2026-11-01T08:06:00.000Z', nativeReceipt: 'waiting',
+    };
+    state.phase = 'RECOVERING';
+    state.retry = { kind: null, attempt: 0, next_at: null };
+    state.recovery_condition = undefined;
+    writeFileSync(statePath, `${JSON.stringify(state)}\n`);
+    view = new TaskCatalog({ workspace: data.workspace }).read('demo-001').state;
+    assert.equal(view.recovery.kind, 'controller_crash');
+    assert.equal(view.recovery.reason, 'controller process exited');
+    assert.equal(view.recovery.attempt, 4);
+    assert.equal(view.recovery.nextRetryAt, '2026-11-01T08:06:00.000Z');
+    assert.equal(view.recovery.nativeReceipt, 'waiting');
+
+    state.status = 'PAUSED';
+    state.phase = 'RECOVERING';
+    state.recovery = undefined;
+    state.pause_reason = undefined;
+    state.retry = { kind: null, attempt: 0, next_at: null };
+    state.recovery_condition = { kind: 'resume_native_receipt', message: '等待原始 A 的 native receipt。', resume_when: '收到新的 receipt' };
+    state.binding = { status: 'PENDING_NATIVE_HOOK' };
+    writeFileSync(statePath, `${JSON.stringify(state)}\n`);
+    view = new TaskCatalog({ workspace: data.workspace }).read('demo-001').state;
+    assert.equal(view.recovery.source, 'automatic');
+    assert.equal(view.recovery.nativeReceipt, 'waiting');
+    assert.equal(view.recovery.kind, 'resume_native_receipt');
+
+    state.status = 'PAUSED';
+    state.phase = 'IDLE';
+    state.pause_reason = 'user';
+    state.recovery_condition = undefined;
+    state.binding = undefined;
+    writeFileSync(statePath, `${JSON.stringify(state)}\n`);
+    view = new TaskCatalog({ workspace: data.workspace }).read('demo-001').state;
+    assert.equal(view.recovery.source, 'user_pause');
+    assert.equal(view.recovery.cancellationBoundary, 'user_pause');
+    assert.equal(view.recovery.nativeReceipt, 'not_required');
+
+    state.status = 'DONE';
+    state.pause_reason = undefined;
+    writeFileSync(statePath, `${JSON.stringify(state)}\n`);
+    view = new TaskCatalog({ workspace: data.workspace }).read('demo-001').state;
+    assert.equal(view.recovery.source, 'done');
+    assert.equal(view.recovery.cancellationBoundary, 'done');
   } finally {
     data.cleanup();
   }
@@ -187,6 +268,8 @@ test('web server exposes task, record and validated control endpoints', async ()
     assert.match(page, /data-collapsible/);
     assert.match(page, /data-collapsible-key/);
     assert.match(page, /task-actions/);
+    assert.match(page, /actionButtonHtml\('delete'/);
+    assert.match(page, /系统级日志不会删除/);
     assert.match(page, /data-action/);
     assert.match(page, /function refresh\(\)/);
     assert.doesNotMatch(page, /location\.reload/);

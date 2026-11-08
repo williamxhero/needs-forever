@@ -18,6 +18,6 @@
     "src/supervisor.js": "48ec372d5895d2c5f3060ebf1b799b5e7fe3ab453c99255a12adbfd8b1f03c9c",
     "src/transport.js": "70edcbafcac34b37db9e796982167f9a5c9084761c081688528abf31c34baf39",
     "src/types.js": "1d776e8997c21eccad34b1b01358b1a3f8df090b5647a855ba3972d361311f08",
-    "src/web.js": "ecbbd5410adba05ce06e4cbf588747e785d09f3678ccf0993bdace8d2498ad06"
+    "src/web.js": "b8df79e2e7d06d9bdbd7881f5b75a0fbc3ad967426c82ebf4efda76097c00310"
   }
 }
