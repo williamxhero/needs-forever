@@ -6,6 +6,7 @@ import { reachedLimits } from './rules.js';
 import { Store } from './store.js';
 import { record, text } from './types.js';
 import type { State, Task } from './types.js';
+import { createRecoveryPlan } from './recovery-coordinator.js';
 
 export interface MainSessionState extends State {
   control_mode: 'main-session';
@@ -184,6 +185,7 @@ export function prepareMainSession(taskPath: string, statePath: string, simulate
       worker_turn_count: 0, elapsed_active_seconds: 0, updated_at: new Date().toISOString(), codex_version: null, mode: simulated ? 'simulated' : 'live',
       recovery_condition: { kind: 'native_hook_required', message: 'Awaiting a correlated native Desktop hook; supervision is not active.', resume_when: 'Review/trust the plugin hooks and run preparation from the intended main session.' },
     };
+    state.recovery_plan = createRecoveryPlan(state, state.recovery_condition!, true);
     store.protect(state);
     store.save(state);
     registerState(task.workspace, statePath);
@@ -228,6 +230,7 @@ export function resumeMainSession(statePath: string, taskPath?: string, simulate
     state.binding = { ...state.binding, status: 'PENDING_NATIVE_HOOK', challenge: randomUUID(), tool_use_id: null, operation: 'resume' };
     state.host.hook_effective = false; state.host.reason = 'Explicit resume awaits a fresh native receipt from the original main session.';
     state.recovery_condition = { kind: 'resume_native_receipt', message: state.host.reason, resume_when: 'Complete resume in the original A, then wait for a new native Stop. Old directions are never replayed.' };
+    state.recovery_plan = createRecoveryPlan(state, state.recovery_condition, true);
     store.save(state); store.event(state, 'main_session_resume_prepared', { main_session_id: state.main_session_id, run_generation: state.run_generation });
     registerState(task.workspace, statePath); return state;
   } finally { store.release(); }

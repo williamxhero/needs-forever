@@ -218,6 +218,7 @@ function stateView(state, title, sessionId) {
         lastError: state.last_error ?? null,
         pauseReason: state.pause_reason ?? null,
         recoveryCondition: state.recovery_condition ?? null,
+        recoveryPlan: state.recovery_plan ?? null,
     };
 }
 function resultForRound(round) {

@@ -24,6 +24,7 @@ export interface TaskStateView {
   lastError: string | null;
   pauseReason: State['pause_reason'] | null;
   recoveryCondition: State['recovery_condition'] | null;
+  recoveryPlan: State['recovery_plan'] | null;
 }
 
 export interface HumanEvent {
@@ -286,6 +287,7 @@ function stateView(state: State, title: string, sessionId: string): TaskStateVie
     lastError: state.last_error ?? null,
     pauseReason: state.pause_reason ?? null,
     recoveryCondition: state.recovery_condition ?? null,
+    recoveryPlan: state.recovery_plan ?? null,
   };
 }
 
