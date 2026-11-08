@@ -45,7 +45,21 @@ export interface StopRequest {
   mode: 'live' | 'simulated';
   last_assistant_message: string | null;
 }
-export function readJson(path: string): any { return JSON.parse(readFileSync(path, 'utf8')); }
+export function readJson(path: string): any {
+  // Windows can briefly deny a read while the state checkpoint is being
+  // atomically replaced by another owner. Keep the previous checkpoint
+  // intact and retry transient sharing errors instead of turning a completed
+  // judgment into an unknown recovery state.
+  const deadline = Date.now() + 5_000;
+  while (true) {
+    try { return JSON.parse(readFileSync(path, 'utf8')); }
+    catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (process.platform !== 'win32' || !['EPERM', 'EACCES', 'EBUSY'].includes(code ?? '') || Date.now() >= deadline) throw error;
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 10 + Math.floor(Math.random() * 40));
+    }
+  }
+}
 export function atomicJson(path: string, value: unknown): void {
   mkdirSync(dirname(path), { recursive: true });
   const temporary = `${path}.${randomUUID()}.tmp`;

@@ -263,15 +263,20 @@ export async function runController(path: string, pluginRoot: string, fixturePat
           const timer = setTimeout(() => { invalidate('Stop hook deadline elapsed; late supervisor output is invalid.'); socket.end('{}\n'); }, Math.max(1, Date.parse(request.deadline_at) - Date.now()));
           try {
             const valid = () => {
-              const saved = readJson(path) as MainSessionState;
+              // The controller owns the task lock for the entire Stop. Read
+              // the in-process checkpoint here instead of reopening
+              // state.json while C/verification is active; Windows readers
+              // can otherwise remain in a sharing violation indefinitely.
+              const saved = state;
               return current.valid && active === current && !closing && !socket.destroyed && saved.status === 'ACTIVE' && saved.phase !== 'RECOVERING' && saved.run_generation === request.run_generation && saved.task_version === request.task_version && saved.contract_sha256 === request.contract_sha256 && saved.contract_sha256 === contractHash(saved.task) && (saved.input_epoch ?? 0) === current.epoch && saved.last_stop?.stop_attempt_id === request.stop_attempt_id && Date.now() < Date.parse(request.deadline_at);
             };
             const guarded = new class extends Store {
               override save(candidate: import('./types.js').State): void {
                 if (!valid()) throw new Error('Obsolete judgment checkpoint rejected.');
-                const saved = readJson(path) as MainSessionState;
-                saved.phase = candidate.phase; if (candidate.judge_thread_ids) saved.judge_thread_ids = candidate.judge_thread_ids; saved.codex_version = candidate.codex_version;
-                super.save(saved);
+                state.phase = candidate.phase;
+                if (candidate.judge_thread_ids) state.judge_thread_ids = candidate.judge_thread_ids;
+                state.codex_version = candidate.codex_version;
+                super.save(state);
               }
             }(path);
             let decision: Decision;
@@ -281,7 +286,6 @@ export async function runController(path: string, pluginRoot: string, fixturePat
               catch (error) {
                 if (!valid() || current.abort.signal.aborted) return {};
                 const classification = classifyRecoveryError(error);
-                state = readJson(path) as MainSessionState;
                 state.recovery_failures = redact(recordRecoveryFailure((state.recovery_failures ?? []) as RecoveryFailure[], error)) as RecoveryFailure[];
                 const backoff = nextBackoff((state.retry.attempt ?? 0) + 1);
                 state.retry = { kind: classification.kind, attempt: backoff.attempt, next_at: backoff.next_at };
@@ -291,7 +295,6 @@ export async function runController(path: string, pluginRoot: string, fixturePat
               }
             }
             if (!valid()) return {};
-            state = readJson(path) as MainSessionState;
             accrue();
             const limits = reachedLimits(state.task.limits, state);
             if (limits.time || (decision.action === 'CONTINUE' && limits.turns)) { pause('user_limit'); return {}; }
@@ -300,6 +303,11 @@ export async function runController(path: string, pluginRoot: string, fixturePat
             state.host.hook_effective = state.mode === 'live' && state.host.source === 'native-desktop';
             state.host.reason = 'Correlated synchronous Stop judged and returned; actual main-session continuation requires subsequent matching activity.';
             if (decision.action !== 'CONTINUE') {
+              // Do not let the 250 ms checkpoint writer race the terminal
+              // checkpoint. On Windows that race can keep the state file in
+              // a sharing window long enough for a valid DONE judgment to be
+              // misclassified as an unknown recovery.
+              clearInterval(checkpointTimer);
               state.status = decision.action; state.phase = 'IDLE'; state.pending_action = null;
               state.stop_transport = { request, outcome: 'returned' };
               if (decision.action === 'DONE') state.binding.status = 'RELEASED';
@@ -345,7 +353,10 @@ export async function runController(path: string, pluginRoot: string, fixturePat
     state.host.reason = 'Bound controller reachable; Stop continuation and actual main-session activity still require evidence.';
     store.save(state); store.event(state, 'main_session_controller_started', { controller_id: id, main_session_id: state.main_session_id, pid: process.pid });
     checkpointTimer = setInterval(() => {
-      if (closing) return;
+      // A Stop owns the checkpoint while judge/verification is in flight.
+      // Repeated heartbeat renames during that window can keep Windows
+      // readers in a sharing violation and strand a valid terminal decision.
+      if (closing || active) return;
       state = readJson(path) as MainSessionState; accrue();
       const hostPid = (state.host as typeof state.host & { desktop_pid?: number }).desktop_pid;
       if (state.status === 'ACTIVE' && state.phase !== 'RECOVERING' && hostPid && processAbsent(hostPid)) { cancelActive('Desktop owner exited.'); recover('Desktop owner exited; explicit same-A resume required.'); }
@@ -364,7 +375,15 @@ export async function runController(path: string, pluginRoot: string, fixturePat
     throw error;
   } finally {
     clearInterval(checkpointTimer);
-    if (lease !== undefined) { closeSync(lease); if (JSON.parse(readFileSync(leasePath, 'utf8')).controller_id === id) unlinkSync(leasePath); }
+    if (lease !== undefined) {
+      // This process created the exclusive lease and no recovery can reclaim
+      // it while the controller is alive. Reading the lease again during
+      // shutdown is both unnecessary and vulnerable to Windows sharing
+      // violations, so release the owned path directly after closing it.
+      closeSync(lease);
+      try { unlinkSync(leasePath); }
+      catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
+    }
     store.release();
     if (process.platform !== 'win32' && existsSync(controller.endpoint)) unlinkSync(controller.endpoint);
   }

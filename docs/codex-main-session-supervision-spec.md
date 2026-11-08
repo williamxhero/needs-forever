@@ -85,6 +85,7 @@
 ### 3. Stop hook 是唯一续跑入口
 
 - 使用同步 `Stop` hook 联系 B 并等待判断；B 的 CONTINUE 结果通过宿主规定的 `decision` / `reason` 返回，继续发生在 A。不将异步 hook 的输出当作能够唤醒空闲会话的机制。
+- WORKER 若需要说明停止原因，必须在 Stop payload 或最后一条消息中提供结构化 `STOP_REASON: ...`（也接受带 `reason` / `message` 的 JSON 值）；生命周期只持久化这个显式字段，缺少字段时保持空白，不从普通文本推断原因。
 - 首版不同时实现 `codex queue` 或第二个 app-server 对 A 的续跑入口，避免两套发送和恢复机制竞争。后续若要加入异步投递，另立明确设计和验收，不作为本 SPEC 的隐式 fallback。
 - hook 仅对已绑定且活动的任务生效；DONE、WAIT_EXTERNAL、PAUSED、未绑定聊天和独立 C 均不产生自动续跑。
 - 用户补充的 opt-in 边界：只有明确执行 start / resume（内部 prepare）入口并经原生凭据关联建立活动绑定后，才产生监督效果。普通聊天、查看/搜索/打印命令或示例、doctor / status 不写入监督状态，不启动 B/C，不返回 CONTINUE；命令文本出现路径或 start 单词不算调用。宿主仍可能分发全局 hook 并展示通用 hook 活动，插件不承诺宿主零脚本调用或零通用 UI。

@@ -5,7 +5,24 @@ import { tmpdir } from 'node:os';
 import { reachedLimits } from './rules.js';
 import { Store } from './store.js';
 import { record, text } from './types.js';
-export function readJson(path) { return JSON.parse(readFileSync(path, 'utf8')); }
+export function readJson(path) {
+    // Windows can briefly deny a read while the state checkpoint is being
+    // atomically replaced by another owner. Keep the previous checkpoint
+    // intact and retry transient sharing errors instead of turning a completed
+    // judgment into an unknown recovery state.
+    const deadline = Date.now() + 5_000;
+    while (true) {
+        try {
+            return JSON.parse(readFileSync(path, 'utf8'));
+        }
+        catch (error) {
+            const code = error.code;
+            if (process.platform !== 'win32' || !['EPERM', 'EACCES', 'EBUSY'].includes(code ?? '') || Date.now() >= deadline)
+                throw error;
+            Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 10 + Math.floor(Math.random() * 40));
+        }
+    }
+}
 export function atomicJson(path, value) {
     mkdirSync(dirname(path), { recursive: true });
     const temporary = `${path}.${randomUUID()}.tmp`;

@@ -5,6 +5,32 @@ import { tmpdir } from 'node:os';
 import type { State, Snapshot, Task } from './types.js';
 import { redact } from './redact.js';
 
+function readJsonRetry(path: string): any {
+  const deadline = Date.now() + 5_000;
+  while (true) {
+    try { return JSON.parse(readFileSync(path, 'utf8')); }
+    catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (process.platform !== 'win32' || !['EPERM', 'EACCES', 'EBUSY'].includes(code ?? '') || Date.now() >= deadline) {
+        throw new Error(`read ${path}: ${(error as Error).message}`, { cause: error });
+      }
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 10 + Math.floor(Math.random() * 40));
+    }
+  }
+}
+
+function readFileRetry(path: string): Buffer {
+  const deadline = Date.now() + 5_000;
+  while (true) {
+    try { return readFileSync(path); }
+    catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (process.platform !== 'win32' || !['EPERM', 'EACCES', 'EBUSY'].includes(code ?? '') || Date.now() >= deadline) throw error;
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 10 + Math.floor(Math.random() * 40));
+    }
+  }
+}
+
 export class Store {
   readonly directory: string;
   private readonly locks: { fd: number; path: string; token: string }[] = [];
@@ -24,7 +50,7 @@ export class Store {
           const guard = `${path}.reclaim`;
           const guardFd = openSync(guard, 'wx');
           try {
-            const owner = JSON.parse(readFileSync(path, 'utf8'));
+            const owner = readJsonRetry(path);
             if (!Number.isInteger(owner.pid) || owner.pid <= 0 || owner.task_id !== task.task_id || owner.state_path !== this.path) throw new Error('Existing lock ownership cannot be safely recovered.');
             try { process.kill(owner.pid, 0); throw new Error('Task already has a live supervisor lock.'); }
             catch (probe) { if ((probe as NodeJS.ErrnoException).code !== 'ESRCH') throw probe; }
@@ -46,10 +72,20 @@ export class Store {
   release(): void {
     for (const lock of this.locks.splice(0)) {
       closeSync(lock.fd);
-      if (JSON.parse(readFileSync(lock.path, 'utf8')).token === lock.token) unlinkSync(lock.path);
+      try {
+        // The current process created this path with wx and kept the handle
+        // open for the whole ownership interval. Re-reading it during
+        // shutdown only creates a Windows sharing violation; no other owner
+        // can replace it before this process releases the path.
+        unlinkSync(lock.path);
+      } catch (error) {
+        // A concurrent recovery may have already removed this owned lock.
+        // Treat that as successful cleanup; preserve all other failures.
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+      }
     }
   }
-  read(): State { return JSON.parse(readFileSync(this.path, 'utf8')) as State; }
+  read(): State { return readJsonRetry(this.path) as State; }
   protect(state: State): void {
     if (!state.task.verify) return;
     if (state.protected_baseline) return;
@@ -58,7 +94,7 @@ export class Store {
       const path = resolve(state.task.workspace, file);
       const suffix = relative(realpathSync(state.task.workspace), realpathSync(path));
       if (isAbsolute(suffix) || suffix === '..' || suffix.startsWith('../') || suffix.startsWith('..\\')) throw new Error('Protected files must remain within the task workspace.');
-      const content = readFileSync(path);
+      const content = readFileRetry(path);
       return { path, sha256: createHash('sha256').update(content).digest('hex'), content_base64: content.toString('base64') };
     });
     this.save(state);
@@ -67,7 +103,7 @@ export class Store {
   protectedChanges(state: State): { path: string; expected_sha256: string; actual_sha256: string | null }[] {
     return (state.protected_baseline ?? []).flatMap((file) => {
       let actual: string | null = null;
-      try { actual = createHash('sha256').update(readFileSync(file.path)).digest('hex'); }
+      try { actual = createHash('sha256').update(readFileRetry(file.path)).digest('hex'); }
       catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
       return actual === file.sha256 ? [] : [{ path: file.path, expected_sha256: file.sha256, actual_sha256: actual }];
     });

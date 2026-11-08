@@ -19,6 +19,41 @@ function strings(value) {
 function isAgent(event) {
     return event.agent_id != null || event.agent_type != null || event.agent_transcript_path != null || event.hook_event_name === 'SubagentStop' || event.hook_event_name === 'SubagentStart';
 }
+function reasonValue(value) {
+    if (typeof value === 'string')
+        return value.trim() || null;
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        return null;
+    for (const key of ['reason', 'message', 'text', 'value']) {
+        const field = value[key];
+        if (typeof field === 'string' && field.trim())
+            return field.trim();
+    }
+    return null;
+}
+function stopReason(message) {
+    if (typeof message !== 'string')
+        return reasonValue(message);
+    const value = String(redact(message));
+    // The worker may emit one explicit structured field in the hook payload or
+    // final message: `STOP_REASON: ...`. Keep the value verbatim and never infer
+    // a reason from ordinary prose; an unmarked Stop must remain blank in the UI.
+    const match = value.match(/(?:^|\r?\n)\s*STOP_REASON\s*[:=]\s*([^\r\n]+)\s*(?:\r?\n|$)/i);
+    if (!match)
+        return null;
+    const candidate = match[1]?.trim() ?? '';
+    if (!candidate)
+        return null;
+    try {
+        const structured = JSON.parse(candidate);
+        const parsed = reasonValue(structured);
+        return parsed;
+    }
+    catch {
+        // Plain text is the normal structured field value.
+    }
+    return candidate;
+}
 export function handleLifecycle(input, host, pluginRoot, adapterOccurrenceId) {
     const event = record(input);
     const name = text(event.hook_event_name, 'hook_event_name');
@@ -104,7 +139,8 @@ export function handleLifecycle(input, host, pluginRoot, adapterOccurrenceId) {
             state.last_stop = request;
             const store = new Store(path);
             store.save(state);
-            store.event(state, 'main_session_stop_observed', { session_id: session, turn_id: request.turn_id, stop_attempt_id: request.stop_attempt_id, run_generation: state.run_generation, host_source: host.source });
+            const stopReasonValue = stopReason(event.stop_reason ?? event.STOP_REASON) ?? stopReason(request.last_assistant_message);
+            store.event(state, 'main_session_stop_observed', { session_id: session, turn_id: request.turn_id, stop_attempt_id: request.stop_attempt_id, run_generation: state.run_generation, host_source: host.source, ...(stopReasonValue ? { stop_reason: stopReasonValue } : {}) });
             // This only creates the request. The B adapter must validate an active
             // lease and return a supported host decision before claiming readiness.
             return state.status === 'ACTIVE' ? { state_path: path, stop_request: request } : {};
