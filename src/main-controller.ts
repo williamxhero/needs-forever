@@ -6,7 +6,7 @@ import type { Socket } from 'node:net';
 import { resolve, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
 import { setTimeout as delay } from 'node:timers/promises';
-import { canonicalPath, registeredStatePaths, readJson, mainLeasePath, contractHash } from './main-session.js';
+import { armNativeRebind, canonicalPath, registeredStatePaths, readJson, mainLeasePath, contractHash } from './main-session.js';
 import type { MainSessionState, StopRequest } from './main-session.js';
 import { handleLifecycle } from './lifecycle.js';
 import { Store } from './store.js';
@@ -81,7 +81,11 @@ export async function prepareControllerResume(path: string): Promise<void> {
 }
 export async function launchController(path: string, pluginRoot: string, fixture?: string): Promise<void> {
   const state = readJson(path) as MainSessionState;
-  if (state.controller) throw new Error('A controller receipt already exists; use explicit resume, never silently replace it.');
+  if (state.controller?.lifecycle === 'running') {
+    if (!processAbsent(state.controller.pid)) throw new Error('A controller receipt already exists; use explicit resume, never silently replace it.');
+    state.controller = { ...state.controller, lifecycle: 'exited' };
+  }
+  if (state.controller?.lifecycle === 'exited') delete state.controller;
   state.controller_startup_deadline = new Date(Date.now() + 25_000).toISOString(); new Store(path).save(state);
   const script = resolve(pluginRoot, 'scripts/controller.mjs');
   const child = spawn(process.execPath, [script, path, ...(fixture ? ['--test-fixture', fixture] : [])], { cwd: state.task.workspace, detached: true, windowsHide: true, stdio: ['ignore', 'ignore', 'ignore', 'ipc'] });
@@ -93,8 +97,18 @@ export async function launchController(path: string, pluginRoot: string, fixture
   }); } catch (error) {
     const saved = readJson(path) as MainSessionState;
     if (!saved.controller) {
-      saved.phase = 'RECOVERING'; saved.last_error = String(redact((error as Error).message));
-      saved.recovery_condition = { kind: 'controller_startup', message: saved.last_error, resume_when: 'Resolve the existing ownership or startup failure, then explicitly resume the bound main session.' };
+      const message = String(redact((error as Error).message));
+      if (saved.control_mode === 'main-session' && saved.binding.status === 'BOUND' && saved.main_session_id && saved.status !== 'DONE') {
+        armNativeRebind(saved, message);
+        new Store(path).save(saved);
+      } else {
+        saved.phase = 'RECOVERING'; saved.last_error = message;
+        saved.recovery_condition = { kind: 'controller_startup', message: saved.last_error, resume_when: 'Resolve the existing ownership or startup failure, then explicitly resume the bound main session.' };
+        new Store(path).save(saved);
+      }
+    } else if (saved.control_mode === 'main-session' && saved.binding.status === 'BOUND' && saved.main_session_id && saved.status !== 'DONE') {
+      armNativeRebind(saved, String(redact((error as Error).message)));
+      saved.controller = { ...saved.controller, lifecycle: 'exited' };
       new Store(path).save(saved);
     }
     throw error;
@@ -176,6 +190,13 @@ export async function runController(path: string, pluginRoot: string, fixturePat
     state.phase = 'RECOVERING'; state.last_error = String(redact(message)); state.host.hook_effective = false;
     state.recovery_condition = { kind: 'stop_transport', message: state.last_error, resume_when: 'Inspect the preserved Stop outcome and explicitly resume the same main session.' };
   };
+  const rearmBinding = (message: string, desktopPid?: number) => {
+    if (state.status === 'PAUSED' || state.status === 'DONE' || state.binding.status !== 'BOUND' || !state.main_session_id) return;
+    if (desktopPid) state.host.desktop_pid = desktopPid;
+    armNativeRebind(state, String(redact(message)));
+    state.controller = { ...controller, lifecycle: 'exited' };
+    store.save(state);
+  };
   const shutdown = () => {
     if (closing) return; closing = true;
     clearInterval(checkpointTimer);
@@ -218,7 +239,9 @@ export async function runController(path: string, pluginRoot: string, fixturePat
           if (event?.session_id !== state.main_session_id || canonicalPath(event.cwd) !== canonicalPath(state.task.workspace) || event.agent_id != null || event.agent_type != null || event.agent_transcript_path != null) return {};
           const desktopRestarted = event.hook_event_name === 'SessionStart' && Number.isInteger(event.callback_desktop_pid) && Number.isInteger(state.host.desktop_pid) && event.callback_desktop_pid !== state.host.desktop_pid;
           if (desktopRestarted || (event.callback_plugin_root && canonicalPath(event.callback_plugin_root) !== controller.plugin_root) || (event.callback_bundle_sha256 && event.callback_bundle_sha256 !== controller.bundle_sha256)) {
-            cancelActive('Native host restarted or installed plugin changed.'); recover('Native host restarted or installed plugin changed; explicit resume must revalidate the original A.'); store.save(state); return {};
+            cancelActive('Native host restarted or installed plugin changed.');
+            rearmBinding('Native host restarted or installed plugin changed; awaiting a trusted lifecycle receipt from the original A.', event.callback_desktop_pid);
+            setImmediate(shutdown); return {};
           }
           if (event.run_generation != null && event.run_generation !== state.run_generation) return {};
           if (event.hook_event_name === 'Stop') {
@@ -359,17 +382,21 @@ export async function runController(path: string, pluginRoot: string, fixturePat
       if (closing || active) return;
       state = readJson(path) as MainSessionState; accrue();
       const hostPid = (state.host as typeof state.host & { desktop_pid?: number }).desktop_pid;
-      if (state.status === 'ACTIVE' && state.phase !== 'RECOVERING' && hostPid && processAbsent(hostPid)) { cancelActive('Desktop owner exited.'); recover('Desktop owner exited; explicit same-A resume required.'); }
+      if (state.status === 'ACTIVE' && state.phase !== 'RECOVERING' && hostPid && processAbsent(hostPid)) {
+        cancelActive('Desktop owner exited.');
+        rearmBinding('Desktop owner exited; awaiting a trusted lifecycle receipt from the original A.');
+        setImmediate(shutdown);
+      }
       if (state.status === 'ACTIVE' && reachedLimits(state.task.limits, state).time) pause('user_limit');
       else store.save(state);
     }, 250);
     process.send?.({ ready: true, controller_id: id }); if (process.connected) process.disconnect();
     await new Promise<void>((done) => server!.once('close', done));
   } catch (error) {
-    if (!closing && state.controller?.id === id) {
-      state.phase = 'RECOVERING'; state.host.hook_effective = false; state.last_error = String(redact((error as Error).message));
-      state.recovery_condition = { kind: 'controller_startup', message: state.last_error, resume_when: 'Resolve the startup failure, then explicitly resume the original A.' };
-      state.controller.lifecycle = 'exited'; store.save(state);
+    if (!closing && state.binding.status === 'BOUND' && state.main_session_id && state.status !== 'DONE') {
+      armNativeRebind(state, String(redact((error as Error).message)));
+      state.controller = { ...controller, lifecycle: 'exited' };
+      store.save(state);
     }
     server?.close(); for (const socket of sockets) socket.end();
     throw error;

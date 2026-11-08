@@ -145,7 +145,41 @@ export function handleLifecycle(input, host, pluginRoot, adapterOccurrenceId) {
             // lease and return a supported host decision before claiming readiness.
             return state.status === 'ACTIVE' ? { state_path: path, stop_request: request } : {};
         }
-        if (state.pause_reason || state.binding.status !== 'PENDING_NATIVE_HOOK' || name !== 'PostToolUse' || !observation || !existsSync(observation))
+        if (state.pause_reason || state.binding.status !== 'PENDING_NATIVE_HOOK')
+            continue;
+        // Automatic recovery never trusts an old prepare/resume receipt. Once B
+        // or its host identity is invalidated, the checkpoint carries a fresh
+        // generation and the original A identity. Only a real lifecycle callback
+        // from that same A can rebind it; no controller or C is started before
+        // this branch returns `bound` to the native adapter.
+        if (state.binding.operation === 'rebind') {
+            if (!['SessionStart', 'UserPromptSubmit'].includes(name))
+                continue;
+            if (state.main_session_id !== session)
+                continue;
+            const expectedWorkspace = state.binding.expected_workspace;
+            const expectedTaskVersion = state.binding.expected_task_version;
+            const expectedSession = state.binding.expected_main_session_id;
+            const expectedGeneration = state.binding.expected_run_generation;
+            if (expectedSession !== session || (expectedWorkspace && canonicalPath(expectedWorkspace) !== canonicalPath(workspace)) || expectedTaskVersion !== state.task_version || expectedGeneration !== state.run_generation)
+                continue;
+            if (typeof event.run_generation === 'string' && event.run_generation !== expectedGeneration)
+                continue;
+            const store = new Store(path);
+            state.binding = { ...state.binding, status: 'BOUND', tool_use_id: null, bound_at: new Date().toISOString() };
+            state.host = { ...host, hook_effective: false, reason: 'Original main-session lifecycle receipt correlated; awaiting exactly one replacement controller.' };
+            state.recovery_condition = { kind: 'rebind_controller_required', message: 'Original main session re-bound; supervision is not active until the replacement controller is ready.', resume_when: 'Allow the replacement B to start, then wait for a native Stop callback.' };
+            store.save(state);
+            store.event(state, 'main_session_rebind_receipt', {
+                main_session_id: session,
+                task_version: state.task_version,
+                run_generation: state.run_generation,
+                hook_event_name: name,
+                host_source: host.source,
+            });
+            return { bound: true, state_path: path };
+        }
+        if (name !== 'PostToolUse' || !observation || !existsSync(observation))
             continue;
         const prior = readJson(observation);
         if (prior.session_id !== session || prior.tool_use_id !== toolId || prior.input_sha256 !== hash(event.tool_input) || prior.source !== host.source || prior.cwd !== canonicalPath(workspace) || prior.plugin_root !== canonicalPath(pluginRoot) || Date.now() - prior.at > 10 * 60_000)

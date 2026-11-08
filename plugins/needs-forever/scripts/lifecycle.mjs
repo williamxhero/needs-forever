@@ -28,7 +28,13 @@ try {
     console.log(JSON.stringify(await dispatchBoundLifecycle(existing, input, pluginRoot, createHash('sha256').update(readFileSync(new URL('../runtime/integrity.json', import.meta.url))).digest('hex'), host?.desktop_pid)));
   } else {
     const preparation = input.hook_event_name === 'PreToolUse' && controlIntent(input.tool_input, pluginRoot) !== null;
-    const pending = input.hook_event_name === 'PostToolUse' && typeof input.cwd === 'string' && registeredStatePaths(input.cwd).some((path) => existsSync(path) && readJson(path).binding?.status === 'PENDING_NATIVE_HOOK');
+    const pending = typeof input.cwd === 'string' && registeredStatePaths(input.cwd).some((path) => {
+      if (!existsSync(path)) return false;
+      const binding = readJson(path).binding;
+      if (binding?.status !== 'PENDING_NATIVE_HOOK') return false;
+      if (input.hook_event_name === 'PostToolUse') return true;
+      return binding.operation === 'rebind' && ['SessionStart', 'UserPromptSubmit'].includes(input.hook_event_name);
+    });
     if (!preparation && !pending) { console.log('{}'); process.exit(0); }
     const host = inspectHookHost(pluginRoot, args[1]);
     const result = handleLifecycle(input, host, pluginRoot);
