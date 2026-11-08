@@ -1,10 +1,13 @@
 {
   "generated_by": "npm run plugin:build",
   "files": {
+    "src/adapter-protocol.js": "1599bba11e0e48947b9d55973b900f62380101ab40d32fb17cb19e8a3478a740",
     "src/cli.js": "679152a59bf253aba16b6075f7854ea06004152fd244074b8a5cdd12c4148baf",
     "src/control-intent.js": "33c80a172debd1fb149606b3623e19d6fb50216f5fbab80a343f60456a066f70",
+    "src/daemon-cli.js": "e5f5c7cb4615bee3956096d529170db935f06bbe93fd03dc7edaff5b953ef939",
+    "src/daemon.js": "42c5cec12fb7fb19f5b53a402934d585c0dbc4ec24e09c79f54d154d7009a1db",
     "src/hook-host.js": "b01a45383ab017f55cc3a1445b40effa21434fa29b8bacd935571e68c12115e1",
-    "src/index.js": "d2115df76bf58be9d58e5fbdbf5be7ca07efba79e8a875fb1e1ee139766991ea",
+    "src/index.js": "3da134918d851ccbff8c235d16a73d7760efc7084973e4caeb2f486a6a6daf94",
     "src/judge.js": "92af03583763a9b0b656c58a193c6b9420754a8cede4040326b666733fd6f404",
     "src/lifecycle.js": "4ee9675410291f10c0e864334e8c80e7ddf3dd92d22ce207f06de7613b76e272",
     "src/main-controller.js": "d76f5e1da180cefa4788b4267342406eda5cc132289673e13d4cd773bc473708",
@@ -19,6 +22,6 @@
     "src/supervisor.js": "23b460056e40b13dbf3f614d0bfc44de24a7910665acb8307aa2ec5392597ec5",
     "src/transport.js": "70edcbafcac34b37db9e796982167f9a5c9084761c081688528abf31c34baf39",
     "src/types.js": "1d776e8997c21eccad34b1b01358b1a3f8df090b5647a855ba3972d361311f08",
-    "src/web.js": "2ced009d674aa4aeeeba61e0c410b0c6f73ac86d257dc41003ced5fd8e1f2d55"
+    "src/web.js": "7d4a4b108c34e8c8f5508038e89e152a139ec52f081cfb004a7bbc2c59cf00ab"
   }
 }

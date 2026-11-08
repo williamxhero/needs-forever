@@ -6,3 +6,8 @@ export type { Task, State, Decision, Snapshot } from './types.js';
 export type { RecoveryPlan } from './types.js';
 export { armRecovery, cancelRecovery, createRecoveryPlan, waitForNativeReceipt, reconcileStaleOwner, recoveryCurrent } from './recovery-coordinator.js';
 export type { HumanEvent, TaskRecord, TaskStateView, TaskSummary, TechnicalEvent, WorkRound } from './web.js';
+export { NFDaemon, startLoopbackApi } from './daemon.js';
+export { discoverStateFiles } from './daemon.js';
+export type { NFDaemonOptions, NFDaemonStatus, DaemonTaskRecord, DaemonTickResult, DaemonAuditEvent, LoopbackApiOptions, RunningLoopbackApi } from './daemon.js';
+export { adapterEnvelope, validateAdapterEnvelope } from './adapter-protocol.js';
+export type { AdapterEnvelope, AdapterEventType, AdapterProvider } from './adapter-protocol.js';
