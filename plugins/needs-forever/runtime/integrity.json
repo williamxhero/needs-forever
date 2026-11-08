@@ -6,11 +6,11 @@
     "src/hook-host.js": "b01a45383ab017f55cc3a1445b40effa21434fa29b8bacd935571e68c12115e1",
     "src/index.js": "d2115df76bf58be9d58e5fbdbf5be7ca07efba79e8a875fb1e1ee139766991ea",
     "src/judge.js": "92af03583763a9b0b656c58a193c6b9420754a8cede4040326b666733fd6f404",
-    "src/lifecycle.js": "e181dec802bf616dd3a792ea8cb1061d25f91d8552f890ded94c18558cc3bbaa",
-    "src/main-controller.js": "54f341e4da46c3dc27377632d8ecef3efebfa5049100bb32aed124f0a30571fc",
+    "src/lifecycle.js": "4ee9675410291f10c0e864334e8c80e7ddf3dd92d22ce207f06de7613b76e272",
+    "src/main-controller.js": "d76f5e1da180cefa4788b4267342406eda5cc132289673e13d4cd773bc473708",
     "src/main-session.js": "80c312d9b60f0b9a832cb0b8b09b9449f09f1ebc2dba0bd5fa4c0fc498ca59ea",
     "src/main-supervision.js": "5a4eace241d3def8fdafc4a248e5ed0389733c1e94ec60724e21c26f9f1623d1",
-    "src/recovery-coordinator.js": "d39f6a9f6a94043deed41b6c335c2a3bb2757484dc793ee1946f04cb5db8ce9d",
+    "src/recovery-coordinator.js": "82f7ee3bad28988c8285a5d77c9e4428b0da95389a99a4f35fcbddb3e4f99a0c",
     "src/recovery.js": "db606a6e5674c70e4f70b56d794e14576ae0d4473d15a6ef4e8a72ab4aa9da2e",
     "src/redact.js": "cd943daa4180f8c87b091babc0160dedab3432b471624710e67926fbfe779db6",
     "src/rules.js": "e743c10107cb043bf2c06957b2646cb9fc723474bd456d0f96a02861d5d376fc",
@@ -19,6 +19,6 @@
     "src/supervisor.js": "23b460056e40b13dbf3f614d0bfc44de24a7910665acb8307aa2ec5392597ec5",
     "src/transport.js": "70edcbafcac34b37db9e796982167f9a5c9084761c081688528abf31c34baf39",
     "src/types.js": "1d776e8997c21eccad34b1b01358b1a3f8df090b5647a855ba3972d361311f08",
-    "src/web.js": "2991cca4ff0889ce73cfaa6fc4d8622eb5f5844d10ad1242437dd756f622c69c"
+    "src/web.js": "2ced009d674aa4aeeeba61e0c410b0c6f73ac86d257dc41003ced5fd8e1f2d55"
   }
 }
