@@ -286,6 +286,29 @@ test('recoverable native invalidation re-arms the original A and starts exactly 
   assert.notEqual(afterStop.controller.id, pending.controller.id);
 });
 
+test('legacy pending resume checkpoints migrate to automatic rebind on the next original-A lifecycle event', async (t) => {
+  const f = installed('legacy-pending-resume', { decision: { action: 'CONTINUE', next_message: 'Continue after migrated rebind.' } });
+  t.after(() => f.run('pause'));
+  assert.equal(f.run('pause').status, 0);
+  const resumed = f.run('resume', ['--test-fixture', f.fixture]);
+  assert.equal(resumed.status, 0, resumed.stderr);
+  const pending = JSON.parse(f.run('status').stdout);
+  assert.equal(pending.status, 'PAUSED');
+  assert.equal(pending.binding.status, 'PENDING_NATIVE_HOOK');
+  assert.equal(pending.binding.operation, 'resume');
+  assert.equal(f.hook({ hook_event_name: 'UserPromptSubmit', prompt: 'Original A resumed normally.' }).status, 0);
+  let rebound: any;
+  for (let attempt = 0; attempt < 80; attempt++) {
+    rebound = JSON.parse(f.run('status').stdout);
+    if (rebound.controller?.lifecycle === 'running' && rebound.status === 'ACTIVE') break;
+    await delay(25);
+  }
+  assert.equal(rebound.binding.status, 'BOUND');
+  assert.equal(rebound.controller.lifecycle, 'running');
+  assert.equal(rebound.recovery_plan.status, 'running');
+  assert.ok(rebound.recovery_plan.generation);
+});
+
 test('foreign and late native rebind receipts cannot wake a paused or completed task', async (t) => {
   const f = installed('rebind-boundaries', { decision: { action: 'CONTINUE', next_message: 'Continue once.' } }, 'rebind-boundaries', 0, {}, undefined, process.pid);
   t.after(() => f.run('pause'));

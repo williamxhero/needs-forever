@@ -6,7 +6,7 @@ import { reachedLimits } from './rules.js';
 import { Store } from './store.js';
 import { record, text } from './types.js';
 import type { State, Task } from './types.js';
-import { createRecoveryPlan } from './recovery-coordinator.js';
+import { createRecoveryPlan, waitForNativeReceipt } from './recovery-coordinator.js';
 
 export interface MainSessionState extends State {
   control_mode: 'main-session';
@@ -125,6 +125,7 @@ export function armNativeRebind(state: MainSessionState, reason: string): void {
     message: reason,
     resume_when: 'Wait for a trusted lifecycle callback from the original main session; B and C remain stopped until its receipt is accepted.',
   };
+  waitForNativeReceipt(state, state.recovery_condition);
 }
 export function indexPath(workspace: string): string { return resolve(workspace, '.codex-supervisor', 'main-session-index.json'); }
 export function mainLeasePath(session: string): string { return resolve(tmpdir(), 'codex-supervisor-locks', `main-session-${createHash('sha256').update(session).digest('hex')}.lock`); }

@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { atomicJson, canonicalPath, contractHash, registeredStatePaths, readJson } from './main-session.js';
+import { armNativeRebind, atomicJson, canonicalPath, contractHash, registeredStatePaths, readJson } from './main-session.js';
 import { Store } from './store.js';
 import { record, text } from './types.js';
 import { redact } from './redact.js';
@@ -86,6 +86,16 @@ export function handleLifecycle(input, host, pluginRoot, adapterOccurrenceId) {
             const store = new Store(path);
             store.save(state);
             store.event(state, 'recovery_plan_rehydrated', { generation: state.recovery_plan.generation, task_version: state.task_version });
+        }
+        // Checkpoints created before automatic rebind used operation=resume. Once
+        // the original A is known and no user pause exists, migrate that pending
+        // checkpoint to the fenced automatic-rebind protocol on its next trusted
+        // lifecycle callback. The callback itself remains the real receipt.
+        if (!state.pause_reason && state.status !== 'DONE' && state.binding.status === 'PENDING_NATIVE_HOOK' && state.binding.operation === 'resume' && state.main_session_id === session && ['SessionStart', 'UserPromptSubmit'].includes(name)) {
+            armNativeRebind(state, 'Migrated pending resume to automatic native rebind.');
+            const store = new Store(path);
+            store.save(state);
+            store.event(state, 'native_rebind_migrated', { main_session_id: session, task_version: state.task_version, run_generation: state.run_generation });
         }
         if (state.control_mode !== 'main-session' || state.status === 'DONE' || canonicalPath(state.task.workspace) !== canonicalPath(workspace))
             continue;

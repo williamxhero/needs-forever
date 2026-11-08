@@ -33,7 +33,7 @@ try {
       const binding = readJson(path).binding;
       if (binding?.status !== 'PENDING_NATIVE_HOOK') return false;
       if (input.hook_event_name === 'PostToolUse') return true;
-      return binding.operation === 'rebind' && ['SessionStart', 'UserPromptSubmit'].includes(input.hook_event_name);
+      return ['rebind', 'resume'].includes(binding.operation) && ['SessionStart', 'UserPromptSubmit'].includes(input.hook_event_name);
     });
     if (!preparation && !pending) { console.log('{}'); process.exit(0); }
     const host = inspectHookHost(pluginRoot, args[1]);

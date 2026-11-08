@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { reachedLimits } from './rules.js';
 import { Store } from './store.js';
 import { record, text } from './types.js';
-import { createRecoveryPlan } from './recovery-coordinator.js';
+import { createRecoveryPlan, waitForNativeReceipt } from './recovery-coordinator.js';
 export function readJson(path) {
     // Windows can briefly deny a read while the state checkpoint is being
     // atomically replaced by another owner. Keep the previous checkpoint
@@ -76,6 +76,7 @@ export function armNativeRebind(state, reason) {
         message: reason,
         resume_when: 'Wait for a trusted lifecycle callback from the original main session; B and C remain stopped until its receipt is accepted.',
     };
+    waitForNativeReceipt(state, state.recovery_condition);
 }
 export function indexPath(workspace) { return resolve(workspace, '.codex-supervisor', 'main-session-index.json'); }
 export function mainLeasePath(session) { return resolve(tmpdir(), 'codex-supervisor-locks', `main-session-${createHash('sha256').update(session).digest('hex')}.lock`); }
