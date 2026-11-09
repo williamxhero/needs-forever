@@ -146,9 +146,9 @@ export function acquireRecoveryOwner(statePath, state) {
 }
 export function recoveryLeasePath(statePath) { return leasePath(statePath); }
 /** Reconcile a controller/watchdog that disappeared without running its
- * shutdown handler.  This is intentionally a state-only operation: it never
- * fabricates a native receipt or starts B/C.  The next real original-A
- * receipt remains the only path that can bind a fresh controller.
+ * shutdown handler.  Binding recovery remains fenced by the original-A
+ * lifecycle receipt; ordinary NF recovery prompts are recorded separately by
+ * the provider adapter and never substitute for that binding evidence.
  */
 export function reconcileStaleOwner(state, now = Date.now()) {
     const plan = state.recovery_plan;
@@ -172,19 +172,53 @@ export function reconcileStaleOwner(state, now = Date.now()) {
         return false;
     if (state.controller)
         state.controller = { ...state.controller, lifecycle: 'exited' };
-    state.binding = { ...state.binding, status: 'PENDING_NATIVE_HOOK', tool_use_id: null, operation: 'resume' };
+    // A dead controller invalidates the old generation.  Arm the same fenced
+    // native rebind used by the lifecycle path so the next real A receipt can
+    // restart B; leaving operation="resume" here would make lifecycle ignore
+    // SessionStart/UserPromptSubmit and strand the task in RECOVERING.
+    const generation = randomUUID();
+    const armedAt = new Date(now).toISOString();
+    state.run_generation = generation;
+    state.input_epoch = (state.input_epoch ?? 0) + 1;
+    state.pending_action = null;
+    delete state.direction_context;
+    delete state.last_stop;
+    state.tool_starts = {};
+    state.continuation_confirmed = false;
     state.phase = 'RECOVERING';
     state.host.hook_effective = false;
     state.last_error = 'Recovery owner exited unexpectedly; waiting for a fresh native receipt from the original A.';
-    state.recovery_condition = { kind: 'controller_exit', message: state.last_error, resume_when: 'A real native receipt from the original A must be correlated before B/C can restart.' };
-    armRecovery(state, state.recovery_condition, now);
+    state.binding = {
+        ...state.binding,
+        status: 'PENDING_NATIVE_HOOK',
+        tool_use_id: null,
+        bound_at: null,
+        challenge: randomUUID(),
+        operation: 'rebind',
+        expected_main_session_id: state.main_session_id,
+        expected_workspace: resolve(state.task.workspace),
+        expected_task_version: state.task_version,
+        expected_run_generation: generation,
+        armed_at: armedAt,
+    };
+    state.recovery_condition = { kind: 'native_rebind', message: state.last_error, resume_when: 'A real native receipt from the original A must be correlated before B/C can restart.' };
+    state.recovery_plan = {
+        ...plan,
+        owner: null,
+        generation,
+        next_retry_at: null,
+        status: 'waiting_native',
+        reason: state.recovery_condition,
+        cancellation_boundary: null,
+    };
     return true;
 }
 /**
  * Consume one persisted recovery deadline from a process that is independent
  * of hooks and B. This is deliberately a state-only coordinator: when the
  * deadline is reached it rotates the native receipt fence and leaves the task
- * waiting for a real callback from the original A. It never starts B or C.
+ * waiting for a real callback from the original A. It does not start B/C
+ * until that binding evidence exists.
  */
 function reconcileRecoveryTickUnlocked(statePath, now) {
     if (!existsSync(statePath))

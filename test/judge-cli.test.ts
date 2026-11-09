@@ -51,6 +51,10 @@ test('judge prompt states the terminal next_message contract', () => {
   assert.match(judgeInstructions, /WAIT_EXTERNAL is allowed only when the snapshot contains a concrete, necessary external condition/);
   assert.match(judgeInstructions, /configured verifier is a supervisor-owned gate executed after DONE/);
   assert.match(judgeInstructions, /result is not required in the judge snapshot/);
+  assert.match(judgeInstructions, /provider is unavailable, rate-limited, degraded, credential-blocked/);
+  assert.match(judgeInstructions, /authorized alternative provider, local cache or artifact/);
+  assert.match(judgeInstructions, /MUST choose CONTINUE and put the concrete alternative action in next_message/);
+  assert.match(judgeInstructions, /Only after the authorized alternatives have been explicitly checked/);
 });
 
 test('real judge boundary continues the original worker then completes with fresh archived read-only judges', () => {

@@ -58,7 +58,7 @@ try {
   const existing = boundStateForEvent(input, pluginRoot, Boolean(args[1]));
   if (existing) {
     const host = input.hook_event_name === 'SessionStart' ? inspectHookHost(pluginRoot, args[1]) : null;
-    console.log(JSON.stringify(await dispatchBoundLifecycle(existing, input, pluginRoot, createHash('sha256').update(readFileSync(new URL('../runtime/integrity.json', import.meta.url))).digest('hex'), host?.desktop_pid)));
+    console.log(JSON.stringify(await dispatchBoundLifecycle(existing, input, pluginRoot, createHash('sha256').update(readFileSync(new URL('../runtime/integrity.json', import.meta.url))).digest('hex'), host?.desktop_pid, nativeReceipt, args[1])));
   } else {
     const preparation = input.hook_event_name === 'PreToolUse' && controlIntent(input.tool_input, pluginRoot) !== null;
     const pending = typeof input.cwd === 'string' && registeredStatePaths(input.cwd).some((path) => {

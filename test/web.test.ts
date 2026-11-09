@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync } from 'node:fs';
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { TaskCatalog, startWebServer } from '../src/web.js';
 
@@ -212,12 +212,15 @@ test('TaskCatalog treats a main-session tool result as the A worker leg', () => 
       { at: '2026-11-01T07:59:03.000Z', type: 'main_session_stop_observed', turn_id: 'turn-001', stop_attempt_id: 'stop-001', stop_reason: 'Tushare 返回 HTTP 429。' },
       { at: '2026-11-01T07:59:04.000Z', type: 'judge_created', stop_attempt_id: 'stop-001', snapshot_id: 'snap-001' },
       { at: '2026-11-01T07:59:05.000Z', type: 'decision', role: 'judge', stop_attempt_id: 'stop-001', decision: { action: 'CONTINUE', reason: '继续。', evidence_ids: ['E1'], next_message: '继续。', external: null } },
+      { at: '2026-11-01T07:59:06.000Z', type: 'main_session_recovery_prompt_sent', role: 'worker', stop_attempt_id: 'stop-001', delivery_id: 'delivery-001' },
+      { at: '2026-11-01T07:59:07.000Z', type: 'main_session_recovery_prompt_acknowledged', role: 'worker', stop_attempt_id: 'stop-001', delivery_id: 'delivery-001' },
     ].map((event) => JSON.stringify(event)).join('\n') + '\n');
     const record = new TaskCatalog({ workspace: data.workspace }).read('demo-001');
     assert.equal(record.rounds.length, 1);
     assert.equal(record.rounds[0]?.worker?.eventType, 'main_tool_result');
     assert.equal(record.rounds[0]?.supervisor.length, 2);
     assert.equal(record.rounds[0]?.stop?.details.stop_reason, 'Tushare 返回 HTTP 429。');
+    assert.deepEqual(record.rounds[0]?.continuation.map((event) => event.eventType), ['main_session_recovery_prompt_sent', 'main_session_recovery_prompt_acknowledged']);
   } finally {
     data.cleanup();
   }
@@ -288,6 +291,8 @@ test('web server exposes task, record and validated control endpoints', async ()
     assert.doesNotMatch(page, /当前回合结束，交由 supervisor 判断下一步/);
     assert.match(page, /status-time/);
     assert.match(page, /status-reason/);
+    assert.match(page, /statusText\(s,p\)/);
+    assert.match(page, /s==='ACTIVE'&&p==='RECOVERING'\?'恢复中'/);
     assert.doesNotMatch(page, /阶段 \+esc\(r\.state\.phase\)/);
 
     const mutation = await fetch(`${running.url}api/tasks/demo-001`, { method: 'POST' });
@@ -299,6 +304,31 @@ test('web server exposes task, record and validated control endpoints', async ()
   } finally {
     await running.close();
     data.cleanup();
+  }
+});
+
+test('NFG catalogs sessions from every daemon workspace', async () => {
+  const first = fixture();
+  const second = fixture();
+  const secondDirectory = resolve(second.workspace, '.codex-supervisor', 'demo-002');
+  renameSync(second.directory, secondDirectory);
+  const secondStatePath = resolve(secondDirectory, 'state.json');
+  const secondState = JSON.parse(readFileSync(secondStatePath, 'utf8'));
+  secondState.task_id = 'demo-002';
+  secondState.task.task_id = 'demo-002';
+  writeFileSync(secondStatePath, `${JSON.stringify(secondState)}\n`);
+  const running = await startWebServer({ workspace: first.workspace, workspaces: [second.workspace], port: 0 });
+  try {
+    const response = await fetch(`${running.url}api/tasks`);
+    assert.equal(response.status, 200);
+    const ids = (await response.json()).tasks.map((item: { taskId: string }) => item.taskId);
+    assert.deepEqual(ids.sort(), ['demo-001', 'demo-002']);
+    const record = await fetch(`${running.url}api/tasks/demo-002`);
+    assert.equal(record.status, 200);
+  } finally {
+    await running.close();
+    first.cleanup();
+    second.cleanup();
   }
 });
 

@@ -63,6 +63,12 @@ function eventSummary(event) {
         case 'main_session_stop_observed': return 'B 收到真实 Stop，触发 C';
         case 'stop_hook_direction_returned': return 'C 判断已返回 A';
         case 'main_session_continuation_confirmed': return 'A 已确认续接';
+        case 'main_session_recovery_prompt_scheduled': return 'NF 已安排恢复 prompt';
+        case 'main_session_recovery_prompt_attempted': return 'NF 开始推动 A 继续';
+        case 'main_session_recovery_prompt_sent': return 'NF 已向 A 发送恢复 prompt';
+        case 'main_session_recovery_prompt_acknowledged': return 'A thread 已接收 NF 恢复 prompt';
+        case 'main_session_recovery_prompt_deferred': return 'A 已有进行中的回合，NF 暂缓发送';
+        case 'main_session_recovery_prompt_failed': return error ? `NF 推动 A 失败：${error}` : 'NF 推动 A 失败';
         case 'worker_created': return 'worker 已创建';
         case 'worker_resumed': return 'worker 已恢复';
         case 'worker_started': return 'worker 开始工作';
@@ -326,7 +332,7 @@ function makeRounds(events) {
         if (human.eventType === 'main_session_stop_observed') {
             round.stop ??= human;
         }
-        else if (human.eventType === 'stop_hook_direction_returned' || human.eventType === 'main_session_continuation_confirmed' || human.eventType === 'main_session_terminal') {
+        else if (human.eventType === 'stop_hook_direction_returned' || human.eventType === 'main_session_continuation_confirmed' || human.eventType === 'main_session_terminal' || human.eventType.startsWith('main_session_recovery_prompt_')) {
             round.continuation.push(human);
         }
         else if (human.role === 'worker') {
@@ -364,33 +370,49 @@ function taskDirectory(root, taskId) {
 }
 export class TaskCatalog {
     root;
+    roots;
     sessionIds = new SessionIdAllocator();
     constructor(options) {
-        this.root = resolve(options.workspace, '.codex-supervisor');
+        this.roots = [...new Set([options.workspace, ...(options.workspaces ?? [])].map((workspace) => resolve(workspace, '.codex-supervisor')))];
+        this.root = this.roots[0];
     }
     list() {
-        if (!existsSync(this.root) || !statSync(this.root).isDirectory())
-            return [];
         const entries = [];
-        for (const entry of readdirSync(this.root, { withFileTypes: true })) {
-            // Windows explicit task views may be exposed through a junction. Keep
-            // discovery read-only while allowing the linked state directory to be
-            // rendered alongside ordinary .codex-supervisor task directories.
-            if (!entry.isDirectory() && !entry.isSymbolicLink())
+        for (const root of this.roots) {
+            if (!existsSync(root) || !statSync(root).isDirectory())
                 continue;
-            try {
-                const record = this.read(entry.name);
-                const result = record.state.lastDecision?.action ?? record.state.status;
-                entries.push({ title: record.title, sessionId: record.sessionId, taskId: record.taskId, status: record.state.status, phase: record.state.phase, updatedAt: record.updatedAt, lastResult: result });
-            }
-            catch {
-                // A task is only discoverable once its atomically written state is readable.
+            for (const entry of readdirSync(root, { withFileTypes: true })) {
+                // Windows explicit task views may be exposed through a junction. Keep
+                // discovery read-only while allowing the linked state directory to be
+                // rendered alongside ordinary .codex-supervisor task directories.
+                if (!entry.isDirectory() && !entry.isSymbolicLink())
+                    continue;
+                try {
+                    const record = this.readFromRoot(root, entry.name);
+                    const result = record.state.lastDecision?.action ?? record.state.status;
+                    entries.push({ title: record.title, sessionId: record.sessionId, taskId: record.taskId, status: record.state.status, phase: record.state.phase, updatedAt: record.updatedAt, lastResult: result });
+                }
+                catch {
+                    // A task is only discoverable once its atomically written state is readable.
+                }
             }
         }
         return entries.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
     }
+    locate(taskId) {
+        for (const root of this.roots) {
+            const directory = taskDirectory(root, taskId);
+            if (existsSync(resolve(directory, 'state.json')))
+                return { root, directory, workspace: resolve(root, '..') };
+        }
+        throw new Error('Task not found.');
+    }
     read(taskId) {
-        const directory = taskDirectory(this.root, taskId);
+        const located = this.locate(taskId);
+        return this.readFromRoot(located.root, taskId);
+    }
+    readFromRoot(root, taskId) {
+        const directory = taskDirectory(root, taskId);
         const statePath = resolve(directory, 'state.json');
         if (!existsSync(statePath))
             throw new Error('Task not found.');
@@ -401,7 +423,7 @@ export class TaskCatalog {
         const metadata = displayMetadata(directory);
         const persistedSessionId = stringValue(metadata.session_id);
         const sessionSeed = stringValue(state.main_session_id) ?? state.worker_thread_id ?? stringValue(state.run_generation) ?? taskId;
-        const sessionId = this.sessionIds.assign(taskId, state.status, sessionSeed, persistedSessionId ?? undefined);
+        const sessionId = this.sessionIds.assign(`${root}:${taskId}`, state.status, sessionSeed, persistedSessionId ?? undefined);
         const events = safeEvents(resolve(directory, 'events.jsonl'));
         const summaryPath = resolve(directory, 'summary.md');
         const summary = existsSync(summaryPath) ? readFileSync(summaryPath, 'utf8') : '';
@@ -461,14 +483,16 @@ function html(response) {
     response.end(WEB_HTML);
 }
 export async function startWebServer(options) {
-    const workspace = resolve(options.workspace);
-    if (!existsSync(workspace) || !statSync(workspace).isDirectory())
-        throw new Error('workspace must name an existing directory.');
+    const workspaces = [...new Set([options.workspace, ...(options.workspaces ?? [])].map((workspace) => resolve(workspace)))];
+    for (const workspace of workspaces)
+        if (!existsSync(workspace) || !statSync(workspace).isDirectory())
+            throw new Error('workspace must name an existing directory.');
+    const workspace = workspaces[0];
     const host = options.host ?? '127.0.0.1';
     const port = options.port ?? 8787;
     if (!Number.isInteger(port) || port < 0 || port > 65535)
         throw new Error('port must be an integer between 0 and 65535.');
-    const catalog = new TaskCatalog({ workspace });
+    const catalog = new TaskCatalog({ workspace, workspaces });
     const server = createServer(async (request, response) => {
         if (request.method !== 'GET' && request.method !== 'HEAD' && request.method !== 'POST') {
             response.setHeader('allow', 'GET, HEAD, POST');
@@ -506,12 +530,13 @@ export async function startWebServer(options) {
                 if (operation !== 'pause' && operation !== 'resume' && operation !== 'delete')
                     return json(response, 400, { error: 'action must be pause, resume or delete' });
                 try {
-                    const directory = taskDirectory(catalog.root, taskId);
+                    const located = catalog.locate(taskId);
+                    const directory = located.directory;
                     const statePath = resolve(directory, 'state.json');
                     if (!existsSync(statePath))
                         return json(response, 404, { error: 'Task not found.' });
                     if (operation === 'delete') {
-                        const paused = await runControl('pause', statePath, workspace, taskId, options.daemonApi && options.daemonToken ? { url: options.daemonApi, token: options.daemonToken } : undefined).catch(() => null);
+                        const paused = await runControl('pause', statePath, located.workspace, taskId, options.daemonApi && options.daemonToken ? { url: options.daemonApi, token: options.daemonToken } : undefined).catch(() => null);
                         if (paused && paused.code !== 0) {
                             let persistedStatus = null;
                             try {
@@ -521,11 +546,11 @@ export async function startWebServer(options) {
                             if (persistedStatus !== 'PAUSED' && !/already paused|PAUSED/i.test(paused.stderr + paused.stdout))
                                 return json(response, 409, { error: paused.stderr || paused.stdout || 'Unable to pause task before delete.' });
                         }
-                        archiveDeletedTaskAudit(catalog.root, directory, taskId, statePath);
+                        archiveDeletedTaskAudit(located.root, directory, taskId, statePath);
                         rmSync(directory, { recursive: true, force: true });
                         return json(response, 200, { deleted: true, taskId });
                     }
-                    const result = await runControl(operation, statePath, workspace, taskId, options.daemonApi && options.daemonToken ? { url: options.daemonApi, token: options.daemonToken } : undefined);
+                    const result = await runControl(operation, statePath, located.workspace, taskId, options.daemonApi && options.daemonToken ? { url: options.daemonApi, token: options.daemonToken } : undefined);
                     if (result.code !== 0)
                         return json(response, 409, { error: result.stderr.trim() || result.stdout.trim() || `Unable to ${operation} task.` });
                     return json(response, 200, { action: operation, taskId, output: result.stdout });
@@ -574,23 +599,24 @@ const app={taskId:new URL(location.href).pathname.match(/^\/tasks\/([^/]+)/)?.[1
 const $=s=>document.querySelector(s); const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const statusLabel={ACTIVE:'正在推进',WAIT_EXTERNAL:'等待外部条件',PAUSED:'已暂停',DONE:'已完成'};
 function statusClass(s,p){return s==='DONE'?'done':s==='WAIT_EXTERNAL'?'wait':s==='PAUSED'?'paused':p==='RECOVERING'?'recover':''}
+function statusText(s,p){return s==='ACTIVE'&&p==='RECOVERING'?'恢复中':statusLabel[s]||s}
 function shortTime(v){try{return new Date(v).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'})}catch{return v}}
 function resultClass(v){return v==='DONE'?'result-done':v==='WAIT_EXTERNAL'?'result-wait':v==='CONTINUE'?'result-continue':v==='FAIL'?'result-error':''}
 function roleName(v){return v==='supervisor'?'supervisor':v==='worker'?'worker':'系统'}
 async function copySessionId(button){const value=button.dataset.sessionId||'';if(!value)return;const copyValue='NF://'+value;try{await navigator.clipboard.writeText(copyValue)}catch{const input=document.createElement('textarea');input.value=copyValue;input.style.position='fixed';input.style.opacity='0';document.body.appendChild(input);input.focus();input.select();document.execCommand('copy');input.remove()}const previous=button.title;button.title='已复制：'+copyValue;button.classList.add('copied');setTimeout(()=>{button.title=previous;button.classList.remove('copied')},3000)}
-function wireSessionCopy(){document.querySelectorAll('[data-session-copy]').forEach(button=>{button.onclick=(event)=>{event.preventDefault();event.stopPropagation();void copySessionId(button)}})}function renderTasks(tasks){const root=$('#tasks');if(!tasks.length){root.innerHTML='<div class="empty-side">暂无可发现的任务</div>';return}root.innerHTML=tasks.map(t=>'<div class="task '+(t.taskId===app.taskId?'selected':'')+'" data-task="'+esc(t.taskId)+'"><span class="task-name">'+esc(t.title||t.taskId)+'</span><span class="task-meta"><span>'+esc(statusLabel[t.status]||t.status)+'</span><span>'+esc(shortTime(t.updatedAt))+'</span></span></div>').join('');root.querySelectorAll('[data-task]').forEach(b=>b.onclick=()=>{app.taskId=b.dataset.task;history.pushState({},'', '/tasks/'+encodeURIComponent(app.taskId));loadRecord()})}
+function wireSessionCopy(){document.querySelectorAll('[data-session-copy]').forEach(button=>{button.onclick=(event)=>{event.preventDefault();event.stopPropagation();void copySessionId(button)}})}function renderTasks(tasks){const root=$('#tasks');if(!tasks.length){root.innerHTML='<div class="empty-side">暂无可发现的任务</div>';return}root.innerHTML=tasks.map(t=>'<div class="task '+(t.taskId===app.taskId?'selected':'')+'" data-task="'+esc(t.taskId)+'"><span class="task-name">'+esc(t.title||t.taskId)+'</span><span class="task-meta"><span>'+esc(statusText(t.status,t.phase))+'</span><span>'+esc(shortTime(t.updatedAt))+'</span></span></div>').join('');root.querySelectorAll('[data-task]').forEach(b=>b.onclick=()=>{app.taskId=b.dataset.task;history.pushState({},'', '/tasks/'+encodeURIComponent(app.taskId));loadRecord()})}
 function eventHtml(ev){return '<div><span class="event-type">'+esc(ev.eventType)+'</span><span class="event-summary">'+esc(ev.summary)+'</span></div>'+(ev.result?'<div class="event-result '+resultClass(ev.result)+'">'+esc(ev.result)+'</div>':'')}
 function matches(round){if(app.filter==='all')return true;const values=round.technicalEvents; if(app.filter==='worker')return values.some(e=>e.role==='worker');if(app.filter==='supervisor')return values.some(e=>e.role==='supervisor');return values.some(e=>e.result==='FAIL'||e.eventType.startsWith('recovery_')||e.eventType.startsWith('stale_')||e.eventType==='external_wait_required'||e.eventType==='paused')}
 function shortDate(v){try{const d=new Date(v);if(Number.isNaN(d.getTime()))return v;return d.getFullYear()+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+String(d.getDate()).padStart(2,'0')}catch{return v}}
 function shortHourMinute(v){try{const d=new Date(v);if(Number.isNaN(d.getTime()))return v;return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}catch{return v}}
-function roundHtml(r,index){const decisionValue=r.result?.details.decision;const action=decisionValue?.action||r.result?.result||'UNKNOWN';const decisionText=decisionValue?.reason||r.result?.summary||'未记录 supervisor reason';const prompt=typeof decisionValue?.next_message==='string'?decisionValue.next_message:r.result?.eventType==='external_wait_required'?String(r.result.details.resume_when||''):'';const stopAt=r.stop?.at||r.endedAt;const decisionAt=r.result?.at||stopAt;const returnedAt=r.continuation.find(e=>e.eventType==='stop_hook_direction_returned')?.at||r.continuation.find(e=>e.eventType==='main_session_continuation_confirmed')?.at||r.endedAt;const stopReason=typeof r.stop?.details.stop_reason==='string'?r.stop.details.stop_reason:'';const stepTime=v=>'<span class="step-time">'+esc(shortHourMinute(v))+'</span>';const collapsible=(className,text,key)=>'<button type="button" class="'+className+' collapsible" data-collapsible data-collapsible-key="'+esc(key)+'"><span class="collapsible-content">'+esc(text)+'</span><span class="collapse-marker" aria-hidden="true">⌄</span></button>';return '<article class="round" data-round="'+index+'"><div class="round-head"><span class="round-title">第 '+(index+1)+' 轮</span><span class="round-time">'+esc(shortDate(stopAt))+'</span></div><div class="round-body"><div class="flow-line">'+stepTime(stopAt)+' <strong>WORKER 发出：</strong> <code>Stop</code>'+(stopReason?'（'+esc(stopReason)+'）':'')+'</div><div class="flow-line">'+stepTime(decisionAt)+' <strong>SUPERVISOR 判断：</strong> <span class="event-result">'+esc(action)+'</span></div>'+collapsible('decision-block',decisionText,'decision-'+index)+'<div class="flow-line">'+stepTime(returnedAt)+' <strong>WORKER 收到：</strong></div>'+collapsible('prompt-block',prompt,'prompt-'+index)+'</div></article>'}function wireCollapsibles(){document.querySelectorAll('[data-collapsible]').forEach(node=>{node.onclick=()=>{const expanded=node.classList.toggle('expanded');const marker=node.querySelector('.collapse-marker');if(marker)marker.textContent=expanded?'⌃':'⌄'}})}
+function roundHtml(r,index){const decisionValue=r.result?.details.decision;const action=decisionValue?.action||r.result?.result||'UNKNOWN';const decisionText=decisionValue?.reason||r.result?.summary||'未记录 supervisor reason';const prompt=typeof decisionValue?.next_message==='string'?decisionValue.next_message:r.result?.eventType==='external_wait_required'?String(r.result.details.resume_when||''):'';const stopAt=r.stop?.at||r.endedAt;const decisionAt=r.result?.at||stopAt;const returnedAt=r.continuation.find(e=>e.eventType==='stop_hook_direction_returned')?.at||r.continuation.find(e=>e.eventType==='main_session_continuation_confirmed')?.at||r.endedAt;const recoverySent=r.continuation.find(e=>e.eventType==='main_session_recovery_prompt_sent');const recoveryAck=r.continuation.find(e=>e.eventType==='main_session_recovery_prompt_acknowledged');const recoveryFailure=r.continuation.find(e=>e.eventType==='main_session_recovery_prompt_failed');const stopReason=typeof r.stop?.details.stop_reason==='string'?r.stop.details.stop_reason:'';const stepTime=v=>'<span class="step-time">'+esc(shortHourMinute(v))+'</span>';const collapsible=(className,text,key)=>'<button type="button" class="'+className+' collapsible" data-collapsible data-collapsible-key="'+esc(key)+'"><span class="collapsible-content">'+esc(text)+'</span><span class="collapse-marker" aria-hidden="true">⌄</span></button>';const recoveryLine=recoverySent?'<div class="flow-line">'+stepTime(recoverySent.at)+' <strong>NF 推动 A：</strong> <span class="event-result">已发送恢复 prompt</span></div>':recoveryFailure?'<div class="flow-line">'+stepTime(recoveryFailure.at)+' <strong>NF 推动 A：</strong> <span class="event-result result-error">发送失败</span></div>':'';const recoveryAckLine=recoveryAck?'<div class="flow-line">'+stepTime(recoveryAck.at)+' <strong>A thread：</strong> <span class="event-result">已接收恢复 prompt</span></div>':'';return '<article class="round" data-round="'+index+'"><div class="round-head"><span class="round-title">第 '+(index+1)+' 轮</span><span class="round-time">'+esc(shortDate(stopAt))+'</span></div><div class="round-body"><div class="flow-line">'+stepTime(stopAt)+' <strong>WORKER 发出：</strong> <span class="event-result">Stop</span></div>'+(stopReason?collapsible('decision-block stop-reason-block',stopReason,'stop-'+index):'')+'<div class="flow-line">'+stepTime(decisionAt)+' <strong>SUPERVISOR 判断：</strong> <span class="event-result">'+esc(action)+'</span></div>'+collapsible('decision-block',decisionText,'decision-'+index)+'<div class="flow-line">'+stepTime(returnedAt)+' <strong>WORKER 收到：</strong></div>'+collapsible('prompt-block',prompt,'prompt-'+index)+recoveryLine+recoveryAckLine+'</div></article>'}function wireCollapsibles(){document.querySelectorAll('[data-collapsible]').forEach(node=>{node.onclick=()=>{const expanded=node.classList.toggle('expanded');const marker=node.querySelector('.collapse-marker');if(marker)marker.textContent=expanded?'⌃':'⌄'}})}
 function statusDateTime(v){try{const d=new Date(v);if(Number.isNaN(d.getTime()))return v;return String(d.getFullYear()).slice(-2)+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+String(d.getDate()).padStart(2,'0')+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}catch{return v}}
 function expandedKeys(){return new Set([...document.querySelectorAll('[data-collapsible].expanded')].map(node=>node.dataset.collapsibleKey).filter(Boolean))}
 function restoreExpanded(keys){document.querySelectorAll('[data-collapsible]').forEach(node=>{const expanded=keys.has(node.dataset.collapsibleKey);node.classList.toggle('expanded',expanded);const marker=node.querySelector('.collapse-marker');if(marker)marker.textContent=expanded?'⌃':'⌄'})}
 function actionButtonHtml(action,label,icon,className=''){return '<button type="button" class="action-icon '+className+'" data-action="'+action+'" aria-label="'+label+'" title="'+label+'">'+icon+'</button>'}
 function renderActions(r){const root=$('#task-actions');if(!r){root.hidden=true;root.innerHTML='';return}root.hidden=false;const paused=r.state.status==='PAUSED';root.innerHTML=actionButtonHtml('copy','复制 session ID：'+r.sessionId,r.sessionId,'session-copy')+actionButtonHtml('refresh','当前自动刷新：'+(app.auto?'开':'关'),app.auto?'↻':'Ⅱ',app.auto?'on':'')+actionButtonHtml(paused?'resume':'pause',paused?'恢复 Needs Forever':'停止 Needs Forever',paused?'▶':'Ⅱ')+actionButtonHtml('delete','删除此监督及其 NFG 记录','×','danger');const copyButton=root.querySelector('[data-action="copy"]');if(copyButton){copyButton.dataset.sessionCopy='';copyButton.dataset.sessionId=r.sessionId}wireActions();wireSessionCopy()}
 async function controlTask(action){if(!app.taskId)return;if(action==='delete'&&!window.confirm('删除此监督及其 NFG 记录？系统级日志不会删除。'))return;const response=await fetch('/api/tasks/'+encodeURIComponent(app.taskId)+'/control',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action})});const result=await response.json();if(!response.ok)throw new Error(result.error||'控制操作失败');if(action==='delete'){app.record=null;app.taskId=null;history.replaceState({},'', '/');renderRecord();await loadTasks();return}await loadTasks();await loadRecord(false)}
-function wireActions(){document.querySelectorAll('[data-action]').forEach(button=>{button.onclick=(event)=>{event.preventDefault();event.stopPropagation();const action=button.dataset.action;if(action==='copy'){const value=app.record?.sessionId||'';button.dataset.sessionId=value;void copySessionId(button);return}if(action==='refresh'){app.auto=!app.auto;renderActions(app.record);return}if(action==='pause'||action==='resume'||action==='delete'){void controlTask(action).catch(error=>{$('#error').textContent=error.message;$('#error').hidden=false})}}})}function recoveryHtml(r){const recovery=r.state.recovery;if(!recovery||recovery.source==='none')return '';const source={automatic:'自动恢复',user_pause:'人工暂停',user_limit:'达到人工限制',delete:'已删除',done:'已完成'}[recovery.source]||recovery.source;const parts=[source];if(recovery.reason)parts.push(recovery.reason);if(recovery.attempt>0)parts.push('尝试 '+recovery.attempt);if(recovery.nextRetryAt)parts.push('下次重试 '+statusDateTime(recovery.nextRetryAt));if(recovery.nativeReceipt==='waiting')parts.push('等待 native receipt');else if(recovery.nativeReceipt==='received')parts.push('native receipt 已确认');return '<div class="status-reason">'+esc(parts.join(' · '))+'</div>'}function renderRecord(preserve=false){const r=app.record;const expanded=preserve?expandedKeys():new Set();if(!r){$('#task-header').hidden=true;renderActions(null);$('#timeline').innerHTML='<div class="empty">选择一个任务查看监督记录。</div>';return}$('#task-header').hidden=false;$('#task-title').textContent=r.title||r.taskId;$('#task-goal').textContent=r.state.goal;const s=$('#task-status');s.textContent=(statusLabel[r.state.status]||r.state.status)+' '+statusDateTime(r.updatedAt);s.className='status '+statusClass(r.state.status,r.state.phase);const reason=r.state.lastError||r.state.recoveryCondition?.message||'';$('#task-meta').innerHTML=(reason?'<div class="status-reason">'+esc(reason)+'</div>':'')+recoveryHtml(r);const rounds=r.rounds.filter(matches);$('#timeline').innerHTML=rounds.length?rounds.map((x,i)=>roundHtml(x,i)).join(''):'<div class="empty">暂无完整 A→B→C 监督轮次。</div>';wireCollapsibles();restoreExpanded(expanded);renderActions(r);$('#timeline').querySelectorAll('.round-toggle').forEach(b=>b.onclick=()=>b.closest('.round').classList.toggle('open'));}async function loadTasks(){const response=await fetch('/api/tasks',{cache:'no-store'});if(!response.ok)throw new Error('读取任务列表失败');const data=await response.json();renderTasks(data.tasks||[]);if(!app.taskId&&data.tasks?.[0]){app.taskId=data.tasks[0].taskId;history.replaceState({},'', '/tasks/'+encodeURIComponent(app.taskId))}return data.tasks||[]}
+function wireActions(){document.querySelectorAll('[data-action]').forEach(button=>{button.onclick=(event)=>{event.preventDefault();event.stopPropagation();const action=button.dataset.action;if(action==='copy'){const value=app.record?.sessionId||'';button.dataset.sessionId=value;void copySessionId(button);return}if(action==='refresh'){app.auto=!app.auto;renderActions(app.record);return}if(action==='pause'||action==='resume'||action==='delete'){void controlTask(action).catch(error=>{$('#error').textContent=error.message;$('#error').hidden=false})}}})}function recoveryHtml(r){const recovery=r.state.recovery;if(!recovery||recovery.source==='none')return '';const source={automatic:'自动恢复',user_pause:'人工暂停',user_limit:'达到人工限制',delete:'已删除',done:'已完成'}[recovery.source]||recovery.source;const parts=[source];if(recovery.reason)parts.push(recovery.reason);if(recovery.attempt>0)parts.push('尝试 '+recovery.attempt);if(recovery.nextRetryAt)parts.push('下次重试 '+statusDateTime(recovery.nextRetryAt));if(recovery.nativeReceipt==='waiting')parts.push('等待 native receipt');else if(recovery.nativeReceipt==='received')parts.push('native receipt 已确认');return '<div class="status-reason">'+esc(parts.join(' · '))+'</div>'}function renderRecord(preserve=false){const r=app.record;const expanded=preserve?expandedKeys():new Set();if(!r){$('#task-header').hidden=true;renderActions(null);$('#timeline').innerHTML='<div class="empty">选择一个任务查看监督记录。</div>';return}$('#task-header').hidden=false;$('#task-title').textContent=r.title||r.taskId;$('#task-goal').textContent=r.state.goal;const s=$('#task-status');s.textContent=(statusText(r.state.status,r.state.phase))+' '+statusDateTime(r.updatedAt);s.className='status '+statusClass(r.state.status,r.state.phase);const reason=r.state.lastError||r.state.recoveryCondition?.message||'';$('#task-meta').innerHTML=(reason?'<div class="status-reason">'+esc(reason)+'</div>':'')+recoveryHtml(r);const rounds=r.rounds.filter(matches);$('#timeline').innerHTML=rounds.length?rounds.map((x,i)=>roundHtml(x,i)).join(''):'<div class="empty">暂无完整 A→B→C 监督轮次。</div>';wireCollapsibles();restoreExpanded(expanded);renderActions(r);$('#timeline').querySelectorAll('.round-toggle').forEach(b=>b.onclick=()=>b.closest('.round').classList.toggle('open'));}async function loadTasks(){const response=await fetch('/api/tasks',{cache:'no-store'});if(!response.ok)throw new Error('读取任务列表失败');const data=await response.json();renderTasks(data.tasks||[]);if(!app.taskId&&data.tasks?.[0]){app.taskId=data.tasks[0].taskId;history.replaceState({},'', '/tasks/'+encodeURIComponent(app.taskId))}return data.tasks||[]}
 async function loadRecord(preserve=false){if(!app.taskId){renderRecord(preserve);return}const response=await fetch('/api/tasks/'+encodeURIComponent(app.taskId),{cache:'no-store'});if(!response.ok)throw new Error((await response.json()).error||'读取任务失败');const next=await response.json();const changed=JSON.stringify(app.record)!==JSON.stringify(next);app.record=next;if(changed||!preserve)renderRecord(preserve)}
 async function load(){try{$('#error').hidden=true;await loadTasks();if(app.taskId)await loadRecord(false)}catch(e){$('#error').textContent=e.message;$('#error').hidden=false}}
 async function refresh(){if(app.refreshing)return;app.refreshing=true;try{$('#error').hidden=true;await loadTasks();if(app.taskId)await loadRecord(true)}catch(e){$('#error').textContent=e.message;$('#error').hidden=false}finally{app.refreshing=false}}

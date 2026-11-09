@@ -237,8 +237,9 @@ export class NFDaemon {
             if (state.status === 'PAUSED' || state.status === 'WAIT_EXTERNAL') {
                 delete state.pause_reason;
                 if (state.control_mode === 'main-session') {
-                    // A daemon resume re-arms the provider binding; it never fabricates
-                    // the native receipt required to start B/C for the original A.
+                    // A daemon resume re-arms the provider binding. The NF
+                    // recovery prompt path is separate and records its own
+                    // send/ack events; it does not claim a host receipt.
                     state.status = 'PAUSED';
                     state.phase = 'RECOVERING';
                     const main = state;

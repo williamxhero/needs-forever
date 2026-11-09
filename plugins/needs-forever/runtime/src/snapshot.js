@@ -67,7 +67,7 @@ export function buildSnapshot(state, workerTurnId, events) {
         repeated_failure: {
             investigate: repeatedSignatures.length > 0,
             signatures: repeatedSignatures,
-            instruction: recoveryInstruction ?? (repeated.length ? 'Investigate a different hypothesis or use a materially different verifiable route; retries alone never justify WAIT_EXTERNAL.' : 'No repeated failure threshold observed.'),
+            instruction: recoveryInstruction ?? (repeated.length ? 'Investigate a different hypothesis, check an authorized alternative provider or local artifact, or use a materially different verifiable route; retries alone never justify WAIT_EXTERNAL.' : 'No repeated failure threshold observed.'),
         },
         omissions: [], evidence_complete: true,
     };

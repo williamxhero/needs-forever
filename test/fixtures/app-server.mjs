@@ -51,7 +51,7 @@ for await (const line of lines) {
     send({ id: message.id, result: { config, origins: {}, layers: null } });
   } else if (message.method === 'thread/start' || message.method === 'thread/resume') {
     const judge = message.params.sandbox === 'read-only';
-    const threadId = judge ? `judge-${++judges}` : 'worker-from-server';
+    const threadId = judge ? `judge-${++judges}` : (scenario.main_session_thread_id ?? 'worker-from-server');
     if (judge) judgeThreads.add(threadId);
     const historyTurns = scenario.reconcile_turns ?? scenario.resume_turns ?? [];
     send({ id: message.id, result: {

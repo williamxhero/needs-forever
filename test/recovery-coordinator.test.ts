@@ -64,11 +64,14 @@ test('a restarted process reconciles a dead owner into a pending native receipt 
   value.recovery_plan.owner = { id: 'old-owner', pid: 2_147_483_647, lease_path: 'old', task_version: 1, generation: value.run_generation, heartbeat_at: new Date(0).toISOString() };
   value.recovery_plan.status = 'running';
   value.controller = { id: 'old-controller', pid: 2_147_483_647, endpoint: 'old', token: 'old', lifecycle: 'running', started_at: new Date(0).toISOString(), run_generation: value.run_generation, plugin_root: value.task.workspace };
+  const oldGeneration = value.run_generation;
   assert.equal(reconcileStaleOwner(value), true);
   assert.equal(value.phase, 'RECOVERING');
   assert.equal(value.binding.status, 'PENDING_NATIVE_HOOK');
-  assert.equal(value.recovery_plan.status, 'armed');
+  assert.equal(value.binding.operation, 'rebind');
+  assert.equal(value.recovery_plan.status, 'waiting_native');
   assert.equal(value.recovery_plan.cancellation_boundary, null);
+  assert.notEqual(value.run_generation, oldGeneration);
 });
 
 test('a detached coordinator consumes a due retry and rotates the native receipt fence without starting B/C', () => {

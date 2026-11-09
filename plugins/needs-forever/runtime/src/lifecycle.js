@@ -138,6 +138,7 @@ export function handleLifecycle(input, host, pluginRoot, adapterOccurrenceId, na
                     state.pending_action.stage = 'confirmed';
                     state.pending_action.target_turn_id = typeof event.turn_id === 'string' ? event.turn_id : null;
                     state.continuation_confirmed = true;
+                    delete state.recovery_prompt;
                     store.event(state, 'main_session_continuation_confirmed', { session_id: session, turn_id: event.turn_id ?? null, delivery_id: context.delivery_id, tool_use_id: toolId, original_event: name });
                 }
                 delete state.tool_starts[toolId];
@@ -194,6 +195,7 @@ export function handleLifecycle(input, host, pluginRoot, adapterOccurrenceId, na
             if (state.binding.accepted_receipt?.occurrence_id === nativeReceipt.occurrence_id)
                 continue;
             const store = new Store(path);
+            delete state.recovery_prompt;
             state.binding = { ...state.binding, status: 'BOUND', tool_use_id: null, bound_at: new Date().toISOString(), accepted_receipt: { ...nativeReceipt, generation: expectedGeneration } };
             state.host = { ...host, hook_effective: false, reason: 'Original main-session lifecycle receipt correlated; awaiting exactly one replacement controller.' };
             state.recovery_condition = { kind: 'rebind_controller_required', message: 'Original main session re-bound; supervision is not active until the replacement controller is ready.', resume_when: 'Allow the replacement B to start, then wait for a native Stop callback.' };
@@ -229,7 +231,7 @@ export function handleLifecycle(input, host, pluginRoot, adapterOccurrenceId, na
         if (operation === 'resume' && state.main_session_id !== null && state.main_session_id !== session)
             continue;
         state.main_session_id = session;
-        state.binding = { ...state.binding, status: 'BOUND', tool_use_id: toolId, bound_at: new Date().toISOString() };
+        state.binding = { ...state.binding, status: 'BOUND', tool_use_id: toolId, bound_at: new Date().toISOString(), ...(nativeReceipt ? { accepted_receipt: { ...nativeReceipt, generation: state.run_generation } } : {}) };
         state.host = { ...host, hook_effective: false, reason: 'Main-session identity correlated; awaiting a real Stop callback and background control readiness.' };
         state.recovery_condition = { kind: 'stop_hook_required', message: 'Main-session bound; supervision is not active until background control and Stop callback are confirmed.', resume_when: 'Start the bound background controller and observe its native Stop callback.' };
         const store = new Store(path);

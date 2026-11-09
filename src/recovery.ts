@@ -76,7 +76,7 @@ export function recordRecoveryFailure(previous: readonly RecoveryFailure[], erro
   const last = previous.at(-1);
   const count = last?.signature === signature ? last.count + 1 : 1;
   const instruction = count >= 3
-    ? 'Investigate a different hypothesis, add a distinguishing check, or use a materially different route; retries alone never justify WAIT_EXTERNAL.'
+    ? 'Investigate a different hypothesis, check an authorized alternative provider or local artifact, add a distinguishing check, or use a materially different route; retries alone never justify WAIT_EXTERNAL.'
     : 'Retry the same authorized operation after the scheduled backoff and record the resulting evidence.';
   return [...previous, { signature, kind: classification.kind, count, message: classification.message, instruction, at: new Date(now).toISOString() }];
 }

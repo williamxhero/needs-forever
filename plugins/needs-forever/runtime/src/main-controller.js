@@ -13,6 +13,37 @@ import { preflightSupervisor, superviseStop } from './main-supervision.js';
 import { classifyRecoveryError, nextBackoff, recordRecoveryFailure } from './recovery.js';
 import { reachedLimits } from './rules.js';
 import { armRecovery, cancelRecovery, createRecoveryPlan, markRecoveryRunning, acquireRecoveryOwner, waitForNativeReceipt, reconcileStaleOwner } from './recovery-coordinator.js';
+import { scheduleNativeRebindPrompt } from './main-session-recovery.js';
+function scheduleMainSessionRecoveryPrompt(path, pluginRoot, fixturePath, state, message, sourceTurnId) {
+    if (state.control_mode !== 'main-session' || !state.main_session_id || state.status !== 'ACTIVE')
+        return;
+    const delayValue = Number(fixturePath ? readJson(fixturePath).recovery_prompt_delay_ms : process.env.NF_RECOVERY_PROMPT_DELAY_MS ?? 3_000);
+    const delayMs = Number.isFinite(delayValue) && delayValue >= 0 ? delayValue : 3_000;
+    const deliveryId = state.pending_action?.delivery_id;
+    if (!deliveryId)
+        return;
+    state.recovery_prompt = {
+        kind: 'continuation',
+        delivery_id: deliveryId,
+        source_turn_id: sourceTurnId,
+        task_version: state.task_version,
+        run_generation: state.run_generation,
+        message,
+        due_at: new Date(Date.now() + delayMs).toISOString(),
+    };
+    const store = new Store(path);
+    store.save(state);
+    store.event(state, 'main_session_recovery_prompt_scheduled', {
+        delivery_id: deliveryId,
+        main_session_id: state.main_session_id,
+        source_turn_id: sourceTurnId,
+        due_at: state.recovery_prompt.due_at,
+        reason: 'A 未在 Stop 方向返回后产生匹配活动；NF 将自动发送恢复 prompt。',
+    });
+    const script = resolve(pluginRoot, 'scripts/recovery-prompt.mjs');
+    const child = spawn(process.execPath, [script, path, ...(fixturePath ? ['--test-fixture', fixturePath] : [])], { cwd: state.task.workspace, detached: true, windowsHide: true, stdio: 'ignore' });
+    child.unref();
+}
 export function controllerRequest(controller, command, payload = null, timeout = 2_000) {
     return new Promise((done, reject) => {
         const socket = createConnection(controller.endpoint);
@@ -79,6 +110,31 @@ function processAbsent(pid) {
         if (error.code === 'ESRCH')
             return true;
         throw error;
+    }
+}
+function acquireMainLease(leasePath, statePath, mainSessionId, controllerId) {
+    mkdirSync(dirname(leasePath), { recursive: true });
+    try {
+        return openSync(leasePath, 'wx', 0o600);
+    }
+    catch (error) {
+        if (error.code !== 'EEXIST')
+            throw error;
+        let owner;
+        try {
+            owner = JSON.parse(readFileSync(leasePath, 'utf8'));
+        }
+        catch {
+            throw new Error('Existing main-session lease is unreadable; refusing automatic recovery.');
+        }
+        if (owner.state_path !== statePath || owner.main_session_id !== mainSessionId || !Number.isInteger(owner.pid) || owner.pid <= 0)
+            throw new Error('Existing main-session lease identity is ambiguous; refusing automatic recovery.');
+        if (!processAbsent(owner.pid))
+            throw new Error('This main session already has a live controller lease.');
+        unlinkSync(leasePath);
+        const lease = openSync(leasePath, 'wx', 0o600);
+        writeFileSync(lease, JSON.stringify({ pid: process.pid, controller_id: controllerId, state_path: statePath, main_session_id: mainSessionId }));
+        return lease;
     }
 }
 export async function pauseMainController(path) {
@@ -240,6 +296,8 @@ export async function launchController(path, pluginRoot, fixture) {
                 armRecovery(saved, saved.recovery_condition);
             }
             new Store(path).save(saved);
+            if (saved.binding.status === 'PENDING_NATIVE_HOOK' && saved.binding.operation === 'rebind')
+                scheduleNativeRebindPrompt(path, pluginRoot, fixture, saved, message);
         }
         else if (saved.control_mode === 'main-session' && saved.binding.status === 'BOUND' && saved.main_session_id && saved.status !== 'DONE') {
             const message = String(redact(error.message));
@@ -251,6 +309,7 @@ export async function launchController(path, pluginRoot, fixture) {
             });
             saved.controller = { ...saved.controller, lifecycle: 'exited' };
             new Store(path).save(saved);
+            scheduleNativeRebindPrompt(path, pluginRoot, fixture, saved, message);
         }
         releaseLaunchLock();
         throw error;
@@ -288,19 +347,54 @@ export function boundStateForEvent(input, pluginRoot, simulated) {
         // versions. Only the package that owns B may dispatch callbacks to it;
         // otherwise a second installation can make B report a false plugin change
         // and strand the task in RECOVERING.
-        if (state.control_mode === 'main-session' && state.status !== 'DONE' && state.binding.status === 'BOUND' && state.main_session_id === input.session_id && (state.mode === 'simulated') === simulated && state.controller?.lifecycle === 'running' && canonicalPath(state.controller.plugin_root) === callbackPluginRoot)
+        const controllerRunning = state.controller?.lifecycle === 'running';
+        const ownerPluginMatches = canonicalPath(state.controller?.plugin_root ?? pluginRoot) === callbackPluginRoot;
+        const exitedControllerRebind = !controllerRunning && ['SessionStart', 'UserPromptSubmit'].includes(input.hook_event_name) && state.status === 'ACTIVE';
+        if (state.control_mode === 'main-session' && state.status !== 'DONE' && state.binding.status === 'BOUND' && state.main_session_id === input.session_id && (state.mode === 'simulated') === simulated && ((controllerRunning && ownerPluginMatches) || exitedControllerRebind))
             return path;
     }
     return null;
 }
-export async function dispatchBoundLifecycle(path, input, pluginRoot, bundleHash, desktopPid) {
+export async function dispatchBoundLifecycle(path, input, pluginRoot, bundleHash, desktopPid, nativeReceipt, fixturePath) {
     const state = readJson(path);
-    if (!state.controller || state.controller.lifecycle !== 'running')
+    if (!state.controller || state.controller.lifecycle !== 'running') {
+        if (!pluginRoot || !bundleHash || !nativeReceipt || !['SessionStart', 'UserPromptSubmit'].includes(input?.hook_event_name) || state.status !== 'ACTIVE' || state.binding.status !== 'BOUND' || state.main_session_id !== input?.session_id || canonicalPath(input?.cwd) !== canonicalPath(state.task.workspace))
+            return {};
+        const issuedAt = Date.parse(nativeReceipt.issued_at);
+        const previousAt = state.binding.accepted_receipt ? Date.parse(state.binding.accepted_receipt.issued_at) : NaN;
+        if (!nativeReceipt.occurrence_id || !Number.isFinite(issuedAt) || (Number.isFinite(previousAt) && issuedAt <= previousAt))
+            return {};
+        const store = new Store(path);
+        const generation = randomUUID();
+        state.input_epoch = (state.input_epoch ?? 0) + 1;
+        state.run_generation = generation;
+        state.pending_action = null;
+        delete state.direction_context;
+        delete state.last_stop;
+        state.tool_starts = {};
+        state.continuation_confirmed = false;
+        state.phase = 'WORKER';
+        delete state.last_error;
+        delete state.recovery_condition;
+        const reboundHost = { ...state.host, hook_effective: state.mode === 'live' && state.host.source === 'native-desktop', reason: 'Automatic native lifecycle receipt re-bound the original A.' };
+        const reboundDesktopPid = typeof desktopPid === 'number' && Number.isInteger(desktopPid) ? desktopPid : null;
+        if (reboundDesktopPid !== null)
+            reboundHost.desktop_pid = reboundDesktopPid;
+        state.host = reboundHost;
+        state.binding = { ...state.binding, status: 'BOUND', bound_at: new Date().toISOString(), accepted_receipt: { ...nativeReceipt, generation } };
+        if (state.recovery_plan) {
+            state.recovery_plan = { ...state.recovery_plan, generation, owner: null, status: 'running', next_retry_at: null, cancellation_boundary: null };
+        }
+        delete state.controller;
+        store.save(state);
+        store.event(state, 'main_session_rebind_receipt', { main_session_id: state.main_session_id, task_version: state.task_version, run_generation: generation, receipt_occurrence_id: nativeReceipt.occurrence_id, receipt_issued_at: nativeReceipt.issued_at, hook_event_name: input.hook_event_name, host_source: state.host.source, automatic: true, callback_plugin_root: canonicalPath(pluginRoot), callback_bundle_sha256: bundleHash });
+        await launchController(path, pluginRoot, fixturePath);
         return {};
+    }
     // The adapter owns occurrence identity. It is not a field supplied by native
     // stdin. One native command invocation sends exactly once on the pinned host.
     const adapterOccurrenceId = randomUUID();
-    return controllerRequest(state.controller, 'lifecycle', { adapter_occurrence_id: adapterOccurrenceId, event: { ...input, ...(pluginRoot ? { callback_plugin_root: canonicalPath(pluginRoot) } : {}), ...(bundleHash ? { callback_bundle_sha256: bundleHash } : {}), ...(desktopPid ? { callback_desktop_pid: desktopPid } : {}) } }, 590_000);
+    return controllerRequest(state.controller, 'lifecycle', { adapter_occurrence_id: adapterOccurrenceId, native_receipt: nativeReceipt ?? null, event: { ...input, ...(pluginRoot ? { callback_plugin_root: canonicalPath(pluginRoot) } : {}), ...(bundleHash ? { callback_bundle_sha256: bundleHash } : {}), ...(desktopPid ? { callback_desktop_pid: desktopPid } : {}) } }, 590_000);
 }
 // Stop judgments share the existing schema/readonly judge. Transport-only
 // fixtures substitute the external model; live tasks cannot use fixture output.
@@ -321,7 +415,7 @@ export async function runController(path, pluginRoot, fixturePath) {
         throw new Error('B requires a correlated main-session binding and matching evidence mode.');
     if (state.controller)
         throw new Error('Controller receipt already exists; explicit recovery is required.');
-    store.lock(state.task);
+    store.lock(state.task, true);
     const leasePath = mainLeasePath(state.main_session_id);
     let lease;
     let server;
@@ -330,7 +424,7 @@ export async function runController(path, pluginRoot, fixturePath) {
     const startupAbort = new AbortController();
     const sockets = new Set();
     const id = randomUUID();
-    const controller = { id, pid: process.pid, token: randomUUID(), endpoint: process.platform === 'win32' ? `\\\\.\\pipe\\needs-forever-main-${id}` : resolve(tmpdir(), `nf-main-${id}.sock`), lifecycle: 'running', started_at: new Date().toISOString(), run_generation: state.run_generation, plugin_root: canonicalPath(pluginRoot), bundle_sha256: createHash('sha256').update(readFileSync(resolve(pluginRoot, 'runtime/integrity.json'))).digest('hex') };
+    let controller = { id, pid: process.pid, token: randomUUID(), endpoint: process.platform === 'win32' ? `\\\\.\\pipe\\needs-forever-main-${id}` : resolve(tmpdir(), `nf-main-${id}.sock`), lifecycle: 'running', started_at: new Date().toISOString(), run_generation: state.run_generation, plugin_root: canonicalPath(pluginRoot), bundle_sha256: createHash('sha256').update(readFileSync(resolve(pluginRoot, 'runtime/integrity.json'))).digest('hex') };
     let active = null;
     let recoveryOwner;
     const accrue = () => {
@@ -391,6 +485,7 @@ export async function runController(path, pluginRoot, fixturePath) {
         });
         state.controller = { ...controller, lifecycle: 'exited' };
         store.save(state);
+        scheduleNativeRebindPrompt(path, pluginRoot, fixturePath, state, reason);
     };
     const shutdown = () => {
         if (closing)
@@ -414,14 +509,9 @@ export async function runController(path, pluginRoot, fixturePath) {
             socket.end();
     };
     try {
-        mkdirSync(dirname(leasePath), { recursive: true });
-        try {
-            lease = openSync(leasePath, 'wx', 0o600);
-        }
-        catch {
-            throw new Error('This main session already has a controller lease; explicit recovery is required.');
-        }
-        writeFileSync(lease, JSON.stringify({ pid: process.pid, controller_id: id, state_path: path, main_session_id: state.main_session_id }));
+        lease = acquireMainLease(leasePath, path, state.main_session_id, id);
+        if (readFileSync(leasePath, 'utf8').length === 0)
+            writeFileSync(lease, JSON.stringify({ pid: process.pid, controller_id: id, state_path: path, main_session_id: state.main_session_id }));
         if (!state.recovery_plan) {
             const reason = state.recovery_condition ?? { kind: 'controller_startup', message: 'Controller recovery plan initialized.', resume_when: 'Revalidate the original native binding before resuming.' };
             state.recovery_plan = createRecoveryPlan(state, reason, false);
@@ -474,12 +564,56 @@ export async function runController(path, pluginRoot, fixturePath) {
                     const event = message.payload?.event;
                     if (event?.session_id !== state.main_session_id || canonicalPath(event.cwd) !== canonicalPath(state.task.workspace) || event.agent_id != null || event.agent_type != null || event.agent_transcript_path != null)
                         return {};
-                    const desktopRestarted = event.hook_event_name === 'SessionStart' && Number.isInteger(event.callback_desktop_pid) && Number.isInteger(state.host.desktop_pid) && event.callback_desktop_pid !== state.host.desktop_pid;
-                    if (desktopRestarted || (event.callback_plugin_root && canonicalPath(event.callback_plugin_root) !== controller.plugin_root) || (event.callback_bundle_sha256 && event.callback_bundle_sha256 !== controller.bundle_sha256)) {
-                        cancelActive('Native host restarted or installed plugin changed.');
-                        rearmBinding('Native host restarted or installed plugin changed; awaiting a trusted lifecycle receipt from the original A.', event.callback_desktop_pid);
-                        setImmediate(shutdown);
+                    const nativeReceipt = message.payload?.native_receipt;
+                    const acceptedReceipt = state.binding.accepted_receipt;
+                    if (acceptedReceipt && nativeReceipt && Date.parse(nativeReceipt.issued_at) <= Date.parse(acceptedReceipt.issued_at))
                         return {};
+                    const desktopRestarted = event.hook_event_name === 'SessionStart' && Number.isInteger(event.callback_desktop_pid) && Number.isInteger(state.host.desktop_pid) && event.callback_desktop_pid !== state.host.desktop_pid;
+                    const callbackPluginRoot = typeof event.callback_plugin_root === 'string' ? canonicalPath(event.callback_plugin_root) : controller.plugin_root;
+                    const callbackBundleSha = typeof event.callback_bundle_sha256 === 'string' ? event.callback_bundle_sha256 : null;
+                    const pluginChanged = callbackPluginRoot !== controller.plugin_root;
+                    const bundleChanged = callbackBundleSha !== null && callbackBundleSha !== controller.bundle_sha256;
+                    if (desktopRestarted || pluginChanged || bundleChanged) {
+                        const sameTrustedA = state.status === 'ACTIVE' && state.binding.status === 'BOUND' && state.main_session_id === event.session_id && callbackPluginRoot === canonicalPath(pluginRoot) && callbackBundleSha !== null;
+                        if (sameTrustedA) {
+                            // The lifecycle callback already came through the newly loaded
+                            // trusted hook for the original A. Keep it as the receipt and
+                            // update B's fingerprints in place; shutting B down here would
+                            // strand the task waiting for a second callback that Codex may
+                            // never emit after a host/plugin restart.
+                            cancelActive('Native host or plugin changed; the new lifecycle receipt re-bound the original A.');
+                            const generation = randomUUID();
+                            state.input_epoch = (state.input_epoch ?? 0) + 1;
+                            state.run_generation = generation;
+                            state.pending_action = null;
+                            delete state.direction_context;
+                            state.tool_starts = {};
+                            state.continuation_confirmed = false;
+                            state.phase = 'WORKER';
+                            delete state.last_error;
+                            delete state.recovery_condition;
+                            state.host = { ...state.host, desktop_pid: Number.isInteger(event.callback_desktop_pid) ? event.callback_desktop_pid : state.host.desktop_pid, hook_effective: state.mode === 'live' && state.host.source === 'native-desktop', reason: 'Automatic native lifecycle receipt re-bound the original A.' };
+                            controller = { ...controller, plugin_root: callbackPluginRoot, bundle_sha256: callbackBundleSha, run_generation: generation };
+                            state.controller = controller;
+                            const reboundBinding = { ...state.binding };
+                            delete reboundBinding.operation;
+                            state.binding = { ...reboundBinding, status: 'BOUND', bound_at: new Date().toISOString(), accepted_receipt: { occurrence_id: String(message.payload?.adapter_occurrence_id ?? randomUUID()), issued_at: new Date().toISOString(), generation } };
+                            if (state.recovery_plan) {
+                                state.recovery_plan.generation = generation;
+                                state.recovery_plan.status = 'running';
+                                state.recovery_plan.next_retry_at = null;
+                                if (state.recovery_plan.owner)
+                                    state.recovery_plan.owner = { ...state.recovery_plan.owner, generation };
+                            }
+                            store.event(state, 'main_session_rebind_receipt', { main_session_id: event.session_id, task_version: state.task_version, run_generation: generation, hook_event_name: event.hook_event_name, host_source: state.host.source, automatic: true, callback_plugin_root: callbackPluginRoot, callback_bundle_sha256: callbackBundleSha });
+                            store.save(state);
+                        }
+                        else {
+                            cancelActive('Native host restarted or installed plugin changed.');
+                            rearmBinding('Native host restarted or installed plugin changed; awaiting a trusted lifecycle receipt from the original A.', event.callback_desktop_pid);
+                            setImmediate(shutdown);
+                            return {};
+                        }
                     }
                     if (event.run_generation != null && event.run_generation !== state.run_generation)
                         return {};
@@ -508,6 +642,7 @@ export async function runController(path, pluginRoot, fixturePath) {
                         state.latest_human_input = { prompt: String(redact(typeof event.prompt === 'string' ? event.prompt : '')).slice(0, 8_000), at: new Date().toISOString(), input_epoch: state.input_epoch };
                         state.pending_action = null;
                         delete state.direction_context;
+                        delete state.recovery_prompt;
                         state.continuation_confirmed = false;
                         state.tool_starts = {};
                         if (state.status === 'ACTIVE' && state.phase !== 'RECOVERING')
@@ -518,6 +653,7 @@ export async function runController(path, pluginRoot, fixturePath) {
                     }
                     if (event.hook_event_name === 'Stop' && state.status === 'ACTIVE' && state.phase !== 'RECOVERING' && !state.pause_reason) {
                         state.accepted_stop_occurrences = [...(state.accepted_stop_occurrences ?? []), message.payload.adapter_occurrence_id];
+                        delete state.recovery_prompt;
                         store.save(state); // Persist admission before any asynchronous C.
                     }
                     accrue();
@@ -634,6 +770,7 @@ export async function runController(path, pluginRoot, fixturePath) {
                         state.stop_transport = { request, outcome: 'returned', delivery_id: delivery };
                         store.save(state);
                         store.event(state, 'stop_hook_direction_returned', { stop_attempt_id: request.stop_attempt_id, delivery_id: delivery, session_id: request.session_id, execution_confirmed: false });
+                        scheduleMainSessionRecoveryPrompt(path, pluginRoot, fixturePath, state, state.pending_action.message, request.turn_id);
                         return { decision: 'block', reason: state.pending_action.message };
                     }
                     catch (error) {
