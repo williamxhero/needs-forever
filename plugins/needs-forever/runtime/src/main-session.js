@@ -47,6 +47,10 @@ export function armNativeRebind(state, reason) {
     if (!state.main_session_id)
         throw new Error('Cannot rebind a main session before the original A is bound.');
     const now = new Date().toISOString();
+    state.recovery_parent = state.last_stop ? {
+        stop_attempt_id: state.last_stop.stop_attempt_id,
+        turn_id: state.last_stop.turn_id,
+    } : { stop_attempt_id: null, turn_id: null };
     const generation = randomUUID();
     state.run_generation = generation;
     state.input_epoch = (state.input_epoch ?? 0) + 1;

@@ -298,6 +298,7 @@ test('native rebind recovery automatically prompts the original A instead of wai
     run_generation: 'rebind-generation',
     binding: { ...before.binding, status: 'PENDING_NATIVE_HOOK', operation: 'rebind', expected_run_generation: 'rebind-generation', armed_at: new Date().toISOString() },
     recovery_condition: { kind: 'native_rebind', message: 'Binding expired.', resume_when: 'A native receipt.' },
+    recovery_parent: { stop_attempt_id: 'stop-parent-001', turn_id: 'turn-parent-001' },
     recovery_plan: { ...(before.recovery_plan ?? { owner: null, generation: 'rebind-generation', task_version: before.task_version, attempt: 0, next_retry_at: null, reason: { kind: 'native_rebind', message: 'Binding expired.', resume_when: 'A native receipt.' }, status: 'waiting_native', cancellation_boundary: null }), owner: null, generation: 'rebind-generation', status: 'waiting_native' },
   } as unknown as MainSessionState;
   writeFileSync(f.state, `${JSON.stringify(pending)}\n`);
@@ -312,6 +313,15 @@ test('native rebind recovery automatically prompts the original A instead of wai
   assert.ok(events.some((event) => event.type === 'main_session_recovery_prompt_scheduled'));
   assert.ok(events.some((event) => event.type === 'main_session_recovery_prompt_sent'));
   assert.ok(events.some((event) => event.type === 'main_session_recovery_prompt_acknowledged'));
+  const scheduled = events.find((event) => event.type === 'main_session_recovery_prompt_scheduled');
+  const sent = events.find((event) => event.type === 'main_session_recovery_prompt_sent');
+  const acknowledged = events.find((event) => event.type === 'main_session_recovery_prompt_acknowledged');
+  assert.equal(scheduled.stop_attempt_id, 'stop-parent-001');
+  assert.equal(scheduled.turn_id, 'turn-parent-001');
+  assert.equal(sent.stop_attempt_id, 'stop-parent-001');
+  assert.equal(sent.turn_id, 'turn-parent-001');
+  assert.equal(acknowledged.stop_attempt_id, 'stop-parent-001');
+  assert.equal(acknowledged.turn_id, 'turn-parent-001');
 });
 
 test('legacy pending resume checkpoints migrate to automatic rebind on the next original-A lifecycle event', async (t) => {

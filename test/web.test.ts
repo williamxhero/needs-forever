@@ -226,6 +226,44 @@ test('TaskCatalog treats a main-session tool result as the A worker leg', () => 
   }
 });
 
+test('TaskCatalog maps a native rebind prompt back to its parent Stop round and exposes the real prompt', async () => {
+  const data = fixture();
+  try {
+    const recoveryPrompt = '请继续执行当前任务。Needs Forever 正在等待原始 A 的真实生命周期回执，以完成当前监督绑定；收到后继续按现有任务合同推进。';
+    writeFileSync(resolve(data.directory, 'events.jsonl'), [
+      { at: '2026-11-01T08:00:00.000Z', type: 'main_session_stop_observed', turn_id: 'turn-parent', stop_attempt_id: 'stop-parent', stop_reason: '工具执行完成。' },
+      { at: '2026-11-01T08:00:01.000Z', type: 'decision', role: 'judge', stop_attempt_id: 'stop-parent', decision: { action: 'CONTINUE', reason: '需要重新建立监督绑定。', evidence_ids: [], next_message: '旧方向。', external: null } },
+      { at: '2026-11-01T08:00:02.000Z', type: 'main_session_recovery_prompt_sent', role: 'worker', stop_attempt_id: 'stop-parent', turn_id: 'turn-parent', delivery_id: 'delivery-parent', message: recoveryPrompt },
+      { at: '2026-11-01T08:00:03.000Z', type: 'main_session_recovery_prompt_acknowledged', role: 'worker', stop_attempt_id: 'stop-parent', turn_id: 'turn-parent', delivery_id: 'delivery-parent', message: recoveryPrompt },
+    ].map((event) => JSON.stringify(event)).join('\n') + '\n');
+    const record = new TaskCatalog({ workspace: data.workspace }).read('demo-001');
+    assert.equal(record.rounds.length, 1);
+    assert.deepEqual(record.rounds[0]?.continuation.map((event) => event.eventType), ['main_session_recovery_prompt_sent', 'main_session_recovery_prompt_acknowledged']);
+    assert.equal(record.rounds[0]?.continuation.find((event) => event.eventType === 'main_session_recovery_prompt_sent')?.details.message, recoveryPrompt);
+    const running = await startWebServer({ workspace: data.workspace, port: 0 });
+    try {
+      const api = await (await fetch(`${running.url}api/tasks/demo-001`)).json() as { rounds: Array<{ continuation: Array<{ details: Record<string, unknown> }> }> };
+      assert.equal(api.rounds[0]?.continuation.find((event) => event.details.type === 'main_session_recovery_prompt_sent')?.details.message, recoveryPrompt);
+    } finally { await running.close(); }
+  } finally { data.cleanup(); }
+});
+
+test('TaskCatalog preserves an externally observed worker prompt without claiming NF sent it', () => {
+  const data = fixture();
+  try {
+    const prompt = '请继续执行当前任务。Needs Forever 正在等待原始 A 的真实生命周期回执，以完成当前监督绑定；收到后继续按现有任务合同推进。';
+    writeFileSync(resolve(data.directory, 'events.jsonl'), [
+      { at: '2026-11-01T08:00:00.000Z', type: 'main_session_stop_observed', turn_id: 'turn-parent', stop_attempt_id: 'stop-parent' },
+      { at: '2026-11-01T08:00:01.000Z', type: 'judge_created', role: 'supervisor', stop_attempt_id: 'stop-parent' },
+      { at: '2026-11-01T08:00:02.000Z', type: 'main_session_worker_prompt_observed', role: 'worker', source: 'codex-app-tools', stop_attempt_id: 'stop-parent', turn_id: 'turn-parent', message: prompt },
+    ].map((event) => JSON.stringify(event)).join('\n') + '\n');
+    const record = new TaskCatalog({ workspace: data.workspace }).read('demo-001');
+    assert.equal(record.rounds.length, 1);
+    assert.equal(record.rounds[0]?.continuation[0]?.eventType, 'main_session_worker_prompt_observed');
+    assert.equal(record.rounds[0]?.continuation[0]?.details.message, prompt);
+  } finally { data.cleanup(); }
+});
+
 test('TaskCatalog assigns repeated main-session work to the next matching Stop/C round', () => {
   const data = fixture();
   try {

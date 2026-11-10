@@ -22,10 +22,10 @@ export function scheduleNativeRebindPrompt(path, pluginRoot, fixturePath, state,
     const deliveryId = randomUUID();
     const delayMs = promptDelayMs(fixturePath);
     const message = `NF 自动恢复绑定：原始 A 的监督绑定已失效。请继续当前任务，保持原目标和授权，不要重复旧方向；这条消息用于重新建立本机监督绑定。\n\n原因为：${reason}`;
-    state.recovery_prompt = { kind: 'native_rebind', delivery_id: deliveryId, source_turn_id: null, task_version: state.task_version, run_generation: state.run_generation, message, due_at: new Date(Date.now() + delayMs).toISOString() };
+    state.recovery_prompt = { kind: 'native_rebind', delivery_id: deliveryId, source_turn_id: state.recovery_parent?.turn_id ?? null, task_version: state.task_version, run_generation: state.run_generation, message, due_at: new Date(Date.now() + delayMs).toISOString() };
     const store = new Store(path);
     store.save(state);
-    store.event(state, 'main_session_recovery_prompt_scheduled', { kind: 'native_rebind', delivery_id: deliveryId, main_session_id: state.main_session_id, due_at: state.recovery_prompt.due_at, reason: 'NF 自动推动原始 A 产生新的 native lifecycle receipt。' });
+    store.event(state, 'main_session_recovery_prompt_scheduled', { kind: 'native_rebind', delivery_id: deliveryId, main_session_id: state.main_session_id, due_at: state.recovery_prompt.due_at, reason: 'NF 自动推动原始 A 产生新的 native lifecycle receipt。', ...(state.recovery_parent?.stop_attempt_id ? { stop_attempt_id: state.recovery_parent.stop_attempt_id } : {}), ...(state.recovery_parent?.turn_id ? { turn_id: state.recovery_parent.turn_id } : {}) });
     const script = resolve(pluginRoot, 'scripts/recovery-prompt.mjs');
     const child = spawn(process.execPath, [script, path, ...(fixturePath ? ['--test-fixture', fixturePath] : [])], { cwd: state.task.workspace, detached: true, windowsHide: true, stdio: 'ignore' });
     child.unref();
@@ -113,7 +113,8 @@ function currentPrompt(statePath) {
     }
 }
 function log(statePath, state, type, details = {}) {
-    new Store(statePath).event(state, type, { role: 'worker', source: 'nf', transport: 'codex-app-server', ...(state.last_stop?.stop_attempt_id ? { stop_attempt_id: state.last_stop.stop_attempt_id } : {}), ...(state.last_stop?.turn_id ? { turn_id: state.last_stop.turn_id } : {}), ...details });
+    const parent = state.last_stop ?? state.recovery_parent;
+    new Store(statePath).event(state, type, { role: 'worker', source: 'nf', transport: 'codex-app-server', ...(parent?.stop_attempt_id ? { stop_attempt_id: parent.stop_attempt_id } : {}), ...(parent?.turn_id ? { turn_id: parent.turn_id } : {}), ...details });
 }
 function matchingClientId(turns, deliveryId) {
     for (const value of turns) {

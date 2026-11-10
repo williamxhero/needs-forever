@@ -30,6 +30,12 @@ export interface MainSessionState extends State {
   };
   host: { desktop_version: string | null; cli_version: string | null; hook_effective: boolean; source: 'unverified' | 'native-desktop' | 'simulated'; reason: string; desktop_pid?: number; desktop_binary?: string };
   last_stop?: StopRequest;
+  /**
+   * Correlation retained when a native rebind clears last_stop.  Recovery
+   * prompts still belong to the Stop round that caused the rebind and must
+   * remain visible in that round's audit trail.
+   */
+  recovery_parent?: { stop_attempt_id: string | null; turn_id: string | null };
   controller?: { id: string; pid: number; endpoint: string; token: string; lifecycle: 'running' | 'exited'; started_at: string; run_generation: string; plugin_root: string; bundle_sha256?: string };
   /**
    * A durable fallback delivery for the original A.  The native Stop hook is
@@ -112,6 +118,10 @@ export function armNativeRebind(state: MainSessionState, reason: string): void {
   if (state.status === 'DONE' || state.pause_reason) return;
   if (!state.main_session_id) throw new Error('Cannot rebind a main session before the original A is bound.');
   const now = new Date().toISOString();
+  state.recovery_parent = state.last_stop ? {
+    stop_attempt_id: state.last_stop.stop_attempt_id,
+    turn_id: state.last_stop.turn_id,
+  } : { stop_attempt_id: null, turn_id: null };
   const generation = randomUUID();
   state.run_generation = generation;
   state.input_epoch = (state.input_epoch ?? 0) + 1;

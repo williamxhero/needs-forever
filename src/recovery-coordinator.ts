@@ -153,6 +153,10 @@ export function reconcileStaleOwner(state: MainSessionState, now = Date.now()): 
   // native rebind used by the lifecycle path so the next real A receipt can
   // restart B; leaving operation="resume" here would make lifecycle ignore
   // SessionStart/UserPromptSubmit and strand the task in RECOVERING.
+  state.recovery_parent = state.last_stop ? {
+    stop_attempt_id: state.last_stop.stop_attempt_id,
+    turn_id: state.last_stop.turn_id,
+  } : { stop_attempt_id: null, turn_id: null };
   const generation = randomUUID();
   const armedAt = new Date(now).toISOString();
   state.run_generation = generation;
@@ -214,6 +218,10 @@ function reconcileRecoveryTickUnlocked(statePath: string, now: number): { change
   const current = parsed.recovery_plan;
   if (!current || current.status === 'cancelled' || (parsed as MainSessionState).status === 'DONE' || (parsed as MainSessionState).status === 'PAUSED') return { changed, waitingNative: false, nextRetryAt: null };
   if (current.next_retry_at && Date.parse(current.next_retry_at) <= now && parsed.binding.status === 'BOUND' && parsed.main_session_id) {
+    parsed.recovery_parent = parsed.last_stop ? {
+      stop_attempt_id: parsed.last_stop.stop_attempt_id,
+      turn_id: parsed.last_stop.turn_id,
+    } : { stop_attempt_id: null, turn_id: null };
     const generation = randomUUID();
     const armedAt = new Date(now).toISOString();
     parsed.run_generation = generation;
