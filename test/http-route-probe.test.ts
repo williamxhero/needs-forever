@@ -117,6 +117,32 @@ test('NF receipts project only actual HTTP facts, reject forged sources, and all
   assert.equal(monotonic.route_ledger!.attempts.length, attempts);
   assert.equal(ingestHttpRouteProbes(monotonic, older.input), 0);
   assert.equal(monotonic.route_catalog!.entries[0]!.status, 'blocked');
+  statusOverride = 200;
+  const five = [await probe(200), await probe(200), await probe(200), await probe(200)];
+  statusOverride = 429; five.push(await probe(200)); statusOverride = null;
+  const sameUrl = structuredClone(state); delete sameUrl.route_catalog; delete sameUrl.route_ledger;
+  const fiveInput = buildC2Context({ ...five[4]!.input, evidence: five.toReversed().map((item, index) => ({ ...item.input.evidence[0]!, id: `E${index}` })) }, sameUrl);
+  assert.equal(ingestHttpRouteProbes(sameUrl, fiveInput), 5);
+  assert.equal(sameUrl.route_catalog!.entries[0]!.status, 'blocked', 'Per-Stop receipt budgets cannot discard a newer status for an already observed URL.');
+  assert.equal(sameUrl.route_catalog!.entries[0]!.rate_limit.status, 'limited');
+  assert.deepEqual(sameUrl.route_ledger!.attempts.map((attempt) => attempt.outcome), ['diagnostic', 'diagnostic', 'diagnostic', 'diagnostic', 'blocked']);
+  assert.equal(ingestHttpRouteProbes(sameUrl, fiveInput), 0);
+  assert.equal(sameUrl.route_ledger!.attempts.length, 5, 'Cross-Stop duplicates cannot become actual attempts.');
+  statusOverride = 200;
+  const diverse = [await probe(201), await probe(202), await probe(203), await probe(204), await probe(205)]; statusOverride = null;
+  const bounded = structuredClone(state); delete bounded.route_catalog; delete bounded.route_ledger;
+  const manyInput = buildC2Context({ ...diverse[4]!.input, evidence: diverse.toReversed().map((item, index) => ({ ...item.input.evidence[0]!, id: `E${index}` })) }, bounded);
+  assert.equal(ingestHttpRouteProbes(bounded, manyInput), 4);
+  const incomplete = buildC2Context(manyInput, bounded);
+  assert.equal(incomplete.c2!.context_complete, false);
+  assert.match(incomplete.omissions!.join(' '), /HTTP.*budget.*omitt/i);
+  const restarted = JSON.parse(JSON.stringify(bounded)) as State;
+  const nextStop = buildC2Context({ ...manyInput, evidence: [] }, restarted);
+  assert.equal(nextStop.c2!.context_complete, false, 'An omitted URL must survive restart and cannot silently become exhausted.');
+  assert.equal(ingestHttpRouteProbes(restarted, manyInput), 1, 'Previously admitted receipt history cannot consume the new URL budget.');
+  assert.equal(restarted.route_ledger!.attempts.length, 5);
+  assert.equal(ingestHttpRouteProbes(restarted, manyInput), 0);
+  assert.equal(buildC2Context({ ...manyInput, evidence: [] }, restarted).c2!.context_complete, true, 'Observing the omitted URL resolves the bounded-context omission.');
   // A separately scoped no-route task records the actual probe itself as an
   // attempt even when the selected C route was inventory, not the API.
   const noRoute = structuredClone(state); delete noRoute.route_catalog; delete noRoute.route_ledger;

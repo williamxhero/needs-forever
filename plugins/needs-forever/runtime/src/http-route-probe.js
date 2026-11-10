@@ -121,13 +121,14 @@ function sourceData(entry) {
     const response = object(value.tool_response);
     return { command: entry.type === 'commandExecution' ? value.command : native ? literalToolCommand(value.tool_input) : null, output: entry.type === 'commandExecution' ? value.aggregatedOutput : native ? (response.stdout ?? response.output ?? value.tool_response) : null };
 }
-function receiptTime(entry) {
-    try {
-        return Date.parse(object(object(JSON.parse(String(sourceData(entry).output))).nf_route_probe).observed_at) || 0;
-    }
-    catch {
-        return 0;
-    }
+function supersedesCatalog(catalog, receipt, proof) {
+    const previous = catalog.get(`http-api:${routeEvidenceDigest(receipt.url).slice(0, 24)}`);
+    const priorReceipt = previous?.evidence.find((item) => item.reference === `nf-http-get:${receipt.url}`);
+    const priorSource = previous?.evidence.find((item) => item.id.startsWith('http-source:'));
+    const delta = priorReceipt ? Date.parse(receipt.observed_at) - Date.parse(priorReceipt.observed_at) : 1;
+    const sourceDelta = priorSource ? Date.parse(proof.observed_at) - Date.parse(priorSource.observed_at) : 1;
+    const observed = receipt.result.status_code !== null && receipt.result.status_code >= 200 && receipt.result.status_code < 300 && !receipt.result.network_error;
+    return !(delta < 0 || (delta === 0 && sourceDelta < 0) || (delta === 0 && sourceDelta === 0 && previous?.status === 'blocked' && observed));
 }
 export function ingestHttpRouteProbes(state, snapshot) {
     const context = state.route_probe;
@@ -139,10 +140,8 @@ export function ingestHttpRouteProbes(state, snapshot) {
     const catalog = new RouteCatalog({ task_id: state.task_id, task_version: state.task_version }, { data: activeRouteCatalog(state) });
     const proofs = snapshotRouteEvidence(snapshot);
     let accepted = 0;
-    const ordered = snapshot.evidence.slice(0, 32).sort((left, right) => receiptTime(left) - receiptTime(right) || Date.parse(left.source?.observed_at ?? '') - Date.parse(right.source?.observed_at ?? ''));
-    for (const entry of ordered) {
-        if (accepted >= 4)
-            break;
+    const verified = [];
+    for (const entry of snapshot.evidence) {
         const proof = proofs.find((item) => item.id === entry.id);
         if (!proof || entry.source?.thread_id !== worker || (entry.source.turn_id && entry.source.turn_id !== snapshot.worker_turn_id) || Math.abs(Date.now() - Date.parse(proof.observed_at)) > 600000)
             continue;
@@ -166,6 +165,36 @@ export function ingestHttpRouteProbes(state, snapshot) {
             const result = receipt.result;
             if (Object.keys(result).sort().join(',') !== 'body_sha256,bytes,network_error,retry_after_seconds,retry_at,status_code,truncated' || !/^[0-9a-f]{64}$/.test(result.body_sha256) || !Number.isInteger(result.bytes) || result.bytes < 0 || result.bytes > 16384 || ![true, false].includes(result.truncated) || ![true, false].includes(result.network_error) || (result.status_code !== null && (!Number.isInteger(result.status_code) || result.status_code < 100 || result.status_code > 599)) || (result.retry_at !== null && !Number.isFinite(Date.parse(result.retry_at))) || (result.retry_after_seconds !== null && (!Number.isInteger(result.retry_after_seconds) || result.retry_after_seconds < 0 || result.retry_after_seconds > 86400)))
                 continue;
+            if (!(context.seen_receipts ?? []).includes(routeEvidenceDigest(receipt)) && supersedesCatalog(catalog, receipt, proof))
+                verified.push({ receipt, proof });
+        }
+        catch { /* Unsigned, forged, foreign or unsupported outputs prove nothing. */ }
+    }
+    verified.sort((left, right) => Date.parse(left.receipt.observed_at) - Date.parse(right.receipt.observed_at) || Date.parse(left.proof.observed_at) - Date.parse(right.proof.observed_at));
+    // Budget distinct URLs only after finding their newest supported facts. Every
+    // actual receipt for an admitted URL remains in chronological audit order.
+    const urls = [...new Set(verified.toReversed().map(({ receipt }) => receipt.url))];
+    const admitted = new Set(urls.slice(0, 4));
+    const omitted = new Set(context.omitted_url_sha256 ?? []);
+    for (const url of urls) {
+        const digest = routeEvidenceDigest(url);
+        if (admitted.has(url))
+            omitted.delete(digest);
+        else
+            omitted.add(digest);
+    }
+    context.omitted_url_sha256 = [...omitted];
+    snapshot.omissions = (snapshot.omissions ?? []).filter((item) => !item.startsWith('HTTP probe URL budget omitted '));
+    if (omitted.size) {
+        snapshot.omissions.push(`HTTP probe URL budget omitted ${omitted.size} unresolved URL observations; inventory/diagnostic required before external waiting.`);
+        if (snapshot.c2)
+            snapshot.c2.context_complete = false;
+    }
+    for (const { receipt, proof } of verified) {
+        if (!admitted.has(receipt.url))
+            continue;
+        try {
+            const result = receipt.result;
             const retryAt = result.retry_at ?? (result.retry_after_seconds !== null ? new Date(Date.parse(receipt.observed_at) + result.retry_after_seconds * 1000).toISOString() : null);
             const digest = routeEvidenceDigest({ url: receipt.url, result }), id = `http-probe:${digest}`, refs = [id];
             const observed = result.status_code !== null && result.status_code >= 200 && result.status_code < 300 && !result.network_error;
@@ -173,12 +202,7 @@ export function ingestHttpRouteProbes(state, snapshot) {
             if (seen.includes(receiptId))
                 continue;
             context.seen_receipts = [...seen, receiptId].slice(-128);
-            const routeId = `http-api:${routeEvidenceDigest(receipt.url).slice(0, 24)}`, previous = catalog.get(routeId);
-            const priorReceipt = previous?.evidence.find((item) => item.reference === `nf-http-get:${receipt.url}`);
-            const priorSource = previous?.evidence.find((item) => item.id.startsWith('http-source:'));
-            const delta = priorReceipt ? Date.parse(receipt.observed_at) - Date.parse(priorReceipt.observed_at) : 1;
-            const sourceDelta = priorSource ? Date.parse(proof.observed_at) - Date.parse(priorSource.observed_at) : 1;
-            if (delta < 0 || (delta === 0 && sourceDelta < 0) || (delta === 0 && sourceDelta === 0 && previous?.status === 'blocked' && observed))
+            if (!supersedesCatalog(catalog, receipt, proof))
                 continue;
             catalog.upsert({ route_id: `http-api:${routeEvidenceDigest(receipt.url).slice(0, 24)}`, resource: { kind: 'api', id: receipt.url }, operation: 'http-get', status: observed ? 'observed' : 'blocked', authorization: { status: 'authorized', evidence_ids: refs }, network: { required: true, available: result.status_code !== null, evidence_ids: refs }, authentication: { status: observed ? 'not_required' : result.status_code === 401 ? 'missing' : 'unknown', evidence_ids: observed || result.status_code === 401 ? refs : [] }, rate_limit: { status: observed ? 'clear' : result.status_code === 429 ? 'limited' : 'unknown', retry_at: retryAt, evidence_ids: observed || result.status_code === 429 ? refs : [] }, last_success: observed ? { at: receipt.observed_at, evidence_ids: refs } : null, capabilities: [`Explicit A invocation of NF performed a credential-free GET; HTTP ${result.status_code ?? 'transport failure'}, ${result.bytes} bytes hashed, truncated=${result.truncated}. This proves only this request, not future quota or task completeness.`], evidence: [{ ...proof, id: `http-source:${routeEvidenceDigest({ reference: proof.reference, digest: proof.content_sha256 })}` }, { id, source: 'probe', reference: `nf-http-get:${receipt.url}`, observed_at: receipt.observed_at, task_version: state.task_version, content_sha256: digest }] });
             const route = catalog.list().find((item) => item.resource.kind === 'api' && item.resource.id === receipt.url);
@@ -187,10 +211,8 @@ export function ingestHttpRouteProbes(state, snapshot) {
             if (!executionOwnsResult && !ledger.list().some((attempt) => attempt.evidence.some((item) => item.reference === proof.reference))) {
                 const identity = { route_id: route.route_id, resource: route.resource, operation: route.operation, hypothesis_id: 'explicit-nf-http-probe', hypothesis: 'An explicit NF-owned read-only GET can establish the actual API response.', expected_evidence: ['Actual HTTP status and bounded response digest.'] };
                 const evidence_ids = route.evidence.map((item) => item.id);
-                if (ledger.evaluateAttempt(identity, { evidence_ids, evidence: route.evidence }).allowed) {
-                    ledger.recordAttempt({ route: identity, outcome: observed ? 'diagnostic' : 'blocked', evidence_ids, evidence: route.evidence, ...(!observed ? { failure_class: `http_${result.status_code ?? 'transport_failure'}` } : {}) });
-                    state.route_ledger = ledger.toJSON();
-                }
+                ledger.recordObservedAttempt({ route: identity, outcome: observed ? 'diagnostic' : 'blocked', evidence_ids, evidence: route.evidence, ...(!observed ? { failure_class: `http_${result.status_code ?? 'transport_failure'}` } : {}) });
+                state.route_ledger = ledger.toJSON();
             }
             accepted++;
         }

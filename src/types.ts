@@ -83,7 +83,7 @@ export interface State {
   recovery_condition?: { kind: string; message: string; resume_when: string };
   recovery_plan?: RecoveryPlan;
   route_catalog?: RouteCatalogData;
-  route_probe?: { state_path: string; nonce: string; scope_sha256: string; argv_prefix: string[]; seen_receipts?: string[] };
+  route_probe?: { state_path: string; nonce: string; scope_sha256: string; argv_prefix: string[]; seen_receipts?: string[]; omitted_url_sha256?: string[] };
   route_ledger?: RouteLedgerData;
   route_execution?: RouteExecution;
 }

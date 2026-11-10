@@ -159,11 +159,19 @@ export class RouteLedger {
     toJSON() { return this.storage.read(); }
     evaluateAttempt(route, context = {}) { return permission(this.list(), route, context, this.now()); }
     recordAttempt(input) {
+        return this.appendAttempt(input, true);
+    }
+    /** Record independent proof of execution that already happened. Permission
+     * still fences future planning; it must not erase an actual observed attempt. */
+    recordObservedAttempt(input) {
+        return this.appendAttempt(input, false);
+    }
+    appendAttempt(input, enforcePermission) {
         validateInput(input);
         return this.storage.update((data) => {
             const context = { evidence_ids: input.evidence_ids, evidence: input.evidence ?? [], ...(input.discriminating_check ? { discriminating_check: input.discriminating_check } : {}) };
             const allowed = permission(data.attempts, input.route, context, this.now());
-            if (!allowed.allowed)
+            if (enforcePermission && !allowed.allowed)
                 throw new Error(`Route attempt rejected: ${allowed.reason}.`);
             const fingerprint = fingerprintRoute(input.route), family = routeFamilyFingerprint(input.route);
             const previous = data.attempts.filter((attempt) => attempt.family_fingerprint === family);

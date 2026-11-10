@@ -44,18 +44,19 @@ export function buildC2Context(snapshot: Snapshot, state: C2ContextState, maxCha
   const scope = { task_id: state.task_id, task_version: state.task_version };
   const catalog = activeRouteCatalog(state);
   const ledger = new RouteLedger(scope, state.route_ledger ? { data: state.route_ledger } : {}).toJSON();
-  snapshot.omissions ??= [];
+  snapshot.omissions = (snapshot.omissions ?? []).filter((item) => !item.startsWith('HTTP probe URL budget omitted '));
   snapshot.plan ??= { missing: 'No current worker plan observed.' };
   snapshot.recent_verification ??= { missing: 'No independent verification result recorded yet.' };
   snapshot.repeated_failure ??= { instruction: 'Use ledger retry permissions; change hypothesis after repeated failures and gather discriminating evidence.' };
   snapshot.c2 = {
-    mode: effectiveC2Mode(state), context_complete: catalog.entries.length > 0,
+    mode: effectiveC2Mode(state), context_complete: catalog.entries.length > 0 && !state.route_probe?.omitted_url_sha256?.length,
     catalog, ledger, observations: snapshotRouteEvidence(snapshot), current_plan: state.last_decision?.route_plan ?? null,
     instruction: 'Facts come only from NF/B observations. Unknown capability/authentication/network/rate-limit facts require route inventory or a discriminating diagnostic. Never infer availability from resource names or model prose. Check ledger permission before choosing a route; equivalent wording is not progress.',
     ...(state.route_probe ? { http_probe: { argv_prefix: state.route_probe.argv_prefix, instruction: 'Only original A may explicitly invoke this exact single literal Node command with --url <credential-free URL> inside the original authorization. NF performs one bounded unauthenticated GET and signs a metadata-only receipt. B verifies command/source/scope/signature; JSON hints never trigger network. A current 2xx can establish this API operation; missing auth/quota facts remain unknown on failures. Never read credentials or grant new permission.' } } : {}),
   };
   snapshot.c2 = redact(snapshot.c2) as typeof snapshot.c2;
   if (!catalog.entries.length) snapshot.omissions.push('Route Catalog has no observed entries; collect a bounded route inventory or discriminating diagnostic.');
+  if (state.route_probe?.omitted_url_sha256?.length) snapshot.omissions.push(`HTTP probe URL budget omitted ${state.route_probe.omitted_url_sha256.length} unresolved URL observations; inventory/diagnostic required before external waiting.`);
   let omittedCatalog = 0, omittedAttempts = 0, omittedObservations = 0;
   const size = () => JSON.stringify(snapshot).length;
   while (size() > maxChars - 400 && (snapshot.c2.ledger.attempts.length > 1 || snapshot.c2.catalog.entries.length > 1)) {
