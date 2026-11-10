@@ -295,6 +295,59 @@ function resultForRound(round) {
     const summary = action === 'DONE' ? '任务完成判断' : action === 'WAIT_EXTERNAL' ? '任务进入外部等待' : action === 'CONTINUE' ? '任务继续推进' : 'supervisor 已返回判断';
     return { ...result, summary };
 }
+function routeAuditForRound(round) {
+    const event = round.supervisor.findLast((item) => item.eventType === 'decision');
+    const value = asRecord(event?.details.decision);
+    if (value?.action !== 'CONTINUE')
+        return null;
+    const plan = asRecord(value.route_plan);
+    const strings = (input) => Array.isArray(input) ? input.filter((item) => typeof item === 'string') : [];
+    if (!plan) {
+        return {
+            kind: 'legacy', planId: `legacy:${round.id}`, selectedRouteId: 'legacy-next-message',
+            diagnosis: { class: 'legacy', statement: stringValue(value.reason) ?? '旧版未记录结构化诊断', evidenceIds: strings(value.evidence_ids) },
+            selectionReason: '旧版仅记录单条续接指令，执行状态未验证。', singleRouteReason: '旧版历史未记录候选集。',
+            candidates: [{
+                    routeId: 'legacy-next-message', title: '旧版虚拟单路线', resource: '旧版续接指令', hypothesis: '旧版未记录', status: 'unknown',
+                    evidenceIds: strings(value.evidence_ids), actions: [stringValue(value.next_message) ?? '旧版未记录续接指令'],
+                    expectedEvidence: [], expectedSignal: '旧版未记录', risk: '旧版未记录',
+                    fallback: { routeId: null, when: '旧版未记录' }, discriminatingCheck: null,
+                }],
+            successCondition: '旧版未记录', stopCondition: '旧版未记录',
+        };
+    }
+    const diagnosis = asRecord(value.diagnosis);
+    const candidates = [];
+    for (const input of Array.isArray(plan.candidates) ? plan.candidates : []) {
+        const candidate = asRecord(input);
+        if (!candidate)
+            continue;
+        const resource = asRecord(candidate.resource);
+        const fallback = asRecord(candidate.fallback);
+        const check = asRecord(candidate.discriminating_check);
+        const status = stringValue(candidate.status);
+        candidates.push({
+            routeId: stringValue(candidate.route_id) ?? 'unknown',
+            title: stringValue(candidate.operation) ?? '未记录路线标题',
+            resource: [stringValue(resource?.kind), stringValue(resource?.id)].filter(Boolean).join(': '),
+            hypothesis: stringValue(candidate.hypothesis) ?? '',
+            status: status === 'observed' || status === 'candidate' || status === 'blocked' || status === 'exhausted' || status === 'forbidden' ? status : 'unknown',
+            evidenceIds: strings(candidate.evidence_ids),
+            actions: strings(candidate.actions),
+            expectedEvidence: strings(candidate.expected_evidence),
+            expectedSignal: stringValue(candidate.expected_signal) ?? '',
+            risk: stringValue(candidate.risk) ?? '',
+            fallback: { routeId: stringValue(fallback?.route_id), when: stringValue(fallback?.when) ?? '' },
+            discriminatingCheck: stringValue(check?.description),
+        });
+    }
+    return {
+        kind: 'c2', planId: stringValue(plan.plan_id) ?? 'unrecorded', selectedRouteId: stringValue(plan.selected_route_id) ?? 'unknown',
+        diagnosis: { class: stringValue(diagnosis?.class) ?? 'unknown', statement: stringValue(diagnosis?.statement) ?? '未记录结构化诊断', evidenceIds: strings(diagnosis?.evidence_ids) },
+        selectionReason: stringValue(plan.selection_reason) ?? '', singleRouteReason: stringValue(plan.single_route_reason), candidates,
+        successCondition: stringValue(plan.success_condition) ?? '', stopCondition: stringValue(plan.stop_condition) ?? '',
+    };
+}
 function makeRounds(events) {
     const stopAttemptsByTurn = new Map();
     for (const raw of events) {
@@ -323,7 +376,7 @@ function makeRounds(events) {
         let round = rounds.get(id);
         if (!round) {
             const at = eventTime(raw);
-            round = { id, startedAt: at, endedAt: at, worker: null, stop: null, supervisor: [], continuation: [], result: null, technicalEvents: [] };
+            round = { id, startedAt: at, endedAt: at, worker: null, stop: null, supervisor: [], continuation: [], result: null, routeAudit: null, technicalEvents: [] };
             rounds.set(id, round);
         }
         round.startedAt = round.startedAt < eventTime(raw) ? round.startedAt : eventTime(raw);
@@ -343,7 +396,7 @@ function makeRounds(events) {
             round.supervisor.push(human);
         }
     }
-    return [...rounds.values()].map((round) => ({ ...round, result: resultForRound(round) }));
+    return [...rounds.values()].map((round) => ({ ...round, result: resultForRound(round), routeAudit: routeAuditForRound(round) }));
 }
 function isCompleteSupervisionRound(round) {
     // NFG is an audit view of completed A→B→C supervision cycles. A round
@@ -610,10 +663,53 @@ function eventHtml(ev){return '<div><span class="event-type">'+esc(ev.eventType)
 function matches(round){if(app.filter==='all')return true;const values=round.technicalEvents; if(app.filter==='worker')return values.some(e=>e.role==='worker');if(app.filter==='supervisor')return values.some(e=>e.role==='supervisor');return values.some(e=>e.result==='FAIL'||e.eventType.startsWith('recovery_')||e.eventType.startsWith('stale_')||e.eventType==='external_wait_required'||e.eventType==='paused')}
 function shortDate(v){try{const d=new Date(v);if(Number.isNaN(d.getTime()))return v;return d.getFullYear()+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+String(d.getDate()).padStart(2,'0')}catch{return v}}
 function shortHourMinute(v){try{const d=new Date(v);if(Number.isNaN(d.getTime()))return v;return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}catch{return v}}
-function roundHtml(r,index){const decisionValue=r.result?.details.decision;const action=decisionValue?.action||r.result?.result||'UNKNOWN';const decisionText=decisionValue?.reason||r.result?.summary||'未记录 supervisor reason';const recoverySent=r.continuation.find(e=>e.eventType==='main_session_recovery_prompt_sent');const recoveryAck=r.continuation.find(e=>e.eventType==='main_session_recovery_prompt_acknowledged');const observedPrompt=r.continuation.find(e=>e.eventType==='main_session_worker_prompt_observed');const recoveryFailure=r.continuation.find(e=>e.eventType==='main_session_recovery_prompt_failed');const prompt=typeof observedPrompt?.details.message==='string'?observedPrompt.details.message:typeof recoverySent?.details.message==='string'?recoverySent.details.message:typeof decisionValue?.next_message==='string'?decisionValue.next_message:r.result?.eventType==='external_wait_required'?String(r.result.details.resume_when||''):'';const stopAt=r.stop?.at||r.endedAt;const decisionAt=r.result?.at||stopAt;const returnedAt=observedPrompt?.at||r.continuation.find(e=>e.eventType==='stop_hook_direction_returned')?.at||r.continuation.find(e=>e.eventType==='main_session_continuation_confirmed')?.at||recoveryAck?.at||recoverySent?.at||r.endedAt;const stopReason=typeof r.stop?.details.stop_reason==='string'?r.stop.details.stop_reason:'';const stepTime=v=>'<span class="step-time">'+esc(shortHourMinute(v))+'</span>';const collapsible=(className,text,key)=>'<button type="button" class="'+className+' collapsible" data-collapsible data-collapsible-key="'+esc(key)+'"><span class="collapsible-content">'+esc(text)+'</span><span class="collapse-marker" aria-hidden="true">⌄</span></button>';const recoveryLine=recoverySent?'<div class="flow-line">'+stepTime(recoverySent.at)+' <strong>NF 推动 A：</strong> <span class="event-result">已发送恢复 prompt</span></div>':recoveryFailure?'<div class="flow-line">'+stepTime(recoveryFailure.at)+' <strong>NF 推动 A：</strong> <span class="event-result result-error">发送失败</span></div>':'';const recoveryAckLine=recoveryAck?'<div class="flow-line">'+stepTime(recoveryAck.at)+' <strong>A thread：</strong> <span class="event-result">已接收恢复 prompt</span></div>':'';return '<article class="round" data-round="'+index+'"><div class="round-head"><span class="round-title">第 '+(index+1)+' 轮</span><span class="round-time">'+esc(shortDate(stopAt))+'</span></div><div class="round-body"><div class="flow-line">'+stepTime(stopAt)+' <strong>WORKER 发出：</strong> <span class="event-result">Stop</span></div>'+(stopReason?collapsible('decision-block stop-reason-block',stopReason,'stop-'+index):'')+'<div class="flow-line">'+stepTime(decisionAt)+' <strong>SUPERVISOR 判断：</strong> <span class="event-result">'+esc(action)+'</span></div>'+collapsible('decision-block',decisionText,'decision-'+index)+'<div class="flow-line">'+stepTime(returnedAt)+' <strong>WORKER 收到：</strong></div>'+collapsible('prompt-block',prompt,'prompt-'+index)+recoveryLine+recoveryAckLine+'</div></article>'}function wireCollapsibles(){document.querySelectorAll('[data-collapsible]').forEach(node=>{node.onclick=()=>{const expanded=node.classList.toggle('expanded');const marker=node.querySelector('.collapse-marker');if(marker)marker.textContent=expanded?'⌃':'⌄'}})}
+function collapsibleHtml(className,text,key){return '<button type="button" class="'+className+' collapsible" data-collapsible data-collapsible-key="'+esc(key)+'" aria-expanded="false"><span class="collapsible-content">'+esc(text)+'</span><span class="collapse-marker" aria-hidden="true">⌄</span></button>'}
+const routeStatusLabel={observed:'已观测',candidate:'候选（未验证）',blocked:'受阻',exhausted:'已耗尽',forbidden:'禁止',unknown:'未知（未验证）'};
+function routeHtml(r,key){
+  const audit=r.routeAudit;if(!audit)return '';
+  const selected=audit.candidates.find(c=>c.routeId===audit.selectedRouteId);
+  const lines=['路线 '+audit.selectedRouteId+' · '+(selected?.title||'未记录路线标题')+' · '+audit.diagnosis.statement,
+    '诊断：'+audit.diagnosis.class+' · '+audit.diagnosis.statement,
+    '诊断证据：'+(audit.diagnosis.evidenceIds.join('、')||'未记录独立证据'),
+    '选择原因：'+audit.selectionReason];
+  if(audit.singleRouteReason)lines.push('单路线原因：'+audit.singleRouteReason);
+  for(const candidate of audit.candidates){
+    lines.push('',candidate.routeId+(candidate.routeId===audit.selectedRouteId?'（选定）':'')+' · '+(routeStatusLabel[candidate.status]||routeStatusLabel.unknown)+' · '+candidate.title,
+      '资源：'+(candidate.resource||'未记录'),'假设：'+candidate.hypothesis,
+      '证据：'+(candidate.evidenceIds.join('、')||'未记录独立证据'),
+      '动作：'+candidate.actions.join('；'),'预期证据：'+candidate.expectedEvidence.join('；'),
+      '预期信号：'+candidate.expectedSignal,'风险：'+candidate.risk,
+      'fallback：'+(candidate.fallback.routeId||'重新规划')+' · '+candidate.fallback.when);
+    if(candidate.discriminatingCheck)lines.push('区分检查：'+candidate.discriminatingCheck);
+  }
+  lines.push('','成功条件：'+audit.successCondition,'停止条件：'+audit.stopCondition);
+  return collapsibleHtml('decision-block route-block',lines.join('\n'),key+':route:'+audit.planId);
+}
+function roundHtml(r,index){
+  const decisionEvent=r.supervisor.findLast(e=>e.eventType==='decision')||r.result;
+  const decisionValue=decisionEvent?.details.decision;
+  const action=decisionValue?.action||r.result?.result||'UNKNOWN';
+  const decisionText=decisionValue?.reason||r.result?.summary||'未记录 supervisor reason';
+  const recoverySent=r.continuation.find(e=>e.eventType==='main_session_recovery_prompt_sent');
+  const recoveryAck=r.continuation.find(e=>e.eventType==='main_session_recovery_prompt_acknowledged');
+  const observedPrompt=r.continuation.find(e=>e.eventType==='main_session_worker_prompt_observed');
+  const recoveryFailure=r.continuation.find(e=>e.eventType==='main_session_recovery_prompt_failed');
+  const prompt=typeof observedPrompt?.details.message==='string'?observedPrompt.details.message:typeof recoverySent?.details.message==='string'?recoverySent.details.message:typeof decisionValue?.next_message==='string'?decisionValue.next_message:r.result?.eventType==='external_wait_required'?String(r.result.details.resume_when||''):'';
+  const stopAt=r.stop?.at||r.endedAt;
+  const decisionAt=decisionEvent?.at||stopAt;
+  const returnedAt=observedPrompt?.at||r.continuation.find(e=>e.eventType==='stop_hook_direction_returned')?.at||r.continuation.find(e=>e.eventType==='main_session_continuation_confirmed')?.at||recoveryAck?.at||recoverySent?.at||r.endedAt;
+  const stopReason=typeof r.stop?.details.stop_reason==='string'?r.stop.details.stop_reason:'';
+  const key=JSON.stringify([app.taskId,r.id]);
+  const stepTime=v=>'<span class="step-time">'+esc(shortHourMinute(v))+'</span>';
+  const recoveryLine=recoverySent?'<div class="flow-line">'+stepTime(recoverySent.at)+' <strong>NF 推动 A：</strong> <span class="event-result">已发送恢复 prompt</span></div>':recoveryFailure?'<div class="flow-line">'+stepTime(recoveryFailure.at)+' <strong>NF 推动 A：</strong> <span class="event-result result-error">发送失败</span></div>':'';
+  const recoveryAckLine=recoveryAck?'<div class="flow-line">'+stepTime(recoveryAck.at)+' <strong>A thread：</strong> <span class="event-result">已接收恢复 prompt</span></div>':'';
+  return '<article class="round" data-round="'+esc(r.id)+'"><div class="round-head"><span class="round-title">第 '+(index+1)+' 轮</span><span class="round-time">'+esc(shortDate(stopAt))+'</span></div><div class="round-body"><div class="flow-line">'+stepTime(stopAt)+' <strong>WORKER 发出：</strong> <span class="event-result">Stop</span></div>'+(stopReason?collapsibleHtml('decision-block stop-reason-block',stopReason,key+':stop'):'')+'<div class="flow-line">'+stepTime(decisionAt)+' <strong>SUPERVISOR 判断：</strong> <span class="event-result">'+esc(action)+'</span></div>'+collapsibleHtml('decision-block',decisionText,key+':decision')+routeHtml(r,key)+'<div class="flow-line">'+stepTime(returnedAt)+' <strong>WORKER 收到：</strong></div>'+collapsibleHtml('prompt-block',prompt,key+':prompt')+recoveryLine+recoveryAckLine+'</div></article>';
+}
+function setExpanded(node,expanded){node.classList.toggle('expanded',expanded);node.setAttribute('aria-expanded',String(expanded));const marker=node.querySelector('.collapse-marker');if(marker)marker.textContent=expanded?'⌃':'⌄'}
+function wireCollapsibles(){document.querySelectorAll('[data-collapsible]').forEach(node=>{node.onclick=()=>setExpanded(node,!node.classList.contains('expanded'))})}
 function statusDateTime(v){try{const d=new Date(v);if(Number.isNaN(d.getTime()))return v;return String(d.getFullYear()).slice(-2)+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+String(d.getDate()).padStart(2,'0')+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}catch{return v}}
 function expandedKeys(){return new Set([...document.querySelectorAll('[data-collapsible].expanded')].map(node=>node.dataset.collapsibleKey).filter(Boolean))}
-function restoreExpanded(keys){document.querySelectorAll('[data-collapsible]').forEach(node=>{const expanded=keys.has(node.dataset.collapsibleKey);node.classList.toggle('expanded',expanded);const marker=node.querySelector('.collapse-marker');if(marker)marker.textContent=expanded?'⌃':'⌄'})}
+function restoreExpanded(keys){document.querySelectorAll('[data-collapsible]').forEach(node=>setExpanded(node,keys.has(node.dataset.collapsibleKey)))}
 function actionButtonHtml(action,label,icon,className=''){return '<button type="button" class="action-icon '+className+'" data-action="'+action+'" aria-label="'+label+'" title="'+label+'">'+icon+'</button>'}
 function renderActions(r){const root=$('#task-actions');if(!r){root.hidden=true;root.innerHTML='';return}root.hidden=false;const paused=r.state.status==='PAUSED';root.innerHTML=actionButtonHtml('copy','复制 session ID：'+r.sessionId,r.sessionId,'session-copy')+actionButtonHtml('refresh','当前自动刷新：'+(app.auto?'开':'关'),app.auto?'↻':'Ⅱ',app.auto?'on':'')+actionButtonHtml(paused?'resume':'pause',paused?'恢复 Needs Forever':'停止 Needs Forever',paused?'▶':'Ⅱ')+actionButtonHtml('delete','删除此监督及其 NFG 记录','×','danger');const copyButton=root.querySelector('[data-action="copy"]');if(copyButton){copyButton.dataset.sessionCopy='';copyButton.dataset.sessionId=r.sessionId}wireActions();wireSessionCopy()}
 async function controlTask(action){if(!app.taskId)return;if(action==='delete'&&!window.confirm('删除此监督及其 NFG 记录？系统级日志不会删除。'))return;const response=await fetch('/api/tasks/'+encodeURIComponent(app.taskId)+'/control',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action})});const result=await response.json();if(!response.ok)throw new Error(result.error||'控制操作失败');if(action==='delete'){app.record=null;app.taskId=null;history.replaceState({},'', '/');renderRecord();await loadTasks();return}await loadTasks();await loadRecord(false)}

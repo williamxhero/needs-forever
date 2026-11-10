@@ -32,6 +32,6 @@
     "src/supervisor.js": "d07ab98801312f0236fa6446607d1e6ce86f6504c2e21bee89a9c5b5d303a02f",
     "src/transport.js": "fd9a5d847cba0ffcab2744db5d743db5b55c84ec08102b65219f42f155e6cc66",
     "src/types.js": "1d776e8997c21eccad34b1b01358b1a3f8df090b5647a855ba3972d361311f08",
-    "src/web.js": "f7dd4b4b1e10b48319ee44ab787372d02b2db48e4b9c10af77c0d6e8531142b7"
+    "src/web.js": "181ae26e8f1bd687e5004e44e5d5cf9590f7a738443b9c58fe24925576805f80"
   }
 }
