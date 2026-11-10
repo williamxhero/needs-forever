@@ -2,8 +2,10 @@ import { randomUUID } from 'node:crypto';
 import type { Snapshot, State } from './types.js';
 import { record } from './types.js';
 import { redact } from './redact.js';
+import { buildC2Context } from './planning-context.js';
 
 const MAX_CHARS = 24_000;
+const PROOF_BUDGET = MAX_CHARS - 2_500;
 function object(value: unknown): Record<string, unknown> { return value && typeof value === 'object' && !Array.isArray(value) ? record(value) : {}; }
 function clip(value: unknown, max: number): unknown {
   if (typeof value === 'string') return value.length <= max ? value : `${value.slice(0, max)} [TRUNCATED: ${value.length - max} chars]`;
@@ -64,7 +66,7 @@ export function buildSnapshot(state: State, workerTurnId: string, events: Record
   };
   if (!plans) snapshot.omissions!.push('Current plan and remaining items were not observed.');
   if (!verification) snapshot.omissions!.push('Independent verification has not run.');
-  if (JSON.stringify(snapshot).length > MAX_CHARS - 1800) throw new Error('Task contract and mandatory snapshot metadata exceed the 24000-character budget; goal, acceptance and authorization were not truncated.');
+  if (JSON.stringify(snapshot).length > PROOF_BUDGET - 1800) throw new Error('Task contract and mandatory snapshot metadata exceed the 24000-character budget; goal, acceptance and authorization were not truncated.');
   const candidates = [...observed.values()].sort((left, right) => {
     const priority = (item: Record<string, unknown>) => item.type === 'commandExecution' && (item.status === 'failed' || (typeof item.exitCode === 'number' && item.exitCode !== 0)) ? 0 : item.type === 'fileChange' ? 1 : item.type === 'commandExecution' ? 2 : 3;
     return priority(left.item) - priority(right.item);
@@ -72,23 +74,23 @@ export function buildSnapshot(state: State, workerTurnId: string, events: Record
   let omitted = 0;
   for (const { item, event } of candidates) {
     if (!['commandExecution', 'fileChange', 'functionCallOutput', 'agentMessage', 'plan'].includes(String(item.type))) continue;
-    const entry: Snapshot['evidence'][number] = { id: `E${snapshot.evidence.length + 1}`, type: String(item.type), value: item, source: { event_id: String(event.event_id), thread_id: state.worker_thread_id!, turn_id: workerTurnId, item_id: String(item.id) } };
+    const entry: Snapshot['evidence'][number] = { id: `E${snapshot.evidence.length + 1}`, type: String(item.type), value: item, source: { event_id: String(event.event_id), ...(typeof event.at === 'string' ? { observed_at: event.at } : {}), thread_id: state.worker_thread_id!, turn_id: workerTurnId, item_id: String(item.id) } };
     snapshot.evidence.push(entry);
-    if (JSON.stringify(snapshot).length > MAX_CHARS - 600) {
+    if (JSON.stringify(snapshot).length > PROOF_BUDGET - 600) {
       snapshot.evidence_complete = false;
       snapshot.omissions!.push(`${entry.id}: item payload truncated; full record is at source.event_id.`);
       for (const limit of [1800, 600, 160]) {
         entry.value = clip(item, limit);
-        if (JSON.stringify(snapshot).length <= MAX_CHARS - 600) break;
+        if (JSON.stringify(snapshot).length <= PROOF_BUDGET - 600) break;
       }
-      if (JSON.stringify(snapshot).length > MAX_CHARS - 600) { snapshot.evidence.pop(); snapshot.omissions!.pop(); omitted++; }
+      if (JSON.stringify(snapshot).length > PROOF_BUDGET - 600) { snapshot.evidence.pop(); snapshot.omissions!.pop(); omitted++; }
     }
   }
   if (verification) {
-    const entry = { id: `E${snapshot.evidence.length + 1}`, type: 'verification_result', value: clip(verification, 1800), source: { event_id: String(verification.event_id) } };
+    const entry = { id: `E${snapshot.evidence.length + 1}`, type: 'verification_result', value: clip(verification, 1800), source: { event_id: String(verification.event_id), ...(typeof verification.at === 'string' ? { observed_at: verification.at } : {}) } };
     snapshot.evidence.push(entry);
-    if (JSON.stringify(snapshot).length > MAX_CHARS - 600) { snapshot.evidence.pop(); omitted++; snapshot.evidence_complete = false; }
+    if (JSON.stringify(snapshot).length > PROOF_BUDGET - 600) { snapshot.evidence.pop(); omitted++; snapshot.evidence_complete = false; }
   }
   if (omitted) snapshot.omissions!.push(`${omitted} additional items omitted for budget; gather concise evidence before a terminal decision.`);
-  return snapshot;
+  return buildC2Context(snapshot, state);
 }

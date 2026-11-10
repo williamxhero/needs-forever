@@ -21,7 +21,7 @@ function setup(name: string, options: Record<string, unknown> = {}, verify = fal
     mkdirSync(dirname(join(workspace, file)), { recursive: true });
     writeFileSync(join(workspace, file), '{"acceptance":"original"}\n');
   }
-  writeFileSync(task, JSON.stringify({ schema_version: 1, task_id: name, workspace, goal: 'Three stages', acceptance: [{ id: 'all', text: 'Three stages complete' }], authorization: 'Local files only', ...(verify ? { verify: { argv: [process.execPath, 'verify.mjs', 'literal;argument'], timeout_seconds: 2, protected_files: protectedFiles } } : {}), limits: {} }));
+  writeFileSync(task, JSON.stringify({ schema_version: 1, task_id: name, workspace, ...(Array.isArray(options.judge_actions) && options.judge_actions.includes('WAIT_EXTERNAL') ? { c2: { mode: 'legacy' } } : {}), goal: 'Three stages', acceptance: [{ id: 'all', text: 'Three stages complete' }], authorization: 'Local files only', ...(verify ? { verify: { argv: [process.execPath, 'verify.mjs', 'literal;argument'], timeout_seconds: 2, protected_files: protectedFiles } } : {}), limits: {} }));
   writeFileSync(scenario, JSON.stringify({ trace, ...options }));
   writeFileSync(fixture, JSON.stringify({ desktop_version: 'simulated', cli_version: 'simulated', app_server_argv: [process.execPath, resolve('test/fixtures/app-server.mjs'), scenario] }));
   const control = join(plugin, 'scripts/main-session.mjs');

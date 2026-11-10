@@ -132,6 +132,12 @@ export function validateTask(input) {
             throw new Error('Invalid verify.protected_files.');
         result.verify = { argv: verify.argv, timeout_seconds: verify.timeout_seconds, protected_files: verify.protected_files };
     }
+    if (task.c2 !== undefined) {
+        const config = record(task.c2);
+        if (Object.keys(config).length !== 1 || !['enforce', 'shadow', 'legacy'].includes(String(config.mode)))
+            throw new Error('Invalid c2 configuration.');
+        result.c2 = { mode: config.mode };
+    }
     return result;
 }
 function validatedTask(path) { return validateTask(readJson(path)); }

@@ -192,6 +192,11 @@ export function validateTask(input: unknown): Task {
     if (!Array.isArray(verify.protected_files) || !verify.protected_files.every((entry) => typeof entry === 'string' && entry.length)) throw new Error('Invalid verify.protected_files.');
     result.verify = { argv: verify.argv as string[], timeout_seconds: verify.timeout_seconds, protected_files: verify.protected_files as string[] };
   }
+  if (task.c2 !== undefined) {
+    const config = record(task.c2);
+    if (Object.keys(config).length !== 1 || !['enforce', 'shadow', 'legacy'].includes(String(config.mode))) throw new Error('Invalid c2 configuration.');
+    result.c2 = { mode: config.mode as NonNullable<Task['c2']>['mode'] };
+  }
   return result;
 }
 function validatedTask(path: string): Task { return validateTask(readJson(path)); }

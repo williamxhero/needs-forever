@@ -7,3 +7,8 @@ export { armRecovery, cancelRecovery, createRecoveryPlan, waitForNativeReceipt, 
 export { NFDaemon, startLoopbackApi } from './daemon.js';
 export { discoverStateFiles } from './daemon.js';
 export { adapterEnvelope, validateAdapterEnvelope } from './adapter-protocol.js';
+export { buildC2Context, effectiveC2Mode, snapshotRouteEvidence } from './planning-context.js';
+export { buildSnapshot } from './snapshot.js';
+export { buildMainSessionSnapshot } from './main-supervision.js';
+export { routeInventoryDecision, validateC2Decision } from './planning.js';
+export { validateDecision, readHistoricalDecision, decisionSchema } from './judge.js';

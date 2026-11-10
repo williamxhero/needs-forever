@@ -8,8 +8,9 @@ import { Store } from './store.js';
 import { redact } from './redact.js';
 import type { Decision, Snapshot } from './types.js';
 import type { MainSessionState, StopRequest } from './main-session.js';
+import { buildC2Context } from './planning-context.js';
 
-const budget = 24_000;
+const budget = 21_500; // Reserve bounded C2 catalog/ledger metadata after current proof.
 
 async function retryRead<T>(operation: string, path: string, read: () => Promise<T>, signal: AbortSignal): Promise<T> {
   const deadline = Date.now() + 5_000;
@@ -65,8 +66,7 @@ export async function preflightSupervisor(state: MainSessionState, fixture: any,
   try { state.codex_version = connection.version; }
   finally { await connection.rpc.close(); }
 }
-function snapshotFor(state: MainSessionState, request: StopRequest, store: Store): Snapshot {
-  const events = store.events();
+export function buildMainSessionSnapshot(state: MainSessionState, request: StopRequest, events: Record<string, unknown>[]): Snapshot {
   // A later Stop after real work is a new evidence window, including within
   // the same turn. Old truncated output must not poison new concise proof.
   const stopPositions = events.flatMap((event, index) => event.type === 'main_session_stop_observed' ? [index] : []);
@@ -91,7 +91,7 @@ function snapshotFor(state: MainSessionState, request: StopRequest, store: Store
   for (const event of [...events].reverse()) {
     if (event.task_version !== state.task_version) continue;
     if (event.type === 'main_tool_result' && currentEvents.has(event) && event.session_id === state.main_session_id && event.run_generation === state.run_generation && event.input_epoch === (state.input_epoch ?? 0) && event.contract_sha256 === state.contract_sha256) {
-      const entry = { id: String(event.event_id), type: 'functionCallOutput', value: event.value, source: { event_id: String(event.event_id), thread_id: state.main_session_id!, ...(typeof event.turn_id === 'string' ? { turn_id: event.turn_id } : {}), item_id: String(event.tool_use_id) } };
+      const entry = { id: String(event.event_id), type: 'functionCallOutput', value: event.value, source: { event_id: String(event.event_id), ...(typeof event.at === 'string' ? { observed_at: event.at } : {}), thread_id: state.main_session_id!, ...(typeof event.turn_id === 'string' ? { turn_id: event.turn_id } : {}), item_id: String(event.tool_use_id) } };
       if (!append(entry)) omitted++;
       if (event.complete === false) snapshot.evidence_complete = false;
     } else if (event.type === 'verification_result' && snapshot.recent_verification === undefined) {
@@ -110,7 +110,9 @@ function snapshotFor(state: MainSessionState, request: StopRequest, store: Store
   if (snapshot.evidence_complete === false) snapshot.omissions!.push('At least one tool result was truncated or omitted. Worker wording cannot replace missing proof.');
   snapshot.repeated_failure = redact(state.recovery_failures?.slice(-3) ?? []);
   if (JSON.stringify(snapshot).length > budget) { snapshot.repeated_failure = 'Earlier recovery details omitted for size.'; snapshot.evidence_complete = false; }
-  return snapshot;
+  const planEvent = [...events].reverse().find((event) => event.type === 'main_tool_result' && currentEvents.has(event) && event.session_id === state.main_session_id && event.run_generation === state.run_generation && event.input_epoch === (state.input_epoch ?? 0) && event.contract_sha256 === state.contract_sha256 && typeof event.value === 'object' && event.value !== null && /(?:update_plan|plan)/.test(String((event.value as Record<string, unknown>).tool_name)));
+  if (planEvent && JSON.stringify(planEvent.value).length < 1_500) snapshot.plan = { observed: planEvent.value, source_event_id: planEvent.event_id };
+  return buildC2Context(snapshot, state);
 }
 async function workspaceDigest(state: MainSessionState, store: Store, signal: AbortSignal): Promise<string> {
   const hash = createHash('sha256');
@@ -194,7 +196,7 @@ async function verification(state: MainSessionState, store: Store, rpc: Rpc, sig
   return continueWith(`Independent verification failed. Repair the task and restore changed protected files; keep the original fixed argv. Rerun concise acceptance checks, then prepare to stop. Evidence: ${JSON.stringify(evidence)}. Original protected content (base64): ${JSON.stringify(original)}`, 'The fixed independent completion gate did not pass.');
 }
 export async function superviseStop(state: MainSessionState, request: StopRequest, fixture: any, signal: AbortSignal, store: Store): Promise<Decision> {
-  const snapshot = snapshotFor(state, request, store);
+  const snapshot = buildMainSessionSnapshot(state, request, store.events());
   store.snapshot(snapshot, null);
   const connection = await connect(commandFor(state, fixture), state.task.workspace, signal);
   const judge = new AppServerJudge(Math.min(120_000, Math.max(1, Date.parse(request.deadline_at) - Date.now() - 1_000)));
