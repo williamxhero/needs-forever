@@ -1,0 +1,74 @@
+{
+  "at": "2026-11-10T13:35:10.438Z",
+  "delivery_main": "655a24abeddf65b7825bc0679363e43f09378a51",
+  "records": [
+    {
+      "number": 50,
+      "comment_id": "6768711009",
+      "body_readback_equal": true,
+      "url": "https://github.com/williamxhero/needs-forever/issues/50#issuecomment-6768711009",
+      "closure": {
+        "number": 50,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED"
+      }
+    },
+    {
+      "number": 51,
+      "comment_id": "6768714939",
+      "body_readback_equal": true,
+      "url": "https://github.com/williamxhero/needs-forever/issues/51#issuecomment-6768714939",
+      "closure": {
+        "number": 51,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED"
+      }
+    },
+    {
+      "number": 52,
+      "comment_id": "6768718093",
+      "body_readback_equal": true,
+      "url": "https://github.com/williamxhero/needs-forever/issues/52#issuecomment-6768718093",
+      "closure": {
+        "number": 52,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED"
+      }
+    },
+    {
+      "number": 53,
+      "comment_id": "6768721780",
+      "body_readback_equal": true,
+      "url": "https://github.com/williamxhero/needs-forever/issues/53#issuecomment-6768721780",
+      "closure": {
+        "number": 53,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED"
+      }
+    },
+    {
+      "number": 40,
+      "comment_id": "6768724612",
+      "body_readback_equal": true,
+      "url": "https://github.com/williamxhero/needs-forever/issues/40#issuecomment-6768724612"
+    },
+    {
+      "number": 48,
+      "comment_id": "6768726860",
+      "body_readback_equal": true,
+      "url": "https://github.com/williamxhero/needs-forever/issues/48#issuecomment-6768726860"
+    },
+    {
+      "number": 49,
+      "comment_id": "6768728701",
+      "body_readback_equal": true,
+      "url": "https://github.com/williamxhero/needs-forever/issues/49#issuecomment-6768728701"
+    },
+    {
+      "number": 54,
+      "comment_id": "6768730874",
+      "body_readback_equal": true,
+      "url": "https://github.com/williamxhero/needs-forever/issues/54#issuecomment-6768730874"
+    }
+  ]
+}
