@@ -13,10 +13,10 @@
 test at dist\test\main-controller.test.js:121:1
 ✖ an installed second native Stop reaches C when the prior diagnostic proof digests were omitted (5041.7187ms)
   AssertionError [ERR_ASSERTION]: Discriminating check requires referenced attempt evidence.
-  
-  
+
+
   1 !== 0
-  
+
       at TestContext.<anonymous> (file:///D:/WILL/TOOLS/needs-forever/dist/test/main-controller.test.js:130:12)
       at Test.runInAsyncScope (node:async_hooks:227:14)
       at Test.run (node:internal/test_runner/test:1382:25)

@@ -1,0 +1,22 @@
+{
+  "at": "2026-11-10T15:53:28.251Z",
+  "source_commit": "0c72ac4e1b848f31af23689847cf076403848666",
+  "original_main_session_id": "01a1ae7a-9442-79e0-b32b-aa560f976453",
+  "original_contract_sha256": "db7ccc65dc3524ae4dcc40767bfd7bd11bd7e4a107a51c5e90d1bb5f3c576e54",
+  "status": "ACTIVE",
+  "phase": "WORKER",
+  "binding": "BOUND",
+  "task_version": 15,
+  "daemon_pid": 81068,
+  "controller_pid": 60720,
+  "native_receipt_at": "2026-11-10T15:52:51.280Z",
+  "controller_started_at": "2026-11-10T15:52:53.831Z",
+  "paired_tool_results_since_restart": 1,
+  "recovery_window_cleared": true,
+  "package_file_count": 48,
+  "hash_parity": true,
+  "coordinator_desktop_recovery": true,
+  "standalone_helper_writer_conflict_resolved": false,
+  "fresh_stop_chain_proven": false,
+  "quantresearch_793_completion_claimed": false
+}

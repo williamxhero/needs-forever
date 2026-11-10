@@ -17,3 +17,9 @@
 完整回归、部署和新真实链路回执分别保留在同名 evidence 目录。只有部署后的真实 Stop、有效 C2、B 唯一交付以及 A 后续活动齐全，才满足 #54/#49 的现场交付门槛；这不表示 QuantResearch #793 已完成。
 
 最终完整串行回归 **224/224**，280.717 秒，零失败、取消或跳过。构建包含 35 个自包含 runtime 模块。修复前失败、最终三项针对性通过、只读现场回放和两轴复审见 [验证回执](../evidence/c2-outcome-repair/checks.json)。较早候选的完整运行因 Spec 审查发现标签替换问题而停止，没有作为通过凭据。
+
+## 本机交付
+
+修复提交 `0c72ac4e1b848f31af23689847cf076403848666` 已部署到原 0.3.4 缓存：48/48 文件一致，更新三个 runtime 文件，Hook 身份未变。只重启已核实归属的旧 B 和全局 daemon；新 daemon PID 81068，NFG HTTP 200。独立 helper 仍被 Desktop active writer 拒绝，协调线程先确认 A 空闲，再通过原 Desktop 线程接口发送正常恢复消息，另记审计事件。
+
+23:52:51.280 收到原 A 的真实 rebind，23:52:53.831 新 B PID 60720 启动，随后核对 WORKER / BOUND、恢复窗口清除及实际工具结果。原 A、合同和 task_version=15 未变。[部署与恢复回执](../evidence/c2-outcome-repair/release-checks.json)保留这些捕获时间的结果；不声称独立 helper 已解决 writer 冲突。新的完整 Stop/C2/交付/继续链路仍待自然发生。
