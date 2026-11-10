@@ -1,7 +1,9 @@
 {
+  "candidate_source_commit": "7e0c9bad744ed20e28f730166a5fa6d761b7ca10",
+  "release_test_commit": "a26213f3d60bcd845689babb913370e04f2b2e1a",
   "mode": "simulated-planner-actual-local-execution",
-  "runtime": "C:\\Users\\will\\.codex\\worktrees\\spec49-review-fixes\\needs-forever\\runs\\spec49-review\\final2-install\\codex-home\\plugins\\cache\\needs-forever-local\\needs-forever\\0.3.4\\runtime",
-  "directory": "C:\\Users\\will\\.codex\\worktrees\\spec49-review-fixes\\needs-forever\\runs\\spec49-review\\final-installed-acceptance",
+  "runtime": "C:\\Users\\will\\.codex\\worktrees\\spec49-review-fixes\\needs-forever\\runs\\spec49-review\\budget-fixed-install\\codex-home\\plugins\\cache\\needs-forever-local\\needs-forever\\0.3.4\\runtime",
+  "directory": "C:\\Users\\will\\.codex\\worktrees\\spec49-review-fixes\\needs-forever\\runs\\spec49-review\\budget-fixed-installed-acceptance",
   "runtime_index_sha256": "2ae51b3a91d3d554034c1362d2b6bfd5d7e3f1c0108cf89815f2a42937959c99",
   "historical_pattern": "NF://B0QI repeated Tushare/G0/G1 failure; generated CSV and quota responses are synthetic fixtures, not real market data/provider observations.",
   "success": {

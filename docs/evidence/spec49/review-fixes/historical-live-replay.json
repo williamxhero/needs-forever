@@ -1,4 +1,6 @@
 {
+  "candidate_source_commit": "7e0c9bad744ed20e28f730166a5fa6d761b7ca10",
+  "release_test_commit": "a26213f3d60bcd845689babb913370e04f2b2e1a",
   "mode": "actual-live-C-historical-Stop-replay",
   "source": "D:\\WILL\\STOCK\\QuantResearch\\.codex-supervisor\\quantresearch-793-supervise\\snapshots\\8784db86-45b6-4130-bcff-fbe45b4a2c3f.json",
   "source_sha256": "e2477f70746dc3809b53224eb19db4d5159a818e178af6d4c7951c91b9abf30d",
@@ -290,20 +292,20 @@
   "limits": "Actual C model receives a historical Stop in a new isolated read-only/network-disabled/tool-free judge. Original A and its active state are untouched. Missing historical Route Catalog/Ledger is explicit and requires inventory. This does not prove a native live Stop, live route execution, or completion of the original B0QI task.",
   "codex_version": "codex-cli 0.167.0",
   "disabled_mcp_count": 4,
-  "owned_C_thread_id": "01a1c3f1-c6fa-7cb0-9691-950bb283d1ec",
+  "owned_C_thread_id": "01a1c414-24b6-70a0-9cf2-3b73fb34f234",
   "owned_C_archived": true,
   "validated": true,
   "action": "CONTINUE",
-  "selected_route": "local-artifact-route-inventory",
+  "selected_route": "local-route-inventory",
   "diagnosis": {
     "class": "evidence_gap",
-    "statement": "汇总文件的生成命令包含预填结论，不能独立证明验收；当前另一条文件检查还报告相关 readback 不存在。缺少完整源证据及可选择的 observed 路线，需要先做有界本地发现。",
+    "statement": "No observed catalog route or recorded attempt is available, and the snapshot omits underlying acceptance and alternative-route evidence. Recover bounded local source artifacts before selecting an execution route or judging external exhaustion.",
     "evidence_ids": [
       "1eec7ec9-4473-4f04-92d7-efa9c26e2544",
       "62daf235-4eb4-4fcb-9b88-44fd1b2544c3"
     ]
   },
-  "next_message": "执行一次只读本地路线发现：在 QuantResearch 工作区寻找最多四个非秘密、无符号链接父目录、大小不超过 16384 字节的普通文件，优先选择能够定位 G0 替代数据路线及 G1 原始合同/实现入口的现有索引或证据文件。不要重试受限 provider，不执行网络请求、Runtime submission 或 holdout 访问；不要以新写的结论摘要替代原始证据。\n返回一次完整、未截断、最多 8000 字符的 JSON tool/command result，严格只有以下结构和键：{\"nf_route_inventory\":{\"schema_version\":1,\"task_id\":\"quantresearch-793-supervise\",\"task_version\":9,\"routes\":[{\"route_id\":\"stable-id\",\"resource\":{\"kind\":\"artifact\",\"id\":\"nested/relative/path\"},\"operation\":\"read-local-artifact\"}]}}。routes 最多四项，路径必须是实际发现的工作区相对路径；未找到则返回空数组。此清单仅是发现提示，不是可用性或授权声明；随后由 B 独立检查普通文件、父目录、16384 字节上限，并记录 source/contract/digest 证据。",
+  "next_message": "Perform a local route-inventory diagnostic without provider calls or remote writes. Inspect filesystem metadata for .scratch/quantresearch-793-fresh-local-audit-20261109.json and .scratch/fresh-authority-window-20261109.json, then identify existing SPEC/dependency or alternative-source evidence artifacts. Select at most four non-secret regular workspace files, each at most 16384 bytes, with no symlink/reparse-point parents. Do not create replacement summaries, claim availability, retry Tushare, access holdout, advance gated stages, or close Issues.\nReturn one complete JSON tool/command result of at most 8000 characters, using exactly this structure and no additional keys: {\"nf_route_inventory\":{\"schema_version\":1,\"task_id\":\"quantresearch-793-supervise\",\"task_version\":9,\"routes\":[{\"route_id\":\"stable-id\",\"resource\":{\"kind\":\"artifact\",\"id\":\"nested/relative/path\"},\"operation\":\"read-local-artifact\"}]}}. Replace the example route with actual discovered workspace-relative paths and stable route IDs; return an empty routes array if none qualify. This is discovery only; independent artifact probing must establish availability and source/digest evidence before substantive route selection.",
   "inventory_acceptance_pass": true,
   "source_snapshot_unchanged": true
 }

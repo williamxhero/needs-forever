@@ -94,6 +94,15 @@ including when the selected route was diagnostic inventory. Proposal/send alone
 does not count. If a confirmed selected API execution already owns this result,
 its normal Stop outcome records the attempt once.
 
+B validates the current bounded Stop evidence before admitting at most four
+distinct canonical URLs, prioritizing their newest verified facts. All actual
+receipts for an admitted URL are applied oldest-to-newest and recorded in that
+order, even if repeated execution was not permitted by future-planning policy.
+Already processed receipts and superseded historical facts consume no new URL
+budget and cannot add attempts. Unresolved omitted URL digests survive restart;
+their explicit omission keeps C2 context incomplete until those existing facts
+are admitted. Ingestion never repeats a request to resolve a budget omission.
+
 Snapshot and Catalog substantive digests exclude receipt signature, nonce, scope
 and issuance time while retaining actual URL/status/body digest/retry facts.
 Repeated receipts for the same response do not become progress; changed body/status

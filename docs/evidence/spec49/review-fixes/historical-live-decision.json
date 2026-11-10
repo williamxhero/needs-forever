@@ -1,34 +1,34 @@
 {
   "action": "CONTINUE",
-  "reason": "原始验收尚未完成，当前证据被省略且 Catalog/Ledger 均为空；必须先发现可核验的本地替代路线，不能据 worker 的限频判断进入 WAIT_EXTERNAL。",
+  "reason": "Acceptance remains incomplete. The route catalog and ledger are empty, context is truncated, and current evidence does not establish exhaustion of authorized alternatives.",
   "evidence_ids": [
     "1eec7ec9-4473-4f04-92d7-efa9c26e2544",
     "62daf235-4eb4-4fcb-9b88-44fd1b2544c3"
   ],
-  "next_message": "执行一次只读本地路线发现：在 QuantResearch 工作区寻找最多四个非秘密、无符号链接父目录、大小不超过 16384 字节的普通文件，优先选择能够定位 G0 替代数据路线及 G1 原始合同/实现入口的现有索引或证据文件。不要重试受限 provider，不执行网络请求、Runtime submission 或 holdout 访问；不要以新写的结论摘要替代原始证据。\n返回一次完整、未截断、最多 8000 字符的 JSON tool/command result，严格只有以下结构和键：{\"nf_route_inventory\":{\"schema_version\":1,\"task_id\":\"quantresearch-793-supervise\",\"task_version\":9,\"routes\":[{\"route_id\":\"stable-id\",\"resource\":{\"kind\":\"artifact\",\"id\":\"nested/relative/path\"},\"operation\":\"read-local-artifact\"}]}}。routes 最多四项，路径必须是实际发现的工作区相对路径；未找到则返回空数组。此清单仅是发现提示，不是可用性或授权声明；随后由 B 独立检查普通文件、父目录、16384 字节上限，并记录 source/contract/digest 证据。",
+  "next_message": "Perform a local route-inventory diagnostic without provider calls or remote writes. Inspect filesystem metadata for .scratch/quantresearch-793-fresh-local-audit-20261109.json and .scratch/fresh-authority-window-20261109.json, then identify existing SPEC/dependency or alternative-source evidence artifacts. Select at most four non-secret regular workspace files, each at most 16384 bytes, with no symlink/reparse-point parents. Do not create replacement summaries, claim availability, retry Tushare, access holdout, advance gated stages, or close Issues.\nReturn one complete JSON tool/command result of at most 8000 characters, using exactly this structure and no additional keys: {\"nf_route_inventory\":{\"schema_version\":1,\"task_id\":\"quantresearch-793-supervise\",\"task_version\":9,\"routes\":[{\"route_id\":\"stable-id\",\"resource\":{\"kind\":\"artifact\",\"id\":\"nested/relative/path\"},\"operation\":\"read-local-artifact\"}]}}. Replace the example route with actual discovered workspace-relative paths and stable route IDs; return an empty routes array if none qualify. This is discovery only; independent artifact probing must establish availability and source/digest evidence before substantive route selection.",
   "diagnosis": {
     "class": "evidence_gap",
-    "statement": "汇总文件的生成命令包含预填结论，不能独立证明验收；当前另一条文件检查还报告相关 readback 不存在。缺少完整源证据及可选择的 observed 路线，需要先做有界本地发现。",
+    "statement": "No observed catalog route or recorded attempt is available, and the snapshot omits underlying acceptance and alternative-route evidence. Recover bounded local source artifacts before selecting an execution route or judging external exhaustion.",
     "evidence_ids": [
       "1eec7ec9-4473-4f04-92d7-efa9c26e2544",
       "62daf235-4eb4-4fcb-9b88-44fd1b2544c3"
     ]
   },
   "route_plan": {
-    "plan_id": "quantresearch-793-v9-route-discovery",
+    "plan_id": "quantresearch-793-v9-route-recovery",
     "candidates": [
       {
-        "route_id": "local-artifact-route-inventory",
+        "route_id": "local-route-inventory",
         "resource": {
           "kind": "diagnostic",
-          "id": "workspace-bounded-route-inventory"
+          "id": "workspace-bounded-artifact-inventory"
         },
-        "operation": "discover-local-artifact-routes",
-        "hypothesis_id": "h-local-source-evidence",
-        "hypothesis": "工作区中可能存在可独立探测的原始合同、实现索引或替代路线证据。",
+        "operation": "discover-local-route-artifacts",
+        "hypothesis_id": "recover-source-linked-route-context",
+        "hypothesis": "Existing bounded local artifacts can supply independently probeable evidence for gate dependencies and authorized alternatives without retrying an unverified provider.",
         "expected_evidence": [
-          "符合 nf_route_inventory v1 的完整有界 JSON",
-          "供 B 独立检查并记录摘要的最多四个相对文件路径"
+          "Complete task-scoped nf_route_inventory result",
+          "Up to four eligible workspace-relative artifact paths for independent probing"
         ],
         "status": "candidate",
         "evidence_ids": [
@@ -36,28 +36,28 @@
           "62daf235-4eb4-4fcb-9b88-44fd1b2544c3"
         ],
         "actions": [
-          "执行一次只读本地路线发现：在 QuantResearch 工作区寻找最多四个非秘密、无符号链接父目录、大小不超过 16384 字节的普通文件，优先选择能够定位 G0 替代数据路线及 G1 原始合同/实现入口的现有索引或证据文件。不要重试受限 provider，不执行网络请求、Runtime submission 或 holdout 访问；不要以新写的结论摘要替代原始证据。",
-          "返回一次完整、未截断、最多 8000 字符的 JSON tool/command result，严格只有以下结构和键：{\"nf_route_inventory\":{\"schema_version\":1,\"task_id\":\"quantresearch-793-supervise\",\"task_version\":9,\"routes\":[{\"route_id\":\"stable-id\",\"resource\":{\"kind\":\"artifact\",\"id\":\"nested/relative/path\"},\"operation\":\"read-local-artifact\"}]}}。routes 最多四项，路径必须是实际发现的工作区相对路径；未找到则返回空数组。此清单仅是发现提示，不是可用性或授权声明；随后由 B 独立检查普通文件、父目录、16384 字节上限，并记录 source/contract/digest 证据。"
+          "Perform a local route-inventory diagnostic without provider calls or remote writes. Inspect filesystem metadata for .scratch/quantresearch-793-fresh-local-audit-20261109.json and .scratch/fresh-authority-window-20261109.json, then identify existing SPEC/dependency or alternative-source evidence artifacts. Select at most four non-secret regular workspace files, each at most 16384 bytes, with no symlink/reparse-point parents. Do not create replacement summaries, claim availability, retry Tushare, access holdout, advance gated stages, or close Issues.",
+          "Return one complete JSON tool/command result of at most 8000 characters, using exactly this structure and no additional keys: {\"nf_route_inventory\":{\"schema_version\":1,\"task_id\":\"quantresearch-793-supervise\",\"task_version\":9,\"routes\":[{\"route_id\":\"stable-id\",\"resource\":{\"kind\":\"artifact\",\"id\":\"nested/relative/path\"},\"operation\":\"read-local-artifact\"}]}}. Replace the example route with actual discovered workspace-relative paths and stable route IDs; return an empty routes array if none qualify. This is discovery only; independent artifact probing must establish availability and source/digest evidence before substantive route selection."
         ],
-        "expected_signal": "得到可供独立探测的文件提示，或明确的空发现结果，而非再次复述阻塞。",
-        "risk": "摘要或过期文件可能仅重复 worker 结论；发现结果不得直接升级为 observed。",
+        "expected_signal": "A valid bounded inventory permits independent catalog observations; an empty inventory establishes only that this discovery found no qualifying artifacts.",
+        "risk": "Local summaries may contain unsupported claims; discovery must not promote them into verified capabilities or acceptance proof.",
         "fallback": {
           "route_id": null,
-          "when": "清单为空或文件探测失败时，依据实际诊断结果调整本地发现范围，不盲重试 provider 或直接等待外部。"
+          "when": "If no eligible artifacts are found, use the diagnostic result to select a different local evidence-discovery scope, not an external wait."
         },
         "discriminating_check": {
-          "description": "由 B 核实文件存在性、普通文件属性、无符号链接父目录、大小及源内容摘要，区分真实来源与预填结论。",
+          "description": "Check actual file metadata and path ancestry rather than relying on worker-reported paths, hashes, or blocked labels.",
           "evidence_ids": [
             "62daf235-4eb4-4fcb-9b88-44fd1b2544c3"
           ]
         }
       }
     ],
-    "selected_route_id": "local-artifact-route-inventory",
-    "selection_reason": "Catalog 没有 observed 条目，Ledger 没有可核验尝试；诊断发现不依赖未经验证的 provider 能力。",
-    "single_route_reason": "路线上下文不完整，尚不能证实两个可执行替代资源；先执行规定的单一路线发现。",
-    "success_condition": "完整合规清单被返回，并可由 B 对发现文件建立独立来源与摘要证据。",
-    "stop_condition": "本轮仅完成有界发现；不推进后续 Gate、不访问 holdout、不关闭 Issue，也不声明完成或外部等待。"
+    "selected_route_id": "local-route-inventory",
+    "selection_reason": "An inventory diagnostic is executable without assuming provider availability and restores the missing context required for substantive route selection.",
+    "single_route_reason": "The catalog has no observed entries and the ledger has no attempts; materially distinct substantive alternatives cannot yet be selected with observation provenance.",
+    "success_condition": "A complete contract-valid inventory is returned and its eligible artifacts can be independently probed.",
+    "stop_condition": "Stop after returning the bounded inventory; do not invoke providers or treat discovery as gate completion."
   },
   "external": null
 }

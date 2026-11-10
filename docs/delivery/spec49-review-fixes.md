@@ -1,7 +1,9 @@
 # SPEC #49 independent-review repairs
 
 Implementation branch: `codex/spec49-review-fixes`. Implementation freeze:
-`eda2c0a1cee394cd082c71f37fb7bec18d39b68c`, including integration `d749157`.
+`7e0c9bad744ed20e28f730166a5fa6d761b7ca10`, including integration `d749157`.
+Release test freeze: `a26213f3d60bcd845689babb913370e04f2b2e1a`; its production
+`src/` and plugin package are byte-identical to the implementation freeze.
 Date: 2026-11-10. This worker owns review repairs and verification; the coordinating
 agent owns independent re-review, production deployment, main merge, cleanup,
 push/equality and Issue closure. No production installation, original-A contact,
@@ -67,6 +69,29 @@ so a genuinely exhausted task can reach WAIT_EXTERNAL without manual State edits
 The optional duplicated-enum suggestion was left unchanged to keep the repair
 focused on the actionable behavioral defects.
 
+The next independent review reproduced three additional boundary defects, each
+with a public red before its fix. Signed HTTP receipts are now verified and applied
+oldest-to-newest, with per-URL monotonic receipt/source time. An older 200 cannot
+overwrite a newer 429; uncertain equal-time availability stays conservative, and
+bounded persisted receipt hashes prevent cross-Stop replay from counting attempts.
+Current Catalog projection now revalidates every active fact against the present
+Task/version and read/access exclusions at discovery, context, validation and
+delivery admission. Old evidence remains audit history; old permission cannot
+authorize a new-version route. Known forbidden paths receive current contract
+exclusion proof, while unsupported scope stays unknown. Cached old snapshots cannot
+admit delivery. Literal exclusion matching preserves leading-dot/spaced paths, so
+`Do not read .scratch/sensitive-audit.json` prevents the actual probe.
+
+The final review reproduced a fifth signed response being lost at the four-receipt
+budget: actual HTTP statuses `200, 200, 200, 200, 429` left stale availability.
+Admission now verifies the current bounded Stop proof first, prioritizes each
+canonical URL's newest supported fact, and budgets four distinct URLs. Every real
+receipt for an admitted URL remains chronological in Ledger, even when execution
+violated the policy for future attempts. Planning/admission permission is unchanged.
+Processed or superseded history consumes no new URL budget and cannot add attempts.
+Unresolved omitted URL digests survive restart and explicitly keep C2 context
+incomplete until their existing facts are admitted; ingestion makes no new request.
+
 ## Public red/green evidence
 
 Tests use the pre-agreed public planning/context/admission boundaries, persisted
@@ -97,21 +122,64 @@ corresponding public regressions now cover:
 - Observed readable cache with a real missing-date failure remains observed, while
   an explicit evidence-linked C exclusion can wait; an unsupported worker claim fails.
 
-[Targeted output](../evidence/spec49/review-fixes/targeted-test.txt) retains the
-focused final run. The complete post-fix release gate is recorded below after it
-finishes; the earlier 198/198 run preceded the second-review HTTP/exclusion repairs
-and is not presented as the final release gate.
+[The public red](../evidence/spec49/review-fixes/http-budget-red.txt) records
+`4 !== 5` before the last fix. [Final targeted output](../evidence/spec49/review-fixes/targeted-test.txt)
+passes 37/37 public planning/routes/HTTP/execution tests, including chronological
+five-attempt recording, duplicate suppression, persistent budget omissions and
+resolution from existing receipts. Earlier full runs preceded this last repair
+and are not the final release gate.
+
+The first final full run is retained: [201/203 passed](../evidence/spec49/review-fixes/full-test-before-fixture-repairs.txt),
+with no skips/cancellations, in 363.124 seconds. Two unchanged lifecycle tests hit
+fixture timing bounds. Native rebind intentionally waited the production 3-second
+grace period inside a 4-second test acknowledgement window; the recorded real
+sent/ack events arrived after the window. The four-judgment recovery scenario was
+killed by its 5-second subprocess watchdog (`status=null`). Both failures repeated
+in isolation ([rebind red](../evidence/spec49/review-fixes/native-rebind-red.txt),
+[judge-recovery red](../evidence/spec49/review-fixes/judge-recovery-red.txt)).
+The rebind fixture now uses the existing zero-delay option; only the four-judgment
+scenario gets a 20-second test watchdog. Production defaults/timeouts and all
+delivery, acknowledgement, correlation and bounded-fallback assertions remain
+unchanged. [Both repaired test boundaries passed 2/2](../evidence/spec49/review-fixes/timing-boundaries-green.txt).
+These test-only commits do not change installed package bytes, so the matching
+installation and actual-C receipts below apply without another model invocation.
+
+A second default-concurrency full run on the test freeze passed 198/203 in
+452.098 seconds. Its five failures were three existing 5-second subprocess
+watchdogs, the automatic CONTINUE recovery poll, and a native-Interrupt fixture
+race where the delayed obsolete result completed before the slow pause hook.
+[The complete second receipt](../evidence/spec49/review-fixes/full-test-default-concurrency.txt)
+retains all exact assertions. No further product or fixture behavior was changed.
+Before the serial full gate, eight detached recovery coordinators were verified
+against this SPEC's installed-copy paths, actual fixture state and simulated host
+configuration, then stopped. Twenty-two unrelated/pre-SPEC processes and the three
+explicit production PIDs were excluded. [Cleanup receipt](../evidence/spec49/review-fixes/fixture-process-cleanup.json).
+The final gate uses the exact same full test selection with one test-file process
+at a time; default concurrency remains a documented Windows fixture limitation.
+
+The complete serial release gate passed **203/203**, with zero failures,
+cancellations, skips or todo tests, in **478.468 seconds**:
+`node --test --test-concurrency=1 "dist/test/*.test.js"` after the unchanged build
+from the default npm test run. [Full final output](../evidence/spec49/review-fixes/full-test-final.txt)
+and [release checks](../evidence/spec49/review-fixes/release-checks.json) retain the
+exact command, both earlier full-run results, source freezes and package equality.
+All 48 current package files still match the isolated installation. The one new
+serial-run fixture coordinator was also verified and stopped
+([after-run receipt](../evidence/spec49/review-fixes/fixture-process-cleanup-after-serial.json));
+production PIDs and the same 22 unrelated/pre-SPEC processes remained excluded.
+Final baseline-wide `git diff --check` passed. Earlier ticket #54 evidence received
+only LF/blank-whitespace formatting normalization, with substantive text unchanged.
 
 ## Actual isolated installation and execution
 
 ```powershell
 npm test
-node scripts/verify-plugin-install.mjs --candidate . --directory runs/spec49-review/final2-install
-node scripts/verify-c2-acceptance.mjs --runtime runs/spec49-review/final2-install/codex-home/plugins/cache/needs-forever-local/needs-forever/0.3.4/runtime --directory runs/spec49-review/final-installed-acceptance
-node scripts/verify-c2-observation-loop.mjs --runtime runs/spec49-review/final2-install/codex-home/plugins/cache/needs-forever-local/needs-forever/0.3.4/runtime --directory runs/spec49-review/final-installed-observation-loop
+node scripts/verify-plugin-install.mjs --candidate . --directory runs/spec49-review/budget-fixed-install
+node scripts/verify-c2-acceptance.mjs --runtime runs/spec49-review/budget-fixed-install/codex-home/plugins/cache/needs-forever-local/needs-forever/0.3.4/runtime --directory runs/spec49-review/budget-fixed-installed-acceptance
+node scripts/verify-c2-observation-loop.mjs --runtime runs/spec49-review/budget-fixed-install/codex-home/plugins/cache/needs-forever-local/needs-forever/0.3.4/runtime --directory runs/spec49-review/budget-fixed-installed-observation-loop
 ```
 
-The native CLI 0.167.0 installed the final 34-module candidate into a fresh isolated
+The native CLI 0.167.0 installed the final 35-module candidate into a fresh isolated
 CODEX_HOME. Every package file hash matches and skill/hook discovery passed.
 Discovery still requires host trust for native effectiveness; no production native
 effectiveness is inferred from this installation.
@@ -130,16 +198,16 @@ are actual. [Receipt](../evidence/spec49/review-fixes/installed-observation-loop
 ## Actual C historical Stop replay
 
 ```powershell
-node scripts/replay-c2-stop.mjs --source D:\WILL\STOCK\QuantResearch\.codex-supervisor\quantresearch-793-supervise\snapshots\8784db86-45b6-4130-bcff-fbe45b4a2c3f.json --runtime plugins/needs-forever/runtime --directory runs/spec49-review/final-historical-live-replay --live true
+node scripts/replay-c2-stop.mjs --source D:\WILL\STOCK\QuantResearch\.codex-supervisor\quantresearch-793-supervise\snapshots\8784db86-45b6-4130-bcff-fbe45b4a2c3f.json --runtime runs/spec49-review/budget-fixed-install/codex-home/plugins/cache/needs-forever-local/needs-forever/0.3.4/runtime --directory runs/spec49-review/budget-fixed-historical-live-replay --live true
 ```
 
-Actual C returned validated CONTINUE selecting `local-artifact-route-inventory`,
+Actual C returned validated CONTINUE selecting `local-route-inventory`,
 with the exact bounded output contract in its next_message. It correctly declined
 to infer completion or exhausted alternatives from incomplete historical evidence.
 The 23042-character replay preserved the immutable contract and original source
 SHA-256 `e2477f70746dc3809b53224eb19db4d5159a818e178af6d4c7951c91b9abf30d`.
 C was read-only/network-disabled/tool-free, four inherited MCP servers were disabled,
-and owned C `01a1c3f1-c6fa-7cb0-9691-950bb283d1ec` was archived. Original A was never
+and owned C `01a1c414-24b6-70a0-9cf2-3b73fb34f234` was archived. Original A was never
 resumed, messaged or interrupted; no selected action was executed on its project.
 [Redacted manifest](../evidence/spec49/review-fixes/historical-live-replay.json) and
 [decision](../evidence/spec49/review-fixes/historical-live-decision.json) retain
