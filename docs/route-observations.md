@@ -49,13 +49,65 @@ authorization or probe/success facts. This conservative guard is not a general
 natural-language policy interpreter; it does not declare arbitrary contract
 restrictions satisfied merely because a file exists.
 
+The hidden task-artifact directories `.scratch` and `.cache` are supported;
+other hidden path components (including `.git`, `.codex`, `.env`, `.` and `..`)
+are rejected. Generic root-file discovery applies the same contract access guard.
+
 `provider`, `api` and `command` hints can identify candidates, with authorization,
 network, authentication and quota facts unknown and no last success. A command
 printing JSON or exiting zero does not prove a provider's availability. This
-adapter intentionally does not interpret arbitrary provider protocols. A future
-adapter must bind actual request/resource/operation and independently validate
-each fact before upgrading any candidate. C still cannot select a substantive
-candidate until its observed Catalog entry satisfies the existing grounding gate.
+hint adapter does not interpret arbitrary provider protocols. C still cannot select
+a substantive candidate until its observed Catalog entry satisfies the grounding gate.
+
+## Explicit NF HTTP probe
+
+For an API already covered by the unchanged original authorization, A may explicitly
+execute the single literal Node argv in `c2.http_probe.argv_prefix`, followed by
+`--url` and its credential-free HTTP(S) URL. No new Task field or authorization
+grant is required. B prepares this runtime metadata and a random private signing
+key; it does not change the immutable Task or contract hash. A URL hint never
+causes B to access the network. C remains read-only/network-disabled/tool-free.
+
+The NF-owned `route-probe --state FILE --url URL` performs one GET, with a two-second
+deadline and a 16384-byte response bound. It sends no credentials/cookies/custom
+headers, rejects userinfo and credential query parameters, and follows no redirects.
+Only HTTP status, bounded body digest/length, truncation, network failure and
+observed Retry-After metadata are emitted. Body/header content is never emitted.
+
+The receipt is HMAC-signed with an NF-private random key under the OS temporary
+directory (owner-only permissions where supported). State and prompts contain
+only nonce/scope and literal command metadata, never key bytes. Scope binds the
+full immutable Task, task version and native generation/input epoch/contract hash.
+At Stop, admission verifies the key/signature, freshness, exact current scope and
+real source command. It accepts direct literal commands or the shared opt-in
+recognizer's top-level `await tools.exec_command({cmd:"literal"})`, `text(...)`,
+and `const result ...; text(result)` wrappers. Dynamic/conditional code, echoes,
+compound commands, assistant messages, forged or foreign receipts are rejected.
+
+The API resource is the canonical actual URL, operation `http-get`. A completed
+2xx unauthenticated GET proves this operation observed, network available,
+authentication not required and this request not rate-limited. It does not prove
+future quota or task completion. A 401 proves missing authentication; a 429 proves
+limited status and its observed retry condition; 403/other failures retain unknown
+authentication/quota unless directly proven. B records an actual probe attempt,
+including when the selected route was diagnostic inventory. Proposal/send alone
+does not count. If a confirmed selected API execution already owns this result,
+its normal Stop outcome records the attempt once.
+
+Snapshot and Catalog substantive digests exclude receipt signature, nonce, scope
+and issuance time while retaining actual URL/status/body digest/retry facts.
+Repeated receipts for the same response do not become progress; changed body/status
+remains new evidence. The original protocol event remains intact for audit.
+
+## Explicit route exclusion
+
+A failed check does not automatically exhaust a readable artifact. For a route
+whose Catalog status remains observed, C may explicitly exclude it for a necessary
+external condition only with its route ID and current proof ID in
+`external.attempted`, backed by the latest matching route attempt's independent
+failure/blocked/exhausted evidence. All other terminal, completeness and
+alternative-exhaustion gates still apply. A bare exit1 or worker's unsupported
+claim cannot automatically change Catalog status or create WAIT_EXTERNAL.
 
 Catalog entries retain source-event evidence, B probe evidence and contract-scope
 evidence with task versions and content hashes. Saving State and rebuilding the

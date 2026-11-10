@@ -1,10 +1,10 @@
-import { lstatSync, fstatSync, openSync, closeSync, readSync, readdirSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { readdirSync } from 'node:fs';
 import { RouteCatalog } from './route-catalog.js';
 import { RouteLedger, canonicalExecutionRoute, routeEvidenceDigest } from './route-ledger.js';
 import { routeInventoryDecision } from './planning.js';
 import { validateDecision } from './judge.js';
-import { ingestRouteObservations } from './route-observations.js';
+import { ingestRouteObservations, probeWorkspaceArtifact } from './route-observations.js';
+import { ingestHttpRouteProbes } from './http-route-probe.js';
 const scope = (state) => ({ task_id: state.task_id, task_version: state.task_version });
 function lifecycleFence(state) {
     const native = state;
@@ -56,25 +56,10 @@ export function discoverLocalRoutes(state) {
     for (const name of files) {
         if (observed >= 4)
             break;
-        const path = resolve(state.task.workspace, name);
         try {
-            const stat = lstatSync(path);
-            if (!stat.isFile() || stat.isSymbolicLink())
+            const evidence = probeWorkspaceArtifact(state, name);
+            if (!evidence)
                 continue;
-            const fd = openSync(path, 'r');
-            let bytes;
-            try {
-                const opened = fstatSync(fd);
-                if (!opened.isFile() || opened.ino !== stat.ino || opened.dev !== stat.dev)
-                    continue;
-                const buffer = Buffer.alloc(Math.min(stat.size, 16_384));
-                bytes = buffer.subarray(0, readSync(fd, buffer, 0, buffer.length, 0));
-            }
-            finally {
-                closeSync(fd);
-            }
-            const digest = routeEvidenceDigest({ path: name, size: stat.size, prefix_sha256: routeEvidenceDigest([...bytes]) });
-            const evidence = { id: `local:${digest}`, source: 'probe', reference: `workspace-file:${name}`, observed_at: new Date().toISOString(), task_version: state.task_version, content_sha256: digest };
             const refs = [evidence.id];
             catalog.upsert({ inventory_only: true, route_id: `local-artifact:${name}`, resource: { kind: 'artifact', id: name }, operation: 'read-local-artifact', status: 'observed', authorization: { status: 'authorized', evidence_ids: refs }, network: { required: false, available: null, evidence_ids: refs }, authentication: { status: 'not_required', evidence_ids: refs }, rate_limit: { status: 'clear', retry_at: null, evidence_ids: refs }, last_success: { at: evidence.observed_at, evidence_ids: refs }, capabilities: ['Completed bounded local inspection; relevance and completeness remain unverified. This is not evidence of remaining executable task work.'], evidence: [evidence] });
             observed++;
@@ -107,6 +92,7 @@ export function confirmRouteExecution(state, deliveryId) {
  * Native hosts may admit several Stops in the same turn. */
 export function captureRouteOutcome(state, snapshot, stopId, native = false) {
     ingestRouteObservations(state, snapshot);
+    ingestHttpRouteProbes(state, snapshot);
     const execution = state.route_execution;
     if (!execution || execution.lifecycle_fence !== lifecycleFence(state) || execution.task_version !== state.task_version || execution.completed_stop_attempt_id || (!native && !execution.confirmed) || stopId === execution.source_stop_attempt_id)
         return null;

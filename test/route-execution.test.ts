@@ -155,11 +155,15 @@ test('workspace inventory honors original protected-data access exclusions and k
   const state = runtimeState('contract-exclusions');
   mkdirSync(resolve(state.task.workspace, 'forward-holdout'), { recursive: true });
   mkdirSync(resolve(state.task.workspace, 'reports'), { recursive: true });
+  mkdirSync(resolve(state.task.workspace, '.scratch'), { recursive: true });
   writeFileSync(resolve(state.task.workspace, 'forward-holdout', 'prices.csv'), 'unreleased holdout data');
   writeFileSync(resolve(state.task.workspace, 'reports', 'manifest.json'), '{"holdout_registered":true}');
   writeFileSync(resolve(state.task.workspace, 'restricted.csv'), 'restricted data');
+  writeFileSync(resolve(state.task.workspace, '.scratch', 'route-audit.json'), '{"local_cache_present":true}');
   state.task.authorization += ' Do not read restricted.csv.';
   state.task.acceptance.push({ id: 'S5', text: '登记时间门 holdout；不提前读取或执行 holdout。' });
+  discoverLocalRoutes(state);
+  assert.equal(state.route_catalog!.entries.some((entry) => entry.resource.id === 'restricted.csv'), false, 'Generic root discovery must use the same authorization/probe boundary.');
   const observe = (id: string, path: string) => {
     const payload = { nf_route_inventory: { schema_version: 1, task_id: state.task_id, task_version: state.task_version, routes: [{ route_id: id, resource: { kind: 'artifact', id: path }, operation: 'read-local-artifact' }] } };
     return ingestRouteObservations(state, context(state, [{ id: 'E1', type: 'commandExecution', value: { aggregatedOutput: JSON.stringify(payload) }, source: { event_id: `source-${id}`, observed_at: new Date().toISOString(), thread_id: 'worker', turn_id: 'turn' } }]));
@@ -175,9 +179,33 @@ test('workspace inventory honors original protected-data access exclusions and k
   }
   assert.equal(observe('metadata', 'reports/manifest.json'), 1);
   assert.equal(state.route_catalog!.entries.find((item) => item.route_id === 'metadata')!.status, 'observed');
+  assert.equal(observe('scratch-audit', '.scratch/route-audit.json'), 1);
+  assert.equal(state.route_catalog!.entries.find((item) => item.route_id === 'scratch-audit')!.status, 'observed');
   state.task.authorization += ' Never read any restricted material.';
   assert.equal(observe('ambiguous', 'reports/manifest.json'), 1);
   assert.equal(state.route_catalog!.entries.find((item) => item.route_id === 'ambiguous')!.status, 'candidate');
+});
+
+test('an observed artifact may be explicitly excluded after a correlated current failure without editing Catalog status', () => {
+  const state = runtimeState('observed-exclusion');
+  writeFileSync(resolve(state.task.workspace, 'cache.csv'), 'date,close\n');
+  const hint = { nf_route_inventory: { schema_version: 1, task_id: state.task_id, task_version: 1, routes: [{ route_id: 'cache', resource: { kind: 'artifact', id: 'cache.csv' }, operation: 'read-local-artifact' }] } };
+  const before = context(state, [{ id: 'E1', type: 'commandExecution', value: { aggregatedOutput: JSON.stringify(hint) }, source: { event_id: 'inventory', observed_at: new Date().toISOString(), thread_id: 'worker', turn_id: 'turn' } }]);
+  ingestRouteObservations(state, before);
+  const selected = routeInventoryDecision(context(state)), entry = state.route_catalog!.entries[0]!;
+  Object.assign(selected.route_plan!.candidates[0]!, { route_id: 'cache', resource: entry.resource, operation: entry.operation, status: 'observed', evidence_ids: entry.evidence.map((proof) => proof.id), actions: ['Check cache.csv for the required input date.'] });
+  selected.route_plan!.selected_route_id = 'cache'; selected.next_message = selected.route_plan!.candidates[0]!.actions.join('\n');
+  prepareRouteExecution(state, selected, context(state), 'cache-send', 'inventory-stop'); confirmRouteExecution(state, 'cache-send');
+  const result = spawnSync(process.execPath, ['-e', 'const fs=require("node:fs");if(!fs.readFileSync("cache.csv","utf8").includes("2026-11-09")){console.error("Required user-supplied date absent from the only authorized cache");process.exit(2)}'], { cwd: state.task.workspace, encoding: 'utf8' });
+  assert.equal(result.status, 2);
+  const failure = context(state, [{ id: 'E1', type: 'commandExecution', value: { command: 'check exact required cache date', exitCode: result.status, aggregatedOutput: result.stderr }, source: { event_id: 'actual-missing-date', observed_at: new Date().toISOString(), thread_id: 'worker', turn_id: 'turn' } }]);
+  captureRouteOutcome(state, failure, 'cache-failure-stop');
+  const stopped = context(state, failure.evidence);
+  assert.equal(state.route_catalog!.entries[0]!.status, 'observed', 'A failed check must not automatically exhaust every use of this readable artifact.');
+  const wait = { action: 'WAIT_EXTERNAL', reason: 'The necessary user-supplied date is absent.', evidence_ids: ['E1'], next_message: '', external: { missing: 'The required user input date.', attempted: ['cache: E1 independently checked the sole authorized artifact; the required date is absent.'], why_no_other_work: 'This task authorizes only this cache and cannot manufacture the user input.', resume_when: 'User supplies the required date in cache.csv.' }, diagnosis: null, route_plan: null };
+  assert.equal(validateDecision(JSON.stringify(wait), stopped).action, 'WAIT_EXTERNAL');
+  const uncorrelated = structuredClone(wait); uncorrelated.external.attempted = ['cache: worker says unavailable'];
+  assert.throws(() => validateDecision(JSON.stringify(uncorrelated), stopped), /attempted\/excluded/);
 });
 
 test('an independently observed reset time permits one evidenced transient route retry', () => {

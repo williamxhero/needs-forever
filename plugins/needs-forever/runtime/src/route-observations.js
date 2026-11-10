@@ -11,7 +11,7 @@ const inside = (root, path) => { const suffix = relative(root, path); return suf
 /** The task is prose, so this is deliberately conservative rather than a
  * general authorization interpreter. Recognized path/holdout exclusions are
  * enforced; an ambiguous read/access restriction cannot authorize a probe. */
-function artifactReadAuthorized(state, path) {
+export function artifactReadAuthorized(state, path) {
     const contract = [state.task.authorization, state.task.goal, ...state.task.acceptance.map((item) => item.text)].join('\n');
     const clauses = contract.split(/[。；;\n]|(?<=[.!?])\s+/);
     const forbiddenAccess = /(?:do\s+not|must\s+not|never|forbid(?:den)?|prohibit(?:ed)?)\s+(?:\w+\s+){0,2}(?:read|access|open|inspect|run|execute|use)|\bno\s+access\b|(?:不|禁止|不得|不可|不能)(?:提前)?(?:读取|访问|打开|查看|使用|执行|运行)/i;
@@ -33,11 +33,13 @@ function artifactReadAuthorized(state, path) {
 }
 /** A descriptor supplies a path, never availability or permission. B performs
  * this bounded read itself and records only the digest, never file contents. */
-function artifactProbe(state, path) {
+export function probeWorkspaceArtifact(state, path) {
+    if (!artifactReadAuthorized(state, path))
+        return null;
     if (!safeText(path, 512) || path.includes('\\') || isAbsolute(path))
         return null;
     const parts = path.split('/');
-    if (parts.length > 16 || parts.some((part) => !part || part.startsWith('.') || /secret|credential|token|password|auth|cookie|private|\.pem$|\.key$/i.test(part)))
+    if (parts.length > 16 || parts.some((part) => !part || (part.startsWith('.') && !['.scratch', '.cache'].includes(part)) || /secret|credential|token|password|auth|cookie|private|\.pem$|\.key$/i.test(part)))
         return null;
     try {
         const root = realpathSync(state.task.workspace), target = resolve(root, ...parts);
@@ -126,7 +128,7 @@ export function ingestRouteObservations(state, snapshot) {
                 const candidate = { route_id: hint.route_id, resource: { kind: resource.kind, id: resource.id }, operation: hint.operation,
                     status: 'candidate', authorization: { status: 'unknown', evidence_ids: [] }, network: { required: null, available: null, evidence_ids: [] }, authentication: { status: 'unknown', evidence_ids: [] }, rate_limit: { status: 'unknown', retry_at: null, evidence_ids: [] }, last_success: null, capabilities: [], evidence: [sourceProof] };
                 if (resource.kind === 'artifact' && hint.operation === 'read-local-artifact' && artifactReadAuthorized(state, resource.id)) {
-                    const observed = artifactProbe(state, resource.id);
+                    const observed = probeWorkspaceArtifact(state, resource.id);
                     if (!observed)
                         continue;
                     const digest = routeEvidenceDigest({ task_id: state.task_id, task_version: state.task_version, workspace: state.task.workspace, authorization: state.task.authorization, operation: 'bounded-workspace-inspection' });

@@ -101,6 +101,14 @@ for await (const line of lines) {
         decision.route_plan.single_route_reason = 'Only this task-relevant artifact is independently observed; other providers remain unverified.';
         decision.next_message = route.actions.join('\n');
       }
+      const api = scenario.judge_select_observed_api && snapshot.c2?.catalog.entries.find((entry) => entry.resource.kind === 'api' && entry.status === 'observed');
+      if (action === 'CONTINUE' && api && decision.route_plan) {
+        const route = decision.route_plan.candidates[0];
+        Object.assign(route, { route_id: api.route_id, resource: api.resource, operation: api.operation, status: 'observed', evidence_ids: api.evidence.map((proof) => proof.id), actions: [`Use the verified read-only API ${api.resource.id} and verify the required result.`] });
+        decision.route_plan.selected_route_id = api.route_id;
+        decision.route_plan.single_route_reason = 'This is the sole observed API alternative; configured names prove no other provider.';
+        decision.next_message = route.actions.join('\n');
+      }
       const judgeOutput = scenario.judge_outputs?.[judges - 1] ?? scenario.judge_output;
       const judgeItem = { type: 'agentMessage', id: 'judge-output', text: judgeOutput ?? JSON.stringify(decision), phase: 'final_answer' };
       if (scenario.wrong_judge_turn) send({ method: 'turn/completed', params: { threadId: message.params.threadId, turn: { id: 'unrelated-judge-turn', status: 'completed', items: [{ ...judgeItem, text: '{"action":"DONE"}' }] } } });
@@ -116,6 +124,12 @@ for await (const line of lines) {
       const result = spawnSync(argv[0], argv.slice(1), { cwd: workspace, windowsHide: true, encoding: 'utf8', timeout: 5000 });
       return { type: 'commandExecution', id: `worker-command-${turns}-${index}`, command: JSON.stringify(argv), status: result.status === 0 ? 'completed' : 'failed', exitCode: result.status, aggregatedOutput: `${result.stdout ?? ''}${result.stderr ?? ''}` };
     });
+    for (const url of scenario.worker_probe_urls?.[turns - 1] ?? []) {
+      const state = JSON.parse(readFileSync(scenario.state_file, 'utf8'));
+      const argv = [...(state.route_probe?.argv_prefix ?? [process.execPath, resolve('dist/src/cli.js'), 'route-probe', '--state', scenario.state_file]), '--url', url];
+      const result = spawnSync(argv[0], argv.slice(1), { cwd: workspace, windowsHide: true, encoding: 'utf8', timeout: 5000 });
+      commandItems.push({ type: 'commandExecution', id: `http-probe-${turns}`, command: JSON.stringify(argv), status: result.status === 0 ? 'completed' : 'failed', exitCode: result.status, aggregatedOutput: `${result.stdout ?? ''}${result.stderr ?? ''}` });
+    }
     for (const change of scenario.worker_changes?.[turns - 1] ?? []) {
       const file = resolve(message.params.cwd ?? JSON.parse(readFileSync(scenario.state_file, 'utf8')).task.workspace, change.path);
       if (change.remove) unlinkSync(file);

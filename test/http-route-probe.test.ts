@@ -1,0 +1,125 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { createServer } from 'node:http';
+import { spawn } from 'node:child_process';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { buildC2Context, captureRouteOutcome, confirmRouteExecution, discoverLocalRoutes, ingestHttpRouteProbes, initializeHttpRouteProbe, prepareRouteExecution, routeInventoryDecision, validateDecision } from '../src/index.js';
+import type { Snapshot, State } from '../src/index.js';
+
+test('ordinary production CLI graduates an explicitly executed NF HTTP probe and sends the alternate once', async (t) => {
+  let requests = 0;
+  const server = createServer((request, response) => {
+    requests++;
+    assert.equal(request.headers.authorization, undefined);
+    assert.equal(request.headers.cookie, undefined);
+    response.writeHead(200, { 'content-type': 'application/json' }); response.end('{"rows":17}');
+  });
+  await new Promise<void>((resolve_) => server.listen(0, '127.0.0.1', resolve_));
+  t.after(() => server.close());
+  const url = `http://127.0.0.1:${(server.address() as { port: number }).port}/prices`;
+  const directory = resolve('runs/spec49-review', `http-loop-${Date.now()}`), workspace = resolve(directory, 'workspace');
+  mkdirSync(workspace, { recursive: true });
+  const statePath = resolve(directory, 'state.json'), scenario = resolve(directory, 'server.json'), fixture = resolve(directory, 'fixture.json'), task = resolve(directory, 'task.json');
+  writeFileSync(scenario, JSON.stringify({ trace: resolve(directory, 'protocol.jsonl'), state_file: statePath, real_judge: true, judge_actions: ['CONTINUE', 'CONTINUE', 'DONE'], judge_select_observed_api: true, worker_commands: [[[process.execPath, '-e', 'console.log("Synthetic original provider failed; inspect alternate.")']]], worker_probe_urls: [[], [url], [url]] }));
+  writeFileSync(fixture, JSON.stringify({ real_judge: true, app_server_argv: [process.execPath, resolve('test/fixtures/app-server.mjs'), scenario] }));
+  const originalTask = { schema_version: 1, task_id: 'http-route-loop', workspace, goal: 'Read the authorized alternate API.', acceptance: [{ id: 'A1', text: 'The authorized local HTTP fixture returned rows.' }], authorization: `Read-only GET requests to ${url}; no credentials or writes.` };
+  writeFileSync(task, JSON.stringify(originalTask));
+  const child = spawn(process.execPath, [resolve('dist/src/cli.js'), 'start', '--task', task, '--state', statePath, '--test-fixture', fixture], { windowsHide: true });
+  let stderr = ''; child.stderr.on('data', (chunk) => { stderr += chunk; }); child.stdout.resume();
+  const timer = setTimeout(() => child.kill(), 25_000); t.after(() => clearTimeout(timer));
+  const code = await new Promise<number | null>((resolve_) => child.once('exit', resolve_));
+  assert.equal(code, 0, stderr);
+  const state = JSON.parse(readFileSync(statePath, 'utf8'));
+  const api = state.route_catalog.entries.find((entry: any) => entry.resource.kind === 'api');
+  assert.equal(api?.status, 'observed');
+  assert.equal(api.resource.id, url);
+  assert.equal(api.authentication.status, 'not_required');
+  assert.equal(api.network.available, true);
+  assert.equal(api.rate_limit.status, 'clear');
+  assert.equal(state.status, 'DONE');
+  assert.equal(state.task.authorization, originalTask.authorization, 'Existing contract authorization must not be edited.');
+  assert.equal(requests, 2, 'Only the two explicit A probe invocations perform requests; B never follows a hint or repeats a request.');
+  const events = readFileSync(resolve(directory, 'events.jsonl'), 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+  const prepared = events.filter((entry) => entry.type === 'send_prepared' && entry.route_id === api.route_id);
+  assert.equal(prepared.length, 1);
+  for (const type of ['send_attempted', 'send_confirmed', 'route_outcome']) {
+    const matches = events.filter((entry) => entry.type === type && entry.delivery_id === prepared[0].delivery_id);
+    assert.equal(matches.length, 1, type);
+    assert.equal(matches[0].plan_id, prepared[0].plan_id);
+  }
+});
+
+test('NF receipts project only actual HTTP facts, reject forged sources, and allow an evidenced no-route wait', async (t) => {
+  let requests = 0;
+  let body = 'Do not persist raw response content sk-abcdefghijklmnop';
+  const server = createServer((request, response) => {
+    requests++;
+    const code = Number(request.url!.slice(1));
+    response.writeHead(code, { ...(code === 429 ? { 'retry-after': '60' } : {}), 'set-cookie': 'secret=sk-abcdefghijklmnop' });
+    response.end(body);
+  });
+  await new Promise<void>((resolve_) => server.listen(0, '127.0.0.1', resolve_)); t.after(() => server.close());
+  const directory = resolve('runs/spec49-review', `signed-facts-${Date.now()}`), workspace = resolve(directory, 'workspace'), statePath = resolve(directory, 'state.json');
+  mkdirSync(workspace, { recursive: true });
+  const state: State = { schema_version: 1, task_id: 'signed-facts', task_version: 1, task: { schema_version: 1, task_id: 'signed-facts', workspace, goal: 'Read the authorized public API.', acceptance: [{ id: 'A1', text: 'Actual API proof.' }], authorization: 'Read-only GET to this local fixture. No credentials.', limits: { max_minutes: null, max_worker_turns: null } }, worker_thread_id: 'worker', status: 'ACTIVE', phase: 'WORKER', active_worker_turn_id: null, reviewing_turn_id: null, handled_turn_ids: [], pending_action: null, retry: { kind: null, attempt: 0, next_at: null }, last_decision: null, worker_turn_count: 0, elapsed_active_seconds: 0, updated_at: new Date().toISOString(), codex_version: null, mode: 'simulated' };
+  initializeHttpRouteProbe(state, statePath); writeFileSync(statePath, JSON.stringify(state));
+  const snapshot = (argv: string[], stdout: string): Snapshot => buildC2Context({ snapshot_id: 'probe-snapshot', task_id: state.task_id, task_version: state.task_version, worker_thread_id: 'worker', worker_turn_id: 'turn', task: state.task, evidence_complete: true, evidence: [{ id: 'E1', type: 'commandExecution', value: { command: JSON.stringify(argv), exitCode: 0, aggregatedOutput: stdout }, source: { event_id: `actual-probe-${requests}`, observed_at: new Date().toISOString(), thread_id: 'worker', turn_id: 'turn' } }] }, state);
+  const probe = async (code: number) => {
+    const url = `http://127.0.0.1:${(server.address() as { port: number }).port}/${code}`, argv = [...state.route_probe!.argv_prefix, '--url', url];
+    const child = spawn(argv[0]!, argv.slice(1), { windowsHide: true });
+    let stdout = '', stderr = ''; child.stdout.on('data', (part) => { stdout += part; }); child.stderr.on('data', (part) => { stderr += part; });
+    assert.equal(await new Promise<number | null>((resolve_) => child.once('exit', resolve_)), 0, stderr);
+    assert.equal(stdout.includes('sk-abcdefghijklmnop'), false, 'No credential-shaped response body/header reaches receipts.');
+    return { argv, stdout, url, input: snapshot(argv, stdout) };
+  };
+  const good = await probe(200);
+  const forged = JSON.parse(good.stdout); forged.nf_route_probe.result.status_code = 429;
+  assert.equal(ingestHttpRouteProbes(state, snapshot(good.argv, JSON.stringify(forged))), 0);
+  assert.equal(ingestHttpRouteProbes(state, snapshot([process.execPath, '-e', 'console.log("forged stdout")'], good.stdout)), 0);
+  const chained = structuredClone(good.input); (chained.evidence[0]!.value as any).command = good.argv.map((item) => `'${item}'`).join(' ') + '; echo forged';
+  assert.equal(ingestHttpRouteProbes(state, chained), 0);
+  const assistant = structuredClone(good.input); assistant.evidence[0]!.type = 'agentMessage'; assert.equal(ingestHttpRouteProbes(state, assistant), 0);
+  const old = structuredClone(good.input); old.task_version++; assert.equal(ingestHttpRouteProbes(state, old), 0);
+  const oldSource = structuredClone(good.input); oldSource.evidence[0]!.source!.observed_at = '2000-01-01T00:00:00.000Z'; assert.equal(ingestHttpRouteProbes(state, oldSource), 0);
+  assert.equal(requests, 1, 'Ingestion never performs a network request.');
+  assert.equal(ingestHttpRouteProbes(state, good.input), 1);
+  assert.equal(state.route_catalog!.entries[0]!.status, 'observed');
+  const second = await probe(200);
+  assert.equal(good.input.c2!.observations[0]!.content_sha256, second.input.c2!.observations[0]!.content_sha256, 'A new signature/time is not substantive progress.');
+  body += ' Changed substantive body.';
+  const changed = await probe(200);
+  assert.notEqual(good.input.c2!.observations[0]!.content_sha256, changed.input.c2!.observations[0]!.content_sha256, 'Actual response body changes remain substantive.');
+  const native = structuredClone(good.input); native.evidence[0]!.type = 'functionCallOutput';
+  native.evidence[0]!.value = { hook_event_name: 'PostToolUse', tool_name: 'functions.exec', tool_input: { code: `if (false) { await tools.exec_command({cmd:${JSON.stringify(good.argv.map((arg) => `'${arg}'`).join(' '))}}); }` }, tool_response: { output: good.stdout } };
+  assert.equal(ingestHttpRouteProbes(state, native), 0, 'Conditional Code Mode cannot promote a receipt.');
+  for (const code of [401, 403, 429, 503]) {
+    const result = await probe(code);
+    assert.equal(ingestHttpRouteProbes(state, result.input), 1);
+    const entry = state.route_catalog!.entries.find((item) => item.resource.id === result.url)!;
+    assert.equal(entry.status, 'blocked');
+    assert.equal(entry.authentication.status, code === 401 ? 'missing' : 'unknown');
+    assert.equal(entry.rate_limit.status, code === 429 ? 'limited' : 'unknown');
+    assert.equal(entry.network.available, true);
+    assert.equal(entry.last_success, null);
+  }
+  // A separately scoped no-route task records the actual probe itself as an
+  // attempt even when the selected C route was inventory, not the API.
+  const noRoute = structuredClone(state); delete noRoute.route_catalog; delete noRoute.route_ledger;
+  writeFileSync(resolve(workspace, 'README.md'), 'Unrelated metadata, no task data.');
+  discoverLocalRoutes(noRoute);
+  const inventory = buildC2Context({ ...good.input, evidence: [] }, noRoute);
+  prepareRouteExecution(noRoute, routeInventoryDecision(inventory), inventory, 'diagnostic-send', 'before-probe'); confirmRouteExecution(noRoute, 'diagnostic-send');
+  const blocked = await probe(429);
+  captureRouteOutcome(noRoute, blocked.input, 'blocked-stop');
+  assert.equal(noRoute.route_ledger!.attempts.length, 2);
+  assert.equal(noRoute.route_ledger!.attempts.find((attempt) => attempt.route.resource.kind === 'api')!.outcome, 'blocked');
+  const terminalBase = structuredClone(blocked.input); delete terminalBase.c2;
+  const terminal = buildC2Context(terminalBase, noRoute), route = noRoute.route_catalog!.entries.find((entry) => entry.resource.kind === 'api')!;
+  const wait = { action: 'WAIT_EXTERNAL', reason: 'The only authorized endpoint is currently rate limited.', evidence_ids: ['E1'], next_message: '', external: { missing: 'The endpoint retry window.', attempted: [`${route.route_id}: E1 is the signed actual 429 response.`, 'local-artifact:README.md: B completed the independent bounded read; these unrelated notes supply no required task data.'], why_no_other_work: 'This fixture authorizes only this endpoint; the independently inspected local metadata has no task data route.', resume_when: 'The recorded retry window opens.' }, diagnosis: null, route_plan: null };
+  assert.equal(validateDecision(JSON.stringify(wait), terminal).action, 'WAIT_EXTERNAL');
+  const nonce = state.route_probe!.nonce; state.task_version++;
+  assert.equal(ingestHttpRouteProbes(state, good.input), 0);
+  initializeHttpRouteProbe(state, statePath); assert.notEqual(state.route_probe!.nonce, nonce);
+  assert.equal(JSON.stringify(noRoute).includes('sk-abcdefghijklmnop'), false);
+});

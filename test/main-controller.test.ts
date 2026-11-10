@@ -8,8 +8,9 @@ import { scheduleNativeRebindPrompt } from '../src/main-session-recovery.js';
 import type { MainSessionState } from '../src/main-session.js';
 import { routeInventoryDecision } from '../src/planning.js';
 import type { Snapshot } from '../src/types.js';
+import { createServer } from 'node:http';
 
-function installed(name: string, transport: unknown = {}, sessionId = name, boundStatus = 0, limits: Record<string, number> = {}, appServer?: Record<string, unknown>, desktopPid?: number, c2Mode = 'legacy') {
+function installed(name: string, transport: unknown = {}, sessionId = name, boundStatus = 0, limits: Record<string, number> = {}, appServer?: Record<string, unknown>, desktopPid?: number, c2Mode = 'legacy', authorization = 'Local files') {
   const directory = resolve('runs/main-controller', `${name}-${Date.now()}`);
   const workspace = join(directory, '工作 空间');
   const plugin = join(directory, '插件 安装副本');
@@ -21,7 +22,7 @@ function installed(name: string, transport: unknown = {}, sessionId = name, boun
   const trace = join(directory, 'protocol.jsonl');
   const scenario = join(directory, 'server.json');
   if (appServer) writeFileSync(scenario, JSON.stringify({ trace, ...appServer }));
-  writeFileSync(task, JSON.stringify({ schema_version: 1, task_id: name, workspace, c2: { mode: c2Mode }, goal: 'Three stages', acceptance: [{ id: 'all', text: 'Three stages complete' }], authorization: 'Local files', limits }));
+  writeFileSync(task, JSON.stringify({ schema_version: 1, task_id: name, workspace, c2: { mode: c2Mode }, goal: 'Three stages', acceptance: [{ id: 'all', text: 'Three stages complete' }], authorization, limits }));
   writeFileSync(fixture, JSON.stringify({ desktop_version: 'simulated', cli_version: 'simulated', transport, ...(desktopPid ? { desktop_pid: desktopPid } : {}), ...(appServer ? { app_server_argv: [process.execPath, resolve('test/fixtures/app-server.mjs'), scenario] } : {}) }));
   const control = join(plugin, 'scripts/main-session.mjs');
   const run = (command: string, args: string[] = []) => spawnSync(process.execPath, [control, command, '--state', state, ...args], { cwd: workspace, encoding: 'utf8', timeout: 20_000 });
@@ -70,6 +71,32 @@ test('installed native Stop ingests the actual paired tool result before choosin
   assert.equal(state.pending_action.route_id, 'native-cache');
   assert.equal(state.recovery_prompt.route_id, 'native-cache');
   assert.equal(state.route_execution.route.route_id, 'native-cache');
+});
+
+test('installed native Code Mode accepts only a literal NF HTTP probe and selects the proven API', async (t) => {
+  let requests = 0;
+  const server = createServer((_request, response) => { requests++; response.end('{"rows":17}'); });
+  await new Promise<void>((resolve_) => server.listen(0, '127.0.0.1', resolve_)); t.after(() => server.close());
+  const url = `http://127.0.0.1:${(server.address() as { port: number }).port}/prices`;
+  const f = installed('c2-native-http', {}, 'c2-native-http', 0, {}, { judge_actions: ['CONTINUE', 'CONTINUE'], judge_select_observed_api: true }, undefined, 'enforce', `Local files and read-only GET to ${url}.`);
+  t.after(() => f.run('pause'));
+  assert.equal(JSON.parse(f.hook({ hook_event_name: 'Stop' }).stdout).decision, 'block');
+  const state = JSON.parse(f.run('status').stdout);
+  const argv = [...state.route_probe.argv_prefix, '--url', url];
+  const command = argv.map((arg: string) => `'${arg}'`).join(' ');
+  const code = `const result = await tools.exec_command({cmd:${JSON.stringify(command)}}); text(result);`;
+  const tool = { tool_use_id: 'actual-http-probe', tool_name: 'functions.exec', tool_input: { code } };
+  assert.equal(f.hook({ ...tool, hook_event_name: 'PreToolUse' }).status, 0);
+  const child = spawn(argv[0], argv.slice(1), { cwd: f.workspace, windowsHide: true });
+  let stdout = '', stderr = ''; child.stdout.on('data', (part) => { stdout += part; }); child.stderr.on('data', (part) => { stderr += part; });
+  assert.equal(await new Promise<number | null>((resolve_) => child.once('exit', resolve_)), 0, stderr);
+  assert.equal(f.hook({ ...tool, hook_event_name: 'PostToolUse', tool_response: { output: stdout } }).status, 0);
+  const stopped = f.hook({ hook_event_name: 'Stop' });
+  assert.equal(JSON.parse(stopped.stdout).reason, `Use the verified read-only API ${url} and verify the required result.`);
+  const after = JSON.parse(f.run('status').stdout);
+  assert.equal(after.route_catalog.entries.find((entry: any) => entry.resource.kind === 'api')?.status, 'observed');
+  assert.equal(after.pending_action.route_id, after.route_catalog.entries.find((entry: any) => entry.resource.kind === 'api').route_id);
+  assert.equal(requests, 1);
 });
 
 test('installed bound main session automatically owns an independent B and synchronous Stop returns direction without claiming execution', (t) => {
