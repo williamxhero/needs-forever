@@ -140,6 +140,20 @@ export class Store {
         });
     }
     save(state) {
+        // A delayed recovery callback cannot resurrect an interrupted task. Only
+        // an explicit resume, which advances task_version, may cross this fence.
+        let saved;
+        try {
+            saved = readJsonRetry(this.path);
+        }
+        catch (error) {
+            if (error.cause?.code !== 'ENOENT')
+                throw error;
+        }
+        if (saved && saved.task_version > state.task_version)
+            throw new Error('Stale checkpoint task version; refusing to overwrite an explicit resume.');
+        if (saved?.status === 'INTERRUPTED' && state.status !== 'INTERRUPTED' && state.task_version <= saved.task_version)
+            throw new Error('Recovery was interrupted; explicit resume is required.');
         state.updated_at = new Date().toISOString();
         const temporary = `${this.path}.${randomUUID()}.tmp`;
         writeFileSync(temporary, `${JSON.stringify(state, null, 2)}\n`, 'utf8');

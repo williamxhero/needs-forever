@@ -6,7 +6,7 @@ import { reachedLimits } from './rules.js';
 import { Store } from './store.js';
 import { record, text } from './types.js';
 import type { State, Task } from './types.js';
-import { createRecoveryPlan, waitForNativeReceipt } from './recovery-coordinator.js';
+import { createRecoveryPlan, waitForNativeReceipt, resetRecoveryWindow } from './recovery-coordinator.js';
 
 export interface MainSessionState extends State {
   control_mode: 'main-session';
@@ -118,7 +118,7 @@ export function contractHash(task: Task): string { return createHash('sha256').u
  * lifecycle receipt.
  */
 export function armNativeRebind(state: MainSessionState, reason: string): void {
-  if (state.status === 'DONE' || state.pause_reason) return;
+  if (state.status === 'DONE' || state.status === 'INTERRUPTED' || state.pause_reason) return;
   if (!state.main_session_id) throw new Error('Cannot rebind a main session before the original A is bound.');
   const now = new Date().toISOString();
   state.recovery_parent = state.last_stop ? {
@@ -263,6 +263,7 @@ export function resumeMainSession(statePath: string, taskPath?: string, simulate
     delete state.controller; delete state.last_stop; delete state.stop_transport; delete state.direction_context; delete state.active_checkpoint_at;
     state.pending_action = null; delete state.route_execution; state.tool_starts = {}; state.continuation_confirmed = false; state.input_epoch = (state.input_epoch ?? 0) + 1;
     state.status = 'PAUSED'; state.phase = 'RECOVERING'; delete state.pause_reason;
+    resetRecoveryWindow(state);
     state.binding = { ...state.binding, status: 'PENDING_NATIVE_HOOK', challenge: randomUUID(), tool_use_id: null, operation: 'resume' };
     state.host.hook_effective = false; state.host.reason = 'Explicit resume awaits a fresh native receipt from the original main session.';
     state.recovery_condition = { kind: 'resume_native_receipt', message: state.host.reason, resume_when: 'Complete resume in the original A, then wait for a new native Stop. Old directions are never replayed.' };

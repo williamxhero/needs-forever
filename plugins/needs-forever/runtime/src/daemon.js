@@ -3,9 +3,10 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, appendFileSync, renam
 import { homedir } from 'node:os';
 import { dirname, relative, resolve, sep } from 'node:path';
 import { createServer } from 'node:http';
-import { createRecoveryPlan, reconcileRecoveryTick, cancelRecovery } from './recovery-coordinator.js';
+import { createRecoveryPlan, reconcileRecoveryTick, cancelRecovery, resetRecoveryWindow } from './recovery-coordinator.js';
 import { validateAdapterEnvelope } from './adapter-protocol.js';
 import { Store } from './store.js';
+import { armNativeRebind } from './main-session.js';
 function readState(path) {
     try {
         const value = JSON.parse(readFileSync(path, 'utf8'));
@@ -72,6 +73,7 @@ export class NFDaemon {
     workspaceRoots;
     manifest;
     timer;
+    recoveryTimer;
     running = false;
     lastTickAt = null;
     tickCount = 0;
@@ -142,6 +144,9 @@ export class NFDaemon {
     stop() {
         if (this.timer)
             clearInterval(this.timer);
+        if (this.recoveryTimer)
+            clearTimeout(this.recoveryTimer);
+        this.recoveryTimer = undefined;
         this.timer = undefined;
         if (!this.running)
             return;
@@ -154,6 +159,7 @@ export class NFDaemon {
         let changed = 0;
         let waitingNative = 0;
         let nextRetryAt = null;
+        let recoveryDeadline = null;
         for (const workspace of this.workspaceRoots) {
             for (const statePath of discoverStateFiles(workspace)) {
                 const state = readState(statePath);
@@ -181,12 +187,23 @@ export class NFDaemon {
                     record.status = refreshed.status;
                     record.phase = refreshed.phase;
                     record.updatedAt = refreshed.updated_at ?? null;
+                    if ((refreshed.status === 'ACTIVE' || (refreshed.status === 'PAUSED' && !refreshed.pause_reason)) && refreshed.recovery_window && refreshed.recovery_plan?.status !== 'cancelled') {
+                        const deadline = Date.parse(refreshed.recovery_window.deadline_at);
+                        if (Number.isFinite(deadline))
+                            recoveryDeadline = Math.min(recoveryDeadline ?? deadline, deadline);
+                    }
                 }
             }
         }
         this.persist();
         this.lastTickAt = at;
         this.tickCount++;
+        // Honor the persisted deadline even between the ordinary discovery polls.
+        if (this.recoveryTimer)
+            clearTimeout(this.recoveryTimer);
+        this.recoveryTimer = this.running && recoveryDeadline !== null
+            ? setTimeout(() => { void this.tick(); }, Math.max(1, recoveryDeadline - this.now()))
+            : undefined;
         const result = { at, discovered, changed, waitingNative, nextRetryAt };
         for (const callback of this.callbacks)
             callback(result);
@@ -222,7 +239,7 @@ export class NFDaemon {
         if (!state)
             throw new Error('Task state is unavailable or invalid.');
         if (action === 'pause') {
-            if (state.status !== 'DONE') {
+            if (state.status !== 'DONE' && state.status !== 'INTERRUPTED') {
                 state.status = 'PAUSED';
                 state.phase = 'IDLE';
                 state.pause_reason = 'user';
@@ -235,19 +252,29 @@ export class NFDaemon {
             this.audit('task_paused', taskId);
         }
         else {
-            if (state.status === 'PAUSED' || state.status === 'WAIT_EXTERNAL') {
+            if (state.status === 'PAUSED' || state.status === 'WAIT_EXTERNAL' || state.status === 'INTERRUPTED') {
+                if (state.status === 'INTERRUPTED')
+                    state.task_version++;
+                resetRecoveryWindow(state, this.now());
+                delete state.last_error;
                 delete state.pause_reason;
                 if (state.control_mode === 'main-session') {
                     // A daemon resume re-arms the provider binding. The NF
                     // recovery prompt path is separate and records its own
                     // send/ack events; it does not claim a host receipt.
-                    state.status = 'PAUSED';
-                    state.phase = 'RECOVERING';
                     const main = state;
-                    if (main.binding)
-                        main.binding.status = 'PENDING_NATIVE_HOOK';
                     main.recovery_condition = { kind: 'daemon_resume', message: 'Task resumed through NF daemon; waiting for a fresh native host receipt.', resume_when: 'A registered original host may complete the binding.' };
-                    state.recovery_plan = createRecoveryPlan(state, { kind: 'daemon_resume', message: main.recovery_condition.message, resume_when: main.recovery_condition.resume_when }, true);
+                    if (main.main_session_id) {
+                        state.status = 'ACTIVE';
+                        armNativeRebind(main, main.recovery_condition.message);
+                    }
+                    else {
+                        state.status = 'PAUSED';
+                        state.phase = 'RECOVERING';
+                        if (main.binding)
+                            main.binding.status = 'PENDING_NATIVE_HOOK';
+                        state.recovery_plan = createRecoveryPlan(state, main.recovery_condition, true);
+                    }
                 }
                 else {
                     state.status = 'ACTIVE';

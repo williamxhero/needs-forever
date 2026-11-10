@@ -3,7 +3,43 @@ import { resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { existsSync, openSync, closeSync, readFileSync, unlinkSync, writeFileSync, renameSync } from 'node:fs';
 import { nextBackoff } from './recovery.js';
+import { Store } from './store.js';
 const DELAYS = [5, 15, 60, 300];
+export const RECOVERY_TIMEOUT_MS = 120_000;
+/** One window per recovery episode, independent of retry/generation changes. */
+function ensureRecoveryWindow(state, now) {
+    if (state.recovery_window)
+        return;
+    const binding = state.binding;
+    const armed = state.phase === 'RECOVERING' ? Date.parse(binding?.armed_at ?? '') : NaN;
+    const started = Number.isFinite(armed) ? Math.min(armed, now) : now;
+    state.recovery_window = { started_at: new Date(started).toISOString(), deadline_at: new Date(started + RECOVERY_TIMEOUT_MS).toISOString() };
+}
+export function resetRecoveryWindow(state, now = Date.now()) {
+    delete state.recovery_interruption;
+    state.recovery_window = { started_at: new Date(now).toISOString(), deadline_at: new Date(now + RECOVERY_TIMEOUT_MS).toISOString() };
+}
+function interruptRecovery(state, now) {
+    const cause = state.recovery_condition?.message ?? state.recovery_plan?.reason.message ?? state.last_error ?? '';
+    const reason = `自动恢复超过 2 分钟仍未成功，监督已中断。${cause ? `最后原因：${cause}` : ''}可点击“恢复”重新尝试。`;
+    state.status = 'INTERRUPTED';
+    state.phase = 'IDLE';
+    state.recovery_interruption = { at: new Date(now).toISOString(), reason };
+    state.recovery_condition = { kind: 'recovery_timeout', message: reason, resume_when: 'Explicit manual resume starts a new recovery window.' };
+    state.last_error = reason;
+    state.input_epoch = (state.input_epoch ?? 0) + 1;
+    state.pending_action = null;
+    state.retry = { kind: null, attempt: 0, next_at: null };
+    delete state.recovery_prompt;
+    delete state.direction_context;
+    delete state.route_execution;
+    state.continuation_confirmed = false;
+    if (state.binding)
+        state.binding.status = 'RELEASED';
+    if (state.host)
+        state.host.hook_effective = false;
+    cancelRecovery(state, 'interrupted', now);
+}
 function leasePath(statePath) {
     const identity = createHash('sha256').update(resolve(statePath)).digest('hex');
     return resolve(tmpdir(), 'codex-supervisor-locks', `recovery-${identity}.lock`);
@@ -28,9 +64,12 @@ export function createRecoveryPlan(state, reason, waitingNative = false) {
  */
 export function armRecovery(state, reason, now = Date.now()) {
     const previous = state.recovery_plan;
+    if (state.status === 'INTERRUPTED')
+        throw new Error('Supervision interrupted; explicit resume is required.');
     const generation = state.run_generation ?? previous?.generation ?? randomUUID();
     if (previous?.cancellation_boundary && previous.generation === generation)
         return previous;
+    ensureRecoveryWindow(state, now);
     const attempt = previous?.generation === generation ? previous.attempt + 1 : 1;
     const backoff = nextBackoff(attempt, now, DELAYS);
     const plan = {
@@ -50,10 +89,13 @@ export function armRecovery(state, reason, now = Date.now()) {
  * busy retry loop.  A subsequent native receipt can move the plan to running.
  */
 export function waitForNativeReceipt(state, reason) {
+    if (state.status === 'INTERRUPTED')
+        throw new Error('Supervision interrupted; explicit resume is required.');
     const generation = state.run_generation ?? state.recovery_plan?.generation ?? randomUUID();
     const previous = state.recovery_plan;
     if (previous?.cancellation_boundary && previous.generation === generation)
         return previous;
+    ensureRecoveryWindow(state, Date.now());
     const plan = {
         owner: null,
         generation,
@@ -90,7 +132,7 @@ export function cancelRecovery(state, kind, now = Date.now()) {
 }
 export function recoveryCurrent(state, plan) {
     const current = state.recovery_plan;
-    return !!current && !current.cancellation_boundary && current.generation === plan.generation && current.task_version === plan.task_version && (!state.run_generation || state.run_generation === plan.generation) && state.status !== 'DONE' && state.status !== 'PAUSED';
+    return !!current && !current.cancellation_boundary && current.generation === plan.generation && current.task_version === plan.task_version && (!state.run_generation || state.run_generation === plan.generation) && state.status !== 'DONE' && state.status !== 'PAUSED' && state.status !== 'INTERRUPTED';
 }
 /** Claim the cross-process watchdog lease.  The lease payload carries the
  * generation and task version, so an old process cannot reclaim a newer plan.
@@ -152,7 +194,7 @@ export function recoveryLeasePath(statePath) { return leasePath(statePath); }
  */
 export function reconcileStaleOwner(state, now = Date.now()) {
     const plan = state.recovery_plan;
-    if (!plan || plan.status === 'cancelled' || plan.cancellation_boundary || state.status === 'PAUSED' || state.status === 'DONE')
+    if (!plan || plan.status === 'cancelled' || plan.cancellation_boundary || state.status === 'PAUSED' || state.status === 'DONE' || state.status === 'INTERRUPTED')
         return false;
     const owner = plan.owner;
     if (!owner)
@@ -235,8 +277,22 @@ function reconcileRecoveryTickUnlocked(statePath, now) {
     catch {
         return { changed: false, waitingNative: false, nextRetryAt: null };
     }
-    if (!parsed.recovery_plan || parsed.status === 'DONE' || parsed.status === 'PAUSED' || parsed.recovery_plan.status === 'cancelled')
+    const manuallyPaused = parsed.status === 'PAUSED' && (parsed.phase !== 'RECOVERING' || !!parsed.pause_reason || !parsed.main_session_id);
+    if (!parsed.recovery_plan || parsed.status === 'DONE' || manuallyPaused || parsed.status === 'INTERRUPTED' || parsed.recovery_plan.status === 'cancelled')
         return { changed: false, waitingNative: false, nextRetryAt: parsed.recovery_plan?.next_retry_at ?? null };
+    if (parsed.phase === 'RECOVERING' || parsed.recovery_plan.status === 'waiting_native' || parsed.recovery_window) {
+        const hadWindow = !!parsed.recovery_window;
+        ensureRecoveryWindow(parsed, now);
+        if (now >= Date.parse(parsed.recovery_window.deadline_at)) {
+            interruptRecovery(parsed, now);
+            const store = new Store(statePath);
+            store.save(parsed);
+            store.event(parsed, 'recovery_interrupted', { reason: parsed.recovery_interruption.reason, started_at: parsed.recovery_window.started_at, deadline_at: parsed.recovery_window.deadline_at, interrupted_at: parsed.recovery_interruption.at });
+            return { changed: true, waitingNative: false, nextRetryAt: null };
+        }
+        if (!hadWindow)
+            new Store(statePath).save(parsed);
+    }
     const plan = parsed.recovery_plan;
     const owner = plan.owner;
     if (owner) {

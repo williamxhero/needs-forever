@@ -132,7 +132,7 @@ export async function pauseMainController(path: string): Promise<unknown> {
 export async function prepareControllerResume(path: string): Promise<void> {
   const state = readJson(path) as MainSessionState;
   if (!state.controller || processAbsent(state.controller.pid)) return;
-  await controllerRequest(state.controller, 'release-for-resume');
+  if (state.status !== 'INTERRUPTED') await controllerRequest(state.controller, 'release-for-resume');
   const deadline = Date.now() + 3_000;
   while (!processAbsent(state.controller.pid)) {
     if (Date.now() >= deadline) throw new Error('Owned B has not exited; no lease was reclaimed. Inspect status before retrying.');
@@ -165,6 +165,7 @@ export async function launchController(path: string, pluginRoot: string, fixture
     } catch { return; }
   }
   const state = readJson(path) as MainSessionState;
+  if (state.status === 'INTERRUPTED') { releaseLaunchLock(); throw new Error('Supervision interrupted; explicit resume is required.'); }
   if (state.controller?.lifecycle === 'running') {
     if (!processAbsent(state.controller.pid)) { releaseLaunchLock(); throw new Error('A controller receipt already exists; use explicit resume, never silently replace it.'); }
     state.controller = { ...state.controller, lifecycle: 'exited' };
@@ -180,6 +181,7 @@ export async function launchController(path: string, pluginRoot: string, fixture
     child.once('message', (message: any) => { clearTimeout(timer); message.error ? reject(new Error(message.error)) : done(); });
   }); } catch (error) {
     const saved = readJson(path) as MainSessionState;
+    if (saved.status === 'INTERRUPTED') { releaseLaunchLock(); throw error; }
     if (!saved.controller) {
       const message = String(redact((error as Error).message));
       if (saved.control_mode === 'main-session' && saved.binding.status === 'BOUND' && saved.main_session_id && saved.status !== 'DONE') {
@@ -242,7 +244,7 @@ export function boundStateForEvent(input: any, pluginRoot: string, simulated: bo
     const controllerRunning = state.controller?.lifecycle === 'running';
     const ownerPluginMatches = canonicalPath(state.controller?.plugin_root ?? pluginRoot) === callbackPluginRoot;
     const exitedControllerRebind = !controllerRunning && ['SessionStart', 'UserPromptSubmit'].includes(input.hook_event_name) && state.status === 'ACTIVE';
-    if (state.control_mode === 'main-session' && state.status !== 'DONE' && state.binding.status === 'BOUND' && state.main_session_id === input.session_id && (state.mode === 'simulated') === simulated && ((controllerRunning && ownerPluginMatches) || exitedControllerRebind)) return path;
+    if (state.control_mode === 'main-session' && state.status !== 'DONE' && state.status !== 'INTERRUPTED' && state.binding.status === 'BOUND' && state.main_session_id === input.session_id && (state.mode === 'simulated') === simulated && ((controllerRunning && ownerPluginMatches) || exitedControllerRebind)) return path;
   }
   return null;
 }
@@ -337,14 +339,14 @@ export async function runController(path: string, pluginRoot: string, fixturePat
     cancelRecovery(state, 'pause'); store.save(state); cancelActive('Paused before cancellation.');
   };
   const recover = (message: string) => {
-    if (state.status === 'PAUSED' || state.status === 'DONE') return;
+    if (state.status === 'PAUSED' || state.status === 'DONE' || state.status === 'INTERRUPTED') return;
     state.input_epoch = (state.input_epoch ?? 0) + 1; delete state.route_execution; delete state.direction_context; state.tool_starts = {}; state.continuation_confirmed = false;
     state.phase = 'RECOVERING'; state.last_error = String(redact(message)); state.host.hook_effective = false;
     state.recovery_condition = { kind: 'stop_transport', message: state.last_error, resume_when: 'Inspect the preserved Stop outcome and explicitly resume the same main session.' };
     armRecovery(state, state.recovery_condition);
   };
   const rearmBinding = (message: string, desktopPid?: number) => {
-    if (state.status === 'PAUSED' || state.status === 'DONE' || state.binding.status !== 'BOUND' || !state.main_session_id) return;
+    if (state.status === 'PAUSED' || state.status === 'DONE' || state.status === 'INTERRUPTED' || state.binding.status !== 'BOUND' || !state.main_session_id) return;
     if (desktopPid) state.host.desktop_pid = desktopPid;
     const reason = String(redact(message));
     armNativeRebind(state, reason);
@@ -361,10 +363,12 @@ export async function runController(path: string, pluginRoot: string, fixturePat
     if (closing) return; closing = true;
     clearInterval(checkpointTimer);
     startupAbort.abort();
+    const latest = readJson(path) as MainSessionState;
+    if (latest.status === 'INTERRUPTED') state = latest;
     accrue();
     if (active) { active.valid = false; active.abort.abort(); }
     state.controller = { ...controller, lifecycle: 'exited' };
-    if (state.status !== 'PAUSED' && state.status !== 'DONE' && state.recovery_plan?.status !== 'cancelled' && state.recovery_plan?.status !== 'waiting_native') {
+    if (state.status !== 'PAUSED' && state.status !== 'DONE' && state.status !== 'INTERRUPTED' && state.recovery_plan?.status !== 'cancelled' && state.recovery_plan?.status !== 'waiting_native') {
       const reason = { kind: 'controller_exit', message: 'Controller exited before the supervision task reached a terminal state.', resume_when: 'Wait for the persisted recovery plan to re-arm the original main session.' } satisfies RecoveryReason;
       armRecovery(state, reason);
     }
@@ -397,7 +401,7 @@ export async function runController(path: string, pluginRoot: string, fixturePat
           // alive while an explicit pause/resume replaces its generation; an
           // old socket must fail closed before it can append a lifecycle event.
           const lifecycleCommand = message.command === 'lifecycle';
-          if (message.token !== controller.token || message.controller_id !== id || message.run_generation !== state.run_generation || latest.run_generation !== message.run_generation || latest.controller?.id !== id || latest.status === 'DONE' || (lifecycleCommand && (latest.status === 'PAUSED' || latest.recovery_plan?.cancellation_boundary))) throw new Error('Owned controller handle identity mismatch.');
+          if (message.token !== controller.token || message.controller_id !== id || message.run_generation !== state.run_generation || latest.run_generation !== message.run_generation || latest.controller?.id !== id || latest.status === 'DONE' || latest.status === 'INTERRUPTED' || (lifecycleCommand && (latest.status === 'PAUSED' || latest.recovery_plan?.cancellation_boundary))) throw new Error('Owned controller handle identity mismatch.');
           state = latest;
           if (message.command === 'ping') return { live: true, controller_id: id };
           if (message.command === 'release-for-resume') {
@@ -434,7 +438,7 @@ export async function runController(path: string, pluginRoot: string, fixturePat
               state.input_epoch = (state.input_epoch ?? 0) + 1;
               state.run_generation = generation;
               state.pending_action = null; delete state.route_execution; delete state.direction_context; state.tool_starts = {}; state.continuation_confirmed = false;
-              state.phase = 'WORKER'; delete state.last_error; delete state.recovery_condition;
+              state.phase = 'WORKER'; delete state.last_error; delete state.recovery_condition; delete state.recovery_window;
               state.host = { ...state.host, desktop_pid: Number.isInteger(event.callback_desktop_pid) ? event.callback_desktop_pid : state.host.desktop_pid, hook_effective: state.mode === 'live' && state.host.source === 'native-desktop', reason: 'Automatic native lifecycle receipt re-bound the original A.' };
               controller = { ...controller, plugin_root: callbackPluginRoot, bundle_sha256: callbackBundleSha, run_generation: generation };
               state.controller = controller;
@@ -568,7 +572,7 @@ export async function runController(path: string, pluginRoot: string, fixturePat
             state.pending_action.stage = 'sent';
             store.event(state, 'send_attempted', { ...correlation, delivery_id: delivery, transport: 'native-stop' });
             state.direction_context = { delivery_id: delivery, at: new Date().toISOString(), run_generation: state.run_generation, input_epoch: state.input_epoch ?? 0, contract_sha256: state.contract_sha256 };
-            state.continuation_confirmed = false; state.phase = 'WORKER';
+            state.continuation_confirmed = false; state.phase = 'WORKER'; delete state.recovery_window;
             state.stop_transport = { request, outcome: 'returned', delivery_id: delivery }; store.save(state);
             store.event(state, 'stop_hook_direction_returned', { ...correlation, stop_attempt_id: request.stop_attempt_id, delivery_id: delivery, session_id: request.session_id, execution_confirmed: false });
             scheduleMainSessionRecoveryPrompt(path, pluginRoot, fixturePath, state, state.pending_action.message, request.turn_id);
@@ -595,18 +599,24 @@ export async function runController(path: string, pluginRoot: string, fixturePat
     await preflightSupervisor(state, fixture, startupAbort.signal);
     const supervisorVersion = state.codex_version;
     state = readJson(path) as MainSessionState;
-    if (closing || state.pause_reason || (state.controller_startup_deadline && Date.now() >= Date.parse(state.controller_startup_deadline))) throw new Error('B startup canceled or deadline expired; explicit recovery required.');
+    if (closing || state.pause_reason || state.status === 'INTERRUPTED' || state.recovery_plan?.cancellation_boundary || (state.controller_startup_deadline && Date.now() >= Date.parse(state.controller_startup_deadline))) throw new Error('B startup canceled or deadline expired; explicit recovery required.');
     state.codex_version = supervisorVersion;
     state.controller = controller; state.status = 'ACTIVE'; state.phase = 'WORKER'; state.continuation_confirmed = false; state.active_checkpoint_at = new Date().toISOString();
     delete state.recovery_condition;
+    delete state.recovery_window;
+    delete state.recovery_interruption;
     state.host.reason = 'Bound controller reachable; Stop continuation and actual main-session activity still require evidence.';
     store.save(state); store.event(state, 'main_session_controller_started', { controller_id: id, main_session_id: state.main_session_id, pid: process.pid });
     checkpointTimer = setInterval(() => {
       // A Stop owns the checkpoint while judge/verification is in flight.
       // Repeated heartbeat renames during that window can keep Windows
       // readers in a sharing violation and strand a valid terminal decision.
-      if (closing || active) return;
-      state = readJson(path) as MainSessionState; accrue();
+      if (closing) return;
+      const checkpoint = readJson(path) as MainSessionState;
+      if (checkpoint.status === 'INTERRUPTED') { state = checkpoint; shutdown(); return; }
+      if (active) return;
+      state = checkpoint;
+      accrue();
       const hostPid = (state.host as typeof state.host & { desktop_pid?: number }).desktop_pid;
       if (state.status === 'ACTIVE' && state.phase !== 'RECOVERING' && hostPid && processAbsent(hostPid)) {
         cancelActive('Desktop owner exited.');
@@ -619,9 +629,9 @@ export async function runController(path: string, pluginRoot: string, fixturePat
     process.send?.({ ready: true, controller_id: id }); if (process.connected) process.disconnect();
     await new Promise<void>((done) => server!.once('close', done));
   } catch (error) {
-    if (!closing && state.binding.status === 'BOUND' && state.main_session_id && state.status !== 'DONE') {
+    if (!closing && state.binding.status === 'BOUND' && state.main_session_id && state.status !== 'DONE' && state.status !== 'INTERRUPTED') {
       rearmBinding(String(redact((error as Error).message)));
-    } else if (!closing && state.controller?.id === id) {
+    } else if (!closing && state.status !== 'INTERRUPTED' && state.controller?.id === id) {
       state.phase = 'RECOVERING'; state.host.hook_effective = false; state.last_error = String(redact((error as Error).message));
       state.recovery_condition = { kind: 'controller_startup', message: state.last_error, resume_when: 'Resolve the startup failure, then wait for the persisted recovery plan.' };
       armRecovery(state, state.recovery_condition);

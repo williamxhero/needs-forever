@@ -39,13 +39,13 @@ export interface TaskStateView {
 
 export interface RecoveryView {
   phase: State['phase'];
-  source: 'automatic' | 'user_pause' | 'user_limit' | 'delete' | 'done' | 'none';
+  source: 'automatic' | 'user_pause' | 'user_limit' | 'delete' | 'done' | 'interrupted' | 'none';
   reason: string | null;
   kind: string | null;
   attempt: number;
   nextRetryAt: string | null;
   nativeReceipt: 'waiting' | 'received' | 'not_required';
-  cancellationBoundary: 'none' | 'user_pause' | 'user_limit' | 'delete' | 'done';
+  cancellationBoundary: 'none' | 'user_pause' | 'user_limit' | 'delete' | 'done' | 'interrupted';
 }
 
 export interface HumanEvent {
@@ -344,7 +344,7 @@ function recoveryView(state: State): RecoveryView {
   const condition = state.recovery_condition;
   const explicitBoundary = optionalString(value, 'cancellation_boundary', 'cancellationBoundary')
     ?? (persisted ? optionalString(persisted as RecoveryState, 'cancellation_boundary', 'cancellationBoundary') : null);
-  const cancellationBoundary: RecoveryView['cancellationBoundary'] = explicitBoundary === 'delete' || explicitBoundary === 'deleted'
+  const cancellationBoundary: RecoveryView['cancellationBoundary'] = state.status === 'INTERRUPTED' ? 'interrupted' : explicitBoundary === 'delete' || explicitBoundary === 'deleted'
     ? 'delete'
     : explicitBoundary === 'done' || state.status === 'DONE'
       ? 'done'
@@ -354,7 +354,7 @@ function recoveryView(state: State): RecoveryView {
           ? 'user_pause'
           : 'none';
   const persistedSource = persisted ? optionalString(persisted as RecoveryState, 'source', 'mode') : null;
-  const source: RecoveryView['source'] = cancellationBoundary === 'done' ? 'done'
+  const source: RecoveryView['source'] = cancellationBoundary === 'interrupted' ? 'interrupted' : cancellationBoundary === 'done' ? 'done'
     : cancellationBoundary === 'delete' ? 'delete'
       : cancellationBoundary === 'user_pause' ? 'user_pause'
         : cancellationBoundary === 'user_limit' ? 'user_limit'
@@ -368,7 +368,7 @@ function recoveryView(state: State): RecoveryView {
   const nativeReceiptValue = value.native_receipt ?? persisted?.native_receipt ?? persisted?.nativeReceipt;
   const nativeReceiptState = typeof nativeReceiptValue === 'string' ? { status: nativeReceiptValue } : nativeReceiptValue as Record<string, unknown> | undefined;
   const bindingStatus = value.binding?.status;
-  const nativeReceipt: RecoveryView['nativeReceipt'] = nativeReceiptState?.status === 'received' || nativeReceiptState?.status === 'bound' || bindingStatus === 'BOUND'
+  const nativeReceipt: RecoveryView['nativeReceipt'] = state.status === 'INTERRUPTED' ? 'not_required' : nativeReceiptState?.status === 'received' || nativeReceiptState?.status === 'bound' || bindingStatus === 'BOUND'
     ? 'received'
     : nativeReceiptState?.status === 'waiting' || nativeReceiptState?.status === 'pending' || bindingStatus === 'PENDING_NATIVE_HOOK' || /native[_ -]?(hook|receipt)/i.test(kind ?? '')
       ? 'waiting'
@@ -712,7 +712,7 @@ export async function startWebServer(options: WebServerOptions): Promise<Running
             if (paused && paused.code !== 0) {
               let persistedStatus: string | null = null;
               try { persistedStatus = (JSON.parse(readFileSync(statePath, 'utf8')) as State).status; } catch { /* deletion below reports the real filesystem outcome */ }
-              if (persistedStatus !== 'PAUSED' && !/already paused|PAUSED/i.test(paused.stderr + paused.stdout)) return json(response, 409, { error: paused.stderr || paused.stdout || 'Unable to pause task before delete.' });
+              if (persistedStatus !== 'PAUSED' && persistedStatus !== 'INTERRUPTED' && !/already paused|PAUSED/i.test(paused.stderr + paused.stdout)) return json(response, 409, { error: paused.stderr || paused.stdout || 'Unable to pause task before delete.' });
             }
             archiveDeletedTaskAudit(located.root, directory, taskId, statePath);
             rmSync(directory, { recursive: true, force: true });
@@ -755,8 +755,8 @@ const WEB_HTML = String.raw`<!doctype html>
 <script>
 const app={taskId:new URL(location.href).pathname.match(/^\/tasks\/([^/]+)/)?.[1]||null,record:null,filter:'all',auto:true,refreshing:false};
 const $=s=>document.querySelector(s); const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const statusLabel={ACTIVE:'正在推进',WAIT_EXTERNAL:'等待外部条件',PAUSED:'已暂停',DONE:'已完成'};
-function statusClass(s,p){return s==='DONE'?'done':s==='WAIT_EXTERNAL'?'wait':s==='PAUSED'?'paused':p==='RECOVERING'?'recover':''}
+const statusLabel={ACTIVE:'正在推进',WAIT_EXTERNAL:'等待外部条件',PAUSED:'已暂停',DONE:'已完成',INTERRUPTED:'已中断'};
+function statusClass(s,p){return s==='DONE'?'done':s==='WAIT_EXTERNAL'?'wait':(s==='PAUSED'||s==='INTERRUPTED')?'paused':p==='RECOVERING'?'recover':''}
 function statusText(s,p){return s==='ACTIVE'&&p==='RECOVERING'?'恢复中':statusLabel[s]||s}
 function shortTime(v){try{return new Date(v).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'})}catch{return v}}
 function resultClass(v){return v==='DONE'?'result-done':v==='WAIT_EXTERNAL'?'result-wait':v==='CONTINUE'?'result-continue':v==='FAIL'?'result-error':''}
@@ -815,9 +815,9 @@ function statusDateTime(v){try{const d=new Date(v);if(Number.isNaN(d.getTime()))
 function expandedKeys(){return new Set([...document.querySelectorAll('[data-collapsible].expanded')].map(node=>node.dataset.collapsibleKey).filter(Boolean))}
 function restoreExpanded(keys){document.querySelectorAll('[data-collapsible]').forEach(node=>setExpanded(node,keys.has(node.dataset.collapsibleKey)))}
 function actionButtonHtml(action,label,icon,className=''){return '<button type="button" class="action-icon '+className+'" data-action="'+action+'" aria-label="'+label+'" title="'+label+'">'+icon+'</button>'}
-function renderActions(r){const root=$('#task-actions');if(!r){root.hidden=true;root.innerHTML='';return}root.hidden=false;const paused=r.state.status==='PAUSED';root.innerHTML=actionButtonHtml('copy','复制 session ID：'+r.sessionId,r.sessionId,'session-copy')+actionButtonHtml('refresh','当前自动刷新：'+(app.auto?'开':'关'),app.auto?'↻':'Ⅱ',app.auto?'on':'')+actionButtonHtml(paused?'resume':'pause',paused?'恢复 Needs Forever':'停止 Needs Forever',paused?'▶':'Ⅱ')+actionButtonHtml('delete','删除此监督及其 NFG 记录','×','danger');const copyButton=root.querySelector('[data-action="copy"]');if(copyButton){copyButton.dataset.sessionCopy='';copyButton.dataset.sessionId=r.sessionId}wireActions();wireSessionCopy()}
+function renderActions(r){const root=$('#task-actions');if(!r){root.hidden=true;root.innerHTML='';return}root.hidden=false;const paused=r.state.status==='PAUSED'||r.state.status==='INTERRUPTED';root.innerHTML=actionButtonHtml('copy','复制 session ID：'+r.sessionId,r.sessionId,'session-copy')+actionButtonHtml('refresh','当前自动刷新：'+(app.auto?'开':'关'),app.auto?'↻':'Ⅱ',app.auto?'on':'')+actionButtonHtml(paused?'resume':'pause',paused?'恢复 Needs Forever':'停止 Needs Forever',paused?'▶':'Ⅱ')+actionButtonHtml('delete','删除此监督及其 NFG 记录','×','danger');const copyButton=root.querySelector('[data-action="copy"]');if(copyButton){copyButton.dataset.sessionCopy='';copyButton.dataset.sessionId=r.sessionId}wireActions();wireSessionCopy()}
 async function controlTask(action){if(!app.taskId)return;if(action==='delete'&&!window.confirm('删除此监督及其 NFG 记录？系统级日志不会删除。'))return;const response=await fetch('/api/tasks/'+encodeURIComponent(app.taskId)+'/control',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action})});const result=await response.json();if(!response.ok)throw new Error(result.error||'控制操作失败');if(action==='delete'){app.record=null;app.taskId=null;history.replaceState({},'', '/');renderRecord();await loadTasks();return}await loadTasks();await loadRecord(false)}
-function wireActions(){document.querySelectorAll('[data-action]').forEach(button=>{button.onclick=(event)=>{event.preventDefault();event.stopPropagation();const action=button.dataset.action;if(action==='copy'){const value=app.record?.sessionId||'';button.dataset.sessionId=value;void copySessionId(button);return}if(action==='refresh'){app.auto=!app.auto;renderActions(app.record);return}if(action==='pause'||action==='resume'||action==='delete'){void controlTask(action).catch(error=>{$('#error').textContent=error.message;$('#error').hidden=false})}}})}function recoveryHtml(r){const recovery=r.state.recovery;if(!recovery||recovery.source==='none')return '';const source={automatic:'自动恢复',user_pause:'人工暂停',user_limit:'达到人工限制',delete:'已删除',done:'已完成'}[recovery.source]||recovery.source;const parts=[source];if(recovery.reason)parts.push(recovery.reason);if(recovery.attempt>0)parts.push('尝试 '+recovery.attempt);if(recovery.nextRetryAt)parts.push('下次重试 '+statusDateTime(recovery.nextRetryAt));if(recovery.nativeReceipt==='waiting')parts.push('等待 native receipt');else if(recovery.nativeReceipt==='received')parts.push('native receipt 已确认');return '<div class="status-reason">'+esc(parts.join(' · '))+'</div>'}function renderRecord(preserve=false){const r=app.record;const expanded=preserve?expandedKeys():new Set();if(!r){$('#task-header').hidden=true;renderActions(null);$('#timeline').innerHTML='<div class="empty">选择一个任务查看监督记录。</div>';return}$('#task-header').hidden=false;$('#task-title').textContent=r.title||r.taskId;$('#task-goal').textContent=r.state.goal;const s=$('#task-status');s.textContent=(statusText(r.state.status,r.state.phase))+' '+statusDateTime(r.updatedAt);s.className='status '+statusClass(r.state.status,r.state.phase);const reason=r.state.lastError||r.state.recoveryCondition?.message||'';$('#task-meta').innerHTML=(reason?'<div class="status-reason">'+esc(reason)+'</div>':'')+recoveryHtml(r);const rounds=r.rounds.filter(matches);$('#timeline').innerHTML=rounds.length?rounds.map((x,i)=>roundHtml(x,i)).join(''):'<div class="empty">暂无完整 A→B→C 监督轮次。</div>';wireCollapsibles();restoreExpanded(expanded);renderActions(r);$('#timeline').querySelectorAll('.round-toggle').forEach(b=>b.onclick=()=>b.closest('.round').classList.toggle('open'));}async function loadTasks(){const response=await fetch('/api/tasks',{cache:'no-store'});if(!response.ok)throw new Error('读取任务列表失败');const data=await response.json();renderTasks(data.tasks||[]);if(!app.taskId&&data.tasks?.[0]){app.taskId=data.tasks[0].taskId;history.replaceState({},'', '/tasks/'+encodeURIComponent(app.taskId))}return data.tasks||[]}
+function wireActions(){document.querySelectorAll('[data-action]').forEach(button=>{button.onclick=(event)=>{event.preventDefault();event.stopPropagation();const action=button.dataset.action;if(action==='copy'){const value=app.record?.sessionId||'';button.dataset.sessionId=value;void copySessionId(button);return}if(action==='refresh'){app.auto=!app.auto;renderActions(app.record);return}if(action==='pause'||action==='resume'||action==='delete'){void controlTask(action).catch(error=>{$('#error').textContent=error.message;$('#error').hidden=false})}}})}function recoveryHtml(r){const recovery=r.state.recovery;if(!recovery||recovery.source==='none'||recovery.source==='interrupted')return '';const source={automatic:'自动恢复',user_pause:'人工暂停',user_limit:'达到人工限制',delete:'已删除',done:'已完成'}[recovery.source]||recovery.source;const parts=[source];if(recovery.reason)parts.push(recovery.reason);if(recovery.attempt>0)parts.push('尝试 '+recovery.attempt);if(recovery.nextRetryAt)parts.push('下次重试 '+statusDateTime(recovery.nextRetryAt));if(recovery.nativeReceipt==='waiting')parts.push('等待 native receipt');else if(recovery.nativeReceipt==='received')parts.push('native receipt 已确认');return '<div class="status-reason">'+esc(parts.join(' · '))+'</div>'}function renderRecord(preserve=false){const r=app.record;const expanded=preserve?expandedKeys():new Set();if(!r){$('#task-header').hidden=true;renderActions(null);$('#timeline').innerHTML='<div class="empty">选择一个任务查看监督记录。</div>';return}$('#task-header').hidden=false;$('#task-title').textContent=r.title||r.taskId;$('#task-goal').textContent=r.state.goal;const s=$('#task-status');s.textContent=(statusText(r.state.status,r.state.phase))+' '+statusDateTime(r.updatedAt);s.className='status '+statusClass(r.state.status,r.state.phase);const reason=r.state.lastError||r.state.recoveryCondition?.message||'';$('#task-meta').innerHTML=(reason?'<div class="status-reason">'+esc(reason)+'</div>':'')+recoveryHtml(r);const rounds=r.rounds.filter(matches);$('#timeline').innerHTML=rounds.length?rounds.map((x,i)=>roundHtml(x,i)).join(''):'<div class="empty">暂无完整 A→B→C 监督轮次。</div>';wireCollapsibles();restoreExpanded(expanded);renderActions(r);$('#timeline').querySelectorAll('.round-toggle').forEach(b=>b.onclick=()=>b.closest('.round').classList.toggle('open'));}async function loadTasks(){const response=await fetch('/api/tasks',{cache:'no-store'});if(!response.ok)throw new Error('读取任务列表失败');const data=await response.json();renderTasks(data.tasks||[]);if(!app.taskId&&data.tasks?.[0]){app.taskId=data.tasks[0].taskId;history.replaceState({},'', '/tasks/'+encodeURIComponent(app.taskId))}return data.tasks||[]}
 async function loadRecord(preserve=false){if(!app.taskId){renderRecord(preserve);return}const response=await fetch('/api/tasks/'+encodeURIComponent(app.taskId),{cache:'no-store'});if(!response.ok)throw new Error((await response.json()).error||'读取任务失败');const next=await response.json();const changed=JSON.stringify(app.record)!==JSON.stringify(next);app.record=next;if(changed||!preserve)renderRecord(preserve)}
 async function load(){try{$('#error').hidden=true;await loadTasks();if(app.taskId)await loadRecord(false)}catch(e){$('#error').textContent=e.message;$('#error').hidden=false}}
 async function refresh(){if(app.refreshing)return;app.refreshing=true;try{$('#error').hidden=true;await loadTasks();if(app.taskId)await loadRecord(true)}catch(e){$('#error').textContent=e.message;$('#error').hidden=false}finally{app.refreshing=false}}

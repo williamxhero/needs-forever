@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { reachedLimits } from './rules.js';
 import { Store } from './store.js';
 import { record, text } from './types.js';
-import { createRecoveryPlan, waitForNativeReceipt } from './recovery-coordinator.js';
+import { createRecoveryPlan, waitForNativeReceipt, resetRecoveryWindow } from './recovery-coordinator.js';
 export function readJson(path) {
     // Windows can briefly deny a read while the state checkpoint is being
     // atomically replaced by another owner. Keep the previous checkpoint
@@ -42,7 +42,7 @@ export function contractHash(task) { return createHash('sha256').update(JSON.str
  * lifecycle receipt.
  */
 export function armNativeRebind(state, reason) {
-    if (state.status === 'DONE' || state.pause_reason)
+    if (state.status === 'DONE' || state.status === 'INTERRUPTED' || state.pause_reason)
         return;
     if (!state.main_session_id)
         throw new Error('Cannot rebind a main session before the original A is bound.');
@@ -245,6 +245,7 @@ export function resumeMainSession(statePath, taskPath, simulated = false) {
         state.status = 'PAUSED';
         state.phase = 'RECOVERING';
         delete state.pause_reason;
+        resetRecoveryWindow(state);
         state.binding = { ...state.binding, status: 'PENDING_NATIVE_HOOK', challenge: randomUUID(), tool_use_id: null, operation: 'resume' };
         state.host.hook_effective = false;
         state.host.reason = 'Explicit resume awaits a fresh native receipt from the original main session.';

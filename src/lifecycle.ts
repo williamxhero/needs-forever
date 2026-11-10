@@ -8,7 +8,7 @@ import { Store } from './store.js';
 import { record, text } from './types.js';
 import { redact } from './redact.js';
 import { controlIntent } from './control-intent.js';
-import { createRecoveryPlan } from './recovery-coordinator.js';
+import { createRecoveryPlan, reconcileRecoveryTick } from './recovery-coordinator.js';
 import { confirmRouteExecution, routeCorrelation } from './route-execution.js';
 
 const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
@@ -79,6 +79,11 @@ export function handleLifecycle(input: unknown, host: HookHost, pluginRoot: stri
   for (const path of entries) {
     if (!existsSync(path)) continue;
     const state = readJson(path) as MainSessionState;
+    if (state.status === 'INTERRUPTED' || state.recovery_plan?.cancellation_boundary?.kind === 'interrupted') continue;
+    if (state.recovery_window && Date.parse(state.recovery_window.deadline_at) <= Date.now()) {
+      reconcileRecoveryTick(path);
+      continue;
+    }
     if (!state.recovery_plan && state.status !== 'DONE' && state.binding.status === 'PENDING_NATIVE_HOOK') {
       const condition = state.recovery_condition ?? { kind: 'native_hook_required', message: 'Awaiting a correlated native receipt from the original A.', resume_when: 'Complete the supported native binding command in the original A.' };
       state.recovery_plan = createRecoveryPlan(state, condition, true);

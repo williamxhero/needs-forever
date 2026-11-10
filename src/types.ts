@@ -54,7 +54,7 @@ export interface RecoveryPlan {
   next_retry_at: string | null;
   reason: { kind: string; message: string; resume_when: string };
   status: 'armed' | 'waiting_native' | 'running' | 'cancelled';
-  cancellation_boundary: { kind: 'pause' | 'delete' | 'done'; at: string; generation: string } | null;
+  cancellation_boundary: { kind: 'pause' | 'delete' | 'done' | 'interrupted'; at: string; generation: string } | null;
 }
 export interface State {
   schema_version: 1;
@@ -62,7 +62,7 @@ export interface State {
   task_version: number;
   task: Task;
   worker_thread_id: string | null;
-  status: 'ACTIVE' | 'WAIT_EXTERNAL' | 'PAUSED' | 'DONE';
+  status: 'ACTIVE' | 'WAIT_EXTERNAL' | 'PAUSED' | 'DONE' | 'INTERRUPTED';
   phase: 'WORKER' | 'JUDGE' | 'VERIFY' | 'RECOVERING' | 'IDLE';
   active_worker_turn_id: string | null;
   reviewing_turn_id: string | null;
@@ -82,6 +82,8 @@ export interface State {
   recovery_failures?: { signature: string; kind: string; count: number; message: string; instruction: string; at: string }[];
   recovery_condition?: { kind: string; message: string; resume_when: string };
   recovery_plan?: RecoveryPlan;
+  recovery_window?: { started_at: string; deadline_at: string };
+  recovery_interruption?: { at: string; reason: string };
   route_catalog?: RouteCatalogData;
   route_probe?: { state_path: string; nonce: string; scope_sha256: string; argv_prefix: string[]; seen_receipts?: string[]; omitted_url_sha256?: string[] };
   route_ledger?: RouteLedgerData;

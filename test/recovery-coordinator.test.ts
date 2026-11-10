@@ -2,8 +2,12 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { createRecoveryPlan, armRecovery, waitForNativeReceipt, cancelRecovery, recoveryCurrent, acquireRecoveryOwner, reconcileStaleOwner, reconcileRecoveryTick } from '../src/recovery-coordinator.js';
+import { createRecoveryPlan, armRecovery, waitForNativeReceipt, cancelRecovery, recoveryCurrent, acquireRecoveryOwner, reconcileStaleOwner, reconcileRecoveryTick, resetRecoveryWindow } from '../src/recovery-coordinator.js';
 import type { MainSessionState } from '../src/main-session.js';
+import { Store } from '../src/store.js';
+import { spawnSync } from 'node:child_process';
+import { handleLifecycle } from '../src/lifecycle.js';
+import { armNativeRebind } from '../src/main-session.js';
 
 function state(name: string): MainSessionState {
   const workspace = resolve('runs/recovery-coordinator', `${name}-${Date.now()}`);
@@ -92,4 +96,123 @@ test('a detached coordinator consumes a due retry and rotates the native receipt
   assert.equal(saved.recovery_plan?.status, 'waiting_native');
   assert.notEqual(saved.run_generation, oldGeneration);
   assert.equal(saved.controller?.lifecycle, 'exited');
+});
+
+test('recovery exceeding two minutes is durably interrupted even with a live owner', () => {
+  const value = state('recovery-timeout');
+  value.phase = 'RECOVERING';
+  value.binding = { ...value.binding, status: 'PENDING_NATIVE_HOOK', operation: 'rebind', armed_at: new Date(0).toISOString() };
+  value.recovery_plan = createRecoveryPlan(value, { kind: 'native_rebind', message: 'receipt missing', resume_when: 'receipt' }, true);
+  value.recovery_plan.owner = { id: 'live', pid: process.pid, lease_path: 'test', task_version: 1, generation: value.run_generation, heartbeat_at: new Date(119_000).toISOString() };
+  const path = resolve(value.task.workspace, 'state.json');
+  writeFileSync(path, JSON.stringify(value));
+  reconcileRecoveryTick(path, 119_999);
+  assert.equal(JSON.parse(readFileSync(path, 'utf8')).status, 'ACTIVE');
+  const tick = reconcileRecoveryTick(path, 120_000);
+  const saved = JSON.parse(readFileSync(path, 'utf8'));
+  assert.equal(saved.status, 'INTERRUPTED');
+  assert.equal(saved.phase, 'IDLE');
+  assert.equal(saved.recovery_plan.cancellation_boundary.kind, 'interrupted');
+  assert.equal(saved.recovery_plan.next_retry_at, null);
+  assert.equal(saved.binding.status, 'RELEASED');
+  assert.equal(saved.host.hook_effective, false);
+  assert.equal(saved.contract_sha256, value.contract_sha256);
+  assert.equal(saved.main_session_id, value.main_session_id);
+  assert.throws(() => new Store(path).save(value), /interrupted/i, 'a late writer cannot revive the checkpoint');
+  assert.equal(tick.waitingNative, false);
+  assert.doesNotThrow(() => process.kill(process.pid, 0));
+  assert.equal(reconcileRecoveryTick(path, 999_999).changed, false);
+  const events = readFileSync(resolve(value.task.workspace, 'events.jsonl'), 'utf8').trim().split('\n').map(line => JSON.parse(line));
+  assert.equal(events.filter(event => event.type === 'recovery_interrupted').length, 1);
+  const resumed = JSON.parse(readFileSync(path, 'utf8'));
+  resumed.task_version++;
+  resumed.status = 'ACTIVE';
+  resetRecoveryWindow(resumed);
+  new Store(path).save(resumed);
+  assert.throws(() => new Store(path).save(saved), /Stale checkpoint/, 'the old controller cannot overwrite a later explicit resume');
+});
+
+test('installed detached coordinator exits after interrupting an expired recovery', () => {
+  const value = state('installed-timeout');
+  value.phase = 'RECOVERING';
+  value.binding = { ...value.binding, status: 'PENDING_NATIVE_HOOK', operation: 'rebind', armed_at: new Date(Date.now() - 121_000).toISOString() };
+  value.recovery_plan = createRecoveryPlan(value, { kind: 'native_rebind', message: 'no receipt', resume_when: 'receipt' }, true);
+  const path = resolve(value.task.workspace, 'state.json');
+  writeFileSync(path, JSON.stringify(value));
+  const child = spawnSync(process.execPath, [resolve('plugins/needs-forever/scripts/recovery-coordinator.mjs'), path, '100'], { encoding: 'utf8', timeout: 5_000, windowsHide: true });
+  assert.equal(child.status, 0, child.stderr);
+  const saved = JSON.parse(readFileSync(path, 'utf8'));
+  assert.equal(saved.status, 'INTERRUPTED');
+  assert.equal(saved.recovery_prompt, undefined);
+});
+
+test('retries and process reconstruction cannot renew the recovery deadline', () => {
+  let value = state('recovery-deadline');
+  value.phase = 'RECOVERING';
+  value.binding = { ...value.binding, status: 'PENDING_NATIVE_HOOK', operation: 'rebind', armed_at: new Date(0).toISOString() };
+  waitForNativeReceipt(value, { kind: 'native_rebind', message: 'missing', resume_when: 'receipt' });
+  value = JSON.parse(JSON.stringify(value));
+  value.run_generation = 'retry-generation';
+  value.binding.armed_at = new Date(90_000).toISOString();
+  armRecovery(value, { kind: 'network', message: 'retry', resume_when: 'receipt' }, 90_000);
+  const path = resolve(value.task.workspace, 'state.json');
+  writeFileSync(path, JSON.stringify(value));
+  reconcileRecoveryTick(path, 120_000);
+  assert.equal(JSON.parse(readFileSync(path, 'utf8')).status, 'INTERRUPTED');
+});
+
+test('healthy work and manual pause are not recovery timeouts', () => {
+  for (const status of ['ACTIVE', 'PAUSED', 'DONE'] as const) {
+    const value = state('no-timeout-' + status);
+    value.status = status;
+    value.recovery_plan = createRecoveryPlan(value, { kind: 'none', message: '', resume_when: '' });
+    value.recovery_plan.status = 'running';
+    const path = resolve(value.task.workspace, 'state.json');
+    writeFileSync(path, JSON.stringify(value));
+    reconcileRecoveryTick(path, 999_999);
+    assert.equal(JSON.parse(readFileSync(path, 'utf8')).status, status);
+  }
+});
+
+test('late native lifecycle events cannot resume interrupted supervision', () => {
+  const value = state('late-native-timeout');
+  value.status = 'INTERRUPTED'; value.phase = 'IDLE';
+  value.binding.status = 'RELEASED';
+  value.recovery_plan = createRecoveryPlan(value, { kind: 'timeout', message: 'timeout', resume_when: 'manual' });
+  cancelRecovery(value, 'interrupted');
+  const path = resolve(value.task.workspace, 'state.json');
+  const index = resolve(value.task.workspace, '.codex-supervisor');
+  mkdirSync(index, { recursive: true });
+  writeFileSync(resolve(index, 'main-session-index.json'), JSON.stringify({ states: [path] }));
+  writeFileSync(path, JSON.stringify(value));
+  const before = readFileSync(path, 'utf8');
+  const cwd = process.cwd();
+  try {
+    process.chdir(value.task.workspace);
+    const result = handleLifecycle({ hook_event_name: 'UserPromptSubmit', cwd: value.task.workspace, session_id: value.main_session_id }, value.host, cwd);
+    assert.deepEqual(result, {});
+    assert.equal(readFileSync(path, 'utf8'), before);
+    armNativeRebind(value, 'late automatic attempt');
+    assert.equal(value.status, 'INTERRUPTED');
+    assert.equal(value.binding.status, 'RELEASED');
+  } finally { process.chdir(cwd); }
+});
+
+test('an expired recovery is interrupted at the native receipt boundary before watchdog polling', () => {
+  const value = state('expired-native-boundary');
+  value.phase = 'RECOVERING';
+  value.binding.status = 'PENDING_NATIVE_HOOK'; value.binding.operation = 'rebind';
+  value.recovery_window = { started_at: new Date(0).toISOString(), deadline_at: new Date(120_000).toISOString() };
+  value.recovery_plan = createRecoveryPlan(value, { kind: 'native_rebind', message: 'missing', resume_when: 'receipt' }, true);
+  const path = resolve(value.task.workspace, 'state.json');
+  const index = resolve(value.task.workspace, '.codex-supervisor');
+  mkdirSync(index, { recursive: true });
+  writeFileSync(resolve(index, 'main-session-index.json'), JSON.stringify({ states: [path] }));
+  writeFileSync(path, JSON.stringify(value));
+  const cwd = process.cwd();
+  try {
+    process.chdir(value.task.workspace);
+    assert.deepEqual(handleLifecycle({ hook_event_name: 'UserPromptSubmit', cwd: value.task.workspace, session_id: value.main_session_id }, value.host, cwd), {});
+    assert.equal(JSON.parse(readFileSync(path, 'utf8')).status, 'INTERRUPTED');
+  } finally { process.chdir(cwd); }
 });

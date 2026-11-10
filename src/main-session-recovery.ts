@@ -20,6 +20,7 @@ function promptDelayMs(fixturePath?: string): number {
  * it never changes the task contract or fabricates a binding. */
 export function scheduleNativeRebindPrompt(path: string, pluginRoot: string, fixturePath: string | undefined, state: MainSessionState, reason: string): boolean {
   if (state.control_mode !== 'main-session' || !state.main_session_id || state.status !== 'ACTIVE' || state.binding.status !== 'PENDING_NATIVE_HOOK' || state.binding.operation !== 'rebind') return false;
+  if (state.recovery_window && Date.parse(state.recovery_window.deadline_at) <= Date.now()) return false;
   const existing = state.recovery_prompt;
   if (existing?.kind === 'native_rebind' && existing.run_generation === state.run_generation) return false;
   const deliveryId = randomUUID();
@@ -80,6 +81,7 @@ function currentPrompt(statePath: string): { state: MainSessionState; prompt: Re
     const state = readJson(statePath) as MainSessionState;
     const prompt = state.recovery_prompt;
     if (!prompt || state.status !== 'ACTIVE' || state.control_mode !== 'main-session' || !state.main_session_id) return null;
+    if (state.recovery_window && Date.parse(state.recovery_window.deadline_at) <= Date.now()) return null;
     if (state.task_version !== prompt.task_version || state.run_generation !== prompt.run_generation) return null;
     if (prompt.kind !== 'native_rebind' && (!state.pending_action || state.pending_action.delivery_id !== prompt.delivery_id || state.pending_action.message !== prompt.message || state.pending_action.plan_id !== prompt.plan_id || state.pending_action.route_id !== prompt.route_id || state.pending_action.source_stop_attempt_id !== prompt.source_stop_attempt_id || state.pending_action.stage === 'confirmed' || state.continuation_confirmed)) return null;
     if (prompt.kind === 'native_rebind' && (state.binding.status !== 'PENDING_NATIVE_HOOK' || state.binding.operation !== 'rebind')) return null;
@@ -124,10 +126,13 @@ export async function deliverMainSessionRecoveryPrompt(statePath: string, fixtur
   const lease = acquireLease(statePath);
   if (!lease) return;
   const { state, prompt } = current;
+  const abort = new AbortController();
+  const remaining = state.recovery_window ? Date.parse(state.recovery_window.deadline_at) - Date.now() : 30_000;
+  const timer = setTimeout(() => abort.abort(), Math.max(1, Math.min(30_000, remaining)));
   try {
     if (hasDeliveryEvent(statePath, prompt.delivery_id, new Set(['main_session_recovery_prompt_sent', 'main_session_recovery_prompt_acknowledged']))) return;
     log(statePath, state, 'main_session_recovery_prompt_attempted', { delivery_id: prompt.delivery_id, main_session_id: state.main_session_id, message: prompt.message, task_version: prompt.task_version, run_generation: prompt.run_generation });
-    const connection = await connect(fixtureCommand(fixturePath), state.task.workspace);
+    const connection = await connect(fixtureCommand(fixturePath), state.task.workspace, abort.signal);
     try {
       const resumed = await connection.rpc.request<any>('thread/resume', { threadId: state.main_session_id, cwd: state.task.workspace, approvalPolicy: 'never', sandbox: 'workspace-write', excludeTurns: false });
       if (!resumed?.thread || resumed.thread.id !== state.main_session_id) throw new Error('Recovery adapter resumed a different thread; no prompt was sent.');
@@ -150,5 +155,5 @@ export async function deliverMainSessionRecoveryPrompt(statePath: string, fixtur
     } finally { await connection.rpc.close(); }
   } catch (error) {
     log(statePath, state, 'main_session_recovery_prompt_failed', { delivery_id: prompt.delivery_id, main_session_id: state.main_session_id, error: error instanceof Error ? error.message : String(error) });
-  } finally { lease.release(); }
+  } finally { clearTimeout(timer); lease.release(); }
 }

@@ -124,6 +124,29 @@ test('TaskCatalog presents persisted state and groups events into worker rounds'
   }
 });
 
+test('NFG renders interrupted supervision with its reason and a manual resume control', async () => {
+  const data = fixture();
+  const path = resolve(data.directory, 'state.json');
+  const value = JSON.parse(readFileSync(path, 'utf8'));
+  value.status = 'INTERRUPTED'; value.phase = 'IDLE';
+  value.last_error = '自动恢复超过 2 分钟仍未成功，监督已中断。';
+  value.recovery_condition = { kind: 'recovery_timeout', message: value.last_error, resume_when: 'manual resume' };
+  writeFileSync(path, JSON.stringify(value));
+  const web = await startWebServer({ workspace: data.workspace, port: 0 });
+  try {
+    const record = await (await fetch(new URL('api/tasks/demo-001', web.url))).json();
+    assert.equal(record.state.recovery.source, 'interrupted');
+    assert.equal(record.state.nativeReceipt, 'not_required');
+    const client = await openWebClient(new URL('tasks/demo-001', web.url).href);
+    assert.match(client.document.querySelector('#task-status')!.textContent, /^已中断 /);
+    assert.match(client.document.querySelector('#task-meta')!.innerHTML, /自动恢复超过 2 分钟/);
+    assert.ok(client.document.querySelector('#task-actions')!.querySelector('[data-action="resume"]'));
+    assert.equal(client.document.querySelector('#task-actions')!.querySelector('[data-action="pause"]'), null);
+    await client.refresh();
+    assert.match(client.document.querySelector('#task-status')!.textContent, /^已中断 /);
+  } finally { await web.close(); data.cleanup(); }
+});
+
 test('NFG API projects the complete selected route audit without rewriting historical decisions', async () => {
   const data = fixture();
   writeRouteRound(data.directory);

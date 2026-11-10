@@ -72,3 +72,66 @@ test('provider-neutral adapter events are authenticated, durable, and deduplicat
   assert.deepEqual(daemon.ingest(event), { accepted: false, duplicate: true, occurrence_id: event.occurrence_id });
   assert.equal(daemon.auditEvents().some((entry) => entry.type === 'adapter_event' && entry.details?.provider === 'claude'), true);
 });
+
+test('interrupted recovery survives daemon restart and only manual resume opens a new window', async () => {
+  const root = mkdtempSync(resolve(tmpdir(), 'nf-interrupted-'));
+  const path = fixture(root, 'INTERRUPTED');
+  const value = JSON.parse(readFileSync(path, 'utf8'));
+  value.phase = 'IDLE';
+  value.recovery_window = { started_at: new Date(0).toISOString(), deadline_at: new Date(120_000).toISOString() };
+  value.recovery_interruption = { at: new Date(120_000).toISOString(), reason: 'timeout' };
+  value.recovery_plan = { owner: null, generation: 'old', task_version: 1, attempt: 3, next_retry_at: null, status: 'cancelled', reason: { kind: 'timeout', message: 'timeout', resume_when: 'manual' }, cancellation_boundary: { kind: 'interrupted', at: new Date(120_000).toISOString(), generation: 'old' } };
+  writeFileSync(path, JSON.stringify(value));
+  const daemon = new NFDaemon({ workspaces: [root], dataPath: resolve(root, 'daemon.json'), intervalMs: 0, now: () => 900_000 });
+  await daemon.tick();
+  assert.equal(daemon.task('daemon-fixture')?.status, 'INTERRUPTED');
+  assert.equal(JSON.parse(readFileSync(path, 'utf8')).recovery_interruption.reason, 'timeout');
+  daemon.control('daemon-fixture', 'resume');
+  const resumed = JSON.parse(readFileSync(path, 'utf8'));
+  assert.equal(resumed.task_version, 2);
+  assert.equal(resumed.recovery_interruption, undefined);
+  assert.equal(resumed.recovery_plan.cancellation_boundary, null);
+  assert.equal(resumed.recovery_window.deadline_at, new Date(1_020_000).toISOString());
+});
+
+test('manual resume of an interrupted original A renews the native binding fences', async () => {
+  const root = mkdtempSync(resolve(tmpdir(), 'nf-main-interrupted-'));
+  const path = fixture(root, 'INTERRUPTED');
+  const value = JSON.parse(readFileSync(path, 'utf8'));
+  Object.assign(value, {
+    phase: 'IDLE', control_mode: 'main-session', main_session_id: 'original-A', contract_sha256: 'immutable', run_generation: 'old',
+    host: { hook_effective: false }, binding: { status: 'RELEASED', operation: 'rebind', expected_task_version: 1, armed_at: new Date(0).toISOString() },
+    recovery_plan: { owner: null, generation: 'old', task_version: 1, attempt: 3, status: 'cancelled', cancellation_boundary: { kind: 'interrupted' } },
+  });
+  writeFileSync(path, JSON.stringify(value));
+  const daemon = new NFDaemon({ workspaces: [root], dataPath: resolve(root, 'daemon.json'), intervalMs: 0 });
+  await daemon.tick();
+  daemon.control('daemon-fixture', 'resume');
+  const saved = JSON.parse(readFileSync(path, 'utf8'));
+  assert.equal(saved.status, 'ACTIVE');
+  assert.equal(saved.phase, 'RECOVERING');
+  assert.equal(saved.main_session_id, 'original-A');
+  assert.equal(saved.contract_sha256, 'immutable');
+  assert.notEqual(saved.run_generation, 'old');
+  assert.equal(saved.binding.expected_task_version, saved.task_version);
+  assert.equal(saved.binding.expected_run_generation, saved.run_generation);
+  assert.equal(saved.recovery_plan.cancellation_boundary, null);
+});
+
+test('daemon honors the recovery deadline between slow discovery polls', async () => {
+  const root = mkdtempSync(resolve(tmpdir(), 'nf-deadline-timer-'));
+  const path = fixture(root, 'ACTIVE');
+  const value = JSON.parse(readFileSync(path, 'utf8'));
+  value.phase = 'RECOVERING';
+  value.recovery_window = { started_at: new Date(Date.now() - 119_500).toISOString(), deadline_at: new Date(Date.now() + 500).toISOString() };
+  value.recovery_plan = { owner: null, generation: 'timer', task_version: 1, attempt: 1, status: 'waiting_native', reason: { kind: 'native', message: 'missing', resume_when: 'receipt' }, next_retry_at: null, cancellation_boundary: null };
+  writeFileSync(path, JSON.stringify(value));
+  const daemon = new NFDaemon({ workspaces: [root], dataPath: resolve(root, 'daemon.json'), intervalMs: 30_000 });
+  daemon.start();
+  try {
+    const until = Date.now() + 5_000;
+    while (JSON.parse(readFileSync(path, 'utf8')).status !== 'INTERRUPTED' && Date.now() < until) await new Promise(resolve => setTimeout(resolve, 25));
+    assert.equal(JSON.parse(readFileSync(path, 'utf8')).status, 'INTERRUPTED');
+    assert.ok(daemon.status().tickCount >= 2);
+  } finally { daemon.stop(); }
+});

@@ -193,7 +193,11 @@ export class Supervisor {
             this.store.event(this.state, 'owned_calls_cancelled');
         })();
     }
-    save() { this.store.save(this.state); }
+    save() {
+        if (this.state.phase === 'WORKER' && this.state.retry.kind === null)
+            delete this.state.recovery_window;
+        this.store.save(this.state);
+    }
     async connectWithRecovery(argv) {
         const enabled = this.fixture?.recovery_enabled === true || this.fixture?.recovery_delays_ms !== undefined || this.fixture === undefined;
         let failure;
