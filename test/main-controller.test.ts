@@ -354,6 +354,9 @@ test('automatic native rebind rotates the generation and rejects stale lifecycle
 
 test('native rebind recovery automatically prompts the original A instead of waiting forever', async (t) => {
   const f = installed('native-rebind-prompt', {}, 'native-rebind-prompt', 0, {}, { main_session_thread_id: 'native-rebind-prompt' });
+  // Exercise delivery/correlation without spending the production's 3s grace
+  // period inside this test's bounded acknowledgement deadline.
+  writeFileSync(f.fixture, JSON.stringify({ ...JSON.parse(readFileSync(f.fixture, 'utf8')), recovery_prompt_delay_ms: 0 }));
   t.after(() => f.run('pause'));
   const before = JSON.parse(f.run('status').stdout) as MainSessionState;
   assert.equal(f.run('pause').status, 0);
