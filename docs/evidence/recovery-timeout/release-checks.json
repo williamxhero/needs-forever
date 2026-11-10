@@ -1,0 +1,67 @@
+{
+  "at": "2026-11-10T12:04:31.704Z",
+  "code_commit": "0cc855c3f3722e574122a1484c61c4cd9163d2c7",
+  "build": "passed; 35 self-contained modules",
+  "full_test": {
+    "command": "node --test --test-concurrency=1 dist/test/*.test.js",
+    "tests": 213,
+    "passed": 213,
+    "failed": 0,
+    "duration_ms": 299306.1725
+  },
+  "targeted": {
+    "tests": 34,
+    "passed": 34
+  },
+  "installed_package": {
+    "matches_source": true,
+    "file_count": 48,
+    "changed_files": [
+      "runtime/src/cli.js",
+      "runtime/src/daemon.js",
+      "runtime/src/lifecycle.js",
+      "runtime/src/main-controller.js",
+      "runtime/src/main-session-recovery.js",
+      "runtime/src/main-session.js",
+      "runtime/src/recovery-coordinator.js",
+      "runtime/src/store.js",
+      "runtime/src/supervisor.js",
+      "runtime/src/web.js",
+      "scripts/recovery-coordinator.mjs",
+      "runtime/integrity.json"
+    ],
+    "hook_identity_unchanged": true
+  },
+  "live": {
+    "at": "2026-11-10T11:59:40.334Z",
+    "status": "INTERRUPTED",
+    "phase": "IDLE",
+    "binding": "RELEASED",
+    "recovery_window": {
+      "started_at": "2026-11-10T06:42:38.967Z",
+      "deadline_at": "2026-11-10T06:44:38.967Z"
+    },
+    "interruption": {
+      "at": "2026-11-10T11:59:26.635Z",
+      "reason": "自动恢复超过 2 分钟仍未成功，监督已中断。最后原因：Desktop owner exited; awaiting a trusted lifecycle receipt from the original A.可点击“恢复”重新尝试。"
+    },
+    "cancellation": {
+      "kind": "interrupted",
+      "at": "2026-11-10T11:59:26.635Z",
+      "generation": "0b9b2c6a-7da6-4ad4-b845-35a1dd635d4d"
+    },
+    "main_session_id": "01a1ae7a-9442-79e0-b32b-aa560f976453",
+    "contract_sha256": "db7ccc65dc3524ae4dcc40767bfd7bd11bd7e4a107a51c5e90d1bb5f3c576e54",
+    "nfg_status": "INTERRUPTED",
+    "nfg_boundary": "interrupted",
+    "nfg_resume_supported": true,
+    "verified_at": "2026-11-10T12:03:04.919Z",
+    "contract_bytes_unchanged": true,
+    "computed_contract_sha256": "db7ccc65dc3524ae4dcc40767bfd7bd11bd7e4a107a51c5e90d1bb5f3c576e54",
+    "interruption_event_count": 1,
+    "status_still_interrupted": true,
+    "task_version_unchanged": true
+  },
+  "global_daemon_pid": 63976,
+  "task_recovery_processes_remaining": 0
+}

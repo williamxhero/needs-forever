@@ -1,0 +1,42 @@
+✔ NF daemon discovers tasks, persists its manifest, and keeps audit after delete (79.614ms)
+✔ NF daemon loopback API requires its token and exposes task control (100.3374ms)
+✔ provider-neutral adapter events are authenticated, durable, and deduplicated (13.3605ms)
+✔ interrupted recovery survives daemon restart and only manual resume opens a new window (22.0725ms)
+✔ manual resume of an interrupted original A renews the native binding fences (18.2535ms)
+✔ daemon honors the recovery deadline between slow discovery polls (529.9801ms)
+✔ automatic recovery persists bounded backoff and preserves generation across process reconstruction (2.8899ms)
+✔ manual cancellation is a durable boundary that rejects stale recovery results (0.9957ms)
+✔ only the current generation may acquire the recovery owner lease (43.5308ms)
+✔ a restarted process reconciles a dead owner into a pending native receipt without starting B/C (1.3623ms)
+✔ a detached coordinator consumes a due retry and rotates the native receipt fence without starting B/C (3.9325ms)
+✔ recovery exceeding two minutes is durably interrupted even with a live owner (19.0184ms)
+✔ installed detached coordinator exits after interrupting an expired recovery (304.4381ms)
+✔ retries and process reconstruction cannot renew the recovery deadline (3.3767ms)
+✔ healthy work and manual pause are not recovery timeouts (4.7033ms)
+✔ late native lifecycle events cannot resume interrupted supervision (4.0212ms)
+✔ an expired recovery is interrupted at the native receipt boundary before watchdog polling (4.3024ms)
+✔ TaskCatalog presents persisted state and groups events into worker rounds (16.9561ms)
+✔ NFG renders interrupted supervision with its reason and a manual resume control (104.4114ms)
+✔ NFG API projects the complete selected route audit without rewriting historical decisions (20.7108ms)
+✔ served NFG client shows compact routes and expands candidate evidence without claiming availability (28.3957ms)
+✔ legacy HTTP history displays a virtual unverified single route and keeps its stored decision intact (89.272ms)
+✔ NFG timer refresh preserves expansion by task, Stop and plan after round insertion and isolates a replacement plan (140.2246ms)
+✔ served NFG escapes model text and route keys while its complete inline script executes (93.9397ms)
+✔ TaskCatalog exposes durable recovery metadata and distinguishes native waiting from user cancellation and DONE (9.5811ms)
+✔ TaskCatalog keeps active session IDs unique and reuses a completed ID (14.5156ms)
+✔ TaskCatalog hides rounds until a real supervisor event completes A→B→C (4.6714ms)
+✔ TaskCatalog treats a main-session tool result as the A worker leg (3.9905ms)
+✔ TaskCatalog maps a native rebind prompt back to its parent Stop round and exposes the real prompt (9.3349ms)
+✔ TaskCatalog preserves an externally observed worker prompt without claiming NF sent it (4.4244ms)
+✔ TaskCatalog assigns repeated main-session work to the next matching Stop/C round (4.1687ms)
+✔ web server exposes task, record and validated control endpoints (49.1219ms)
+✔ NFG catalogs sessions from every daemon workspace (13.8584ms)
+✔ web delete removes the task directory while preserving a system audit record and root system events (101.188ms)
+ℹ tests 34
+ℹ suites 0
+ℹ pass 34
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 922.465
