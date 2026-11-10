@@ -15,7 +15,7 @@ import { redact } from './redact.js';
 import { buildMainSessionSnapshot, preflightSupervisor, superviseStop } from './main-supervision.js';
 import { validateDecision } from './judge.js';
 import { captureRouteOutcome, discoverLocalRoutes, plannerFailureFallback, prepareRouteExecution, routeCorrelation } from './route-execution.js';
-import type { Decision } from './types.js';
+import type { Decision, Snapshot } from './types.js';
 import { classifyRecoveryError, nextBackoff, recordRecoveryFailure, type RecoveryFailure } from './recovery.js';
 import { reachedLimits } from './rules.js';
 import { armRecovery, cancelRecovery, createRecoveryPlan, markRecoveryRunning, acquireRecoveryOwner, waitForNativeReceipt, reconcileStaleOwner, type RecoveryReason } from './recovery-coordinator.js';
@@ -290,12 +290,11 @@ export async function dispatchBoundLifecycle(path: string, input: unknown, plugi
 
 // Stop judgments share the existing schema/readonly judge. Transport-only
 // fixtures substitute the external model; live tasks cannot use fixture output.
-export async function evaluateStop(state: MainSessionState, request: StopRequest, fixture: any, signal: AbortSignal, store: Store): Promise<Decision> {
-  if (state.mode !== 'simulated' || !fixture?.transport?.decision) return superviseStop(state, request, fixture, signal, store);
+export async function evaluateStop(state: MainSessionState, request: StopRequest, fixture: any, signal: AbortSignal, store: Store, snapshot: Snapshot = buildMainSessionSnapshot(state, request, store.events())): Promise<Decision> {
+  if (state.mode !== 'simulated' || !fixture?.transport?.decision) return superviseStop(state, request, fixture, signal, store, snapshot);
   await delay(Number(fixture.transport.delay_ms ?? 0), undefined, { signal });
   const decision = fixture.transport.decision;
   if (decision.action !== 'CONTINUE' || typeof decision.next_message !== 'string' || !decision.next_message.trim()) throw new Error('Transport fixtures may only request concrete CONTINUE; DONE requires the completion gate.');
-  const snapshot = buildMainSessionSnapshot(state, request, store.events());
   const raw = { reason: 'Simulated external transport direction.', evidence_ids: [], external: null, ...decision };
   const validated = validateDecision(JSON.stringify(raw), snapshot);
   store.event(state, 'decision', { role: 'judge', source: 'simulated-transport', stop_attempt_id: request.stop_attempt_id, decision: validated });
@@ -522,10 +521,20 @@ export async function runController(path: string, pluginRoot: string, fixturePat
               }
             }(path);
             let decision: Decision;
+            const delivery = randomUUID();
+            let correlation: ReturnType<typeof prepareRouteExecution> = {};
             let outputFailures = 0;
             if (state.mode === 'simulated' && !fixture?.app_server_argv && !fixture?.transport?.decision) throw new Error('Missing explicit simulated supervisor adapter; configure it before explicit resume.');
             while (true) {
-              try { decision = await evaluateStop(structuredClone(state), request, fixture, current.abort.signal, guarded); break; }
+              try {
+                // Admission must use the exact bounded proof judged by C. Its
+                // own decision/history can otherwise evict cited evidence.
+                const snapshot = buildMainSessionSnapshot(state, request, store.events());
+                decision = await evaluateStop(structuredClone(state), request, fixture, current.abort.signal, guarded, snapshot);
+                if (!valid()) return {};
+                if (decision.action === 'CONTINUE') correlation = prepareRouteExecution(state, decision, snapshot, delivery, request.stop_attempt_id);
+                break;
+              }
               catch (error) {
                 if (!valid() || current.abort.signal.aborted) return {};
                 const classification = classifyRecoveryError(error);
@@ -535,7 +544,9 @@ export async function runController(path: string, pluginRoot: string, fixturePat
                 store.save(state); store.event(state, 'main_session_retry', { ...classification, ...backoff, stop_attempt_id: request.stop_attempt_id });
                 if (!classification.recoverable) throw error;
                 if (++outputFailures >= 3) {
-                  decision = plannerFailureFallback(buildMainSessionSnapshot(state, request, store.events()), 'C failed three bounded output attempts; gather source-linked route facts.');
+                  const snapshot = buildMainSessionSnapshot(state, request, store.events());
+                  decision = plannerFailureFallback(snapshot, 'C failed three bounded output attempts; gather source-linked route facts.');
+                  correlation = prepareRouteExecution(state, decision, snapshot, delivery, request.stop_attempt_id);
                   store.event(state, 'judge_inventory_fallback', { failures: outputFailures, stop_attempt_id: request.stop_attempt_id, decision });
                   break;
                 }
@@ -567,8 +578,6 @@ export async function runController(path: string, pluginRoot: string, fixturePat
               socket.once('finish', () => setImmediate(shutdown));
               return {};
             }
-            const delivery = randomUUID();
-            const correlation = prepareRouteExecution(state, decision, buildMainSessionSnapshot(state, request, store.events()), delivery, request.stop_attempt_id);
             state.pending_action = { ...correlation, delivery_id: delivery, source_turn_id: request.turn_id, task_version: request.task_version, message: decision.next_message, stage: 'prepared', target_turn_id: null };
             store.event(state, 'send_prepared', { ...correlation, delivery_id: delivery, source_turn_id: request.turn_id, message: decision.next_message, transport: 'native-stop' });
             state.pending_action.stage = 'sent';

@@ -1,0 +1,14 @@
+{
+  "source_snapshot_sha256": "de863358f41add4f7b5064faf734a8e5829ed66a8f043e096b568d55f4562709",
+  "source_stop_attempt_id": "2c9f1abe-a891-41d2-859d-0400952b62c6",
+  "original_main_session_id": "01a1ae7a-9442-79e0-b32b-aa560f976453",
+  "original_contract_sha256": "db7ccc65dc3524ae4dcc40767bfd7bd11bd7e4a107a51c5e90d1bb5f3c576e54",
+  "validation": "valid",
+  "action": "CONTINUE",
+  "plan_id": "qr793-v14-restore-route-context",
+  "judged_evidence_count": 7,
+  "cited_evidence_count": 3,
+  "failure": "B rebuilt its bounded proof after adding its own C decision, evicting one cited ID; then incorrectly inherited the old completed binding recovery deadline.",
+  "delivery_attempted": false,
+  "raw_capture_committed": false
+}

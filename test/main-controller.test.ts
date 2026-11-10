@@ -74,6 +74,27 @@ test('installed native Stop ingests the actual paired tool result before choosin
   assert.equal(state.route_execution.route.route_id, 'native-cache');
 });
 
+test('native C2 delivery retains the exact judged proof after its own decision fills the snapshot budget', (t) => {
+  const name = 'c2-stable-admission-proof';
+  const f = installed(name, {}, name, 0, {}, { judge_actions: ['CONTINUE'], judge_cite_current_proof: true }, undefined, 'enforce');
+  t.after(() => f.run('pause'));
+  for (let index = 0; index < 3; index++) {
+    const tool = { tool_use_id: `large-proof-${index}`, tool_name: 'exec_command', tool_input: { command: `read-authorized-proof-${index}` } };
+    assert.equal(f.hook({ ...tool, hook_event_name: 'PreToolUse' }).status, 0);
+    assert.equal(f.hook({ ...tool, hook_event_name: 'PostToolUse', tool_response: { stdout: `${index}:` + 'proof '.repeat(1_100), exitCode: 0 } }).status, 0);
+  }
+  const stopped = f.hook({ hook_event_name: 'Stop' });
+  assert.equal(stopped.status, 0, stopped.stderr);
+  assert.equal(JSON.parse(stopped.stdout).decision, 'block', 'B must deliver a decision valid against the proof C actually saw.');
+  const saved = JSON.parse(f.run('status').stdout);
+  assert.equal(saved.phase, 'WORKER');
+  assert.equal(saved.pending_action.stage, 'sent');
+  assert.ok(saved.last_decision.evidence_ids.length >= 2);
+  const events = readFileSync(join(f.workspace, '.codex-supervisor', name, 'events.jsonl'), 'utf8').split(/\r?\n/).filter(Boolean).map(line => JSON.parse(line));
+  assert.equal(events.filter(event => event.type === 'send_attempted').length, 1);
+  assert.equal(events.some(event => event.type === 'main_session_retry'), false);
+});
+
 test('installed native Code Mode accepts only a literal NF HTTP probe and selects the proven API', async (t) => {
   let requests = 0;
   const server = createServer((_request, response) => { requests++; response.end('{"rows":17}'); });

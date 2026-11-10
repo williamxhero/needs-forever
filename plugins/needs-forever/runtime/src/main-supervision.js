@@ -251,8 +251,7 @@ async function verification(state, store, rpc, signal, snapshot) {
     const original = state.protected_baseline.filter((file) => changed.has(file.path));
     return continueWith(snapshot, `Independent verification failed. Repair the task and restore changed protected files; keep the original fixed argv. Rerun concise acceptance checks, then prepare to stop. Evidence: ${JSON.stringify(evidence)}. Original protected content (base64): ${JSON.stringify(original)}`, 'The fixed independent completion gate did not pass.');
 }
-export async function superviseStop(state, request, fixture, signal, store) {
-    const snapshot = buildMainSessionSnapshot(state, request, store.events());
+export async function superviseStop(state, request, fixture, signal, store, snapshot = buildMainSessionSnapshot(state, request, store.events())) {
     store.snapshot(snapshot, null);
     const connection = await connect(commandFor(state, fixture), state.task.workspace, signal);
     const timeout = state.mode === 'simulated' && Number.isFinite(fixture?.judge_timeout_ms) ? Math.max(1, Number(fixture.judge_timeout_ms)) : 120_000;

@@ -174,6 +174,19 @@ test('healthy work and manual pause are not recovery timeouts', () => {
   }
 });
 
+test('a fresh failure after healthy work does not inherit an old completed native recovery deadline', () => {
+  const value = state('fresh-after-healthy');
+  value.binding = { ...value.binding, status: 'BOUND', operation: 'rebind', armed_at: new Date(0).toISOString(), bound_at: new Date(2_000).toISOString() };
+  value.recovery_plan = createRecoveryPlan(value, { kind: 'old_rebind', message: 'old', resume_when: 'receipt' });
+  value.recovery_plan.status = 'running';
+  // Exactly the live Stop failure call site: WORKER/JUDGE was healthy, its
+  // recovery window was cleared, then recover() enters RECOVERING first.
+  value.phase = 'RECOVERING';
+  armRecovery(value, { kind: 'stop_transport', message: 'new failure', resume_when: 'retry' }, 3_600_000);
+  assert.equal(value.recovery_window?.started_at, new Date(3_600_000).toISOString());
+  assert.equal(value.recovery_window?.deadline_at, new Date(3_720_000).toISOString());
+});
+
 test('late native lifecycle events cannot resume interrupted supervision', () => {
   const value = state('late-native-timeout');
   value.status = 'INTERRUPTED'; value.phase = 'IDLE';

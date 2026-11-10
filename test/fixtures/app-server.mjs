@@ -103,6 +103,12 @@ for await (const line of lines) {
       const snapshot = JSON.parse(message.params.input[0].text);
       const action = scenario.judge_actions?.[judges - 1] ?? 'DONE';
       const decision = action === 'CONTINUE' && snapshot.c2?.mode !== 'legacy' ? routeInventoryDecision(snapshot, 'A1 evidence checked.') : { action, reason: 'A1 evidence checked.', evidence_ids: snapshot.evidence.map((entry) => entry.id), next_message: action === 'CONTINUE' ? 'Check the remaining acceptance result.' : '', external: action === 'WAIT_EXTERNAL' ? { missing: 'Required credential.', attempted: ['Checked local credentials.'], why_no_other_work: 'The only remaining item requires the credential.', resume_when: 'User supplies credential.' } : null };
+      if (scenario.judge_cite_current_proof && decision.route_plan) {
+        decision.reason += ' Preserve the independently observed proof while checking the original acceptance.'.repeat(70);
+        decision.evidence_ids = snapshot.evidence.map(entry => entry.id);
+        decision.diagnosis.evidence_ids = [...decision.evidence_ids];
+        decision.route_plan.candidates[0].evidence_ids = [...decision.evidence_ids];
+      }
       const artifact = scenario.judge_select_observed_artifact && snapshot.c2?.catalog.entries.find((entry) => !entry.inventory_only && entry.resource.kind === 'artifact' && entry.status === 'observed');
       if (action === 'CONTINUE' && artifact && decision.route_plan) {
         const route = decision.route_plan.candidates[0];

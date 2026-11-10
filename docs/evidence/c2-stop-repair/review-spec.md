@@ -1,0 +1,10 @@
+PASS — no actionable Spec findings.
+
+Reviewed git diff aee4758393ccb79389366b00973fb1b35fb9aef0 -- src test plugins against docs/delivery/recovery-resume.md, docs/delivery/spec49-execution.md and the supplied NF://B0QI recovery requirement.
+
+- src/main-controller.ts:532–535 uses one bounded Snapshot for C evaluation and continuation admission. C's newly appended history cannot evict its cited proof before admission. src/route-execution.ts:52 retains task/contract checks, refreshes the catalog from current state and evaluates against the full durable ledger.
+- Admission is inside the bounded three-attempt retry loop, including fallback admission (src/main-controller.ts:539–554). Existing human-input, generation, contract and deadline invalidation remains active, followed by limits and a single delivery (lines 472–475, 512, 557–590). Pause clears route execution and durably cancels recovery (lines 335–339).
+- src/recovery-coordinator.ts:15–19 preserves an existing episode window and inherits armed_at only for RECOVERING/PENDING_NATIVE_HOOK migration. A later failure after healthy BOUND work receives a fresh 120-second window. Existing manual cancellation, interruption and late-native guards remain unchanged.
+- Regression assertions exercise proof eviction and exactly one send without retry (test/main-controller.test.ts:77), plus a fresh post-rebind recovery episode (test/recovery-coordinator.test.ts:177). Existing tests cover durable pause, nonrenewable retries and timeout interruption.
+
+No scope creep found. git diff --check passed. No tests were run in this independent review because the coordinating agent already has the targeted run in progress. This review establishes code/spec alignment; it does not claim fresh native production acceptance or original task completion. No runtime state was changed and original A was not contacted.

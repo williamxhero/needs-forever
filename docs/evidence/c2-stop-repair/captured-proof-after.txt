@@ -1,0 +1,2 @@
+{"original_valid":true,"original_proof":7,"rebuilt_proof":5,"originally_cited":3,"missing_after_rebuild":1}
+{"frozen_snapshot_admitted":true,"new_rebuilt_snapshot_correctly_rejected":true,"sent":false,"production_state_written":false}

@@ -1,0 +1,10 @@
+✔ native C2 delivery retains the exact judged proof after its own decision fills the snapshot budget (2377.8976ms)
+✔ a fresh failure after healthy work does not inherit an old completed native recovery deadline (11.4191ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2509.3243

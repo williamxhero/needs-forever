@@ -14,7 +14,7 @@ export const RECOVERY_TIMEOUT_MS = 120_000;
 function ensureRecoveryWindow(state: State, now: number): void {
   if (state.recovery_window) return;
   const binding = (state as MainSessionState).binding;
-  const armed = state.phase === 'RECOVERING' ? Date.parse(binding?.armed_at ?? '') : NaN;
+  const armed = state.phase === 'RECOVERING' && binding?.status === 'PENDING_NATIVE_HOOK' ? Date.parse(binding.armed_at ?? '') : NaN;
   const started = Number.isFinite(armed) ? Math.min(armed, now) : now;
   state.recovery_window = { started_at: new Date(started).toISOString(), deadline_at: new Date(started + RECOVERY_TIMEOUT_MS).toISOString() };
 }
