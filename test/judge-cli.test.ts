@@ -113,6 +113,7 @@ test('bounded snapshots preserve the contract, real sources, recent instructions
     { type: 'plan', id: 'plan', text: 'Check credential then finish remaining A1.' },
   ] });
   const task = json(fixture.task);
+  task.c2 = { mode: 'legacy' }; // This fixture exercises snapshot budgeting, not repeated-route planning.
   task.goal += ' Complete original stages. '.repeat(80);
   task.authorization += ' Never request external permissions.';
   task.limits = { max_worker_turns: 3, max_minutes: null };

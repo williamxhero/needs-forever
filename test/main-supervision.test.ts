@@ -5,7 +5,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { cpSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 
-function setup(name: string, options: Record<string, unknown> = {}, verify = false, stateDirectory = join('.codex-supervisor', name), protectedFiles = ['verify.mjs']) {
+function setup(name: string, options: Record<string, unknown> = {}, verify = false, stateDirectory = join('.codex-supervisor', name), protectedFiles = ['verify.mjs'], supervisorFixture: Record<string, unknown> = {}) {
   const directory = resolve('runs/main-supervision', `${name}-${Date.now()}`);
   const workspace = join(directory, '工作 空间');
   const plugin = join(directory, '插件 安装副本');
@@ -21,9 +21,9 @@ function setup(name: string, options: Record<string, unknown> = {}, verify = fal
     mkdirSync(dirname(join(workspace, file)), { recursive: true });
     writeFileSync(join(workspace, file), '{"acceptance":"original"}\n');
   }
-  writeFileSync(task, JSON.stringify({ schema_version: 1, task_id: name, workspace, ...(Array.isArray(options.judge_actions) && options.judge_actions.includes('WAIT_EXTERNAL') ? { c2: { mode: 'legacy' } } : {}), goal: 'Three stages', acceptance: [{ id: 'all', text: 'Three stages complete' }], authorization: 'Local files only', ...(verify ? { verify: { argv: [process.execPath, 'verify.mjs', 'literal;argument'], timeout_seconds: 2, protected_files: protectedFiles } } : {}), limits: {} }));
+  writeFileSync(task, JSON.stringify({ schema_version: 1, task_id: name, workspace, ...(options.legacy_transport === true || (Array.isArray(options.judge_actions) && options.judge_actions.includes('WAIT_EXTERNAL')) ? { c2: { mode: 'legacy' } } : {}), goal: 'Three stages', acceptance: [{ id: 'all', text: 'Three stages complete' }], authorization: 'Local files only', ...(verify ? { verify: { argv: [process.execPath, 'verify.mjs', 'literal;argument'], timeout_seconds: 2, protected_files: protectedFiles } } : {}), limits: {} }));
   writeFileSync(scenario, JSON.stringify({ trace, ...options }));
-  writeFileSync(fixture, JSON.stringify({ desktop_version: 'simulated', cli_version: 'simulated', app_server_argv: [process.execPath, resolve('test/fixtures/app-server.mjs'), scenario] }));
+  writeFileSync(fixture, JSON.stringify({ desktop_version: 'simulated', cli_version: 'simulated', app_server_argv: [process.execPath, resolve('test/fixtures/app-server.mjs'), scenario], ...supervisorFixture }));
   const control = join(plugin, 'scripts/main-session.mjs');
   const run = (command: string, args: string[] = []) => spawnSync(process.execPath, [control, command, '--state', state, ...args], { cwd: workspace, encoding: 'utf8', timeout: 20_000 });
   const hook = (event: Record<string, unknown>) => spawnSync(process.execPath, [join(plugin, 'scripts/lifecycle.mjs'), '--test-fixture', fixture], { cwd: workspace, env: { ...process.env, PLUGIN_ROOT: plugin }, input: JSON.stringify({ session_id: name, cwd: workspace, turn_id: 'same-turn', ...event }), encoding: 'utf8', timeout: 20_000 });
@@ -70,6 +70,51 @@ test('installed Stop creates fresh readonly C for each same-turn stop and confir
   const proof = snapshot.evidence.find((entry: any) => entry.type === 'functionCallOutput');
   assert.equal(proof.source.item_id, 'phase-one');
   assert.match(JSON.stringify(proof.value), /phase-one.txt/);
+});
+
+test('installed C2 correlates same-turn Stop executions and persists only confirmed source-linked observations', (t) => {
+  const f = setup('c2-native-route', { judge_actions: ['CONTINUE', 'CONTINUE'] });
+  t.after(() => f.run('pause'));
+  const proof = (id: string, value: string) => {
+    writeFileSync(join(f.workspace, 'result.txt'), value);
+    const result = spawnSync(process.execPath, ['-e', "console.log(require('node:fs').readFileSync('result.txt','utf8'))"], { cwd: f.workspace, encoding: 'utf8' });
+    assert.equal(result.status, 0);
+    f.activity(id, result.stdout);
+  };
+  proof('first', 'first source observation');
+  assert.equal(f.stop().decision, 'block');
+  const initial = JSON.parse(readFileSync(f.state, 'utf8'));
+  assert.equal(initial.route_ledger.attempts.length, 0, 'A returned prompt is not yet an executed route.');
+  assert.equal(initial.pending_action.plan_id, initial.last_decision.route_plan.plan_id);
+  assert.equal(initial.recovery_prompt.plan_id, initial.pending_action.plan_id);
+  assert.equal(initial.recovery_prompt.source_stop_attempt_id, initial.last_stop.stop_attempt_id);
+  proof('second', 'second source observation');
+  assert.equal(f.stop().decision, 'block');
+  const state = JSON.parse(readFileSync(f.state, 'utf8'));
+  assert.equal(state.route_ledger.attempts.length, 1, 'The same turn may produce a new executed Stop.');
+  assert.ok(state.route_ledger.attempts[0].evidence.every((entry: any) => entry.reference && entry.content_sha256));
+  const events = readFileSync(join(f.workspace, '.codex-supervisor', 'c2-native-route', 'events.jsonl'), 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+  const outcome = events.find((entry) => entry.type === 'route_outcome');
+  assert.equal(outcome.plan_id, initial.pending_action.plan_id);
+  assert.equal(outcome.source_stop_attempt_id, initial.last_stop.stop_attempt_id);
+  assert.notEqual(outcome.stop_attempt_id, outcome.source_stop_attempt_id);
+  assert.equal(events.find((entry) => entry.type === 'send_confirmed').route_id, initial.pending_action.route_id);
+  f.hook({ hook_event_name: 'UserPromptSubmit', prompt: 'Continue with this newer human direction.' });
+  assert.equal(JSON.parse(readFileSync(f.state, 'utf8')).route_execution, undefined);
+});
+
+for (const failure of ['invalid', 'empty', 'timeout']) test(`installed native ${failure} C outputs return a bounded inventory through the active decision gate`, (t) => {
+  const f = setup(`native-fallback-${failure}`, failure === 'timeout' ? { hold_judge_until: 3 } : { judge_outputs: [failure === 'invalid' ? '{broken' : '', failure === 'invalid' ? '{broken' : '', failure === 'invalid' ? '{broken' : ''] }, false, join('.codex-supervisor', `native-fallback-${failure}`), ['verify.mjs'], { recovery_delays_ms: [0], judge_timeout_ms: failure === 'timeout' ? 100 : 1000 });
+  t.after(() => f.run('pause'));
+  const reply = f.stop();
+  assert.equal(reply.decision, 'block');
+  const state = JSON.parse(readFileSync(f.state, 'utf8'));
+  assert.equal(state.last_decision.route_plan.selected_route_id, 'route-inventory');
+  assert.equal(state.route_ledger.attempts.length, 0, 'A returned fallback has not yet executed.');
+  const events = readFileSync(join(f.workspace, '.codex-supervisor', `native-fallback-${failure}`, 'events.jsonl'), 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+  assert.equal(events.filter((entry) => entry.type === 'main_session_retry').length, 3);
+  assert.equal(events.filter((entry) => entry.type === 'send_prepared').length, 1);
+  assert.equal(events.find((entry) => entry.type === 'judge_inventory_fallback').failures, 3);
 });
 
 test('assistant completion or blocked wording alone cannot support DONE or WAIT_EXTERNAL', (t) => {
@@ -318,7 +363,7 @@ test('recoverable model errors remove credential canaries from public state and 
 });
 
 test('an adapter occurrence accepts one C and delivery while separate identical native invocations each judge', async (t) => {
-  const f = setup('adapter-occurrence', { judge_actions: ['CONTINUE'], judge_delay_ms: 500 });
+  const f = setup('adapter-occurrence', { legacy_transport: true, judge_actions: ['CONTINUE'], judge_delay_ms: 500 });
   t.after(() => f.run('pause'));
   const relay = (id: string) => new Promise<any>((done, reject) => {
     const child = spawn(process.execPath, [resolve('test/fixtures/hook-relay.mjs'), f.state, id], { windowsHide: true });

@@ -97,7 +97,7 @@ for await (const line of lines) {
       if (scenario.wrong_judge_turn) send({ method: 'turn/completed', params: { threadId: message.params.threadId, turn: { id: 'unrelated-judge-turn', status: 'completed', items: [{ ...judgeItem, text: '{"action":"DONE"}' }] } } });
       if (scenario.stream_items) send({ method: 'item/completed', params: { threadId: message.params.threadId, turnId, item: judgeItem } });
       const finishJudge = () => send({ method: 'turn/completed', params: { threadId: message.params.threadId, turn: { id: turnId, status: 'completed', items: scenario.stream_items ? [] : [judgeItem] } } });
-      const holdThisJudge = scenario.hold_judge || (scenario.hold_judge_once && judges === 1);
+      const holdThisJudge = scenario.hold_judge || (scenario.hold_judge_once && judges === 1) || judges <= (scenario.hold_judge_until ?? 0);
       if (!holdThisJudge) { if (scenario.judge_delay_ms) setTimeout(finishJudge, scenario.judge_delay_ms); else finishJudge(); }
       continue;
     }

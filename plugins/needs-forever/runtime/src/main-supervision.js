@@ -7,6 +7,7 @@ import { codexCommand, connect } from './transport.js';
 import { Store } from './store.js';
 import { redact } from './redact.js';
 import { buildC2Context } from './planning-context.js';
+import { routeInventoryDecision } from './planning.js';
 const budget = 21_500; // Reserve bounded C2 catalog/ledger metadata after current proof.
 async function retryRead(operation, path, read, signal) {
     const deadline = Date.now() + 5_000;
@@ -48,8 +49,10 @@ function verificationWorkspace(state) {
         return state.task.workspace;
     return first;
 }
-function continueWith(message, reason) {
-    return { action: 'CONTINUE', reason, evidence_ids: [], next_message: message, external: null };
+function continueWith(snapshot, message, reason) {
+    const concise = message.length <= 3_000 ? message : `${message.slice(0, 2700)}\nRead the persisted verification_result and protected baseline for the complete evidence and original protected contents.`;
+    const decision = snapshot.c2?.mode === 'legacy' ? { action: 'CONTINUE', reason, evidence_ids: [], next_message: concise, external: null } : routeInventoryDecision(snapshot, reason, concise);
+    return validateDecision(JSON.stringify(decision), snapshot);
 }
 function commandFor(state, fixture) {
     if (state.mode === 'simulated') {
@@ -198,7 +201,7 @@ async function workspaceDigest(state, store, signal) {
     signal.throwIfAborted();
     return hash.digest('hex');
 }
-async function verification(state, store, rpc, signal) {
+async function verification(state, store, rpc, signal, snapshot) {
     const verify = state.task.verify;
     if (!verify)
         return null;
@@ -246,13 +249,14 @@ async function verification(state, store, rpc, signal) {
         return null;
     const changed = new Set([...before, ...after].map((file) => file.path));
     const original = state.protected_baseline.filter((file) => changed.has(file.path));
-    return continueWith(`Independent verification failed. Repair the task and restore changed protected files; keep the original fixed argv. Rerun concise acceptance checks, then prepare to stop. Evidence: ${JSON.stringify(evidence)}. Original protected content (base64): ${JSON.stringify(original)}`, 'The fixed independent completion gate did not pass.');
+    return continueWith(snapshot, `Independent verification failed. Repair the task and restore changed protected files; keep the original fixed argv. Rerun concise acceptance checks, then prepare to stop. Evidence: ${JSON.stringify(evidence)}. Original protected content (base64): ${JSON.stringify(original)}`, 'The fixed independent completion gate did not pass.');
 }
 export async function superviseStop(state, request, fixture, signal, store) {
     const snapshot = buildMainSessionSnapshot(state, request, store.events());
     store.snapshot(snapshot, null);
     const connection = await connect(commandFor(state, fixture), state.task.workspace, signal);
-    const judge = new AppServerJudge(Math.min(120_000, Math.max(1, Date.parse(request.deadline_at) - Date.now() - 1_000)));
+    const timeout = state.mode === 'simulated' && Number.isFinite(fixture?.judge_timeout_ms) ? Math.max(1, Number(fixture.judge_timeout_ms)) : 120_000;
+    const judge = new AppServerJudge(Math.min(timeout, Math.max(1, Date.parse(request.deadline_at) - Date.now() - 1_000)));
     judge.bind(connection.rpc, (type, details) => {
         if (type === 'judge_created' && typeof details.thread_id === 'string') {
             state.judge_thread_ids ??= [];
@@ -283,7 +287,7 @@ export async function superviseStop(state, request, fixture, signal, store) {
         catch (error) {
             store.snapshot(snapshot, judge.rawOutput, 'invalid');
             if (!signal.aborted && judge.rawOutput && /evidence|worker claims|unknown evidence/i.test(error.message)) {
-                decision = continueWith(`Gather concise structured tool or file-check evidence for every original acceptance item (${state.task.acceptance.map((item) => item.id).join(', ')}). Check remaining authorized routes and implement unfinished work; a final assistant claim alone cannot establish completion or external waiting. Rejected audit: ${error.message}`, 'Supervisor terminal decision lacked sufficient independent evidence.');
+                decision = continueWith(snapshot, `Gather concise structured tool or file-check evidence for every original acceptance item (${state.task.acceptance.map((item) => item.id).join(', ')}). Check remaining authorized routes and implement unfinished work; a final assistant claim alone cannot establish completion or external waiting. Rejected audit: ${error.message}`, 'Supervisor terminal decision lacked sufficient independent evidence.');
             }
             else
                 throw error;
@@ -291,7 +295,7 @@ export async function superviseStop(state, request, fixture, signal, store) {
         signal.throwIfAborted();
         store.event(state, 'decision', { role: 'judge', thread_id: state.judge_thread_ids?.at(-1), snapshot_id: snapshot.snapshot_id, stop_attempt_id: request.stop_attempt_id, worker_thread_id: state.main_session_id, decision });
         if (decision.action === 'DONE')
-            decision = await verification(state, store, connection.rpc, signal) ?? decision;
+            decision = await verification(state, store, connection.rpc, signal, snapshot) ?? decision;
         signal.throwIfAborted();
         return decision;
     }

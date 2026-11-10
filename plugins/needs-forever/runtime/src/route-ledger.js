@@ -35,6 +35,11 @@ export function fingerprintRoute(route) {
     validateIdentity(route);
     return hash([...familyIdentity(route), normalize(route.hypothesis_id), [...new Set(route.expected_evidence.map(normalize))].sort()]);
 }
+/** Model-selected diagnostic names are audit labels, never new execution families. */
+export function canonicalExecutionRoute(route, catalog) {
+    const observed = catalog.some((entry) => entry.status === 'observed' && entry.route_id === route.route_id && entry.resource.kind === route.resource.kind && entry.resource.id === route.resource.id && entry.operation === route.operation);
+    return route.resource.kind === 'diagnostic' && !observed ? { ...route, resource: { kind: 'diagnostic', id: 'nf-owned-bounded-diagnostic' }, operation: 'inspect-authorized-route-facts' } : route;
+}
 function validateInput(input) {
     validateIdentity(input.route);
     strings(input.evidence_ids, 'evidence_ids');
@@ -105,6 +110,8 @@ function permission(attempts, route, context, now) {
     const priorFailure = failures.at(-2);
     if (priorFailure && priorFailure.failure_class === last.failure_class)
         return result(false, 'change_hypothesis');
+    if (last.outcome === 'diagnostic' && (fresh.size > 0 || last.new_evidence_ids.length > 0))
+        return result(true, 'new_evidence');
     if (last.outcome !== 'transient_failure')
         return result(false, 'change_hypothesis');
     const retry = last.retry_condition;

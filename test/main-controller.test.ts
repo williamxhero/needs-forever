@@ -19,7 +19,7 @@ function installed(name: string, transport: unknown = {}, sessionId = name, boun
   const trace = join(directory, 'protocol.jsonl');
   const scenario = join(directory, 'server.json');
   if (appServer) writeFileSync(scenario, JSON.stringify({ trace, ...appServer }));
-  writeFileSync(task, JSON.stringify({ schema_version: 1, task_id: name, workspace, goal: 'Three stages', acceptance: [{ id: 'all', text: 'Three stages complete' }], authorization: 'Local files', limits }));
+  writeFileSync(task, JSON.stringify({ schema_version: 1, task_id: name, workspace, c2: { mode: 'legacy' }, goal: 'Three stages', acceptance: [{ id: 'all', text: 'Three stages complete' }], authorization: 'Local files', limits }));
   writeFileSync(fixture, JSON.stringify({ desktop_version: 'simulated', cli_version: 'simulated', transport, ...(desktopPid ? { desktop_pid: desktopPid } : {}), ...(appServer ? { app_server_argv: [process.execPath, resolve('test/fixtures/app-server.mjs'), scenario] } : {}) }));
   const control = join(plugin, 'scripts/main-session.mjs');
   const run = (command: string, args: string[] = []) => spawnSync(process.execPath, [control, command, '--state', state, ...args], { cwd: workspace, encoding: 'utf8', timeout: 20_000 });

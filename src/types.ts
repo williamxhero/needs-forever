@@ -1,5 +1,17 @@
 import type { C2Context, C2Mode, Diagnosis, RoutePlan } from './planning-contract.js';
 import type { RouteCatalogData, RouteLedgerData } from './route-contract.js';
+import type { RouteEvidence, RouteIdentity } from './route-contract.js';
+export interface RouteCorrelation { plan_id?: string; route_id?: string; source_stop_attempt_id?: string }
+export interface RouteExecution extends RouteCorrelation {
+  delivery_id: string;
+  task_version: number;
+  route: RouteIdentity;
+  evidence: RouteEvidence[];
+  confirmed: boolean;
+  lifecycle_fence: string;
+  discriminating_check?: import('./route-contract.js').RouteDiscriminatingCheck;
+  completed_stop_attempt_id?: string;
+}
 export interface Task {
   schema_version: 1;
   task_id: string;
@@ -20,7 +32,7 @@ export interface Decision {
   diagnosis?: Diagnosis | null;
   route_plan?: RoutePlan | null;
 }
-export interface PendingAction {
+export interface PendingAction extends RouteCorrelation {
   delivery_id: string;
   source_turn_id: string | null;
   task_version: number;
@@ -72,6 +84,7 @@ export interface State {
   recovery_plan?: RecoveryPlan;
   route_catalog?: RouteCatalogData;
   route_ledger?: RouteLedgerData;
+  route_execution?: RouteExecution;
 }
 export interface Snapshot {
   snapshot_id: string;

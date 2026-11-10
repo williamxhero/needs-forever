@@ -101,6 +101,7 @@ async function main() {
                 throw new Error('Resume must preserve simulated/live mode.');
             state.task = task;
             state.task_version++;
+            delete state.route_execution;
             state.status = 'ACTIVE';
             delete state.pause_reason;
             state.retry = { kind: null, attempt: 0, next_at: null };

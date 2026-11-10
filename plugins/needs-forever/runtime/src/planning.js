@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { record, text } from './types.js';
-import { RouteLedger, fingerprintRoute, routeFamilyFingerprint } from './route-ledger.js';
+import { RouteLedger, canonicalExecutionRoute, fingerprintRoute, routeFamilyFingerprint } from './route-ledger.js';
 export function planningEvidenceIds(snapshot) {
     return new Set([...snapshot.evidence.map((entry) => entry.id), ...(snapshot.c2?.catalog.entries.flatMap((entry) => entry.evidence.map((item) => item.id)) ?? []), ...(snapshot.c2?.ledger.attempts.flatMap((entry) => entry.evidence.map((item) => item.id)) ?? [])]);
 }
@@ -87,7 +87,7 @@ export function validateC2Decision(decision, snapshot) {
             if (route.fallback.route_id !== null && (!candidates.some((entry) => entry.route_id === route.fallback.route_id) || route.fallback.route_id === route.route_id))
                 throw new Error('Invalid C2 fallback route.');
         const distinct = new Set(candidates.map(routeFamilyFingerprint));
-        const knownAlternatives = snapshot.c2?.catalog.entries.filter((entry) => entry.status === 'observed' && entry.authorization.status === 'authorized') ?? [];
+        const knownAlternatives = snapshot.c2?.catalog.entries.filter((entry) => !entry.inventory_only && entry.status === 'observed' && entry.authorization.status === 'authorized') ?? [];
         if (distinct.size < 2 && (!raw.single_route_reason || (selected.resource.kind !== 'diagnostic' && knownAlternatives.length > 1)))
             throw new Error('C2 requires materially different candidates or a justified single route.');
         if (selected.resource.kind !== 'diagnostic' && knownAlternatives.length > 1 && new Set(candidates.filter((route) => route.resource.kind !== 'diagnostic' && route.status === 'observed').map(routeFamilyFingerprint)).size < 2)
@@ -102,7 +102,7 @@ export function validateC2Decision(decision, snapshot) {
         if (snapshot.c2) {
             const ledger = new RouteLedger({ task_id: snapshot.task_id, task_version: snapshot.task_version }, { data: snapshot.c2.ledger });
             const evidence = snapshot.c2.observations.filter((entry) => selected.evidence_ids.includes(entry.id));
-            const permission = ledger.evaluateAttempt(selected, { evidence_ids: selected.evidence_ids, evidence, ...(selected.discriminating_check ? { discriminating_check: selected.discriminating_check } : {}) });
+            const permission = ledger.evaluateAttempt(canonicalExecutionRoute(selected, snapshot.c2.catalog.entries), { evidence_ids: selected.evidence_ids, evidence, ...(selected.discriminating_check ? { discriminating_check: selected.discriminating_check } : {}) });
             if (!permission.allowed)
                 throw new Error(`C2 repeated route rejected: ${permission.reason}.`);
         }
@@ -115,6 +115,10 @@ export function validateC2Decision(decision, snapshot) {
             if (!context?.context_complete || !context.catalog.entries.length)
                 throw new Error('Missing route context requires inventory CONTINUE before WAIT_EXTERNAL.');
             for (const route of context.catalog.entries) {
+                // B already performed this read-only inventory operation. It proves
+                // readability, never relevance or unfinished work toward acceptance.
+                if (route.inventory_only && route.last_success && route.evidence.some((proof) => proof.source === 'probe' && proof.reference === `workspace-file:${route.resource.id}`) && decision.external?.attempted.some((reason) => reason.includes(route.route_id)))
+                    continue;
                 const attempt = context.ledger.attempts.findLast((attempt) => attempt.route.resource.kind === route.resource.kind && attempt.route.resource.id === route.resource.id && attempt.route.operation === route.operation);
                 if (!['forbidden', 'exhausted', 'blocked'].includes(route.status) || !route.evidence.length || (route.status !== 'forbidden' && !attempt) || !decision.external?.attempted.some((reason) => reason.includes(route.route_id)))
                     throw new Error(`WAIT_EXTERNAL requires explicit attempted/excluded route ${route.route_id} with evidence and reason.`);
@@ -126,10 +130,11 @@ export function validateC2Decision(decision, snapshot) {
 /** A safe executable direction; it makes no provider or authentication claim. */
 export function routeInventoryDecision(snapshot, reason = 'Required route facts are missing or the planner could not produce a valid decision.', message) {
     const action = message ?? 'Collect a bounded read-only route inventory for the remaining acceptance items: inspect authorized local artifacts, configured provider/API capabilities and prior failures; record actual authorization, network, authentication and retry evidence with source references. Do not retry a failed provider blindly. Report one discriminating check and concise proof before choosing an execution route.';
+    const evidenceIds = snapshot.c2?.observations.map((entry) => entry.id) ?? [];
     return { action: 'CONTINUE', reason, evidence_ids: [], next_message: action, external: null,
         diagnosis: { class: 'evidence_gap', statement: reason, evidence_ids: [] },
         route_plan: { plan_id: randomUUID(), candidates: [{
-                    route_id: 'route-inventory', resource: { kind: 'diagnostic', id: 'authorized-route-inventory' }, operation: 'inspect-authorized-route-facts', hypothesis_id: 'missing-route-facts', hypothesis: 'A bounded inspection can establish the next authorized route without assuming provider availability.', expected_evidence: ['Source-linked capability and blocker facts for the remaining acceptance items'], status: 'candidate', evidence_ids: [], actions: [action], expected_signal: 'A source-linked catalog or a concise discriminating observation.', risk: 'Inspection may find that an external condition is necessary; do not infer that before inspection.', fallback: { route_id: null, when: 'If inspection cannot establish a route, record the missing facts and the exact required observation.' }, discriminating_check: null,
+                    route_id: 'route-inventory', resource: { kind: 'diagnostic', id: 'authorized-route-inventory' }, operation: 'inspect-authorized-route-facts', hypothesis_id: 'missing-route-facts', hypothesis: 'A bounded inspection can establish the next authorized route without assuming provider availability.', expected_evidence: ['Source-linked capability and blocker facts for the remaining acceptance items'], status: 'candidate', evidence_ids: evidenceIds, actions: [action], expected_signal: 'A source-linked catalog or a concise discriminating observation.', risk: 'Inspection may find that an external condition is necessary; do not infer that before inspection.', fallback: { route_id: null, when: 'If inspection cannot establish a route, record the missing facts and the exact required observation.' }, discriminating_check: null,
                 }], selected_route_id: 'route-inventory', selection_reason: 'Gather missing facts before selecting a substantive route.', single_route_reason: 'One bounded inventory step is sufficient before route facts support distinct executable candidates.', success_condition: 'Record concise, independently traceable route facts.', stop_condition: 'Stop inspection after producing the bounded inventory or a precise missing-fact record; do not execute an unverified provider.' },
     };
 }

@@ -44,6 +44,9 @@ export interface MainSessionState extends State {
    * after B returned the hook result.
    */
   recovery_prompt?: {
+    plan_id?: string;
+    route_id?: string;
+    source_stop_attempt_id?: string;
     kind?: 'continuation' | 'native_rebind';
     delivery_id: string;
     source_turn_id: string | null;
@@ -126,6 +129,7 @@ export function armNativeRebind(state: MainSessionState, reason: string): void {
   state.run_generation = generation;
   state.input_epoch = (state.input_epoch ?? 0) + 1;
   state.pending_action = null;
+  delete state.route_execution;
   delete state.direction_context;
   delete state.last_stop;
   state.tool_starts = {};
@@ -257,7 +261,7 @@ export function resumeMainSession(statePath: string, taskPath?: string, simulate
     state.recovery_history = [...(state.recovery_history ?? []), { at: new Date().toISOString(), run_generation: state.run_generation, controller: state.controller, stop_transport: state.stop_transport, pending_action: state.pending_action }];
     state.task = task; state.task_version++; state.contract_sha256 = contractHash(task); state.run_generation = randomUUID();
     delete state.controller; delete state.last_stop; delete state.stop_transport; delete state.direction_context; delete state.active_checkpoint_at;
-    state.pending_action = null; state.tool_starts = {}; state.continuation_confirmed = false; state.input_epoch = (state.input_epoch ?? 0) + 1;
+    state.pending_action = null; delete state.route_execution; state.tool_starts = {}; state.continuation_confirmed = false; state.input_epoch = (state.input_epoch ?? 0) + 1;
     state.status = 'PAUSED'; state.phase = 'RECOVERING'; delete state.pause_reason;
     state.binding = { ...state.binding, status: 'PENDING_NATIVE_HOOK', challenge: randomUUID(), tool_use_id: null, operation: 'resume' };
     state.host.hook_effective = false; state.host.reason = 'Explicit resume awaits a fresh native receipt from the original main session.';
