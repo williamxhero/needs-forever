@@ -1,0 +1,333 @@
+{
+  "snapshot_id": "snapshot-5",
+  "task_id": "B0QI-historical-pattern-fixture",
+  "task_version": 1,
+  "worker_thread_id": "simulated-A",
+  "worker_turn_id": "simulated-stop",
+  "task": {
+    "schema_version": 1,
+    "task_id": "B0QI-historical-pattern-fixture",
+    "workspace": "C:\\Users\\will\\.codex\\worktrees\\spec49-ticket54\\needs-forever\\runs\\ticket54\\installed-acceptance\\workspace",
+    "goal": "Produce the two-row fixture coverage result despite a Tushare quota blocker.",
+    "acceptance": [
+      {
+        "id": "A1",
+        "text": "The independently checked local result contains exactly the required two dates."
+      }
+    ],
+    "authorization": "Use only this generated local fixture workspace; no network/provider access.",
+    "limits": {
+      "max_worker_turns": null,
+      "max_minutes": null
+    }
+  },
+  "evidence": [
+    {
+      "id": "local-probe-1",
+      "type": "commandExecution",
+      "value": {
+        "command": "[\"C:\\\\Program Files\\\\nodejs\\\\node.exe\",\"-e\",\"console.error(JSON.stringify({fixture_provider:'Tushare',status:429,error:'synthetic daily quota exhausted'}));process.exit(29)\"]",
+        "exitCode": 29,
+        "aggregatedOutput": "{\"fixture_provider\":\"Tushare\",\"status\":429,\"error\":\"synthetic daily quota exhausted\"}\n"
+      },
+      "source": {
+        "event_id": "local-probe-1",
+        "observed_at": "2026-11-10T04:50:42.356Z"
+      }
+    },
+    {
+      "id": "local-probe-5",
+      "type": "commandExecution",
+      "value": {
+        "command": "[\"C:\\\\Program Files\\\\nodejs\\\\node.exe\",\"-e\",\"const fs=require('node:fs');fs.unlinkSync('local-b0qi.csv');try{fs.readFileSync('local-b0qi.csv')}catch(e){console.error(JSON.stringify({path:'local-b0qi.csv',code:e.code,fault_injection:'generated fixture input removed'}));process.exit(2)}\"]",
+        "exitCode": 2,
+        "aggregatedOutput": "{\"path\":\"local-b0qi.csv\",\"code\":\"ENOENT\",\"fault_injection\":\"generated fixture input removed\"}\n"
+      },
+      "source": {
+        "event_id": "local-probe-5",
+        "observed_at": "2026-11-10T04:50:42.852Z"
+      }
+    }
+  ],
+  "evidence_complete": true,
+  "omissions": [],
+  "plan": {
+    "missing": "No current worker plan observed."
+  },
+  "recent_verification": {
+    "missing": "No independent verification result recorded yet."
+  },
+  "repeated_failure": {
+    "instruction": "Use ledger retry permissions; change hypothesis after repeated failures and gather discriminating evidence."
+  },
+  "c2": {
+    "mode": "enforce",
+    "context_complete": true,
+    "catalog": {
+      "schema_version": 1,
+      "scope": {
+        "task_id": "B0QI-historical-pattern-fixture",
+        "task_version": 1
+      },
+      "revision": 3,
+      "entries": [
+        {
+          "route_id": "tushare-quota-fixture",
+          "resource": {
+            "kind": "provider",
+            "id": "synthetic:Tushare"
+          },
+          "operation": "verify-fixture-coverage",
+          "status": "blocked",
+          "authorization": {
+            "status": "authorized",
+            "evidence_ids": [
+              "local-probe-1"
+            ]
+          },
+          "network": {
+            "required": false,
+            "available": null,
+            "evidence_ids": [
+              "local-probe-1"
+            ]
+          },
+          "authentication": {
+            "status": "not_required",
+            "evidence_ids": [
+              "local-probe-1"
+            ]
+          },
+          "rate_limit": {
+            "status": "limited",
+            "retry_at": null,
+            "evidence_ids": [
+              "local-probe-1"
+            ]
+          },
+          "last_success": null,
+          "capabilities": [
+            "fixture coverage"
+          ],
+          "evidence": [
+            {
+              "id": "local-probe-1",
+              "source": "event",
+              "reference": "local-probe-1",
+              "observed_at": "2026-11-10T04:50:42.356Z",
+              "task_version": 1,
+              "content_sha256": "a876e55dc55eb35cc546f13deb0f0b52af0aad391defb6ed02c53c0d81707fd3"
+            }
+          ]
+        },
+        {
+          "route_id": "local-b0qi-artifact",
+          "resource": {
+            "kind": "artifact",
+            "id": "local-b0qi.csv"
+          },
+          "operation": "verify-fixture-coverage",
+          "status": "exhausted",
+          "authorization": {
+            "status": "authorized",
+            "evidence_ids": [
+              "local-probe-5"
+            ]
+          },
+          "network": {
+            "required": false,
+            "available": null,
+            "evidence_ids": [
+              "local-probe-5"
+            ]
+          },
+          "authentication": {
+            "status": "not_required",
+            "evidence_ids": [
+              "local-probe-5"
+            ]
+          },
+          "rate_limit": {
+            "status": "clear",
+            "retry_at": null,
+            "evidence_ids": [
+              "local-probe-5"
+            ]
+          },
+          "last_success": null,
+          "capabilities": [
+            "fixture coverage"
+          ],
+          "evidence": [
+            {
+              "id": "local-probe-5",
+              "source": "event",
+              "reference": "local-probe-5",
+              "observed_at": "2026-11-10T04:50:42.852Z",
+              "task_version": 1,
+              "content_sha256": "321d70c1d1c32e7f5c20a5434b0251bea11183544c45a1ef2d2163fb250384ac"
+            }
+          ]
+        }
+      ]
+    },
+    "ledger": {
+      "schema_version": 1,
+      "scope": {
+        "task_id": "B0QI-historical-pattern-fixture",
+        "task_version": 1
+      },
+      "revision": 2,
+      "attempts": [
+        {
+          "attempt_id": "7494433d-a69e-4b4e-887e-ce3a1462a8b1",
+          "task_version": 1,
+          "at": "2026-11-10T04:50:42.512Z",
+          "route": {
+            "route_id": "tushare-quota-fixture",
+            "resource": {
+              "kind": "provider",
+              "id": "synthetic:Tushare"
+            },
+            "operation": "verify-fixture-coverage",
+            "hypothesis_id": "fixture-coverage",
+            "hypothesis": "The synthetic quota blocker excludes this fixture route.",
+            "expected_evidence": [
+              "Independently checked two-date fixture coverage"
+            ],
+            "status": "blocked",
+            "evidence_ids": [
+              "local-probe-1"
+            ],
+            "actions": [
+              "Inspect quota failure."
+            ],
+            "expected_signal": "A checked two-row result or a concrete missing-file failure.",
+            "risk": "Fixture data proves only the acceptance exercise, not historical market coverage.",
+            "fallback": {
+              "route_id": null,
+              "when": "If the local artifact fails, collect its exact failure and replan; do not blindly retry Tushare."
+            },
+            "discriminating_check": null
+          },
+          "fingerprint": "409d4b91089f64858927737e3625fd9844d5a96048714251e4cbbba38f9cfe83",
+          "family_fingerprint": "02d4df963d8d40a1d9877e88c89bf824b479ff396afbbd9e41a68dfbe1ed9bd4",
+          "attempt_number": 1,
+          "family_attempt_number": 1,
+          "evidence_ids": [
+            "local-probe-1"
+          ],
+          "evidence": [
+            {
+              "id": "local-probe-1",
+              "source": "event",
+              "reference": "local-probe-1",
+              "observed_at": "2026-11-10T04:50:42.356Z",
+              "task_version": 1,
+              "content_sha256": "a876e55dc55eb35cc546f13deb0f0b52af0aad391defb6ed02c53c0d81707fd3"
+            }
+          ],
+          "new_evidence_ids": [
+            "local-probe-1"
+          ],
+          "outcome": "blocked",
+          "failure_class": "provider_limit",
+          "retry_condition": null,
+          "discriminating_check": null,
+          "next_attempt": {
+            "allowed": false,
+            "reason": "change_hypothesis",
+            "fingerprint": "409d4b91089f64858927737e3625fd9844d5a96048714251e4cbbba38f9cfe83",
+            "family_fingerprint": "02d4df963d8d40a1d9877e88c89bf824b479ff396afbbd9e41a68dfbe1ed9bd4",
+            "attempt_count": 1,
+            "next_attempt": 2
+          }
+        },
+        {
+          "attempt_id": "7db81413-6863-4f75-bf1f-c841d380f7d5",
+          "task_version": 1,
+          "at": "2026-11-10T04:50:42.854Z",
+          "route": {
+            "route_id": "local-b0qi-artifact",
+            "resource": {
+              "kind": "artifact",
+              "id": "local-b0qi.csv"
+            },
+            "operation": "verify-fixture-coverage",
+            "hypothesis_id": "fixture-coverage",
+            "hypothesis": "The authorized local CSV can supply the two fixture dates.",
+            "expected_evidence": [
+              "Independently checked two-date fixture coverage"
+            ],
+            "status": "observed",
+            "evidence_ids": [
+              "local-probe-2"
+            ],
+            "actions": [
+              "Read the required local input."
+            ],
+            "expected_signal": "A checked two-row result or a concrete missing-file failure.",
+            "risk": "Fixture data proves only the acceptance exercise, not historical market coverage.",
+            "fallback": {
+              "route_id": null,
+              "when": "If the local artifact fails, collect its exact failure and replan; do not blindly retry Tushare."
+            },
+            "discriminating_check": null
+          },
+          "fingerprint": "0a799b462a152cbde3f6dc40315a3024247077be701199a4c980807892f39d36",
+          "family_fingerprint": "b342f493566af344a6ead73bfd60e32234d7e374946e215f60b5ee6835bdebe7",
+          "attempt_number": 1,
+          "family_attempt_number": 1,
+          "evidence_ids": [
+            "local-probe-5"
+          ],
+          "evidence": [
+            {
+              "id": "local-probe-5",
+              "source": "event",
+              "reference": "local-probe-5",
+              "observed_at": "2026-11-10T04:50:42.852Z",
+              "task_version": 1,
+              "content_sha256": "321d70c1d1c32e7f5c20a5434b0251bea11183544c45a1ef2d2163fb250384ac"
+            }
+          ],
+          "new_evidence_ids": [
+            "local-probe-5"
+          ],
+          "outcome": "exhausted",
+          "failure_class": "missing_local_input",
+          "retry_condition": null,
+          "discriminating_check": null,
+          "next_attempt": {
+            "allowed": false,
+            "reason": "route_exhausted",
+            "fingerprint": "0a799b462a152cbde3f6dc40315a3024247077be701199a4c980807892f39d36",
+            "family_fingerprint": "b342f493566af344a6ead73bfd60e32234d7e374946e215f60b5ee6835bdebe7",
+            "attempt_count": 1,
+            "next_attempt": 2
+          }
+        }
+      ]
+    },
+    "observations": [
+      {
+        "id": "local-probe-1",
+        "source": "event",
+        "reference": "local-probe-1",
+        "observed_at": "2026-11-10T04:50:42.356Z",
+        "task_version": 1,
+        "content_sha256": "a876e55dc55eb35cc546f13deb0f0b52af0aad391defb6ed02c53c0d81707fd3"
+      },
+      {
+        "id": "local-probe-5",
+        "source": "event",
+        "reference": "local-probe-5",
+        "observed_at": "2026-11-10T04:50:42.852Z",
+        "task_version": 1,
+        "content_sha256": "321d70c1d1c32e7f5c20a5434b0251bea11183544c45a1ef2d2163fb250384ac"
+      }
+    ],
+    "current_plan": null,
+    "instruction": "Facts come only from NF/B observations. Unknown capability/authentication/network/rate-limit facts require route inventory or a discriminating diagnostic. Never infer availability from resource names or model prose. Check ledger permission before choosing a route; equivalent wording is not progress."
+  }
+}

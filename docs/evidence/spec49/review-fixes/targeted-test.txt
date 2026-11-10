@@ -1,0 +1,45 @@
+✔ ordinary production CLI graduates an explicitly executed NF HTTP probe and sends the alternate once (3779.4326ms)
+✔ NF receipts project only actual HTTP facts, reject forged sources, and allow an evidenced no-route wait (14916.1698ms)
+✔ near-budget Stop proof becomes explicit incomplete inventory context while the task contract stays intact (28.8644ms)
+✔ missing route facts produce a concrete inventory CONTINUE without changing the task contract (1.2433ms)
+✔ Tushare limit evidence selects a real local artifact route and rejects a blind provider retry (15.3903ms)
+✔ route plans reject invented evidence, identities, availability, fallback and next-message drift (9.3627ms)
+✔ a third equivalent route without substantive new evidence is rejected despite renamed event IDs (9.3968ms)
+✔ terminal gates retain independent proof and require explicit route exhaustion for external wait (3.8142ms)
+✔ historical legacy CONTINUE remains readable while live default and explicit fixture modes are distinct (1.3807ms)
+✔ ordinary and native snapshots share source-linked route context, current plans and the 24k budget (89.7552ms)
+✔ proof digests ignore event/item labels but detect changed substantive content across Stop snapshots (3.1652ms)
+✔ multiple executable directions require two substantive candidates rather than a repeated inventory alternative (1.9676ms)
+✔ external waiting is accepted only with complete independently evidenced exhaustion of named routes (2.1164ms)
+✔ installed runtime exposes the same enforced C2 planning and historical-reading boundary (246.8796ms)
+✔ inventory fallback passes active validation with two observed alternatives and incomplete proof (37.0125ms)
+✔ completed generic file inventory does not claim relevant unfinished work or prevent an evidenced external wait (126.5698ms)
+✔ confirmed route result survives restart, ignores relabeled identical proof and prevents another equivalent send (246.6986ms)
+✔ a newer human epoch cannot attribute its admitted native Stop to an older route (2.127ms)
+✔ public inventory execution ingests independently probed nested artifacts across restart and selects a correlated alternate (229.8155ms)
+✔ inventory hints cannot forge facts, reuse historical/model evidence, expand scope or traverse symlink parents (18.5209ms)
+✔ workspace inventory honors original protected-data access exclusions and keeps ambiguous authorization unverified (64.3554ms)
+✔ current contract/version revalidation fences inherited Catalog facts at context and delivery admission (10.6302ms)
+✔ an observed artifact may be explicitly excluded after a correlated current failure without editing Catalog status (312.0738ms)
+✔ an independently observed reset time permits one evidenced transient route retry (191.2689ms)
+✔ ordinary selected route delivery and next Stop retain one persisted execution and factual local inventory (2683.661ms)
+✔ ordinary CLI ingests actual tool inventory before C selects and B delivers the executable alternate once (1873.8896ms)
+✔ ordinary invalid C outputs produce one bounded factual inventory fallback (9578.2683ms)
+✔ ordinary empty C outputs produce one bounded factual inventory fallback (6775.8394ms)
+✔ ordinary timeout C outputs produce one bounded factual inventory fallback (7339.1222ms)
+✔ ordinary authentication-prose C outputs produce one bounded factual inventory fallback (3145.6368ms)
+✔ Route Catalog preserves all capability states and independently observed facts after restart (41.3132ms)
+✔ Route Ledger persists outcomes and evidence deltas while semantic identity ignores prompt wording (14.3473ms)
+✔ new event IDs do not manufacture evidence progress and reused IDs can carry new substantive evidence (16.5698ms)
+✔ only a meaningful transient retry is allowed before a third no-progress family attempt is rejected (2.2218ms)
+✔ same-class failure with genuinely new evidence requires a discriminating check or changed hypothesis (2.2914ms)
+✔ unproven availability and blind transient retries cannot be recorded as observed capability or progress (1.9701ms)
+✔ task resume retains route history, reloads other writers, and fences older task versions (42.818ms)
+ℹ tests 37
+ℹ suites 0
+ℹ pass 37
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 32894.0753

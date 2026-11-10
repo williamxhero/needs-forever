@@ -17,7 +17,7 @@ function scenario(name: string, options: Record<string, unknown> = {}) {
   const state = resolve(directory, 'state.json');
   const config = resolve(directory, 'scenario.json');
   const fixture = resolve(directory, 'fixture.json');
-  writeFileSync(task, JSON.stringify({ schema_version: 1, task_id: name, workspace, goal: 'Produce the accepted local result.', acceptance: [{ id: 'A1', text: 'The result is checked.' }], authorization: 'Local workspace only; no network.' }));
+  writeFileSync(task, JSON.stringify({ schema_version: 1, task_id: name, workspace, ...(Array.isArray(options.judge_actions) && options.judge_actions.includes('WAIT_EXTERNAL') ? { c2: { mode: 'legacy' } } : {}), goal: 'Produce the accepted local result.', acceptance: [{ id: 'A1', text: 'The result is checked.' }], authorization: 'Local workspace only; no network.' }));
   writeFileSync(config, JSON.stringify({ trace, state_file: state, real_judge: true, ...options }));
   writeFileSync(fixture, JSON.stringify({ app_server_argv: [process.execPath, resolve('test/fixtures/app-server.mjs'), config], real_judge: true }));
   return { directory, workspace, task, state, trace, config, fixture, run() { return spawnSync(process.execPath, [resolve('dist/src/cli.js'), 'start', '--task', task, '--state', state, '--test-fixture', fixture], { encoding: 'utf8', timeout: 15000 }); }, events() { return jsonl(resolve(directory, 'events.jsonl')); }, protocol() { return jsonl(trace); }, snapshots() { return readdirSync(resolve(directory, 'snapshots')).map((name) => json(resolve(directory, 'snapshots', name))); } };
@@ -113,6 +113,7 @@ test('bounded snapshots preserve the contract, real sources, recent instructions
     { type: 'plan', id: 'plan', text: 'Check credential then finish remaining A1.' },
   ] });
   const task = json(fixture.task);
+  task.c2 = { mode: 'legacy' }; // This fixture exercises snapshot budgeting, not repeated-route planning.
   task.goal += ' Complete original stages. '.repeat(80);
   task.authorization += ' Never request external permissions.';
   task.limits = { max_worker_turns: 3, max_minutes: null };

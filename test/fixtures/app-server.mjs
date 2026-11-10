@@ -2,6 +2,7 @@ import { createInterface } from 'node:readline';
 import { appendFileSync, readFileSync, writeFileSync, unlinkSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { routeInventoryDecision } from '../../dist/src/planning.js';
 
 const scenario = JSON.parse(readFileSync(process.argv[2], 'utf8'));
 const trace = (value) => appendFileSync(scenario.trace, `${JSON.stringify(value)}\n`);
@@ -90,13 +91,30 @@ for await (const line of lines) {
       if (scenario.judge_disconnect) process.exit(0);
       const snapshot = JSON.parse(message.params.input[0].text);
       const action = scenario.judge_actions?.[judges - 1] ?? 'DONE';
-      const decision = { action, reason: 'A1 evidence checked.', evidence_ids: snapshot.evidence.map((entry) => entry.id), next_message: action === 'CONTINUE' ? 'Check the remaining acceptance result.' : '', external: action === 'WAIT_EXTERNAL' ? { missing: 'Required credential.', attempted: ['Checked local credentials.'], why_no_other_work: 'The only remaining item requires the credential.', resume_when: 'User supplies credential.' } : null };
+      const decision = action === 'CONTINUE' && snapshot.c2?.mode !== 'legacy' ? routeInventoryDecision(snapshot, 'A1 evidence checked.') : { action, reason: 'A1 evidence checked.', evidence_ids: snapshot.evidence.map((entry) => entry.id), next_message: action === 'CONTINUE' ? 'Check the remaining acceptance result.' : '', external: action === 'WAIT_EXTERNAL' ? { missing: 'Required credential.', attempted: ['Checked local credentials.'], why_no_other_work: 'The only remaining item requires the credential.', resume_when: 'User supplies credential.' } : null };
+      const artifact = scenario.judge_select_observed_artifact && snapshot.c2?.catalog.entries.find((entry) => !entry.inventory_only && entry.resource.kind === 'artifact' && entry.status === 'observed');
+      if (action === 'CONTINUE' && artifact && decision.route_plan) {
+        const route = decision.route_plan.candidates[0];
+        Object.assign(route, { route_id: artifact.route_id, resource: artifact.resource, operation: artifact.operation, status: 'observed', evidence_ids: artifact.evidence.map((proof) => proof.id), actions: [`Read ${artifact.resource.id} and verify the required result.`] });
+        decision.route_plan.selected_route_id = artifact.route_id;
+        decision.route_plan.selection_reason = 'B independently observed the source-linked local alternative.';
+        decision.route_plan.single_route_reason = 'Only this task-relevant artifact is independently observed; other providers remain unverified.';
+        decision.next_message = route.actions.join('\n');
+      }
+      const api = scenario.judge_select_observed_api && snapshot.c2?.catalog.entries.find((entry) => entry.resource.kind === 'api' && entry.status === 'observed');
+      if (action === 'CONTINUE' && api && decision.route_plan) {
+        const route = decision.route_plan.candidates[0];
+        Object.assign(route, { route_id: api.route_id, resource: api.resource, operation: api.operation, status: 'observed', evidence_ids: api.evidence.map((proof) => proof.id), actions: [`Use the verified read-only API ${api.resource.id} and verify the required result.`] });
+        decision.route_plan.selected_route_id = api.route_id;
+        decision.route_plan.single_route_reason = 'This is the sole observed API alternative; configured names prove no other provider.';
+        decision.next_message = route.actions.join('\n');
+      }
       const judgeOutput = scenario.judge_outputs?.[judges - 1] ?? scenario.judge_output;
       const judgeItem = { type: 'agentMessage', id: 'judge-output', text: judgeOutput ?? JSON.stringify(decision), phase: 'final_answer' };
       if (scenario.wrong_judge_turn) send({ method: 'turn/completed', params: { threadId: message.params.threadId, turn: { id: 'unrelated-judge-turn', status: 'completed', items: [{ ...judgeItem, text: '{"action":"DONE"}' }] } } });
       if (scenario.stream_items) send({ method: 'item/completed', params: { threadId: message.params.threadId, turnId, item: judgeItem } });
       const finishJudge = () => send({ method: 'turn/completed', params: { threadId: message.params.threadId, turn: { id: turnId, status: 'completed', items: scenario.stream_items ? [] : [judgeItem] } } });
-      const holdThisJudge = scenario.hold_judge || (scenario.hold_judge_once && judges === 1);
+      const holdThisJudge = scenario.hold_judge || (scenario.hold_judge_once && judges === 1) || judges <= (scenario.hold_judge_until ?? 0);
       if (!holdThisJudge) { if (scenario.judge_delay_ms) setTimeout(finishJudge, scenario.judge_delay_ms); else finishJudge(); }
       continue;
     }
@@ -106,6 +124,12 @@ for await (const line of lines) {
       const result = spawnSync(argv[0], argv.slice(1), { cwd: workspace, windowsHide: true, encoding: 'utf8', timeout: 5000 });
       return { type: 'commandExecution', id: `worker-command-${turns}-${index}`, command: JSON.stringify(argv), status: result.status === 0 ? 'completed' : 'failed', exitCode: result.status, aggregatedOutput: `${result.stdout ?? ''}${result.stderr ?? ''}` };
     });
+    for (const url of scenario.worker_probe_urls?.[turns - 1] ?? []) {
+      const state = JSON.parse(readFileSync(scenario.state_file, 'utf8'));
+      const argv = [...(state.route_probe?.argv_prefix ?? [process.execPath, resolve('dist/src/cli.js'), 'route-probe', '--state', scenario.state_file]), '--url', url];
+      const result = spawnSync(argv[0], argv.slice(1), { cwd: workspace, windowsHide: true, encoding: 'utf8', timeout: 5000 });
+      commandItems.push({ type: 'commandExecution', id: `http-probe-${turns}`, command: JSON.stringify(argv), status: result.status === 0 ? 'completed' : 'failed', exitCode: result.status, aggregatedOutput: `${result.stdout ?? ''}${result.stderr ?? ''}` });
+    }
     for (const change of scenario.worker_changes?.[turns - 1] ?? []) {
       const file = resolve(message.params.cwd ?? JSON.parse(readFileSync(scenario.state_file, 'utf8')).task.workspace, change.path);
       if (change.remove) unlinkSync(file);
@@ -129,7 +153,7 @@ for await (const line of lines) {
       // A same-thread unrelated started/input pair must not confirm this delivery.
       send({ method: 'turn/started', params: { threadId: message.params.threadId, turn: { id: 'unrelated-turn', status: 'inProgress', items: [] } } });
       send({ method: 'item/started', params: { threadId: message.params.threadId, turnId: 'unrelated-turn', item: { type: 'userMessage', id: 'old-input', clientId: 'obsolete-delivery', content: [] } } });
-      if (!scenario.real_judge) send({ method: 'turn/completed', params: { threadId: message.params.threadId, turn: { id: 'first-turn-from-server', status: 'completed', items: [] } } });
+      if (turns > 1 && !scenario.real_judge) send({ method: 'turn/completed', params: { threadId: message.params.threadId, turn: { id: 'first-turn-from-server', status: 'completed', items: [] } } });
     }
     if (!scenario.suppress_worker_confirmation) send({ method: 'turn/started', params: { threadId: message.params.threadId, turn: { id: turnId, status: 'inProgress', items: [] } } });
     if (scenario.thread_closed_after_ms !== undefined) setTimeout(() => send({ method: 'thread/closed', params: { threadId: message.params.threadId } }), scenario.thread_closed_after_ms);

@@ -15,13 +15,21 @@ function fixture(name: string, options: Record<string, unknown>) {
   const config = resolve(directory, 'scenario.json');
   const fixtureFile = resolve(directory, 'fixture.json');
   const trace = resolve(directory, 'protocol.jsonl');
-  writeFileSync(task, JSON.stringify({ schema_version: 1, task_id: name, workspace, goal: 'Complete the accepted result.', acceptance: [{ id: 'A1', text: 'The result is checked.' }], authorization: 'Local workspace only.', limits: { max_worker_turns: null, max_minutes: null } }));
-  writeFileSync(config, JSON.stringify({ trace, state_file: state, ...options }));
+  writeFileSync(task, JSON.stringify({ schema_version: 1, task_id: name, workspace, c2: { mode: 'legacy' }, goal: 'Complete the accepted result.', acceptance: [{ id: 'A1', text: 'The result is checked.' }], authorization: 'Local workspace only.', limits: { max_worker_turns: null, max_minutes: null } }));
+  writeFileSync(resolve(workspace, 'result.json'), '{"accepted":true}\n');
+  const check = [process.execPath, '-e', "console.log(require('node:fs').readFileSync('result.json','utf8'))"];
+  const checked = spawnSync(check[0]!, check.slice(1), { cwd: workspace, encoding: 'utf8' });
+  assert.equal(checked.status, 0);
+  const proof = { type: 'commandExecution', id: 'result-check', command: JSON.stringify(check), status: 'completed', exitCode: checked.status, aggregatedOutput: checked.stdout };
+  const scenario: any = { trace, state_file: state, worker_commands: Array.from({ length: 16 }, () => [check]), ...options };
+  for (const key of ['resume_turns', 'reconcile_turns']) for (const turn of scenario[key] ?? []) if (turn.status === 'completed' && !turn.items?.length) turn.items = [proof];
+  for (const page of scenario.turn_pages ?? []) for (const turn of page.data ?? []) if (turn.status === 'completed' && !turn.items?.length) turn.items = [proof];
+  writeFileSync(config, JSON.stringify(scenario));
   writeFileSync(fixtureFile, JSON.stringify({ app_server_argv: [process.execPath, resolve('test/fixtures/app-server.mjs'), config], judge: { action: 'DONE', reason: 'Accepted fixture result.', evidence_ids: ['E1'], next_message: '', external: null }, recovery_enabled: true, recovery_delays_ms: [0, 0, 0], ...options }));
-  return { task, state, fixtureFile, trace, directory, run() { return spawnSync(process.execPath, [resolve('dist/src/cli.js'), 'start', '--task', task, '--state', state, '--test-fixture', fixtureFile], { encoding: 'utf8', timeout: 5000 }); } };
+  return { task, state, fixtureFile, trace, directory, run(timeout = 5000) { return spawnSync(process.execPath, [resolve('dist/src/cli.js'), 'start', '--task', task, '--state', state, '--test-fixture', fixtureFile], { encoding: 'utf8', timeout }); } };
 }
 
-test('recoverable judge failures retry forever with visible classification and no attempt limit', () => {
+test('recoverable judge failures preserve visible classification and retry before the bounded output fallback', () => {
   const run = fixture('retry-sequence', { judge_failures: ['Judge timeout.', 'Unexpected token } in JSON'] });
   const result = run.run();
   assert.equal(result.status, 0, result.stderr);
@@ -253,21 +261,23 @@ test('real judge timeout closes the old app-server, reconnects the worker and re
   assert.ok(events().some((entry) => entry.type === 'connection_reconnected'));
 });
 
-test('three identical judge failures appear in the next judge snapshot as an investigation instruction', () => {
+test('three identical judge failures produce one bounded investigation direction before a new worker Stop', () => {
   const invalid = '{"action":"DONE"}';
   const run = fixture('repeated-judge-failures', {
     real_judge: true,
     tool_items: [{ type: 'commandExecution', id: 'check', command: 'check', status: 'completed', exitCode: 0, aggregatedOutput: 'A1 passes.' }],
     judge_outputs: [invalid, invalid, invalid, JSON.stringify({ action: 'DONE', reason: 'Accepted after investigation.', evidence_ids: ['E1'], next_message: '', external: null })],
   });
-  const result = run.run();
+  // Four real judge lifecycles plus fallback/worker execution exceed the
+  // ordinary single-judgment watchdog on a loaded Windows host.
+  const result = run.run(20_000);
   assert.equal(result.status, 0, result.stderr);
   const judgeInputs = readFileSync(run.trace, 'utf8').trim().split('\n').map((line) => JSON.parse(line))
     .filter((entry) => entry.message?.method === 'turn/start' && entry.message.params.threadId.startsWith('judge-'))
     .map((entry) => JSON.parse(entry.message.params.input[0].text));
-  const investigated = judgeInputs.find((input) => input.repeated_failure?.investigate === true);
-  assert.ok(investigated, 'No judge snapshot carried the repeated-failure gate.');
-  assert.match(investigated.repeated_failure.instruction, /different hypothesis|distinguishing check|different route/i);
+  const events = readFileSync(resolve(run.directory, 'events.jsonl'), 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+  assert.equal(events.filter((event) => event.type === 'judge_inventory_fallback').length, 1);
+  assert.equal(judgeInputs.length, 4);
 });
 
 test('transient initial app-server startup failure uses the same recovery backoff before creating the worker', () => {

@@ -1,0 +1,79 @@
+{
+  "candidate_source_commit": "7e0c9bad744ed20e28f730166a5fa6d761b7ca10",
+  "release_test_commit": "a26213f3d60bcd845689babb913370e04f2b2e1a",
+  "integration_ancestor": "d749157",
+  "module_count": 35,
+  "final_gate": {
+    "command": "node --test --test-concurrency=1 \"dist/test/*.test.js\" (complete npm test selection after its unchanged build)",
+    "tests": 203,
+    "pass": 203,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0,
+    "duration_ms": 478468.1591
+  },
+  "default_concurrency_attempts": [
+    {
+      "command": "npm test (default test-concurrency=2)",
+      "evidence": "full-test-before-fixture-repairs.txt",
+      "tests": 203,
+      "pass": 201,
+      "fail": 2,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "duration_ms": 363124.3481
+    },
+    {
+      "command": "npm test (default test-concurrency=2)",
+      "evidence": "full-test-default-concurrency.txt",
+      "tests": 203,
+      "pass": 198,
+      "fail": 5,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "duration_ms": 452097.7086
+    }
+  ],
+  "test_only_repairs": [
+    "Existing recovery_prompt_delay_ms=0 fixture for automatic rebind delivery.",
+    "20-second subprocess watchdog only for the four-judgment recovery scenario."
+  ],
+  "production_tree_equal": true,
+  "current_package_matches_installed_hashes": true,
+  "package_file_count": 48,
+  "installed_acceptance": {
+    "result": "passed",
+    "kind": "simulated-planner-actual-local-execution"
+  },
+  "installed_observation_loop": {
+    "result": "passed",
+    "kind": "simulated-planner-actual-local-tools-and-local-HTTP"
+  },
+  "historical_replay": {
+    "result": "passed",
+    "kind": "actual-live-C-historical-Stop-replay",
+    "native_live_Stop": false,
+    "original_A_contacted": false,
+    "original_source_unchanged": true
+  },
+  "limitation": "Default concurrency=2 exposed existing Windows fixture wait-window contention. Both failed full runs and exact assertions are retained; the complete final release gate used one test-file process at a time. Product delays/timeouts, task permission, and all behavioral assertions are unchanged. Production deployment, original B0QI completion and a new native live Stop remain coordinating-agent gates.",
+  "fixture_cleanup": {
+    "before_serial_stopped": 8,
+    "after_serial_stopped": 1,
+    "unrelated_or_pre_spec_excluded": 22,
+    "protected_production_pids": [
+      46016,
+      54416,
+      66412
+    ],
+    "receipts": [
+      "fixture-process-cleanup.json",
+      "fixture-process-cleanup-after-serial.json"
+    ]
+  },
+  "final_original_source_sha256": "e2477f70746dc3809b53224eb19db4d5159a818e178af6d4c7951c91b9abf30d",
+  "baseline_diff_check": "passed against 921708f637a1588fa135cb72ddda8cbbddc51cff"
+}

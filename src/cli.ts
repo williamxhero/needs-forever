@@ -11,10 +11,16 @@ import { startWebServer } from './web.js';
 import { record, text } from './types.js';
 import type { Decision, State, Task } from './types.js';
 import { createRecoveryPlan } from './recovery-coordinator.js';
+import { executeHttpRouteProbe } from './http-route-probe.js';
 
 function readJson(path: string): unknown { return JSON.parse(readFileSync(path, 'utf8')); }
 async function main(): Promise<void> {
   const [command, ...args] = process.argv.slice(2);
+  if (command === 'route-probe') {
+    if (args.length !== 4 || args[0] !== '--state' || args[2] !== '--url' || !args[1] || !args[3]) throw new Error('Usage: route-probe --state FILE --url URL. Invoke only within the original task authorization.');
+    console.log(JSON.stringify(await executeHttpRouteProbe(args[1], args[3])));
+    return;
+  }
   if (command === 'web') {
     const flags = new Map<string, string>();
     for (let index = 0; index < args.length; index += 2) {
@@ -85,6 +91,7 @@ async function main(): Promise<void> {
       if (state.mode !== (fixture ? 'simulated' : 'live')) throw new Error('Resume must preserve simulated/live mode.');
       state.task = task;
       state.task_version++;
+      delete state.route_execution;
       state.status = 'ACTIVE';
       delete state.pause_reason;
       state.retry = { kind: null, attempt: 0, next_at: null };

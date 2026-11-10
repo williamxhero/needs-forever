@@ -5,6 +5,7 @@ import { cpSync, mkdirSync, readFileSync, writeFileSync, existsSync } from 'node
 import { resolve, join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
+import { transportProof } from './fixtures/transport-proof.js';
 
 const source = resolve('plugins/needs-forever');
 function json(path: string): any { return JSON.parse(readFileSync(path, 'utf8')); }
@@ -19,7 +20,7 @@ function setup(name: string, options: Record<string, unknown> = {}) {
   const fixture = join(directory, 'fixture.json');
   const scenario = join(directory, 'scenario.json');
   const trace = join(directory, 'protocol.jsonl');
-  writeFileSync(task, JSON.stringify({ schema_version: 1, task_id: name, workspace, goal: 'Complete the local result.', acceptance: [{ id: 'A1', text: 'The result is checked.' }], authorization: 'Only this local workspace.', limits: { max_worker_turns: null, max_minutes: null } }));
+  writeFileSync(task, JSON.stringify({ schema_version: 1, task_id: name, workspace, goal: 'Complete the local result.', acceptance: [{ id: 'A1', text: 'The result is checked.' }], authorization: 'Only this local workspace.', c2: { mode: 'legacy' }, limits: { max_worker_turns: null, max_minutes: null } }));
   writeFileSync(scenario, JSON.stringify({ trace, state_file: state, ...options }));
   writeFileSync(fixture, JSON.stringify({ app_server_argv: [process.execPath, resolve('test/fixtures/app-server.mjs'), scenario], judge: { action: 'DONE', reason: 'Fixture acceptance.', evidence_ids: ['E1'], next_message: '', external: null }, recovery_enabled: true, recovery_delays_ms: [0] }));
   const control = join(plugin, 'scripts/control.mjs');
@@ -74,7 +75,7 @@ test('installed copy starts in background, pauses durably, resumes the original 
     await until(() => !existsSync(`${fixture.state}.plugin.lock`), 'Plugin lease did not release.');
     const scenario = json(fixture.scenario);
     scenario.hold_worker = false;
-    scenario.resume_turns = [{ id: json(fixture.state).active_worker_turn_id, status: 'completed', items: [] }];
+    scenario.resume_turns = [{ id: json(fixture.state).active_worker_turn_id, status: 'completed', items: [transportProof(fixture.workspace)] }];
     writeFileSync(fixture.scenario, JSON.stringify(scenario));
     const resumed = fixture.resume();
     assert.equal(resumed.status, 0, resumed.stderr);

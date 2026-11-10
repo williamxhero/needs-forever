@@ -3,8 +3,45 @@ import assert from 'node:assert/strict';
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { TaskCatalog, startWebServer } from '../src/web.js';
+import type { Decision } from '../src/types.js';
+import { openWebClient } from './fixtures/web-client.js';
+
+function routeDecision(): Decision {
+  return {
+    action: 'CONTINUE', reason: '限频后检查本地产物。', evidence_ids: ['E1'], next_message: '核对本地覆盖率。', external: null,
+    diagnosis: { class: 'provider_limit', statement: 'Tushare 触发限频。', evidence_ids: ['E1'] },
+    route_plan: {
+      plan_id: 'plan-local-001', selected_route_id: 'local-bars', selection_reason: '本地文件有独立观测。', single_route_reason: null,
+      candidates: [
+        {
+          route_id: 'local-bars', resource: { kind: 'artifact', id: 'daily.parquet' }, operation: '检查本地产物覆盖率',
+          hypothesis_id: 'local-history', hypothesis: '本地产物可能覆盖所需交易日。', expected_evidence: ['覆盖率报告'],
+          status: 'observed', evidence_ids: ['E2'], actions: ['核对本地覆盖率。'], expected_signal: '列出缺失交易日。', risk: '历史范围可能不足。',
+          fallback: { route_id: 'alternate-api', when: '覆盖率不足。' }, discriminating_check: null,
+        },
+        {
+          route_id: 'alternate-api', resource: { kind: 'provider', id: 'unprobed-provider' }, operation: '探测备用来源',
+          hypothesis_id: 'alternate-source', hypothesis: '备用来源可能支持所需历史。', expected_evidence: ['只读探测结果'],
+          status: 'candidate', evidence_ids: [], actions: ['读取授权范围内的能力信息。'], expected_signal: '记录支持范围与认证要求。', risk: '认证与限额未知。',
+          fallback: { route_id: null, when: '无独立证据时重新规划。' }, discriminating_check: null,
+        },
+      ],
+      success_condition: '独立覆盖率报告可以复核。', stop_condition: '文件不可读时停止本路线。',
+    },
+  };
+}
+
+function writeRouteRound(directory: string, value: Decision = routeDecision()): void {
+  const events = [
+    { at: '2026-11-01T08:00:00.000Z', type: 'main_session_stop_observed', turn_id: 'turn-001', stop_attempt_id: 'stop-001', stop_reason: 'provider 429' },
+    { at: '2026-11-01T08:00:01.000Z', type: 'decision', role: 'judge', stop_attempt_id: 'stop-001', decision: value },
+    { at: '2026-11-01T08:00:02.000Z', type: 'stop_hook_direction_returned', stop_attempt_id: 'stop-001' },
+  ];
+  writeFileSync(resolve(directory, 'events.jsonl'), events.map((event) => JSON.stringify(event)).join('\n') + '\n');
+}
 
 function fixture() {
+  mkdirSync(resolve('runs'), { recursive: true });
   const workspace = mkdtempSync(resolve('runs', 'web-test-'));
   const directory = resolve(workspace, '.codex-supervisor', 'demo-001');
   mkdirSync(resolve(directory, 'snapshots'), { recursive: true });
@@ -85,6 +122,178 @@ test('TaskCatalog presents persisted state and groups events into worker rounds'
   } finally {
     data.cleanup();
   }
+});
+
+test('NFG API projects the complete selected route audit without rewriting historical decisions', async () => {
+  const data = fixture();
+  writeRouteRound(data.directory);
+  const eventsPath = resolve(data.directory, 'events.jsonl');
+  const savedEvents = readFileSync(eventsPath, 'utf8');
+  const running = await startWebServer({ workspace: data.workspace, port: 0 });
+  try {
+    const response = await fetch(`${running.url}api/tasks/demo-001`);
+    assert.equal(response.status, 200);
+    const record = await response.json();
+    const audit = record.rounds[0].routeAudit;
+    assert.equal(audit.kind, 'c2');
+    assert.equal(audit.planId, 'plan-local-001');
+    assert.equal(audit.selectedRouteId, 'local-bars');
+    assert.equal(audit.diagnosis.statement, 'Tushare 触发限频。');
+    assert.equal(audit.selectionReason, '本地文件有独立观测。');
+    assert.equal(audit.candidates[0].title, '检查本地产物覆盖率');
+    assert.equal(audit.candidates[0].status, 'observed');
+    assert.deepEqual(audit.candidates[0].evidenceIds, ['E2']);
+    assert.equal(audit.candidates[0].risk, '历史范围可能不足。');
+    assert.deepEqual(audit.candidates[0].fallback, { routeId: 'alternate-api', when: '覆盖率不足。' });
+    assert.equal(audit.candidates[1].status, 'candidate');
+    assert.equal(audit.successCondition, '独立覆盖率报告可以复核。');
+    assert.equal(audit.stopCondition, '文件不可读时停止本路线。');
+    assert.equal(readFileSync(eventsPath, 'utf8'), savedEvents);
+  } finally { await running.close(); data.cleanup(); }
+});
+
+test('served NFG client shows compact routes and expands candidate evidence without claiming availability', async () => {
+  const data = fixture();
+  writeRouteRound(data.directory);
+  const running = await startWebServer({ workspace: data.workspace, port: 0 });
+  try {
+    const client = await openWebClient(`${running.url}tasks/demo-001`);
+    const timeline = client.document.querySelector('#timeline')!.innerHTML;
+    assert.equal((timeline.match(/class="flow-line"/g) ?? []).length, 3);
+    assert.match(timeline, /WORKER 发出：[\s\S]*SUPERVISOR 判断：[\s\S]*WORKER 收到：/);
+    const route = client.document.querySelector('.route-block');
+    assert.ok(route, 'selected route is rendered beneath SUPERVISOR');
+    assert.match(route.textContent.split('\n')[0]!, /local-bars.*检查本地产物覆盖率.*Tushare 触发限频/);
+    assert.equal(route.getAttribute('aria-expanded'), 'false');
+    assert.equal(route.classList.contains('expanded'), false);
+    route.click();
+    assert.equal(route.classList.contains('expanded'), true);
+    assert.equal(route.getAttribute('aria-expanded'), 'true');
+    assert.match(route.textContent, /alternate-api.*候选（未验证）/);
+    assert.match(route.textContent, /证据：E2/);
+    assert.match(route.textContent, /风险：历史范围可能不足/);
+    assert.match(route.textContent, /fallback：alternate-api.*覆盖率不足/);
+    assert.match(route.textContent, /成功条件：独立覆盖率报告可以复核/);
+    assert.match(route.textContent, /停止条件：文件不可读时停止本路线/);
+    assert.doesNotMatch(route.textContent, /可用 provider|provider 可用/);
+    assert.equal(client.document.querySelectorAll('[data-action]').length, 4);
+    client.document.querySelector('[data-action="copy"]')!.click();
+    assert.match(client.copied[0]!, /^NF:\/\/[0-9A-Z]{4}$/);
+    assert.equal(client.document.querySelector('#task-title')!.textContent, '演示任务标题');
+    assert.match(client.document.querySelector('#task-status')!.textContent, /^正在推进 /);
+  } finally { await running.close(); data.cleanup(); }
+});
+
+test('legacy HTTP history displays a virtual unverified single route and keeps its stored decision intact', async () => {
+  const data = fixture();
+  const legacy: Decision = { action: 'CONTINUE', reason: '还有一个阶段。', evidence_ids: ['E1'], next_message: '继续第二阶段。', external: null };
+  writeRouteRound(data.directory, legacy);
+  const eventsPath = resolve(data.directory, 'events.jsonl');
+  const before = readFileSync(eventsPath, 'utf8');
+  const running = await startWebServer({ workspace: data.workspace, port: 0 });
+  try {
+    const record = await (await fetch(`${running.url}api/tasks/demo-001`)).json();
+    assert.equal(record.rounds[0].routeAudit.kind, 'legacy');
+    assert.equal(record.rounds[0].routeAudit.candidates.length, 1);
+    assert.equal(record.rounds[0].routeAudit.candidates[0].status, 'unknown');
+    assert.deepEqual(record.rounds[0].result.details.decision, legacy);
+    const client = await openWebClient(`${running.url}tasks/demo-001`);
+    const route = client.document.querySelector('.route-block')!;
+    assert.ok(route);
+    assert.match(route.textContent, /旧版虚拟单路线/);
+    assert.match(route.textContent, /未知（未验证）/);
+    assert.match(route.textContent, /动作：继续第二阶段/);
+    assert.match(client.document.querySelector('#timeline')!.innerHTML, /继续第二阶段/);
+    assert.doesNotMatch(client.document.querySelector('#timeline')!.innerHTML, /undefined|\[object Object\]/);
+    await client.refresh();
+    assert.equal(readFileSync(eventsPath, 'utf8'), before);
+  } finally { await running.close(); data.cleanup(); }
+});
+
+test('NFG timer refresh preserves expansion by task, Stop and plan after round insertion and isolates a replacement plan', async () => {
+  const data = fixture();
+  writeRouteRound(data.directory);
+  const eventsPath = resolve(data.directory, 'events.jsonl');
+  const running = await startWebServer({ workspace: data.workspace, port: 0 });
+  try {
+    const client = await openWebClient(`${running.url}tasks/demo-001`);
+    const route = client.document.querySelector('.route-block')!;
+    const oldKey = route.dataset.collapsibleKey!;
+    const prompt = client.document.querySelector('.prompt-block')!;
+    const stop = client.document.querySelector('.stop-reason-block')!;
+    route.click(); prompt.click(); stop.click();
+    const prior = [
+      { at: '2026-11-01T07:00:00.000Z', type: 'main_session_stop_observed', stop_attempt_id: 'stop-earlier' },
+      { at: '2026-11-01T07:00:01.000Z', type: 'decision', role: 'judge', stop_attempt_id: 'stop-earlier', decision: routeDecision() },
+    ];
+    const history = prior.map((event) => JSON.stringify(event)).join('\n') + '\n' + readFileSync(eventsPath, 'utf8');
+    writeFileSync(eventsPath, history);
+    await client.refresh();
+    const routes = client.document.querySelectorAll('.route-block');
+    assert.equal(routes.length, 2);
+    assert.equal(routes[0]!.classList.contains('expanded'), false, 'same plan on another Stop stays collapsed');
+    assert.equal(routes[1]!.dataset.collapsibleKey, oldKey);
+    assert.equal(routes[1]!.classList.contains('expanded'), true, 'original route remains expanded after index changes');
+    assert.equal(routes[1]!.getAttribute('aria-expanded'), 'true');
+    for (const key of [prompt.dataset.collapsibleKey, stop.dataset.collapsibleKey]) {
+      assert.equal(client.document.querySelectorAll('[data-collapsible]').find((node) => node.dataset.collapsibleKey === key)?.classList.contains('expanded'), true);
+    }
+
+    client.document.querySelector('[data-action="refresh"]')!.click();
+    const before = client.document.querySelector('#timeline')!.innerHTML;
+    writeFileSync(eventsPath, history.replaceAll('plan-local-001', 'plan-local-002'));
+    await client.refresh();
+    assert.equal(client.document.querySelector('#timeline')!.innerHTML, before, 'disabled auto refresh keeps current view');
+    client.document.querySelector('[data-action="refresh"]')!.click();
+    await client.refresh();
+    assert.ok(client.document.querySelectorAll('.route-block').every((node) => !node.classList.contains('expanded')), 'replacement plans start collapsed');
+    assert.equal(client.document.querySelectorAll('.prompt-block').find((node) => node.dataset.collapsibleKey === prompt.dataset.collapsibleKey)?.classList.contains('expanded'), true);
+  } finally { await running.close(); data.cleanup(); }
+});
+
+test('served NFG escapes model text and route keys while its complete inline script executes', async () => {
+  const data = fixture();
+  const attack = '\"><img src=x onerror="globalThis.pwned=true"></span><script>globalThis.pwned=true</script>&\'`\\\n\u2028';
+  const value = routeDecision();
+  const plan = value.route_plan!;
+  value.reason = 'reason' + attack;
+  value.next_message = 'prompt' + attack;
+  value.diagnosis!.statement = 'diagnosis' + attack;
+  value.diagnosis!.evidence_ids = ['diagnosis-proof' + attack];
+  plan.plan_id = 'plan' + attack;
+  plan.selected_route_id = plan.candidates[0]!.route_id = 'route' + attack;
+  plan.selection_reason = 'selection' + attack;
+  plan.single_route_reason = 'single' + attack;
+  plan.success_condition = 'success' + attack;
+  plan.stop_condition = 'stop' + attack;
+  const candidate = plan.candidates[0]!;
+  candidate.operation = 'title' + attack;
+  candidate.resource.id = 'resource' + attack;
+  candidate.hypothesis = 'hypothesis' + attack;
+  candidate.evidence_ids = ['proof' + attack];
+  candidate.actions = ['action' + attack];
+  candidate.expected_evidence = ['expected-proof' + attack];
+  candidate.expected_signal = 'signal' + attack;
+  candidate.risk = 'risk' + attack;
+  candidate.fallback = { route_id: 'fallback-route' + attack, when: 'fallback-when' + attack };
+  candidate.discriminating_check = { description: 'check' + attack, evidence_ids: [] };
+  writeRouteRound(data.directory, value);
+  const running = await startWebServer({ workspace: data.workspace, port: 0 });
+  try {
+    const client = await openWebClient(`${running.url}tasks/demo-001`);
+    const markup = client.document.querySelector('#timeline')!.innerHTML;
+    assert.doesNotMatch(markup, /<img\b|<script\b/);
+    assert.match(markup, /&lt;img src=x onerror=&quot;/);
+    const route = client.document.querySelector('.route-block')!;
+    for (const prefix of ['diagnosis', 'diagnosis-proof', 'route', 'title', 'resource', 'hypothesis', 'selection', 'single', 'proof', 'action', 'expected-proof', 'signal', 'risk', 'fallback-route', 'fallback-when', 'check', 'success', 'stop']) {
+      assert.ok(route.textContent.includes(prefix + attack), `${prefix} remains readable as escaped text`);
+    }
+    assert.ok(route.dataset.collapsibleKey!.includes('plan' + attack));
+    route.click();
+    await client.refresh();
+    assert.equal(client.document.querySelector('.route-block')!.getAttribute('aria-expanded'), 'true');
+    assert.ok(client.document.querySelector('.prompt-block')!.textContent.includes('prompt' + attack));
+  } finally { await running.close(); data.cleanup(); }
 });
 
 test('TaskCatalog exposes durable recovery metadata and distinguishes native waiting from user cancellation and DONE', () => {

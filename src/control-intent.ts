@@ -113,10 +113,13 @@ function codeCommand(code: string): string | null {
 }
 
 /** Exact opt-in intent shared by the native adapter and receipt correlation. */
-export function controlIntent(input: unknown, pluginRoot: string): ControlIntent | null {
+export function literalToolCommand(input: unknown): string | null {
   if (!input || typeof input !== 'object' || Array.isArray(input)) return null;
   const value = input as Record<string, unknown>;
-  const command = typeof value.code === 'string' ? codeCommand(value.code) : typeof value.cmd === 'string' ? value.cmd : typeof value.command === 'string' ? value.command : null;
+  return typeof value.code === 'string' ? codeCommand(value.code) : typeof value.cmd === 'string' ? value.cmd : typeof value.command === 'string' ? value.command : null;
+}
+export function controlIntent(input: unknown, pluginRoot: string): ControlIntent | null {
+  const command = literalToolCommand(input);
   const words = command === null ? null : shellWords(command);
   if (!words || !['node', 'node.exe'].includes(normalized(words[0] ?? '').split('/').at(-1)!)) return null;
   const script = normalized(words[1] ?? '');

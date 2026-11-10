@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { isAbsolute, relative, resolve } from 'node:path';
 import { record, text } from './types.js';
 import { Store } from './store.js';
-import { archiveTerminatedJudge } from './judge.js';
+import { archiveTerminatedJudge, validateDecision } from './judge.js';
 import { normalize, selectAction, reachedLimits } from './rules.js';
 import { connect, RpcServerError } from './transport.js';
 import { redact } from './redact.js';
@@ -10,6 +10,8 @@ import { buildSnapshot } from './snapshot.js';
 import { classifyRecoveryError, nextBackoff, recordRecoveryFailure } from './recovery.js';
 import { setTimeout as delay } from 'node:timers/promises';
 import { armRecovery, cancelRecovery } from './recovery-coordinator.js';
+import { captureRouteOutcome, confirmRouteExecution, discoverLocalRoutes, plannerFailureFallback, prepareRouteExecution, routeCorrelation } from './route-execution.js';
+import { initializeHttpRouteProbe } from './http-route-probe.js';
 export class Supervisor {
     state;
     store;
@@ -104,9 +106,10 @@ export class Supervisor {
     async judgeWithRecovery(snapshot, argv) {
         const enabled = this.fixture?.recovery_enabled === true || this.fixture?.recovery_delays_ms !== undefined || this.fixture === undefined;
         let currentSnapshot = snapshot;
+        let failures = 0;
         while (this.state.status === 'ACTIVE') {
             try {
-                const decision = await this.judge.judge(currentSnapshot, this.abort.signal);
+                const decision = validateDecision(JSON.stringify(await this.judge.judge(currentSnapshot, this.abort.signal)), currentSnapshot);
                 this.state.retry = { kind: null, attempt: 0, next_at: null };
                 this.save();
                 return decision;
@@ -116,10 +119,17 @@ export class Supervisor {
                     this.store.event(this.state, 'stale_judge_result_ignored', { snapshot_id: currentSnapshot.snapshot_id });
                     return null;
                 }
-                if (!enabled)
-                    throw error;
                 if (this.judge.rawOutput !== undefined)
                     this.store.snapshot(currentSnapshot, this.judge.rawOutput, 'invalid');
+                if (++failures >= 3) {
+                    const fallback = plannerFailureFallback(currentSnapshot, 'C failed three bounded output attempts; gather source-linked route facts.');
+                    if (this.fixture?.real_judge === true || this.fixture === undefined)
+                        await this.reconnectAndReconcile(argv);
+                    this.store.event(this.state, 'judge_inventory_fallback', { failures, snapshot_id: currentSnapshot.snapshot_id, decision: fallback });
+                    return fallback;
+                }
+                if (!enabled)
+                    throw error;
                 if (!(await this.scheduleRecovery(error)))
                     return null;
                 if (this.fixture?.real_judge === true || this.fixture === undefined) {
@@ -163,6 +173,7 @@ export class Supervisor {
         const turn = this.state.active_worker_turn_id;
         this.state.status = 'PAUSED';
         this.state.task_version++;
+        delete this.state.route_execution;
         this.state.pause_reason = reason;
         this.state.phase = 'IDLE';
         if (this.state.pending_action?.stage !== 'sent')
@@ -268,8 +279,10 @@ export class Supervisor {
             if (!matchingActive)
                 throw new Error('Saved active worker turn is absent from resume history; no resend performed.');
             this.store.event(this.state, 'worker_history_reconciled', { turn_id: active, status: matchingActive.status });
-            if (matchingActive.status === 'completed')
+            if (matchingActive.status === 'completed') {
+                this.store.event(this.state, 'worker_evidence', { thread_id: this.state.worker_thread_id, method: 'turn/completed', params: { threadId: this.state.worker_thread_id, turn: matchingActive }, source: 'reconciled-worker-history' });
                 this.enqueue({ kind: 'notification', method: 'turn/completed', params: { threadId: this.state.worker_thread_id, turn: matchingActive } });
+            }
             else if (matchingActive.status === 'interrupted')
                 this.continueAfterInterrupted(null, matchingActive);
             else if (matchingActive.status === 'failed') {
@@ -292,12 +305,13 @@ export class Supervisor {
             this.state.phase = 'WORKER';
             this.save();
             this.store.event(this.state, 'send_reconciled_absent', { delivery_id: pending.delivery_id, action: 'resend_after_history_check' });
-            this.sendNext(message, pending.source_turn_id);
+            this.sendNext(message, pending.source_turn_id, pending);
             return;
         }
         this.store.event(this.state, 'send_reconciled_present', { delivery_id: pending.delivery_id, turn_id: matching.id, status: matching.status });
         if (matching.status === 'completed') {
             this.confirm(matching.id, pending.delivery_id, this.state.task_version, 'history');
+            this.store.event(this.state, 'worker_evidence', { thread_id: this.state.worker_thread_id, method: 'turn/completed', params: { threadId: this.state.worker_thread_id, turn: matching }, source: 'reconciled-worker-history' });
             this.enqueue({ kind: 'notification', method: 'turn/completed', params: { threadId: this.state.worker_thread_id, turn: matching } });
         }
         else if (matching.status === 'inProgress') {
@@ -358,17 +372,37 @@ export class Supervisor {
         this.save();
         return new Error(`Worker turn ${turn.id} failed: ${message}`);
     }
+    recoveredRouteDirection(pending, turn, status) {
+        if (!this.state.route_execution || this.state.route_execution.completed_stop_attempt_id)
+            return null;
+        if (pending)
+            confirmRouteExecution(this.state, pending.delivery_id); // History proved the exact client message was delivered.
+        this.store.event(this.state, 'worker_evidence', { role: 'worker', thread_id: this.state.worker_thread_id, method: 'turn/completed', params: { threadId: this.state.worker_thread_id, turn: { ...turn, status } }, source: 'reconciled-worker-history' });
+        const stopId = `worker:${this.state.task_version}:${turn.id}`;
+        const outcome = captureRouteOutcome(this.state, buildSnapshot(this.state, turn.id, this.store.events()), stopId);
+        if (outcome)
+            this.store.event(this.state, 'route_outcome', outcome);
+        const snapshot = buildSnapshot(this.state, turn.id, this.store.events());
+        const decision = plannerFailureFallback(snapshot, `The previous worker execution ${status}; inspect its actual result and choose a discriminating authorized direction.`);
+        const deliveryId = randomUUID();
+        const correlation = prepareRouteExecution(this.state, decision, snapshot, deliveryId, stopId);
+        this.state.last_decision = decision;
+        this.store.event(this.state, 'decision', { role: 'judge', source: 'worker-terminal-recovery', stop_attempt_id: stopId, decision });
+        return { message: decision.next_message, route: { ...correlation, delivery_id: deliveryId } };
+    }
     continueAfterInterrupted(pending, turn) {
-        const message = pending?.message.replace(/^\[supervisor:[^\]]+\]\n/, '') ?? JSON.stringify(this.state.task);
+        const recovery = this.recoveredRouteDirection(pending, turn, 'interrupted');
+        const message = recovery?.message ?? pending?.message.replace(/^\[supervisor:[^\]]+\]\n/, '') ?? JSON.stringify(this.state.task);
         this.state.pending_action = null;
         this.state.active_worker_turn_id = null;
         this.state.reviewing_turn_id = null;
         this.state.phase = 'WORKER';
         this.save();
         this.store.event(this.state, 'worker_history_interrupted', { turn_id: turn.id, old_delivery_id: pending?.delivery_id ?? null, action: 'new_continuation' });
-        this.sendNext(message, pending?.source_turn_id ?? turn.id);
+        this.sendNext(message, pending?.source_turn_id ?? turn.id, recovery?.route);
     }
     continueAfterTerminal(pending, turn, error) {
+        const recovery = this.recoveredRouteDirection(pending, turn, 'failed');
         const message = pending?.message.replace(/^\[supervisor:[^\]]+\]\n/, '') ?? JSON.stringify(this.state.task);
         this.state.pending_action = null;
         this.state.active_worker_turn_id = null;
@@ -376,7 +410,7 @@ export class Supervisor {
         this.state.phase = 'WORKER';
         this.save();
         this.store.event(this.state, 'worker_history_failed_continuation', { turn_id: turn.id, old_delivery_id: pending?.delivery_id ?? null, error: error.message, action: 'new_continuation' });
-        this.sendNext(`The previous worker turn failed with this error: ${error.message}\nContinue the authorized task from the current workspace using a repaired or different route.\n${message}`, pending?.source_turn_id ?? turn.id);
+        this.sendNext(recovery?.message ?? `The previous worker turn failed with this error: ${error.message}\nContinue the authorized task from the current workspace using a repaired or different route.\n${message}`, pending?.source_turn_id ?? turn.id, recovery?.route);
     }
     async reconnectAndReconcile(argv) {
         const old = this.rpc;
@@ -445,7 +479,7 @@ export class Supervisor {
                 return;
             const failure = error instanceof Error ? error : new Error('Connection failed.');
             this.judge.connectionFailed?.(failure);
-            this.enqueue({ kind: 'failure', error: failure });
+            this.enqueue({ kind: 'failure', error: failure, rpc });
         }
     }
     async restoreAfterVerification(argv, old) {
@@ -490,11 +524,12 @@ export class Supervisor {
             return;
         pending.stage = 'confirmed';
         pending.target_turn_id = turnId;
+        confirmRouteExecution(this.state, delivery);
         this.state.active_worker_turn_id = turnId;
         this.state.phase = 'WORKER';
         this.state.worker_turn_count++;
         this.save();
-        this.store.event(this.state, 'send_confirmed', { role: 'worker', thread_id: this.state.worker_thread_id, turn_id: turnId, delivery_id: delivery, via });
+        this.store.event(this.state, 'send_confirmed', { role: 'worker', thread_id: this.state.worker_thread_id, turn_id: turnId, delivery_id: delivery, via, ...routeCorrelation(pending) });
         const completed = this.candidates.get(turnId)?.completed;
         this.candidates.clear();
         if (completed)
@@ -556,8 +591,10 @@ export class Supervisor {
                 this.state.reviewing_turn_id = null;
                 this.state.phase = 'WORKER';
                 this.save();
-                if (known.status === 'completed')
+                if (known.status === 'completed') {
+                    this.store.event(this.state, 'worker_evidence', { thread_id: this.state.worker_thread_id, method: 'turn/completed', params: { threadId: this.state.worker_thread_id, turn: known }, source: 'reconciled-worker-history' });
                     this.enqueue({ kind: 'notification', method: 'turn/completed', params: { threadId: this.state.worker_thread_id, turn: known } });
+                }
                 else if (known.status === 'interrupted')
                     this.continueAfterInterrupted(this.state.pending_action, known);
                 else if (known.status === 'failed') {
@@ -587,6 +624,8 @@ export class Supervisor {
                     continue;
                 }
                 if (incoming.kind === 'failure') {
+                    if (incoming.rpc && incoming.rpc !== this.rpc)
+                        continue;
                     if (incoming.delivery && (incoming.version !== this.state.task_version || incoming.delivery !== this.state.pending_action?.delivery_id || this.state.pending_action.stage === 'confirmed')) {
                         this.store.event(this.state, 'stale_send_result_ignored', { delivery_id: incoming.delivery, error: incoming.error.message });
                         continue;
@@ -678,7 +717,15 @@ export class Supervisor {
                 this.state.active_worker_turn_id = null;
                 this.state.reviewing_turn_id = event.turn_id;
                 this.save();
-                const snapshot = this.judge.rawOutput === undefined ? { snapshot_id: randomUUID(), task_id: this.state.task_id, task_version: this.state.task_version, worker_thread_id: this.state.worker_thread_id, worker_turn_id: event.turn_id, task: this.state.task, evidence: [{ id: 'E1', type: 'worker_terminal', value: redact(event.raw) }] } : buildSnapshot(this.state, event.turn_id, this.store.events());
+                const stopId = `worker:${this.state.task_version}:${event.turn_id}`;
+                this.store.event(this.state, 'worker_stop_observed', { turn_id: event.turn_id, stop_attempt_id: stopId, ...routeCorrelation(this.state.pending_action) });
+                const outcome = captureRouteOutcome(this.state, buildSnapshot(this.state, event.turn_id, this.store.events()), stopId);
+                if (outcome)
+                    this.store.event(this.state, 'route_outcome', outcome);
+                discoverLocalRoutes(this.state);
+                initializeHttpRouteProbe(this.state, this.store.path);
+                this.save();
+                const snapshot = buildSnapshot(this.state, event.turn_id, this.store.events());
                 this.store.snapshot(snapshot, null);
                 let decision;
                 try {
@@ -707,7 +754,9 @@ export class Supervisor {
                 this.state.reviewing_turn_id = null;
                 this.store.event(this.state, 'decision', { role: 'judge', thread_id: this.judge.rawOutput === undefined ? null : this.state.judge_thread_ids?.at(-1), worker_thread_id: this.state.worker_thread_id, worker_turn_id: event.turn_id, snapshot_id: snapshot.snapshot_id, decision });
                 if (decision.action === 'CONTINUE') {
-                    this.sendNext(text(decision.next_message, 'next_message'), event.turn_id);
+                    const delivery = randomUUID();
+                    const correlation = prepareRouteExecution(this.state, decision, snapshot, delivery, stopId);
+                    this.sendNext(text(decision.next_message, 'next_message'), event.turn_id, { ...correlation, delivery_id: delivery });
                 }
                 else {
                     if (decision.action !== 'DONE' && (decision.action !== 'WAIT_EXTERNAL' || !decision.external))
@@ -760,7 +809,15 @@ export class Supervisor {
                             if (!passed) {
                                 const changed = new Set([...before, ...after].map((file) => file.path));
                                 const restore = (this.state.protected_baseline ?? []).filter((file) => changed.has(file.path));
-                                this.sendNext(`Independent verification failed. Repair the task and restore any changed protected files to their original content; never change the fixed verification command. Evidence: ${JSON.stringify(redact(evidence))}. Original protected contents (base64): ${JSON.stringify(restore)}`, event.turn_id);
+                                const repair = plannerFailureFallback(snapshot, 'The fixed independent verifier failed.');
+                                const message = `Independent verification failed. Repair the task and restore changed protected files; never change the fixed verification command. Inspect the persisted verification_result and protected baseline for full evidence. Evidence: ${JSON.stringify(redact(evidence)).slice(0, 1200)}. Original protected contents (base64, bounded): ${JSON.stringify(restore).slice(0, 1000)}`;
+                                repair.next_message = message;
+                                repair.route_plan.candidates[0].actions = [message];
+                                const delivery = randomUUID();
+                                const correlation = prepareRouteExecution(this.state, repair, snapshot, delivery, stopId);
+                                this.state.last_decision = repair;
+                                this.store.event(this.state, 'decision', { worker_turn_id: event.turn_id, stop_attempt_id: stopId, decision: repair, source: 'fixed_verifier' });
+                                this.sendNext(message, event.turn_id, { ...correlation, delivery_id: delivery });
                                 continue;
                             }
                         }
@@ -822,7 +879,7 @@ export class Supervisor {
             await this.rpc?.close();
         }
     }
-    sendNext(message, sourceTurn) {
+    sendNext(message, sourceTurn, route) {
         if (this.state.status !== 'ACTIVE' || this.state.active_worker_turn_id || this.state.reviewing_turn_id)
             throw new Error('Cannot send while a worker or judge is active.');
         this.accrue();
@@ -831,17 +888,21 @@ export class Supervisor {
             this.pause('user_limit');
             return;
         }
-        const deliveryId = randomUUID();
+        const deliveryId = route?.delivery_id ?? randomUUID();
         const fullMessage = `[supervisor:${deliveryId}]\n${message}`;
-        this.state.pending_action = { delivery_id: deliveryId, source_turn_id: sourceTurn, task_version: this.state.task_version, message: fullMessage, stage: 'prepared', target_turn_id: null };
+        this.state.pending_action = { ...routeCorrelation(route), delivery_id: deliveryId, source_turn_id: sourceTurn, task_version: this.state.task_version, message: fullMessage, stage: 'prepared', target_turn_id: null };
+        if (route?.plan_id && this.state.route_execution) {
+            this.state.route_execution.delivery_id = deliveryId;
+            this.state.route_execution.confirmed = false;
+        }
         this.state.phase = 'WORKER';
         this.save();
-        this.store.event(this.state, 'send_prepared', { delivery_id: deliveryId, source_turn_id: sourceTurn, message: fullMessage });
+        this.store.event(this.state, 'send_prepared', { delivery_id: deliveryId, source_turn_id: sourceTurn, message: fullMessage, ...routeCorrelation(route) });
         const params = { threadId: this.state.worker_thread_id, clientUserMessageId: deliveryId, input: [{ type: 'text', text: fullMessage, text_elements: [] }] };
         this.state.pending_action.stage = 'sent';
         this.save();
         const version = this.state.task_version;
-        this.store.event(this.state, 'send_attempted', { delivery_id: deliveryId });
+        this.store.event(this.state, 'send_attempted', { delivery_id: deliveryId, ...routeCorrelation(route) });
         void this.rpc.request('turn/start', params).then((result) => {
             this.enqueue({ kind: 'response', delivery: deliveryId, version, turn: text(result.turn.id, 'turn id') });
         }).catch((error) => {

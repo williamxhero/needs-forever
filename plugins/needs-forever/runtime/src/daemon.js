@@ -226,6 +226,7 @@ export class NFDaemon {
                 state.status = 'PAUSED';
                 state.phase = 'IDLE';
                 state.pause_reason = 'user';
+                delete state.route_execution;
                 cancelRecovery(state, 'pause', this.now());
                 const store = new Store(record.statePath);
                 store.save(state);

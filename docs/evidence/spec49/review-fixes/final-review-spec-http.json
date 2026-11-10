@@ -1,0 +1,28 @@
+{
+  "sha": "7e0c9bad744ed20e28f730166a5fa6d761b7ca10",
+  "actualCredentialFreeGets": 10,
+  "nativeCodeMode": true,
+  "sameUrl": {
+    "accepted": 5,
+    "status": "blocked",
+    "rateLimit": "limited",
+    "chronologicalOutcomes": [
+      "diagnostic",
+      "diagnostic",
+      "diagnostic",
+      "diagnostic",
+      "blocked"
+    ],
+    "replayAccepted": 0
+  },
+  "distinctUrls": {
+    "initialAccepted": 4,
+    "persistedOmissions": 1,
+    "waitRejected": true,
+    "followUpAccepted": 1,
+    "finalAttempts": 5,
+    "finalOmissions": 0,
+    "conciseFollowUpComplete": true
+  },
+  "noIngestionNetwork": true
+}

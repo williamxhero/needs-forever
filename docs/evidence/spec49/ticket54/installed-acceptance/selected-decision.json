@@ -1,0 +1,78 @@
+{
+  "action": "CONTINUE",
+  "reason": "The Tushare-pattern fixture is quota blocked; a real local artifact is readable.",
+  "evidence_ids": [],
+  "next_message": "Read local-b0qi.csv, write result.json, and independently check that coverage contains exactly 2026-11-05 and 2026-11-06.",
+  "external": null,
+  "diagnosis": {
+    "class": "provider_limit",
+    "statement": "The synthetic provider command returned a quota failure.",
+    "evidence_ids": [
+      "local-probe-1"
+    ]
+  },
+  "route_plan": {
+    "plan_id": "b0qi-local-alternate",
+    "candidates": [
+      {
+        "route_id": "local-b0qi-artifact",
+        "resource": {
+          "kind": "artifact",
+          "id": "local-b0qi.csv"
+        },
+        "operation": "verify-fixture-coverage",
+        "hypothesis_id": "fixture-coverage",
+        "hypothesis": "The authorized local CSV can supply the two fixture dates.",
+        "expected_evidence": [
+          "Independently checked two-date fixture coverage"
+        ],
+        "status": "observed",
+        "evidence_ids": [
+          "local-probe-2"
+        ],
+        "actions": [
+          "Read local-b0qi.csv, write result.json, and independently check that coverage contains exactly 2026-11-05 and 2026-11-06."
+        ],
+        "expected_signal": "A checked two-row result or a concrete missing-file failure.",
+        "risk": "Fixture data proves only the acceptance exercise, not historical market coverage.",
+        "fallback": {
+          "route_id": null,
+          "when": "If the local artifact fails, collect its exact failure and replan; do not blindly retry Tushare."
+        },
+        "discriminating_check": null
+      },
+      {
+        "route_id": "tushare-quota-fixture",
+        "resource": {
+          "kind": "provider",
+          "id": "synthetic:Tushare"
+        },
+        "operation": "verify-fixture-coverage",
+        "hypothesis_id": "fixture-coverage",
+        "hypothesis": "The synthetic quota blocker excludes this fixture route.",
+        "expected_evidence": [
+          "Independently checked two-date fixture coverage"
+        ],
+        "status": "blocked",
+        "evidence_ids": [
+          "local-probe-1"
+        ],
+        "actions": [
+          "Do not retry the quota-blocked fixture provider."
+        ],
+        "expected_signal": "A checked two-row result or a concrete missing-file failure.",
+        "risk": "Fixture data proves only the acceptance exercise, not historical market coverage.",
+        "fallback": {
+          "route_id": null,
+          "when": "If the local artifact fails, collect its exact failure and replan; do not blindly retry Tushare."
+        },
+        "discriminating_check": null
+      }
+    ],
+    "selected_route_id": "local-b0qi-artifact",
+    "selection_reason": "Use the authorized local artifact with observed readability and no network requirement.",
+    "single_route_reason": null,
+    "success_condition": "Independent Node verifier reports exactly two expected dates.",
+    "stop_condition": "Stop after the verification report or exact local failure; never loop through equivalent G0/G1 audits."
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "valid": true,
+  "action": "CONTINUE",
+  "selected_route": "authorized-inventory",
+  "source": "docs/codex-supervisor-v0.1-spec.md section 5.2",
+  "example_sha256": "c8047650a7982220669012c44ab2d5f2b8239005078fd353198bf30e41c867bb"
+}

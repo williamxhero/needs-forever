@@ -1,0 +1,109 @@
+{
+  "mode": "verified-owned-test-process-cleanup",
+  "cutoff_for_root_runs": "2026-11-10T03:49:18.0000000Z",
+  "protected_production_pids": [
+    46016,
+    54416,
+    66412
+  ],
+  "unrelated_or_pre_spec_excluded": 22,
+  "verified_count": 8,
+  "records": [
+    {
+      "pid": 87644,
+      "created_at": "2026-11-10T04:02:02.7230000Z",
+      "command": "\"C:\\Program Files\\nodejs\\node.exe\" \"C:\\Users\\will\\.codex\\worktrees\\spec49-ticket51\\needs-forever\\runs\\main-supervision\\external-condition-1794283321719\\插件 安装副本\\scripts\\recovery-coordinator.mjs\" \"C:\\Users\\will\\.codex\\worktrees\\spec49-ticket51\\needs-forever\\runs\\main-supervision\\external-condition-1794283321719\\工作 空间\\.codex-supervisor\\external-condition\\state.json\"",
+      "scope": "C:\\Users\\will\\.codex\\worktrees\\spec49-ticket51\\needs-forever",
+      "state": "C:\\Users\\will\\.codex\\worktrees\\spec49-ticket51\\needs-forever\\runs\\main-supervision\\external-condition-1794283321719\\工作 空间\\.codex-supervisor\\external-condition\\state.json",
+      "status": "WAIT_EXTERNAL",
+      "fixture": "C:\\Users\\will\\.codex\\worktrees\\spec49-ticket51\\needs-forever\\runs\\main-supervision\\external-condition-1794283321719\\host.json",
+      "fixture_desktop_version": "simulated",
+      "fixture_cli_version": "simulated",
+      "stopped": true
+    },
+    {
+      "pid": 4840,
+      "created_at": "2026-11-10T04:21:04.2500820Z",
+      "command": "\"C:\\Program Files\\nodejs\\node.exe\" \"C:\\Users\\will\\.codex\\worktrees\\spec49-ticket52\\needs-forever\\runs\\main-supervision\\external-condition-1794284463044\\插件 安装副本\\scripts\\recovery-coordinator.mjs\" \"C:\\Users\\will\\.codex\\worktrees\\spec49-ticket52\\needs-forever\\runs\\main-supervision\\external-condition-1794284463044\\工作 空间\\.codex-supervisor\\external-condition\\state.json\"",
+      "scope": "C:\\Users\\will\\.codex\\worktrees\\spec49-ticket52\\needs-forever",
+      "state": "C:\\Users\\will\\.codex\\worktrees\\spec49-ticket52\\needs-forever\\runs\\main-supervision\\external-condition-1794284463044\\工作 空间\\.codex-supervisor\\external-condition\\state.json",
+      "status": "WAIT_EXTERNAL",
+      "fixture": "C:\\Users\\will\\.codex\\worktrees\\spec49-ticket52\\needs-forever\\runs\\main-supervision\\external-condition-1794284463044\\host.json",
+      "fixture_desktop_version": "simulated",
+      "fixture_cli_version": "simulated",
+      "stopped": true
+    },
+    {
+      "pid": 40592,
+      "created_at": "2026-11-10T04:34:53.7715300Z",
+      "command": "\"C:\\Program Files\\nodejs\\node.exe\" \"D:\\WILL\\TOOLS\\needs-forever\\runs\\main-supervision\\external-condition-1794285292997\\插件 安装副本\\scripts\\recovery-coordinator.mjs\" \"D:\\WILL\\TOOLS\\needs-forever\\runs\\main-supervision\\external-condition-1794285292997\\工作 空间\\.codex-supervisor\\external-condition\\state.json\"",
+      "scope": "D:\\WILL\\TOOLS\\needs-forever",
+      "state": "D:\\WILL\\TOOLS\\needs-forever\\runs\\main-supervision\\external-condition-1794285292997\\工作 空间\\.codex-supervisor\\external-condition\\state.json",
+      "status": "WAIT_EXTERNAL",
+      "fixture": "D:\\WILL\\TOOLS\\needs-forever\\runs\\main-supervision\\external-condition-1794285292997\\host.json",
+      "fixture_desktop_version": "simulated",
+      "fixture_cli_version": "simulated",
+      "stopped": true
+    },
+    {
+      "pid": 76432,
+      "created_at": "2026-11-10T05:16:40.6392010Z",
+      "command": "\"C:\\Program Files\\nodejs\\node.exe\" \"C:\\Users\\will\\.codex\\worktrees\\spec49-review-fixes\\needs-forever\\runs\\main-supervision\\external-condition-1794287799309\\插件 安装副本\\scripts\\recovery-coordinator.mjs\" \"C:\\Users\\will\\.codex\\worktrees\\spec49-review-fixes\\needs-forever\\runs\\main-supervision\\external-condition-1794287799309\\工作 空间\\.codex-supervisor\\external-condition\\state.json\"",
+      "scope": "C:\\Users\\will\\.codex\\worktrees\\spec49-review-fixes\\needs-forever",
+      "state": "C:\\Users\\will\\.codex\\worktrees\\spec49-review-fixes\\needs-forever\\runs\\main-supervision\\external-condition-1794287799309\\工作 空间\\.codex-supervisor\\external-condition\\state.json",
+      "status": "WAIT_EXTERNAL",
+      "fixture": "C:\\Users\\will\\.codex\\worktrees\\spec49-review-fixes\\needs-forever\\runs\\main-supervision\\external-condition-1794287799309\\host.json",
+      "fixture_desktop_version": "simulated",
+      "fixture_cli_version": "simulated",
+      "stopped": true
+    },
+    {
+      "pid": 35552,
+      "created_at": "2026-11-10T05:36:23.6058540Z",
+      "command": "\"C:\\Program Files\\nodejs\\node.exe\" \"C:\\Users\\will\\.codex\\worktrees\\spec49-review-fixes\\needs-forever\\runs\\main-supervision\\external-condition-1794288981838\\插件 安装副本\\scripts\\recovery-coordinator.mjs\" \"C:\\Users\\will\\.codex\\worktrees\\spec49-review-fixes\\needs-forever\\runs\\main-supervision\\external-condition-1794288981838\\工作 空间\\.codex-supervisor\\external-condition\\state.json\"",
+      "scope": "C:\\Users\\will\\.codex\\worktrees\\spec49-review-fixes\\needs-forever",
+      "state": "C:\\Users\\will\\.codex\\worktrees\\spec49-review-fixes\\needs-forever\\runs\\main-supervision\\external-condition-1794288981838\\工作 空间\\.codex-supervisor\\external-condition\\state.json",
+      "status": "WAIT_EXTERNAL",
+      "fixture": "C:\\Users\\will\\.codex\\worktrees\\spec49-review-fixes\\needs-forever\\runs\\main-supervision\\external-condition-1794288981838\\host.json",
+      "fixture_desktop_version": "simulated",
+      "fixture_cli_version": "simulated",
+      "stopped": true
+    },
+    {
+      "pid": 68368,
+      "created_at": "2026-11-10T05:53:58.0945700Z",
+      "command": "\"C:\\Program Files\\nodejs\\node.exe\" \"C:\\Users\\will\\.codex\\worktrees\\spec49-review-fixes\\needs-forever\\runs\\main-supervision\\external-condition-1794290033574\\插件 安装副本\\scripts\\recovery-coordinator.mjs\" \"C:\\Users\\will\\.codex\\worktrees\\spec49-review-fixes\\needs-forever\\runs\\main-supervision\\external-condition-1794290033574\\工作 空间\\.codex-supervisor\\external-condition\\state.json\"",
+      "scope": "C:\\Users\\will\\.codex\\worktrees\\spec49-review-fixes\\needs-forever",
+      "state": "C:\\Users\\will\\.codex\\worktrees\\spec49-review-fixes\\needs-forever\\runs\\main-supervision\\external-condition-1794290033574\\工作 空间\\.codex-supervisor\\external-condition\\state.json",
+      "status": "WAIT_EXTERNAL",
+      "fixture": "C:\\Users\\will\\.codex\\worktrees\\spec49-review-fixes\\needs-forever\\runs\\main-supervision\\external-condition-1794290033574\\host.json",
+      "fixture_desktop_version": "simulated",
+      "fixture_cli_version": "simulated",
+      "stopped": true
+    },
+    {
+      "pid": 76724,
+      "created_at": "2026-11-10T06:13:35.5412710Z",
+      "command": "\"C:\\Program Files\\nodejs\\node.exe\" \"C:\\Users\\will\\.codex\\worktrees\\spec49-review-fixes\\needs-forever\\runs\\main-supervision\\external-condition-1794291213198\\插件 安装副本\\scripts\\recovery-coordinator.mjs\" \"C:\\Users\\will\\.codex\\worktrees\\spec49-review-fixes\\needs-forever\\runs\\main-supervision\\external-condition-1794291213198\\工作 空间\\.codex-supervisor\\external-condition\\state.json\"",
+      "scope": "C:\\Users\\will\\.codex\\worktrees\\spec49-review-fixes\\needs-forever",
+      "state": "C:\\Users\\will\\.codex\\worktrees\\spec49-review-fixes\\needs-forever\\runs\\main-supervision\\external-condition-1794291213198\\工作 空间\\.codex-supervisor\\external-condition\\state.json",
+      "status": "WAIT_EXTERNAL",
+      "fixture": "C:\\Users\\will\\.codex\\worktrees\\spec49-review-fixes\\needs-forever\\runs\\main-supervision\\external-condition-1794291213198\\host.json",
+      "fixture_desktop_version": "simulated",
+      "fixture_cli_version": "simulated",
+      "stopped": true
+    },
+    {
+      "pid": 73820,
+      "created_at": "2026-11-10T06:24:44.1654730Z",
+      "command": "\"C:\\Program Files\\nodejs\\node.exe\" \"C:\\Users\\will\\.codex\\worktrees\\spec49-review-fixes\\needs-forever\\runs\\main-supervision\\external-condition-1794291879485\\插件 安装副本\\scripts\\recovery-coordinator.mjs\" \"C:\\Users\\will\\.codex\\worktrees\\spec49-review-fixes\\needs-forever\\runs\\main-supervision\\external-condition-1794291879485\\工作 空间\\.codex-supervisor\\external-condition\\state.json\"",
+      "scope": "C:\\Users\\will\\.codex\\worktrees\\spec49-review-fixes\\needs-forever",
+      "state": "C:\\Users\\will\\.codex\\worktrees\\spec49-review-fixes\\needs-forever\\runs\\main-supervision\\external-condition-1794291879485\\工作 空间\\.codex-supervisor\\external-condition\\state.json",
+      "status": "WAIT_EXTERNAL",
+      "fixture": "C:\\Users\\will\\.codex\\worktrees\\spec49-review-fixes\\needs-forever\\runs\\main-supervision\\external-condition-1794291879485\\host.json",
+      "fixture_desktop_version": "simulated",
+      "fixture_cli_version": "simulated",
+      "stopped": true
+    }
+  ]
+}

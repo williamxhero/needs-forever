@@ -1,3 +1,17 @@
+import type { C2Context, C2Mode, Diagnosis, RoutePlan } from './planning-contract.js';
+import type { RouteCatalogData, RouteLedgerData } from './route-contract.js';
+import type { RouteEvidence, RouteIdentity } from './route-contract.js';
+export interface RouteCorrelation { plan_id?: string; route_id?: string; source_stop_attempt_id?: string }
+export interface RouteExecution extends RouteCorrelation {
+  delivery_id: string;
+  task_version: number;
+  route: RouteIdentity;
+  evidence: RouteEvidence[];
+  confirmed: boolean;
+  lifecycle_fence: string;
+  discriminating_check?: import('./route-contract.js').RouteDiscriminatingCheck;
+  completed_stop_attempt_id?: string;
+}
 export interface Task {
   schema_version: 1;
   task_id: string;
@@ -5,6 +19,7 @@ export interface Task {
   goal: string;
   acceptance: { id: string; text: string }[];
   authorization: string;
+  c2?: { mode: C2Mode };
   verify?: { argv: string[]; timeout_seconds: number; protected_files: string[] };
   limits: { max_worker_turns: number | null; max_minutes: number | null };
 }
@@ -14,8 +29,10 @@ export interface Decision {
   evidence_ids: string[];
   next_message: string;
   external: { missing: string; attempted: string[]; why_no_other_work: string; resume_when: string } | null;
+  diagnosis?: Diagnosis | null;
+  route_plan?: RoutePlan | null;
 }
-export interface PendingAction {
+export interface PendingAction extends RouteCorrelation {
   delivery_id: string;
   source_turn_id: string | null;
   task_version: number;
@@ -65,6 +82,10 @@ export interface State {
   recovery_failures?: { signature: string; kind: string; count: number; message: string; instruction: string; at: string }[];
   recovery_condition?: { kind: string; message: string; resume_when: string };
   recovery_plan?: RecoveryPlan;
+  route_catalog?: RouteCatalogData;
+  route_probe?: { state_path: string; nonce: string; scope_sha256: string; argv_prefix: string[]; seen_receipts?: string[]; omitted_url_sha256?: string[] };
+  route_ledger?: RouteLedgerData;
+  route_execution?: RouteExecution;
 }
 export interface Snapshot {
   snapshot_id: string;
@@ -73,13 +94,14 @@ export interface Snapshot {
   worker_thread_id: string;
   worker_turn_id: string;
   task: Task;
-  evidence: { id: string; type: string; value: unknown; source?: { event_id: string; thread_id?: string; turn_id?: string; item_id?: string } }[];
+  evidence: { id: string; type: string; value: unknown; source?: { event_id: string; observed_at?: string; thread_id?: string; turn_id?: string; item_id?: string } }[];
   plan?: unknown;
   recent_verification?: unknown;
   recent_instructions?: unknown[];
   repeated_failure?: unknown;
   omissions?: string[];
   evidence_complete?: boolean;
+  c2?: C2Context;
 }
 
 export function record(value: unknown): Record<string, unknown> {

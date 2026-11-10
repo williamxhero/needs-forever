@@ -55,6 +55,7 @@ export function armNativeRebind(state, reason) {
     state.run_generation = generation;
     state.input_epoch = (state.input_epoch ?? 0) + 1;
     state.pending_action = null;
+    delete state.route_execution;
     delete state.direction_context;
     delete state.last_stop;
     state.tool_starts = {};
@@ -131,6 +132,12 @@ export function validateTask(input) {
         if (!Array.isArray(verify.protected_files) || !verify.protected_files.every((entry) => typeof entry === 'string' && entry.length))
             throw new Error('Invalid verify.protected_files.');
         result.verify = { argv: verify.argv, timeout_seconds: verify.timeout_seconds, protected_files: verify.protected_files };
+    }
+    if (task.c2 !== undefined) {
+        const config = record(task.c2);
+        if (Object.keys(config).length !== 1 || !['enforce', 'shadow', 'legacy'].includes(String(config.mode)))
+            throw new Error('Invalid c2 configuration.');
+        result.c2 = { mode: config.mode };
     }
     return result;
 }
@@ -231,6 +238,7 @@ export function resumeMainSession(statePath, taskPath, simulated = false) {
         delete state.direction_context;
         delete state.active_checkpoint_at;
         state.pending_action = null;
+        delete state.route_execution;
         state.tool_starts = {};
         state.continuation_confirmed = false;
         state.input_epoch = (state.input_epoch ?? 0) + 1;
