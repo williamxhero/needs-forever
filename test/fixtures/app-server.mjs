@@ -2,6 +2,7 @@ import { createInterface } from 'node:readline';
 import { appendFileSync, readFileSync, writeFileSync, unlinkSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { routeInventoryDecision } from '../../dist/src/planning.js';
 
 const scenario = JSON.parse(readFileSync(process.argv[2], 'utf8'));
 const trace = (value) => appendFileSync(scenario.trace, `${JSON.stringify(value)}\n`);
@@ -90,7 +91,7 @@ for await (const line of lines) {
       if (scenario.judge_disconnect) process.exit(0);
       const snapshot = JSON.parse(message.params.input[0].text);
       const action = scenario.judge_actions?.[judges - 1] ?? 'DONE';
-      const decision = { action, reason: 'A1 evidence checked.', evidence_ids: snapshot.evidence.map((entry) => entry.id), next_message: action === 'CONTINUE' ? 'Check the remaining acceptance result.' : '', external: action === 'WAIT_EXTERNAL' ? { missing: 'Required credential.', attempted: ['Checked local credentials.'], why_no_other_work: 'The only remaining item requires the credential.', resume_when: 'User supplies credential.' } : null };
+      const decision = action === 'CONTINUE' && snapshot.c2?.mode !== 'legacy' ? routeInventoryDecision(snapshot, 'A1 evidence checked.') : { action, reason: 'A1 evidence checked.', evidence_ids: snapshot.evidence.map((entry) => entry.id), next_message: action === 'CONTINUE' ? 'Check the remaining acceptance result.' : '', external: action === 'WAIT_EXTERNAL' ? { missing: 'Required credential.', attempted: ['Checked local credentials.'], why_no_other_work: 'The only remaining item requires the credential.', resume_when: 'User supplies credential.' } : null };
       const judgeOutput = scenario.judge_outputs?.[judges - 1] ?? scenario.judge_output;
       const judgeItem = { type: 'agentMessage', id: 'judge-output', text: judgeOutput ?? JSON.stringify(decision), phase: 'final_answer' };
       if (scenario.wrong_judge_turn) send({ method: 'turn/completed', params: { threadId: message.params.threadId, turn: { id: 'unrelated-judge-turn', status: 'completed', items: [{ ...judgeItem, text: '{"action":"DONE"}' }] } } });

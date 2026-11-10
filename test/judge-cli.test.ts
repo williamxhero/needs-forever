@@ -17,7 +17,7 @@ function scenario(name: string, options: Record<string, unknown> = {}) {
   const state = resolve(directory, 'state.json');
   const config = resolve(directory, 'scenario.json');
   const fixture = resolve(directory, 'fixture.json');
-  writeFileSync(task, JSON.stringify({ schema_version: 1, task_id: name, workspace, goal: 'Produce the accepted local result.', acceptance: [{ id: 'A1', text: 'The result is checked.' }], authorization: 'Local workspace only; no network.' }));
+  writeFileSync(task, JSON.stringify({ schema_version: 1, task_id: name, workspace, ...(Array.isArray(options.judge_actions) && options.judge_actions.includes('WAIT_EXTERNAL') ? { c2: { mode: 'legacy' } } : {}), goal: 'Produce the accepted local result.', acceptance: [{ id: 'A1', text: 'The result is checked.' }], authorization: 'Local workspace only; no network.' }));
   writeFileSync(config, JSON.stringify({ trace, state_file: state, real_judge: true, ...options }));
   writeFileSync(fixture, JSON.stringify({ app_server_argv: [process.execPath, resolve('test/fixtures/app-server.mjs'), config], real_judge: true }));
   return { directory, workspace, task, state, trace, config, fixture, run() { return spawnSync(process.execPath, [resolve('dist/src/cli.js'), 'start', '--task', task, '--state', state, '--test-fixture', fixture], { encoding: 'utf8', timeout: 15000 }); }, events() { return jsonl(resolve(directory, 'events.jsonl')); }, protocol() { return jsonl(trace); }, snapshots() { return readdirSync(resolve(directory, 'snapshots')).map((name) => json(resolve(directory, 'snapshots', name))); } };

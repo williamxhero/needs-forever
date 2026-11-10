@@ -582,7 +582,7 @@ export class Supervisor {
         this.state.active_worker_turn_id = null;
         this.state.reviewing_turn_id = event.turn_id;
         this.save();
-        const snapshot: Snapshot = this.judge.rawOutput === undefined ? { snapshot_id: randomUUID(), task_id: this.state.task_id, task_version: this.state.task_version, worker_thread_id: this.state.worker_thread_id!, worker_turn_id: event.turn_id, task: this.state.task, evidence: [{ id: 'E1', type: 'worker_terminal', value: redact(event.raw) }] } : buildSnapshot(this.state, event.turn_id, this.store.events());
+        const snapshot: Snapshot = buildSnapshot(this.state, event.turn_id, this.store.events());
         this.store.snapshot(snapshot, null);
         let decision;
         try {

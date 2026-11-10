@@ -149,6 +149,8 @@ judge 获得一份有界快照，包括：
 
 judge 只能返回一个 JSON 对象，不带 Markdown 围栏。使用 turn/start 的 outputSchema 约束结构，程序仍须再次校验。[S1](https://learn.chatgpt.com/docs/app-server)
 
+SPEC #49 的 C2 合同现在是当前监督的默认协议。下面的五字段例子只表示历史 v0.1 读取格式；当前 CONTINUE 必须另带 diagnosis 和 route_plan，完整字段及公开接口见 [ticket #51 合同](delivery/ticket51-c2-planning.md)。DONE、WAIT_EXTERNAL 的 diagnosis 和 route_plan 为 null，原有独立证据门槛保持生效。显式 task.c2.mode=shadow 可审计旧结果；legacy 只允许显式模拟 fixture。省略配置时有效模式为 enforce，不把默认值注入保存的任务合同或更改其 hash。
+
 ~~~json
 {
   "action": "CONTINUE",
@@ -168,6 +170,8 @@ judge 只能返回一个 JSON 对象，不带 Markdown 围栏。使用 turn/star
 | evidence_ids | 引用本次快照中真实存在的证据 ID；未知 ID 判为无效结果 |
 | next_message | CONTINUE 时非空；其他结果必须为空字符串 |
 | external | CONTINUE、DONE 时为 null；WAIT_EXTERNAL 时为下面的对象 |
+| diagnosis | 当前 CONTINUE 的阻塞类别、诊断和真实证据引用；其他动作 null |
+| route_plan | 当前 CONTINUE 的候选身份、假设、状态、动作、信号、风险、fallback、选定路线、成功和停止条件；其他动作 null |
 
 WAIT_EXTERNAL 的 external 对象：
 
@@ -191,13 +195,16 @@ WAIT_EXTERNAL 的 external 对象：
 ### 5.3 判断器提示词基线
 
 ~~~text
-你只负责审核当前任务是否可以结束，并给出一条具体下一步。
+你审核当前任务是否可以结束，并基于来源明确的 Route Catalog 和 Route Ledger 规划下一步。
 原始目标、验收条件和真实用户授权优先于执行线程的收尾措辞。
 执行线程正常结束、说 blocked、提供选项或询问是否继续，都不直接证明应停止。
 
 还有已授权且可推进的工作，返回 CONTINUE。
 当前路线失败时，选择一个有实质区别且可验证的下一步；
-必要时先让执行线程补充调查，不必每次列出多套方案。
+有多个可执行方向时列出至少两个实质不同的候选；确实只有一个方向时说明原因。
+缺少路线事实时选择路线盘点或区分性诊断 CONTINUE，不能推导 WAIT_EXTERNAL。
+选定路线必须属于候选集合，next_message 必须由其具体动作生成。
+provider 名称和模型措辞不构成授权、认证、网络、限频或可用性证据。
 已经决定过的普通技术选项不要重新提交用户。
 
 只有全部验收有依据时返回 DONE。
@@ -307,9 +314,11 @@ pending_action 至少包含：delivery_id、来源回合 ID、任务版本、完
 
 ### 8.2 重复失败
 
-使用最近回合中的错误签名、相同监督指令和缺少新的工具结果作为简单触发信号，不建立复杂的“进展评分”。
+最近回合中的错误签名仍用于提示。C2 另使用 Route Ledger 的稳定资源、操作、假设和预期证据身份，以及真实观测内容的 SHA-256 判断重试资格；改变措辞、event UUID 或 E1 标签不能构成新进展。
 
 达到阈值后，在下一份 judge 快照中明确要求：不要重复原指令，选择不同假设、补一个能区分原因的检查，或推进其他可做事项。
+
+一次临时重试必须有独立观测支持的重试条件；第二次同类失败要求改变假设或提供带新证据的区分检查；同资源/操作第三次无新证据尝试被拒绝。普通 worker 与 native Stop 使用同一个 C2 上下文，保留当前证明和原始合同，目录或账本摘要超限时给出遗漏标记并要求盘点/诊断。WAIT_EXTERNAL 必须逐一列出已授权候选的尝试或排除及证据、路线 ID 和理由。
 
 这些信号只触发换路检查，不足以证明整个任务没有进展。未知错误可以保持诊断和重试，但不能仅靠反复输出“继续”声称恢复成功。
 
