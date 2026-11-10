@@ -14,11 +14,11 @@ test at dist\test\recovery-coordinator.test.js:165:1
 ✖ a fresh failure after healthy work does not inherit an old completed native recovery deadline (3.0462ms)
   AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
   + actual - expected
-  
+
   + '1970-01-01T00:00:00.000Z'
   - '1970-01-01T01:00:00.000Z'
                  ^
-  
+
       at TestContext.<anonymous> (file:///D:/WILL/TOOLS/needs-forever/dist/test/recovery-coordinator.test.js:174:12)
       at Test.runInAsyncScope (node:async_hooks:227:14)
       at Test.run (node:internal/test_runner/test:1382:25)

@@ -81,6 +81,8 @@ The approved SPEC and ticket split define these interfaces: route catalog/ledger
 
 ## Production recovery follow-up (2026-11-10, UTC+8)
 
+- **Final live acceptance, 2026-11-11 00:01 UTC+8:** genuine Stop `5c4c7121-6af5-4319-b518-e4c890521f74` produced valid actual-C C2 CONTINUE, B delivery `fb14439b-f93f-4630-9d68-01c9e678feb3` occurred exactly once, and a complete paired real original-A tool result confirmed continuation at 00:01:34.591. No coordinator message occurred between that Stop and confirmation. The full original contract/A identity was preserved. [Final delivery and evidence map](spec49-final.md) supersedes earlier pending live-gate statements at their capture times; tracker closure/readback is recorded separately.
+
 - 23:29 的真实 Stop 已产生有效 C2 CONTINUE 和 B 唯一 native 方向；A 随后仅返回 assistant 清单并于 23:31:35 再次 Stop。第二次 Stop 因路线结果保存的缺摘要异常而未到 C，现场门槛仍未完成。[后续修复](c2-outcome-repair.md)保留原始证明，不以新快照同名标签补证，且将结果采集纳入 Stop 有界恢复。最终全量 224/224、三项红绿回归、只读现场回放及两轴复审通过；生产部署和完整新链路仍需独立记录。
 - 修复 `0c72ac4` 已在原 0.3.4 上部署，48/48 文件一致，Hook 身份未变。全局 daemon PID 81068 / NFG HTTP 200。协调线程在 A 空闲时通过 Desktop 接口正常恢复并另记审计；23:52:51.280 真实 rebind，23:52:53.831 新 B PID 60720，WORKER / BOUND、恢复窗口清除且实际工具结果到达。独立 helper 的 writer 冲突尚未解决。#54/#49 继续开放，待新的真实完整链路。
 

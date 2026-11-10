@@ -1,0 +1,57 @@
+{
+  "at": "2026-11-10T16:04:05.818Z",
+  "kind": "actual-production-native-stop-live-C2-single-B-delivery-real-A-tool",
+  "original_main_session_id": "01a1ae7a-9442-79e0-b32b-aa560f976453",
+  "contract_sha256": "db7ccc65dc3524ae4dcc40767bfd7bd11bd7e4a107a51c5e90d1bb5f3c576e54",
+  "task_version": 15,
+  "stop": {
+    "id": "5c4c7121-6af5-4319-b518-e4c890521f74",
+    "at": "2026-11-10T15:59:11.972Z",
+    "turn_id": "01a1c628-f260-7e12-a2e6-f4d2dcfa7e43"
+  },
+  "snapshot": {
+    "id": "9aaf45aa-eae3-44eb-9147-4c8cf400e608",
+    "sha256": "462a1f8ff52b3757bbae40db4ea849d2f70f1601c2ad914ea96d1a119213d5f2",
+    "validation": "valid",
+    "revalidated_with_current_public_validator": true
+  },
+  "C": {
+    "thread_id": "01a1c62f-5511-7091-9eee-baebe56af71e",
+    "created_at": "2026-11-10T15:59:13.975Z",
+    "output_at": "2026-11-10T16:01:00.348Z",
+    "archived_at": "2026-11-10T16:01:00.415Z",
+    "action": "CONTINUE",
+    "plan_id": "qr793-v15-current-artifact-inventory",
+    "selected_route_id": "diagnostic-current-artifact-inventory",
+    "candidate_count": 1,
+    "selected_kind": "diagnostic",
+    "selected_status": "candidate",
+    "action_count": 2,
+    "next_message_sha256": "cbed52ffe753f70214cd1683b76229a8ce02facb173b4bad2ebfc3b43fb4a858",
+    "selected_actions_equal_message": true
+  },
+  "B": {
+    "delivery_id": "fb14439b-f93f-4630-9d68-01c9e678feb3",
+    "prepared_count": 1,
+    "attempted_count": 1,
+    "direction_count": 1,
+    "direction_at": "2026-11-10T16:01:00.466Z",
+    "confirmed_count": 1,
+    "confirmed_at": "2026-11-10T16:01:34.591Z"
+  },
+  "A": {
+    "tool_result_at": "2026-11-10T16:01:34.591Z",
+    "tool_event_id": "07a19f2a-5d9a-48ac-a416-c7d89c6ed7b4",
+    "tool_use_id": "exec-4c3db1f2-4a02-49b7-a0ea-0048c5d50b9f",
+    "turn_id": "01a1c628-f260-7e12-a2e6-f4d2dcfa7e43",
+    "session_id": "01a1ae7a-9442-79e0-b32b-aa560f976453",
+    "complete": true,
+    "tool_value_sha256": "d4dd3d010014af3c7824c26f6d2a9b58a992d4a589a77378a3b46a01a0832b14",
+    "matching_native_contract": true
+  },
+  "coordinator_messages_between_stop_and_confirmation": 0,
+  "original_events_unchanged": true,
+  "live_provider_availability_claimed": false,
+  "quantresearch_793_completion_claimed": false,
+  "known_limit": "Earlier binding restoration used the Desktop thread interface because the standalone helper was rejected by the Desktop active writer. The selected C2 native continuation above required no coordinator message."
+}

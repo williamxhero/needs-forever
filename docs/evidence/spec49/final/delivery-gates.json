@@ -1,0 +1,33 @@
+{
+  "at": "2026-11-10T16:06:14.377Z",
+  "pre_documentation_main": "d6702c90d66e55d79c4a099c0891a0b3f4941f38",
+  "pre_documentation_remote": "d6702c90d66e55d79c4a099c0891a0b3f4941f38",
+  "reviewed_source_commits_in_main": [
+    "25877a82",
+    "c831843",
+    "80a7128",
+    "6d93f8c",
+    "7a6ef1e",
+    "7e0c9ba",
+    "45cb8a4",
+    "0c72ac4"
+  ],
+  "primary_worktree_only": true,
+  "created_spec49_branches_remaining": 0,
+  "managed_worktrees_archived": 6,
+  "package_files_matching_source_and_installed": 48,
+  "hook_identity_unchanged": true,
+  "full_tests": 224,
+  "full_pass": 224,
+  "full_fail": 0,
+  "standards_unresolved": 0,
+  "spec_unresolved": 0,
+  "installed_fixture_success_and_wait_verified": true,
+  "actual_native_C2_single_delivery_and_A_tool_verified": true,
+  "native_receipt": "native-live-chain.json",
+  "limits": [
+    "Default concurrent npm test has recorded Windows fixture failures; final full serial suite passed.",
+    "Independent helper Desktop active-writer conflict remains; initial binding restoration used the Desktop interface.",
+    "No real external provider availability or QuantResearch #793 completion is claimed."
+  ]
+}

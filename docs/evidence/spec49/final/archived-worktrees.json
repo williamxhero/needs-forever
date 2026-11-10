@@ -1,0 +1,36 @@
+{
+  "source": "Codex app list_artifacts readback",
+  "archived_count": 6,
+  "archives": [
+    {
+      "id": "01a1c529-6916-7341-a3c0-f116d36f1d1c",
+      "type": "archived_worktree",
+      "root": "C:\\Users\\will\\.codex\\worktrees\\spec49-ticket50\\needs-forever"
+    },
+    {
+      "id": "01a1c529-6b8b-7703-9841-c29704735f74",
+      "type": "archived_worktree",
+      "root": "C:\\Users\\will\\.codex\\worktrees\\spec49-ticket51\\needs-forever"
+    },
+    {
+      "id": "01a1c529-703e-7663-a6de-a6df3fcef298",
+      "type": "archived_worktree",
+      "root": "C:\\Users\\will\\.codex\\worktrees\\spec49-ticket52\\needs-forever"
+    },
+    {
+      "id": "01a1c529-73dc-77e2-bde2-66268a84cee3",
+      "type": "archived_worktree",
+      "root": "C:\\Users\\will\\.codex\\worktrees\\spec49-ticket53\\needs-forever"
+    },
+    {
+      "id": "01a1c529-77e0-7433-a224-cf85398e530b",
+      "type": "archived_worktree",
+      "root": "C:\\Users\\will\\.codex\\worktrees\\spec49-ticket54\\needs-forever"
+    },
+    {
+      "id": "01a1c529-7b12-7482-8493-2a2ecd0be897",
+      "type": "archived_worktree",
+      "root": "C:\\Users\\will\\.codex\\worktrees\\spec49-review-fixes\\needs-forever"
+    }
+  ]
+}

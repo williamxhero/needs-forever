@@ -14,10 +14,10 @@ test at dist\test\main-controller.test.js:73:1
 ✖ native C2 delivery retains the exact judged proof after its own decision fills the snapshot budget (2167.0805ms)
   AssertionError [ERR_ASSERTION]: B must deliver a decision valid against the proof C actually saw.
   + actual - expected
-  
+
   + undefined
   - 'block'
-  
+
       at TestContext.<anonymous> (file:///D:/WILL/TOOLS/needs-forever/dist/test/main-controller.test.js:84:12)
       at Test.runInAsyncScope (node:async_hooks:227:14)
       at Test.run (node:internal/test_runner/test:1382:25)
