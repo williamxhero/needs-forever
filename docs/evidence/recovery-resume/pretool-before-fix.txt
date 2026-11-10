@@ -1,0 +1,28 @@
+✖ resume binds an already-running original A on its next genuine PreToolUse (1727.0124ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1843.9895
+
+✖ failing tests:
+
+test at dist\test\main-controller.test.js:451:5
+✖ resume binds an already-running original A on its next genuine PreToolUse (1727.0124ms)
+  AssertionError [ERR_ASSERTION]: The genuine tool that restores binding must retain its matching result for C.
+  
+  0 !== 1
+  
+      at TestContext.<anonymous> (file:///D:/WILL/TOOLS/needs-forever/dist/test/main-controller.test.js:475:20)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

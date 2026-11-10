@@ -1,0 +1,15 @@
+✔ daemon resume dispatches recovery immediately and ticks retry it without a Codex hook (35.2395ms)
+✔ native rebind recovery automatically prompts the original A instead of waiting forever (2168.8778ms)
+✔ global daemon resume runs the installed helper, binds the original A and restores Stop supervision (3074.0406ms)
+✔ untrusted recovery hooks interrupt immediately with a concrete cause and never start A (2370.8138ms)
+✔ resume binds an already-running original A on its next genuine PreToolUse (2151.8388ms)
+✔ resume binds an already-running original A on its next genuine PostToolUse (1858.1731ms)
+✔ resume binds an already-running original A on its next genuine Stop (1720.6152ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 13680.137
