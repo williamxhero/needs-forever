@@ -1,0 +1,20 @@
+{
+  "action": "WAIT_EXTERNAL",
+  "reason": "The remaining required fixture data has no authorized executable source.",
+  "evidence_ids": [
+    "local-probe-1",
+    "local-probe-5"
+  ],
+  "next_message": "",
+  "external": {
+    "missing": "Required local fixture input or an explicitly authorized replacement.",
+    "attempted": [
+      "tushare-quota-fixture: synthetic quota command failed.",
+      "local-b0qi-artifact: exact local input is absent."
+    ],
+    "why_no_other_work": "This exercise authorizes only the generated local artifact and synthetic provider; both are explicitly excluded.",
+    "resume_when": "Supply the required local fixture input or authorize a replacement."
+  },
+  "diagnosis": null,
+  "route_plan": null
+}

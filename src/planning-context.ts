@@ -57,6 +57,20 @@ export function buildC2Context(snapshot: Snapshot, state: C2ContextState, maxCha
     snapshot.c2.context_complete = false;
     snapshot.omissions.push(`C2 budget omissions: ${omittedCatalog} catalog entries, ${omittedAttempts} route attempts, ${omittedObservations} observation digests. Inventory/diagnostic required before substantive route selection or external waiting.`);
   }
+  // A pre-C2/near-limit Stop may already consume the ordinary proof budget.
+  // Keep the immutable contract, and make omitted current proof explicit rather
+  // than failing before C can request a concise discriminating observation.
+  let omittedCurrentProof = 0;
+  while (size() > maxChars - 400 && snapshot.evidence.length) {
+    const omitted = snapshot.evidence.pop()!;
+    snapshot.c2.observations = snapshot.c2.observations.filter((entry) => entry.id !== omitted.id);
+    omittedCurrentProof++;
+  }
+  if (omittedCurrentProof) {
+    snapshot.evidence_complete = false;
+    snapshot.c2.context_complete = false;
+    snapshot.omissions.push(`${omittedCurrentProof} current Stop proof entries omitted to fit C2 within ${maxChars} characters; gather concise current proof before terminal judgment.`);
+  }
   if (size() > maxChars) throw new Error('Task contract and current Stop proof leave insufficient room for the bounded C2 context within 24000 characters.');
   return snapshot;
 }

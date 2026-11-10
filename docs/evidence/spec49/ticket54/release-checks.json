@@ -1,0 +1,35 @@
+{
+  "date": "2026-11-10",
+  "branch": "codex/spec49-ticket54",
+  "integration_base": "87edf5d",
+  "command": "npm test",
+  "tests": 191,
+  "pass": 191,
+  "fail": 0,
+  "cancelled": 0,
+  "skipped": 0,
+  "todo": 0,
+  "duration_ms": 184298.0831,
+  "runtime_modules": 32,
+  "earlier_full_run": {
+    "duration_ms": 179248.7345,
+    "tests": 191,
+    "fail": 0,
+    "pass": 191
+  },
+  "plugin_build": "passed",
+  "installed_cli_discovery": "passed-no-model-untrusted-hooks",
+  "installed_public_c2_acceptance": "passed-simulated-planner-five-actual-local-subprocesses",
+  "historical_live_C_replay": "passed-validated-bounded-inventory-continue",
+  "original_A_contacted": false,
+  "fresh_native_Stop": "not_forced-observation-limit",
+  "global_installation_changed": false,
+  "root_gates": [
+    "independent Standards/Spec review",
+    "production deployment and state observation",
+    "main merge",
+    "cleanup",
+    "push and local/remote equality",
+    "issue evidence and closure"
+  ]
+}
