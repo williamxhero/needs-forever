@@ -151,6 +151,35 @@ test('inventory hints cannot forge facts, reuse historical/model evidence, expan
   assert.equal(state.route_catalog!.entries.find((entry) => entry.route_id === 'candidate-provider')!.status, 'candidate');
 });
 
+test('workspace inventory honors original protected-data access exclusions and keeps ambiguous authorization unverified', () => {
+  const state = runtimeState('contract-exclusions');
+  mkdirSync(resolve(state.task.workspace, 'forward-holdout'), { recursive: true });
+  mkdirSync(resolve(state.task.workspace, 'reports'), { recursive: true });
+  writeFileSync(resolve(state.task.workspace, 'forward-holdout', 'prices.csv'), 'unreleased holdout data');
+  writeFileSync(resolve(state.task.workspace, 'reports', 'manifest.json'), '{"holdout_registered":true}');
+  writeFileSync(resolve(state.task.workspace, 'restricted.csv'), 'restricted data');
+  state.task.authorization += ' Do not read restricted.csv.';
+  state.task.acceptance.push({ id: 'S5', text: '登记时间门 holdout；不提前读取或执行 holdout。' });
+  const observe = (id: string, path: string) => {
+    const payload = { nf_route_inventory: { schema_version: 1, task_id: state.task_id, task_version: state.task_version, routes: [{ route_id: id, resource: { kind: 'artifact', id: path }, operation: 'read-local-artifact' }] } };
+    return ingestRouteObservations(state, context(state, [{ id: 'E1', type: 'commandExecution', value: { aggregatedOutput: JSON.stringify(payload) }, source: { event_id: `source-${id}`, observed_at: new Date().toISOString(), thread_id: 'worker', turn_id: 'turn' } }]));
+  };
+  assert.equal(observe('holdout', 'forward-holdout/prices.csv'), 1);
+  assert.equal(observe('restricted', 'restricted.csv'), 1);
+  for (const id of ['holdout', 'restricted']) {
+    const entry = state.route_catalog!.entries.find((item) => item.route_id === id)!;
+    assert.equal(entry.status, 'candidate');
+    assert.equal(entry.authorization.status, 'unknown');
+    assert.equal(entry.evidence.some((proof) => proof.source === 'probe'), false);
+    assert.equal(entry.last_success, null);
+  }
+  assert.equal(observe('metadata', 'reports/manifest.json'), 1);
+  assert.equal(state.route_catalog!.entries.find((item) => item.route_id === 'metadata')!.status, 'observed');
+  state.task.authorization += ' Never read any restricted material.';
+  assert.equal(observe('ambiguous', 'reports/manifest.json'), 1);
+  assert.equal(state.route_catalog!.entries.find((item) => item.route_id === 'ambiguous')!.status, 'candidate');
+});
+
 test('an independently observed reset time permits one evidenced transient route retry', () => {
   const state = runtimeState('observed-retry');
   const first = context(state);

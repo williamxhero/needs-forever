@@ -40,6 +40,15 @@ proves no network/authentication requirement, no remote rate limit and a success
 bounded read. It proves neither relevance nor completeness nor task completion.
 Selected actions and independent acceptance checks must still establish those.
 
+Workspace membership never overrides read/access exclusions in the original goal,
+authorization or acceptance. Known protected data names (`holdout`/`留出`) under an
+explicit access prohibition, and literal excluded paths, are not probed. Metadata
+reports/manifests outside guarded path names remain eligible for the bounded read.
+An ambiguous read/access restriction leaves the artifact as a candidate without
+authorization or probe/success facts. This conservative guard is not a general
+natural-language policy interpreter; it does not declare arbitrary contract
+restrictions satisfied merely because a file exists.
+
 `provider`, `api` and `command` hints can identify candidates, with authorization,
 network, authentication and quota facts unknown and no last success. A command
 printing JSON or exiting zero does not prove a provider's availability. This

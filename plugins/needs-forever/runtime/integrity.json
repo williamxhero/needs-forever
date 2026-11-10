@@ -25,7 +25,7 @@
     "src/route-contract.js": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
     "src/route-execution.js": "cf988ab62caf1ee5c547a73ab3898b701bb4ad7beb47092f4165b7bd33fea7c4",
     "src/route-ledger.js": "a58067dd84ce3c106b5c702179207ba8e48fa176f6f06d1318a18a49c5975319",
-    "src/route-observations.js": "c312dcfda5ac68a4e7613c3adea7f6bb1aff4d8697d139eb48973a4948ca925e",
+    "src/route-observations.js": "61ab557be1e1e79b5f5404f7392c09df123310a8268349ecc835f2bd1b041aba",
     "src/route-storage.js": "ed3a083a8a6e5f52edfcf55dca6d0c1dc6e20b2ea111e6e69560db9076a08034",
     "src/rules.js": "e743c10107cb043bf2c06957b2646cb9fc723474bd456d0f96a02861d5d376fc",
     "src/snapshot.js": "f5bfee9d5637c1e3ecb0ce2bedecf8eb8b70ee013ff088055daaf1ce9cd13978",
