@@ -27,6 +27,8 @@ export interface MainSessionState extends State {
     expected_run_generation?: string;
     armed_at?: string;
     accepted_receipt?: { occurrence_id: string; issued_at: string; generation: string };
+    /** A genuine Stop used for rebind still needs one delivery to the new B. */
+    pending_stop_receipt?: string;
   };
   host: { desktop_version: string | null; cli_version: string | null; hook_effective: boolean; source: 'unverified' | 'native-desktop' | 'simulated'; reason: string; desktop_pid?: number; desktop_binary?: string };
   last_stop?: StopRequest;
@@ -44,6 +46,7 @@ export interface MainSessionState extends State {
    * after B returned the hook result.
    */
   recovery_prompt?: {
+    plugin_root?: string;
     plan_id?: string;
     route_id?: string;
     source_stop_attempt_id?: string;

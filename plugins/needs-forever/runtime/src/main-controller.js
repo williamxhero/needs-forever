@@ -591,8 +591,13 @@ export async function runController(path, pluginRoot, fixturePath) {
                         return {};
                     const nativeReceipt = message.payload?.native_receipt;
                     const acceptedReceipt = state.binding.accepted_receipt;
-                    if (acceptedReceipt && nativeReceipt && Date.parse(nativeReceipt.issued_at) <= Date.parse(acceptedReceipt.issued_at))
+                    const firstReboundStop = event.hook_event_name === 'Stop' && nativeReceipt && acceptedReceipt?.occurrence_id === nativeReceipt.occurrence_id && state.binding.pending_stop_receipt === nativeReceipt.occurrence_id;
+                    if (acceptedReceipt && nativeReceipt && Date.parse(nativeReceipt.issued_at) <= Date.parse(acceptedReceipt.issued_at) && !firstReboundStop)
                         return {};
+                    if (firstReboundStop) {
+                        delete state.binding.pending_stop_receipt;
+                        store.save(state);
+                    }
                     const desktopRestarted = event.hook_event_name === 'SessionStart' && Number.isInteger(event.callback_desktop_pid) && Number.isInteger(state.host.desktop_pid) && event.callback_desktop_pid !== state.host.desktop_pid;
                     const callbackPluginRoot = typeof event.callback_plugin_root === 'string' ? canonicalPath(event.callback_plugin_root) : controller.plugin_root;
                     const callbackBundleSha = typeof event.callback_bundle_sha256 === 'string' ? event.callback_bundle_sha256 : null;
@@ -862,6 +867,7 @@ export async function runController(path, pluginRoot, fixturePath) {
         delete state.recovery_condition;
         delete state.recovery_window;
         delete state.recovery_interruption;
+        delete state.last_error;
         state.host.reason = 'Bound controller reachable; Stop continuation and actual main-session activity still require evidence.';
         store.save(state);
         store.event(state, 'main_session_controller_started', { controller_id: id, main_session_id: state.main_session_id, pid: process.pid });

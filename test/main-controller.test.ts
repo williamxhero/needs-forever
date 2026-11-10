@@ -4,7 +4,8 @@ import { spawn, spawnSync } from 'node:child_process';
 import { cpSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
-import { scheduleNativeRebindPrompt } from '../src/main-session-recovery.js';
+import { driveNativeRecovery, scheduleNativeRebindPrompt } from '../src/main-session-recovery.js';
+import { NFDaemon } from '../src/daemon.js';
 import type { MainSessionState } from '../src/main-session.js';
 import { routeInventoryDecision } from '../src/planning.js';
 import type { Snapshot } from '../src/types.js';
@@ -21,7 +22,7 @@ function installed(name: string, transport: unknown = {}, sessionId = name, boun
   const fixture = join(directory, 'host.json');
   const trace = join(directory, 'protocol.jsonl');
   const scenario = join(directory, 'server.json');
-  if (appServer) writeFileSync(scenario, JSON.stringify({ trace, ...appServer }));
+  if (appServer) writeFileSync(scenario, JSON.stringify({ trace, plugin_root: plugin, ...appServer }));
   writeFileSync(task, JSON.stringify({ schema_version: 1, task_id: name, workspace, c2: { mode: c2Mode }, goal: 'Three stages', acceptance: [{ id: 'all', text: 'Three stages complete' }], authorization, limits }));
   writeFileSync(fixture, JSON.stringify({ desktop_version: 'simulated', cli_version: 'simulated', transport, ...(desktopPid ? { desktop_pid: desktopPid } : {}), ...(appServer ? { app_server_argv: [process.execPath, resolve('test/fixtures/app-server.mjs'), scenario] } : {}) }));
   const control = join(plugin, 'scripts/main-session.mjs');
@@ -353,7 +354,7 @@ test('automatic native rebind rotates the generation and rejects stale lifecycle
 });
 
 test('native rebind recovery automatically prompts the original A instead of waiting forever', async (t) => {
-  const f = installed('native-rebind-prompt', {}, 'native-rebind-prompt', 0, {}, { main_session_thread_id: 'native-rebind-prompt' });
+  const f = installed('native-rebind-prompt', {}, 'native-rebind-prompt', 0, {}, { main_session_thread_id: 'native-rebind-prompt', worker_completion_delay_ms: 300 });
   // Exercise delivery/correlation without spending the production's 3s grace
   // period inside this test's bounded acknowledgement deadline.
   writeFileSync(f.fixture, JSON.stringify({ ...JSON.parse(readFileSync(f.fixture, 'utf8')), recovery_prompt_delay_ms: 0 }));
@@ -375,12 +376,19 @@ test('native rebind recovery automatically prompts the original A instead of wai
   let events: any[] = [];
   while (Date.now() < deadline) {
     try { events = readFileSync(join(f.workspace, '.codex-supervisor', 'native-rebind-prompt', 'events.jsonl'), 'utf8').split(/\r?\n/).filter(Boolean).map((line) => JSON.parse(line)); } catch { /* child has not created the file yet */ }
-    if (events.some((event) => event.type === 'main_session_recovery_prompt_acknowledged')) break;
+    if (events.some((event) => event.type === 'main_session_recovery_turn_completed')) break;
     await delay(25);
   }
   assert.ok(events.some((event) => event.type === 'main_session_recovery_prompt_scheduled'));
   assert.ok(events.some((event) => event.type === 'main_session_recovery_prompt_sent'));
   assert.ok(events.some((event) => event.type === 'main_session_recovery_prompt_acknowledged'));
+  assert.ok(events.some((event) => event.type === 'main_session_recovery_turn_completed'), 'The owned worker must survive acknowledgement until completion.');
+  const trace = readFileSync(f.trace, 'utf8').split(/\r?\n/).filter(Boolean).map(line => JSON.parse(line));
+  const worker = trace.find(entry => entry.message?.method === 'turn/start' && entry.message.params.threadId === 'native-rebind-prompt');
+  const processStart = trace.find(entry => entry.kind === 'spawn' && entry.pid === worker.pid);
+  assert.ok(!processStart.argv.includes('features.hooks=false'), 'A must retain hooks.');
+  const resume = trace.find(entry => entry.pid === worker.pid && entry.message?.method === 'thread/resume');
+  assert.equal(resume.message.params.sandbox, undefined, 'Recovery must retain the saved worker permissions.');
   const scheduled = events.find((event) => event.type === 'main_session_recovery_prompt_scheduled');
   const sent = events.find((event) => event.type === 'main_session_recovery_prompt_sent');
   const acknowledged = events.find((event) => event.type === 'main_session_recovery_prompt_acknowledged');
@@ -390,6 +398,89 @@ test('native rebind recovery automatically prompts the original A instead of wai
   assert.equal(sent.turn_id, 'turn-parent-001');
   assert.equal(acknowledged.stop_attempt_id, 'stop-parent-001');
   assert.equal(acknowledged.turn_id, 'turn-parent-001');
+});
+
+test('global daemon resume runs the installed helper, binds the original A and restores Stop supervision', async (t) => {
+  const name = 'daemon-native-recovery';
+  const f = installed(name, { decision: { action: 'CONTINUE', next_message: 'Continue the original acceptance work.' } }, name, 0, {}, { main_session_thread_id: name, worker_completion_delay_ms: 300 });
+  t.after(() => f.run('pause'));
+  const original = JSON.parse(f.run('status').stdout);
+  assert.equal(f.run('pause').status, 0);
+  await delay(300);
+  writeFileSync(f.fixture, JSON.stringify({ ...JSON.parse(readFileSync(f.fixture, 'utf8')), recovery_prompt_delay_ms: 0 }));
+  const scenarioPath = join(f.directory, 'server.json');
+  writeFileSync(scenarioPath, JSON.stringify({ ...JSON.parse(readFileSync(scenarioPath, 'utf8')), native_recovery_hook: { plugin: f.plugin, fixture: f.fixture, workspace: f.workspace } }));
+  writeFileSync(f.state, JSON.stringify({ ...original, status: 'INTERRUPTED', phase: 'IDLE', controller: undefined, recovery_plan: undefined, binding: { ...original.binding, status: 'RELEASED' } }));
+  const daemon = new NFDaemon({ workspaces: [f.workspace], dataPath: join(f.directory, 'daemon.json'), intervalMs: 0, recoverTask: path => { driveNativeRecovery(path, f.plugin, f.fixture); } });
+  await daemon.tick();
+  daemon.control(name, 'resume');
+  let rebound: any;
+  const until = Date.now() + 8000;
+  do {
+    await delay(25);
+    rebound = JSON.parse(readFileSync(f.state, 'utf8'));
+  } while ((rebound.binding.status !== 'BOUND' || rebound.controller?.lifecycle !== 'running' || rebound.phase !== 'WORKER') && Date.now() < until);
+  assert.equal(rebound.binding.status, 'BOUND');
+  assert.equal(rebound.phase, 'WORKER');
+  assert.equal(rebound.controller.lifecycle, 'running');
+  assert.equal(rebound.main_session_id, original.main_session_id);
+  assert.equal(rebound.contract_sha256, original.contract_sha256);
+  assert.equal(rebound.recovery_window, undefined);
+  assert.deepEqual(JSON.parse(f.hook({ hook_event_name: 'Stop' }).stdout), { decision: 'block', reason: 'Continue the original acceptance work.' });
+});
+
+test('untrusted recovery hooks interrupt immediately with a concrete cause and never start A', async (t) => {
+  const name = 'recovery-untrusted';
+  const f = installed(name, { decision: { action: 'CONTINUE', next_message: 'Continue.' } }, name, 0, {}, { main_session_thread_id: name, recovery_hook_trust: 'untrusted' });
+  t.after(() => f.run('pause'));
+  const original = JSON.parse(f.run('status').stdout);
+  assert.equal(f.run('pause').status, 0);
+  await delay(300);
+  writeFileSync(f.fixture, JSON.stringify({ ...JSON.parse(readFileSync(f.fixture, 'utf8')), recovery_prompt_delay_ms: 0 }));
+  writeFileSync(f.state, JSON.stringify({ ...original, status: 'INTERRUPTED', phase: 'IDLE', controller: undefined, recovery_plan: undefined, binding: { ...original.binding, status: 'RELEASED' } }));
+  const daemon = new NFDaemon({ workspaces: [f.workspace], dataPath: join(f.directory, 'daemon.json'), intervalMs: 0, recoverTask: path => { driveNativeRecovery(path, f.plugin, f.fixture); } });
+  await daemon.tick(); daemon.control(name, 'resume');
+  let saved: any;
+  const until = Date.now() + 5000;
+  do { await delay(25); saved = JSON.parse(readFileSync(f.state, 'utf8')); } while (saved.status !== 'INTERRUPTED' && Date.now() < until);
+  assert.equal(saved.status, 'INTERRUPTED');
+  assert.match(saved.recovery_interruption.reason, /尚未信任/);
+  const trace = readFileSync(f.trace, 'utf8').split(/\r?\n/).filter(Boolean).map(line => JSON.parse(line));
+  assert.equal(trace.some(entry => entry.message?.method === 'turn/start' && entry.message.params.threadId === name), false);
+});
+
+for (const eventName of ['PreToolUse', 'PostToolUse', 'Stop']) test(`resume binds an already-running original A on its next genuine ${eventName}`, async (t) => {
+  const name = `resume-active-${eventName.toLowerCase()}`;
+  const f = installed(name, { decision: { action: 'CONTINUE', next_message: 'Continue the original task after recovery.' } });
+  t.after(() => f.run('pause'));
+  const before = JSON.parse(f.run('status').stdout);
+  assert.equal(f.run('pause').status, 0);
+  await delay(300);
+  const daemon = new NFDaemon({ workspaces: [f.workspace], dataPath: join(f.directory, 'daemon.json'), intervalMs: 0 });
+  await daemon.tick(); daemon.control(name, 'resume');
+  const hook = f.hook({ hook_event_name: eventName, tool_use_id: 'existing-worker-tool', tool_input: { command: 'existing authorized work' }, tool_response: 'actual tool result', last_assistant_message: 'STOP_REASON: An acceptance item remains.' });
+  assert.equal(hook.status, 0, hook.stderr);
+  const saved = JSON.parse(f.run('status').stdout);
+  assert.equal(saved.binding.status, 'BOUND', 'An active original A must not need another user prompt to rebind.');
+  assert.equal(saved.controller.lifecycle, 'running');
+  assert.equal(saved.phase, 'WORKER');
+  assert.equal(saved.main_session_id, before.main_session_id);
+  assert.equal(saved.contract_sha256, before.contract_sha256);
+  assert.equal(saved.last_error, undefined, 'Successful recovery clears the old failure displayed by NFG.');
+  if (eventName === 'PreToolUse') {
+    const result = f.hook({ hook_event_name: 'PostToolUse', tool_use_id: 'existing-worker-tool', tool_input: { command: 'existing authorized work' }, tool_response: 'actual recovered tool result' });
+    assert.equal(result.status, 0, result.stderr);
+    const events = readFileSync(join(f.workspace, '.codex-supervisor', name, 'events.jsonl'), 'utf8').split(/\r?\n/).filter(Boolean).map(line => JSON.parse(line));
+    const results = events.filter(event => event.type === 'main_tool_result' && event.tool_use_id === 'existing-worker-tool');
+    assert.equal(results.length, 1, 'The genuine tool that restores binding must retain its matching result for C.');
+    assert.equal(results[0].value.tool_response, 'actual recovered tool result');
+  }
+  if (eventName === 'PostToolUse') assert.equal(saved.tool_starts?.['existing-worker-tool'], undefined, 'A lone PostToolUse must not fabricate a prior start.');
+  if (eventName === 'Stop') {
+    assert.deepEqual(JSON.parse(hook.stdout), { decision: 'block', reason: 'Continue the original task after recovery.' });
+    const events = readFileSync(join(f.workspace, '.codex-supervisor', name, 'events.jsonl'), 'utf8').split(/\r?\n/).filter(Boolean).map(line => JSON.parse(line));
+    assert.equal(events.filter(event => event.type === 'main_session_stop_observed').length, 1);
+  }
 });
 
 test('legacy pending resume checkpoints migrate to automatic rebind on the next original-A lifecycle event', async (t) => {

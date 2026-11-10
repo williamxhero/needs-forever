@@ -7,7 +7,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { registeredStatePaths, readJson } from '../runtime/src/main-session.js';
 import { inspectHookHost } from '../runtime/src/hook-host.js';
 import { controlIntent } from '../runtime/src/control-intent.js';
-import { handleLifecycle } from '../runtime/src/lifecycle.js';
+import { handleLifecycle, isNativeRebindEvent } from '../runtime/src/lifecycle.js';
 import { redact } from '../runtime/src/redact.js';
 import { boundStateForEvent, dispatchBoundLifecycle, launchController } from '../runtime/src/main-controller.js';
 
@@ -66,13 +66,21 @@ try {
       const binding = readJson(path).binding;
       if (binding?.status !== 'PENDING_NATIVE_HOOK') return false;
       if (input.hook_event_name === 'PostToolUse') return true;
-      return ['rebind', 'resume'].includes(binding.operation) && ['SessionStart', 'UserPromptSubmit'].includes(input.hook_event_name);
+      return binding.operation === 'rebind'
+        ? isNativeRebindEvent(input.hook_event_name)
+        : binding.operation === 'resume' && ['SessionStart', 'UserPromptSubmit'].includes(input.hook_event_name);
     });
     if (!preparation && !pending) { console.log('{}'); process.exit(0); }
     const host = inspectHookHost(pluginRoot, args[1]);
     const result = handleLifecycle(input, host, pluginRoot, undefined, nativeReceipt);
-    if (result.bound) await launchController(result.state_path, pluginRoot, args[1]);
-    console.log('{}');
+    if (result.bound) {
+      await launchController(result.state_path, pluginRoot, args[1]);
+      // The callback that restored the binding is still the real current
+      // event. In particular, a first Stop must reach B/C exactly once.
+      if (input.hook_event_name === 'Stop') {
+        console.log(JSON.stringify(await dispatchBoundLifecycle(result.state_path, input, pluginRoot, createHash('sha256').update(readFileSync(new URL('../runtime/integrity.json', import.meta.url))).digest('hex'), host.desktop_pid, nativeReceipt, args[1])));
+      } else console.log('{}');
+    } else console.log('{}');
   }
 } catch (error) {
   console.error(String(redact(error.message)));

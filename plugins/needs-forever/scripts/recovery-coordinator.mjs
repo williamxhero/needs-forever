@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 import { closeSync, existsSync, openSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { reconcileRecoveryTick } from '../runtime/src/recovery-coordinator.js';
-import { scheduleNativeRebindPrompt } from '../runtime/src/main-session-recovery.js';
-import { Store } from '../runtime/src/store.js';
+import { driveNativeRecovery } from '../runtime/src/main-session-recovery.js';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -43,16 +42,7 @@ try { while (!stopping && existsSync(statePath)) {
     const result = reconcileRecoveryTick(statePath);
     if (result.waitingNative) {
       try {
-        const current = JSON.parse(readFileSync(statePath, 'utf8'));
-        const prompt = current.recovery_prompt;
-        const dueAt = prompt?.kind === 'native_rebind' ? Date.parse(prompt.due_at) : NaN;
-        if (prompt?.kind === 'native_rebind' && Number.isFinite(dueAt) && dueAt + 30_000 <= Date.now() && current.binding?.status === 'PENDING_NATIVE_HOOK' && current.binding?.operation === 'rebind') {
-          delete current.recovery_prompt;
-          const store = new Store(statePath);
-          store.save(current);
-          store.event(current, 'main_session_recovery_prompt_retry_scheduled', { reason: 'native lifecycle receipt did not arrive before the recovery prompt deadline.' });
-        }
-        scheduleNativeRebindPrompt(statePath, pluginRoot, undefined, current, current.recovery_plan?.reason?.message ?? '原始 A 的监督绑定已失效。');
+        driveNativeRecovery(statePath, pluginRoot);
       } catch { /* The next tick retries after an interrupted checkpoint. */ }
       // Native A is the only authority that can produce the next B. Polling
       // remains bounded and quiet while it waits for that real receipt.

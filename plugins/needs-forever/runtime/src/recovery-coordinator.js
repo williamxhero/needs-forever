@@ -19,13 +19,13 @@ export function resetRecoveryWindow(state, now = Date.now()) {
     delete state.recovery_interruption;
     state.recovery_window = { started_at: new Date(now).toISOString(), deadline_at: new Date(now + RECOVERY_TIMEOUT_MS).toISOString() };
 }
-function interruptRecovery(state, now) {
+export function interruptRecovery(state, now, explicitReason) {
     const cause = state.recovery_condition?.message ?? state.recovery_plan?.reason.message ?? state.last_error ?? '';
-    const reason = `自动恢复超过 2 分钟仍未成功，监督已中断。${cause ? `最后原因：${cause}` : ''}可点击“恢复”重新尝试。`;
+    const reason = explicitReason ?? `自动恢复超过 2 分钟仍未成功，监督已中断。${cause ? `最后原因：${cause}` : ''}可点击“恢复”重新尝试。`;
     state.status = 'INTERRUPTED';
     state.phase = 'IDLE';
     state.recovery_interruption = { at: new Date(now).toISOString(), reason };
-    state.recovery_condition = { kind: 'recovery_timeout', message: reason, resume_when: 'Explicit manual resume starts a new recovery window.' };
+    state.recovery_condition = { kind: explicitReason ? 'recovery_unavailable' : 'recovery_timeout', message: reason, resume_when: 'Explicit manual resume starts a new recovery window.' };
     state.last_error = reason;
     state.input_epoch = (state.input_epoch ?? 0) + 1;
     state.pending_action = null;

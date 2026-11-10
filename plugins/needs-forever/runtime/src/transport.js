@@ -156,6 +156,20 @@ async function handshake(rpc) {
     await rpc.request('initialize', params);
     rpc.notify('initialized');
 }
+/** Original-worker recovery preserves the host's plugins, hooks, tools and
+ * saved thread permissions. Judge isolation must never be applied to A. */
+export async function connectWorker(argv, workspace, signal) {
+    const rpc = new Rpc(argv, workspace, [], signal);
+    try {
+        await rpc.request('initialize', { clientInfo: { name: 'needs-forever-worker-recovery', title: 'Needs Forever worker recovery', version: '0.3.4' }, capabilities: { experimentalApi: true, requestAttestation: false } });
+        rpc.notify('initialized');
+        return { rpc };
+    }
+    catch (error) {
+        await rpc.close();
+        throw error;
+    }
+}
 export async function connect(argv, workspace, signal, versionTimeoutMs = 10_000) {
     signal?.throwIfAborted();
     const [executable, ...arguments_] = argv;

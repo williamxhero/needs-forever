@@ -135,3 +135,23 @@ test('daemon honors the recovery deadline between slow discovery polls', async (
     assert.ok(daemon.status().tickCount >= 2);
   } finally { daemon.stop(); }
 });
+
+test('daemon resume dispatches recovery immediately and ticks retry it without a Codex hook', async () => {
+  const root = mkdtempSync(resolve(tmpdir(), 'nf-resume-dispatch-'));
+  const path = fixture(root, 'INTERRUPTED');
+  const value = JSON.parse(readFileSync(path, 'utf8'));
+  Object.assign(value, { control_mode: 'main-session', main_session_id: 'original-A', run_generation: 'old', host: {}, binding: { status: 'RELEASED' } });
+  writeFileSync(path, JSON.stringify(value));
+  const dispatched: string[] = [];
+  const options = { workspaces: [root], dataPath: resolve(root, 'daemon.json'), intervalMs: 0, recoverTask: (statePath: string) => { dispatched.push(statePath); } };
+  const daemon = new NFDaemon(options);
+  await daemon.tick();
+  assert.equal(dispatched.length, 0, 'Interrupted tasks must remain stopped.');
+  daemon.control('daemon-fixture', 'resume');
+  assert.deepEqual(dispatched, [path], 'A successful resume must dispatch execution, not just arm a state.');
+  await daemon.tick();
+  assert.equal(dispatched.length, 2, 'The global host must drive recovery without another hook.');
+  daemon.control('daemon-fixture', 'pause');
+  await daemon.tick();
+  assert.equal(dispatched.length, 2, 'Manual pause must stop the driver.');
+});

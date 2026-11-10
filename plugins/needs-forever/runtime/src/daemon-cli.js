@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { NFDaemon, startLoopbackApi } from './daemon.js';
 import { startWebServer } from './web.js';
+import { driveNativeRecovery } from './main-session-recovery.js';
 function flags(argv) {
     const result = new Map();
     for (let i = 0; i < argv.length; i += 2) {
@@ -62,7 +63,9 @@ async function main() {
         console.log(JSON.stringify(uninstallWindowsAutostart(), null, 2));
         return;
     }
-    const daemon = new NFDaemon({ workspaces, ...(one(options, '--state') ? { dataPath: one(options, '--state') } : {}), ...(one(options, '--interval') ? { intervalMs: Number(one(options, '--interval')) } : {}) });
+    const runtimeRoot = resolve(fileURLToPath(new URL('../..', import.meta.url)));
+    const pluginRoot = existsSync(resolve(runtimeRoot, 'scripts/recovery-prompt.mjs')) ? runtimeRoot : resolve(runtimeRoot, 'plugins/needs-forever');
+    const daemon = new NFDaemon({ workspaces, recoverTask: (statePath) => { driveNativeRecovery(statePath, pluginRoot); }, ...(one(options, '--state') ? { dataPath: one(options, '--state') } : {}), ...(one(options, '--interval') ? { intervalMs: Number(one(options, '--interval')) } : {}) });
     if (command === 'status') {
         await daemon.tick();
         console.log(JSON.stringify(daemon.status(), null, 2));

@@ -12,6 +12,15 @@ import { createRecoveryPlan, reconcileRecoveryTick } from './recovery-coordinato
 import { confirmRouteExecution, routeCorrelation } from './route-execution.js';
 
 const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
+export function isNativeRebindEvent(name: unknown): boolean {
+  return typeof name === 'string' && ['SessionStart', 'UserPromptSubmit', 'PreToolUse', 'PostToolUse', 'Stop'].includes(name);
+}
+function recordToolStart(state: MainSessionState, toolId: string, input: unknown): void {
+  state.tool_starts ??= {};
+  state.tool_starts[toolId] = { at: new Date().toISOString(), input_sha256: hash(input) };
+  const keys = Object.keys(state.tool_starts);
+  for (const key of keys.slice(0, Math.max(0, keys.length - 128))) delete state.tool_starts[key];
+}
 function strings(value: unknown): string[] {
   if (typeof value === 'string') return [value];
   if (Array.isArray(value)) return value.flatMap(strings);
@@ -113,9 +122,7 @@ export function handleLifecycle(input: unknown, host: HookHost, pluginRoot: stri
       state.tool_starts ??= {};
       if (state.processed_tool_ids?.includes(toolId)) return {};
       if (name === 'PreToolUse') {
-        state.tool_starts[toolId] = { at: new Date().toISOString(), input_sha256: hash(event.tool_input) };
-        const keys = Object.keys(state.tool_starts);
-        for (const key of keys.slice(0, Math.max(0, keys.length - 128))) delete state.tool_starts[key];
+        recordToolStart(state, toolId, event.tool_input);
       } else {
         const start = state.tool_starts[toolId];
         if (!start || start.input_sha256 !== hash(event.tool_input)) return {};
@@ -164,7 +171,9 @@ export function handleLifecycle(input: unknown, host: HookHost, pluginRoot: stri
     // from that same A can rebind it; no controller or C is started before
     // this branch returns `bound` to the native adapter.
     if (state.binding.operation === 'rebind') {
-      if (!['SessionStart', 'UserPromptSubmit'].includes(name)) continue;
+      // An already-running A may emit only tools/Stop after resume. Waiting
+      // exclusively for a new user message strands genuine active workers.
+      if (!isNativeRebindEvent(name)) continue;
       if (state.main_session_id !== session) continue;
       const expectedWorkspace = state.binding.expected_workspace;
       const expectedTaskVersion = state.binding.expected_task_version;
@@ -183,6 +192,12 @@ export function handleLifecycle(input: unknown, host: HookHost, pluginRoot: stri
       const store = new Store(path);
       delete state.recovery_prompt;
       state.binding = { ...state.binding, status: 'BOUND', tool_use_id: null, bound_at: new Date().toISOString(), accepted_receipt: { ...nativeReceipt, generation: expectedGeneration! } };
+      delete state.binding.pending_stop_receipt;
+      if (name === 'Stop') state.binding.pending_stop_receipt = nativeReceipt.occurrence_id;
+      // Keep the genuine start that established this binding so its matching
+      // result remains available to C. A PostToolUse-only receipt proves no
+      // preceding start and must never create one.
+      if (name === 'PreToolUse' && toolId && !state.processed_tool_ids?.includes(toolId)) recordToolStart(state, toolId, event.tool_input);
       state.host = { ...host, hook_effective: false, reason: 'Original main-session lifecycle receipt correlated; awaiting exactly one replacement controller.' };
       state.recovery_condition = { kind: 'rebind_controller_required', message: 'Original main session re-bound; supervision is not active until the replacement controller is ready.', resume_when: 'Allow the replacement B to start, then wait for a native Stop callback.' };
       store.save(state);

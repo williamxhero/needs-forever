@@ -50,6 +50,9 @@ for await (const line of lines) {
       config.mcp_servers[name] = { enabled: overrides.some((value) => value.startsWith('mcp_servers=') && value.includes(`${JSON.stringify(name)}={enabled=false}`)) ? false : true };
     }
     send({ id: message.id, result: { config, origins: {}, layers: null } });
+  } else if (message.method === 'hooks/list') {
+    const names = ['sessionStart', 'userPromptSubmit', 'preToolUse', 'postToolUse', 'stop', 'interrupt'];
+    send({ id: message.id, result: { data: [{ hooks: names.map(eventName => ({ eventName, sourcePath: resolve(scenario.plugin_root ?? '.', 'hooks/hooks.json'), enabled: true, trustStatus: scenario.recovery_hook_trust ?? 'trusted' })) }] } });
   } else if (message.method === 'thread/start' || message.method === 'thread/resume') {
     const judge = message.params.sandbox === 'read-only';
     const threadId = judge ? `judge-${++judges}` : (scenario.main_session_thread_id ?? 'worker-from-server');
@@ -73,6 +76,14 @@ for await (const line of lines) {
     else if (scenario.unsubscribe_error) send({ id: message.id, error: { code: -32000, message: 'Thread unsubscribe fixture failure.' } });
     else send({ id: message.id, result: {} });
   } else if (message.method === 'turn/start') {
+    if (scenario.native_recovery_hook && !judgeThreads.has(message.params.threadId)) {
+      const hook = scenario.native_recovery_hook;
+      const result = spawnSync(process.execPath, [resolve(hook.plugin, 'scripts/lifecycle.mjs'), '--test-fixture', hook.fixture], {
+        cwd: hook.workspace, env: { ...process.env, PLUGIN_ROOT: hook.plugin }, encoding: 'utf8', timeout: 15000,
+        input: JSON.stringify({ hook_event_name: 'UserPromptSubmit', session_id: message.params.threadId, cwd: hook.workspace, turn_id: 'recovered-native-turn', prompt: message.params.input[0].text }),
+      });
+      trace({ kind: 'native_recovery_hook', status: result.status, stderr: result.stderr });
+    }
     if (judgeThreads.has(message.params.threadId)) {
       const turnId = `judge-turn-${judges}`;
       if (scenario.judge_request_once && !scenario.judge_request_consumed) {
@@ -169,6 +180,7 @@ for await (const line of lines) {
       if (scenario.stream_items) { for (const item of completed.params.turn.items) send({ method: 'item/completed', params: { threadId: message.params.threadId, turnId, item } }); completed.params.turn.items = []; }
       if (scenario.late_error_first && turns > 1) setTimeout(() => send(completed), 80);
       else if (scenario.server_requests?.length) setTimeout(() => send(completed), 120);
+      else if (scenario.worker_completion_delay_ms) setTimeout(() => send(completed), scenario.worker_completion_delay_ms);
       else send(completed);
       if (scenario.duplicate_events) { send(completed); send(completed); }
     }

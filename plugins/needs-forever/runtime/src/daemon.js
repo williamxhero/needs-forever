@@ -71,6 +71,7 @@ export class NFDaemon {
     now;
     intervalMs;
     workspaceRoots;
+    recoverTask;
     manifest;
     timer;
     recoveryTimer;
@@ -84,6 +85,7 @@ export class NFDaemon {
             throw new Error('NF daemon requires at least one workspace.');
         this.workspaceRoots = [...new Set(options.workspaces.map((workspace) => resolve(workspace)))].sort();
         this.now = options.now ?? (() => Date.now());
+        this.recoverTask = options.recoverTask;
         this.intervalMs = options.intervalMs ?? 30_000;
         if (!Number.isFinite(this.intervalMs) || this.intervalMs < 0)
             throw new Error('intervalMs must be a nonnegative number.');
@@ -175,6 +177,8 @@ export class NFDaemon {
                 if (record.deleted)
                     continue;
                 const result = reconcileRecoveryTick(statePath, this.now());
+                if (result.waitingNative)
+                    this.dispatchRecovery(statePath);
                 if (result.changed)
                     changed++;
                 if (result.waitingNative)
@@ -223,6 +227,16 @@ export class NFDaemon {
     task(taskId) {
         const task = this.manifest.tasks[taskId];
         return task && !task.deleted ? { ...task } : null;
+    }
+    dispatchRecovery(statePath) {
+        if (!this.recoverTask)
+            return;
+        try {
+            this.recoverTask(statePath);
+        }
+        catch {
+            this.audit('recovery_dispatch_failed', readState(statePath)?.task_id, { reason: 'Provider recovery driver failed; the next daemon tick will retry.' });
+        }
     }
     /** Apply a user control boundary and leave a durable audit record. */
     control(taskId, action) {
@@ -284,6 +298,7 @@ export class NFDaemon {
                 const store = new Store(record.statePath);
                 store.save(state);
                 store.event(state, 'daemon_resumed', { source: 'nf-daemon' });
+                this.dispatchRecovery(record.statePath);
             }
             this.audit('task_resumed', taskId);
         }
