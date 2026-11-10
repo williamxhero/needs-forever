@@ -130,7 +130,7 @@ for await (const line of lines) {
       // A same-thread unrelated started/input pair must not confirm this delivery.
       send({ method: 'turn/started', params: { threadId: message.params.threadId, turn: { id: 'unrelated-turn', status: 'inProgress', items: [] } } });
       send({ method: 'item/started', params: { threadId: message.params.threadId, turnId: 'unrelated-turn', item: { type: 'userMessage', id: 'old-input', clientId: 'obsolete-delivery', content: [] } } });
-      if (!scenario.real_judge) send({ method: 'turn/completed', params: { threadId: message.params.threadId, turn: { id: 'first-turn-from-server', status: 'completed', items: [] } } });
+      if (turns > 1 && !scenario.real_judge) send({ method: 'turn/completed', params: { threadId: message.params.threadId, turn: { id: 'first-turn-from-server', status: 'completed', items: [] } } });
     }
     if (!scenario.suppress_worker_confirmation) send({ method: 'turn/started', params: { threadId: message.params.threadId, turn: { id: turnId, status: 'inProgress', items: [] } } });
     if (scenario.thread_closed_after_ms !== undefined) setTimeout(() => send({ method: 'thread/closed', params: { threadId: message.params.threadId } }), scenario.thread_closed_after_ms);

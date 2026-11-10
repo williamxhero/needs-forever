@@ -149,17 +149,47 @@ judge 获得一份有界快照，包括：
 
 judge 只能返回一个 JSON 对象，不带 Markdown 围栏。使用 turn/start 的 outputSchema 约束结构，程序仍须再次校验。[S1](https://learn.chatgpt.com/docs/app-server)
 
-SPEC #49 的 C2 合同现在是当前监督的默认协议。下面的五字段例子只表示历史 v0.1 读取格式；当前 CONTINUE 必须另带 diagnosis 和 route_plan，完整字段及公开接口见 [ticket #51 合同](delivery/ticket51-c2-planning.md)。DONE、WAIT_EXTERNAL 的 diagnosis 和 route_plan 为 null，原有独立证据门槛保持生效。显式 task.c2.mode=shadow 可审计旧结果；legacy 只允许显式模拟 fixture。省略配置时有效模式为 enforce，不把默认值注入保存的任务合同或更改其 hash。
+SPEC #49 的 C2 合同是当前监督的默认协议，包括没有 c2 字段的旧 live 任务。当前 CONTINUE 必须带 diagnosis 和 route_plan；下面是缺少目录事实时完整、可校验的盘点例子。DONE、WAIT_EXTERNAL 的 diagnosis 和 route_plan 为 null，原有独立证据门槛保持生效。可选配置为 `"c2": { "mode": "enforce" }`、shadow 或 legacy。shadow 显式允许旧 CONTINUE 以便审计；legacy 只允许显式模拟 fixture。省略配置时有效模式为 enforce，不把默认值注入保存的任务合同或更改其 hash。
 
 ~~~json
 {
   "action": "CONTINUE",
-  "reason": "当前仅完成 S1，S2 和 S3 仍在原始任务范围内。",
-  "evidence_ids": ["E2", "E5"],
-  "next_message": "继续执行 S2。先核对失败日志和依赖版本，验证兼容路线后完成修改，再运行相关检查。",
-  "external": null
+  "reason": "缺少有来源的路线目录，先盘点再选执行路线。",
+  "evidence_ids": [],
+  "next_message": "只读检查已授权的本地数据清单、provider 配置和既有失败记录，输出带来源与摘要的候选目录；不调用未验证 provider，不盲重试限频路线。",
+  "external": null,
+  "diagnosis": {
+    "class": "evidence_gap",
+    "statement": "当前目录事实不足以确认可执行替代路线。",
+    "evidence_ids": []
+  },
+  "route_plan": {
+    "plan_id": "inventory-001",
+    "candidates": [{
+      "route_id": "authorized-inventory",
+      "resource": { "kind": "diagnostic", "id": "authorized-route-inventory" },
+      "operation": "inspect-authorized-route-facts",
+      "hypothesis_id": "missing-route-facts",
+      "hypothesis": "有界只读检查可以补齐替代路线的判别事实。",
+      "expected_evidence": ["带命令或文件来源、内容摘要及未知项的路线目录"],
+      "status": "candidate",
+      "evidence_ids": [],
+      "actions": ["只读检查已授权的本地数据清单、provider 配置和既有失败记录，输出带来源与摘要的候选目录；不调用未验证 provider，不盲重试限频路线。"],
+      "expected_signal": "明确可读本地产物、被观测阻塞和仍待验证的能力。",
+      "risk": "文件名不能证明数据覆盖，配置名不能证明认证或可用性。",
+      "fallback": { "route_id": null, "when": "检查后仍缺事实时，记录精确缺项并重新规划判别步骤。" },
+      "discriminating_check": null
+    }],
+    "selected_route_id": "authorized-inventory",
+    "selection_reason": "先取得事实，避免编造 provider 能力或外部等待。",
+    "single_route_reason": "当前没有目录事实，只需一个有界诊断步骤来支持后续实质不同的候选。",
+    "success_condition": "保存精简、有独立来源的目录和失败摘要。",
+    "stop_condition": "输出目录或精确缺项后停止盘点，不重复整套审计。"
+  }
 }
 ~~~
+
+历史只有 action、reason、evidence_ids、next_message、external 的五字段记录仍通过 readHistoricalDecision 读取，NFG 将其投影为虚拟 legacy 单路线，不改写旧事件；历史可读性不授予当前 live 任务执行旧格式的权限。完整接口见 [ticket #51 合同](delivery/ticket51-c2-planning.md)。
 
 字段约束：
 
@@ -203,8 +233,11 @@ WAIT_EXTERNAL 的 external 对象：
 当前路线失败时，选择一个有实质区别且可验证的下一步；
 有多个可执行方向时列出至少两个实质不同的候选；确实只有一个方向时说明原因。
 缺少路线事实时选择路线盘点或区分性诊断 CONTINUE，不能推导 WAIT_EXTERNAL。
-选定路线必须属于候选集合，next_message 必须由其具体动作生成。
+选定路线必须属于候选集合，next_message 必须由其 actions 按换行连接生成，且不超过 3000 字符。
+每个候选写出稳定身份、假设、状态、证据、具体动作、预期信号、风险与 fallback。
+route_plan 写出选定理由、成功条件和停止条件；终态的 diagnosis、route_plan 为 null。
 provider 名称和模型措辞不构成授权、认证、网络、限频或可用性证据。
+已知路线事实必须来自目录证据；未验证候选只能保留 candidate/unknown，不能作为已验证可用路线执行。
 已经决定过的普通技术选项不要重新提交用户。
 
 只有全部验收有依据时返回 DONE。
@@ -318,7 +351,9 @@ pending_action 至少包含：delivery_id、来源回合 ID、任务版本、完
 
 达到阈值后，在下一份 judge 快照中明确要求：不要重复原指令，选择不同假设、补一个能区分原因的检查，或推进其他可做事项。
 
-一次临时重试必须有独立观测支持的重试条件；第二次同类失败要求改变假设或提供带新证据的区分检查；同资源/操作第三次无新证据尝试被拒绝。普通 worker 与 native Stop 使用同一个 C2 上下文，保留当前证明和原始合同，目录或账本摘要超限时给出遗漏标记并要求盘点/诊断。WAIT_EXTERNAL 必须逐一列出已授权候选的尝试或排除及证据、路线 ID 和理由。
+一次临时重试必须有独立观测支持的重试条件；第二次同类失败要求改变假设或提供带新证据的区分检查；同资源/操作第三次无新证据尝试被拒绝。普通 worker 与 native Stop 使用同一个 C2 上下文，保留原始合同和 Stop 身份。目录、账本或当前证明超限时给出遗漏标记；当前证明缺失使 evidence_complete=false，只能盘点/诊断补齐精简独立证明，不能作终态判断。WAIT_EXTERNAL 必须逐一列出已授权候选的尝试或排除及证据、路线 ID 和理由。
+
+C 连续三次超时、空输出或非法结果后，B 记录并发送一次经过同一校验的确定性路线盘点 fallback；不编造可用 provider。等价盘点已被账本拒绝时保留明确恢复检查点，不再无界发送。
 
 这些信号只触发换路检查，不足以证明整个任务没有进展。未知错误可以保持诊断和重试，但不能仅靠反复输出“继续”声称恢复成功。
 

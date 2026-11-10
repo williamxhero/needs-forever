@@ -5,6 +5,7 @@ import { once } from 'node:events';
 import { setTimeout as delay } from 'node:timers/promises';
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { transportProof } from './fixtures/transport-proof.js';
 
 const cli = resolve('dist/src/cli.js');
 const server = resolve('test/fixtures/app-server.mjs');
@@ -25,11 +26,11 @@ function setup(name: string, options: Record<string, unknown> = {}) {
   mkdirSync(workspace, { recursive: true });
   const trace = resolve(directory, 'protocol.jsonl');
   const scenario = resolve(directory, 'scenario.json');
-  writeFileSync(scenario, JSON.stringify({ trace, ...options }));
+  writeFileSync(scenario, JSON.stringify({ trace, tool_items: [transportProof(workspace)], ...options }));
   const fixture = resolve(directory, 'fixture.json');
   writeFileSync(fixture, JSON.stringify({ app_server_argv: [process.execPath, server, scenario], judge: { action: 'WAIT_EXTERNAL', reason: 'Fixture external dependency.', evidence_ids: ['E1'], next_message: '', external: { missing: 'Fixture input.', attempted: ['Known route.'], why_no_other_work: 'No other fixture work.', resume_when: 'Input available.' } } }));
   const taskFile = resolve(directory, 'task.json');
-  writeFileSync(taskFile, JSON.stringify({ schema_version: 1, task_id: name, workspace, goal: 'Complete the goal.', acceptance: [{ id: 'A1', text: 'Accepted result.' }], authorization: 'Local work only.' }));
+  writeFileSync(taskFile, JSON.stringify({ schema_version: 1, task_id: name, workspace, goal: 'Complete the goal.', acceptance: [{ id: 'A1', text: 'Accepted result.' }], authorization: 'Local work only.', c2: { mode: 'legacy' } }));
   const stateFile = resolve(directory, 'state.json');
   return { directory, workspace, trace, scenario, fixture, taskFile, stateFile, argv: ['start', '--task', taskFile, '--state', stateFile, '--test-fixture', fixture] };
 }
@@ -52,10 +53,10 @@ test('start preserves the task and server identities; status reads WAIT_EXTERNAL
   const directory = resolve('runs/ticket23', `initial-${Date.now()}`);
   const workspace = resolve(directory, 'workspace');
   mkdirSync(workspace, { recursive: true });
-  const task = { schema_version: 1, task_id: 'fixture-initial', workspace, goal: 'Complete all original stages.', acceptance: [{ id: 'A1', text: 'All stages exist.' }], authorization: 'Only local workspace changes.' };
+  const task = { schema_version: 1, task_id: 'fixture-initial', workspace, goal: 'Complete all original stages.', acceptance: [{ id: 'A1', text: 'All stages exist.' }], authorization: 'Only local workspace changes.', c2: { mode: 'legacy' } };
   const trace = resolve(directory, 'protocol.jsonl');
   const scenario = resolve(directory, 'scenario.json');
-  writeFileSync(scenario, JSON.stringify({ trace }));
+  writeFileSync(scenario, JSON.stringify({ trace, tool_items: [transportProof(workspace)] }));
   const fixture = resolve(directory, 'fixture.json');
   writeFileSync(fixture, JSON.stringify({ app_server_argv: [process.execPath, server, scenario], judge: { action: 'WAIT_EXTERNAL', reason: 'Fixture external dependency.', evidence_ids: ['E1'], next_message: '', external: { missing: 'Fixture supplied input.', attempted: ['Fixture supplied route.'], why_no_other_work: 'All other fixture work is exhausted.', resume_when: 'Fixture input arrives.' } } }));
   const taskFile = resolve(directory, 'task.json');
@@ -447,7 +448,7 @@ test('resume reconciles an interrupted sent delivery into one new continuation',
   const fixture = setup('resume-interrupted', { disconnect_on_send_once: true });
   assert.equal(run(fixture.argv).status, 1);
   const pending = json(fixture.stateFile).pending_action;
-  writeFileSync(fixture.scenario, JSON.stringify({ trace: fixture.trace, resume_turns: [{ id: 'first-turn-from-server', status: 'interrupted', items: [{ type: 'userMessage', clientId: pending.delivery_id }] }] }));
+  writeFileSync(fixture.scenario, JSON.stringify({ ...json(fixture.scenario), trace: fixture.trace, resume_turns: [{ id: 'first-turn-from-server', status: 'interrupted', items: [{ type: 'userMessage', clientId: pending.delivery_id }] }] }));
   const resumed = run(['resume', '--state', fixture.stateFile, '--test-fixture', fixture.fixture]);
   assert.equal(resumed.status, 0, resumed.stderr);
   const state = json(fixture.stateFile);
@@ -466,7 +467,7 @@ test('resume records a failed sent delivery and enters unified recovery without 
   const fixture = setup('resume-failed', { disconnect_on_send_once: true });
   assert.equal(run(fixture.argv).status, 1);
   const pending = json(fixture.stateFile).pending_action;
-  writeFileSync(fixture.scenario, JSON.stringify({ trace: fixture.trace, resume_turns: [{ id: 'first-turn-from-server', status: 'failed', error: { message: 'Worker process exited with code 17.' }, items: [{ type: 'userMessage', clientId: pending.delivery_id }] }] }));
+  writeFileSync(fixture.scenario, JSON.stringify({ ...json(fixture.scenario), trace: fixture.trace, resume_turns: [{ id: 'first-turn-from-server', status: 'failed', error: { message: 'Worker process exited with code 17.' }, items: [{ type: 'userMessage', clientId: pending.delivery_id }] }] }));
   const resumed = run(['resume', '--state', fixture.stateFile, '--test-fixture', fixture.fixture]);
   assert.equal(resumed.status, 0, resumed.stderr);
   const state = json(fixture.stateFile);
@@ -481,7 +482,7 @@ test('resume records a failed sent delivery and enters unified recovery without 
 test('resume reviews the saved completed worker turn without adding another worker round', () => {
   const fixture = setup('resume-completed', { hold_worker: true, pause_after_ms: 80 });
   assert.equal(run(fixture.argv).status, 0);
-  writeFileSync(fixture.scenario, JSON.stringify({ trace: fixture.trace, resume_turns: [{ id: 'first-turn-from-server', status: 'completed', items: [] }] }));
+  writeFileSync(fixture.scenario, JSON.stringify({ ...json(fixture.scenario), trace: fixture.trace, resume_turns: [{ id: 'first-turn-from-server', status: 'completed', items: [transportProof(fixture.workspace)] }] }));
   writeFileSync(fixture.fixture, JSON.stringify({ ...json(fixture.fixture), judge: { action: 'DONE', reason: 'Completed while interrupt raced.', evidence_ids: ['E1'], next_message: '', external: null } }));
   const result = run(['resume', '--state', fixture.stateFile, '--test-fixture', fixture.fixture]);
   assert.equal(result.status, 0, result.stderr);
@@ -511,7 +512,7 @@ test('explicit resume reclaims only a dead supervisor lock and preserves checkpo
       if (event.kind === 'spawn') { try { process.kill(event.pid, 'SIGKILL'); } catch {} }
     }
   }
-  writeFileSync(fixture.scenario, JSON.stringify({ trace: fixture.trace, resume_turns: [{ id: 'first-turn-from-server', status: 'completed', items: [] }] }));
+  writeFileSync(fixture.scenario, JSON.stringify({ ...json(fixture.scenario), trace: fixture.trace, resume_turns: [{ id: 'first-turn-from-server', status: 'completed', items: [transportProof(fixture.workspace)] }] }));
   writeFileSync(fixture.fixture, JSON.stringify({ ...json(fixture.fixture), judge: { action: 'DONE', reason: 'Recovered fixture history.', evidence_ids: ['E1'], next_message: '', external: null } }));
   const resumed = run(['resume', '--state', fixture.stateFile, '--test-fixture', fixture.fixture]);
   assert.equal(resumed.status, 0, resumed.stderr);

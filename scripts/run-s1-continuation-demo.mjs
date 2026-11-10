@@ -1,6 +1,7 @@
 import { mkdirSync, existsSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { transportProof } from '../dist/test/fixtures/transport-proof.js';
 
 const directory = resolve(process.argv[2] ?? `runs/ticket24/demo-${Date.now()}`);
 if (existsSync(directory)) throw new Error('Choose a new evidence directory.');
@@ -13,13 +14,13 @@ const write = (name, value) => {
 };
 const stateFile = resolve(directory, 'state.json');
 const taskFile = write('task.json', {
-  schema_version: 1, task_id: 's1-continuation-demonstration', workspace,
+  schema_version: 1, task_id: 's1-continuation-demonstration', workspace, c2: { mode: 'legacy' },
   goal: 'Complete all three fixture stages in the same worker.',
   acceptance: [{ id: 'A1', text: 'Two early finishes each cause a confirmed new turn, then fixed DONE.' }],
   authorization: 'Only this isolated simulated workspace may be changed.',
 });
 const scenarioFile = write('scenario.json', {
-  trace: resolve(directory, 'protocol.jsonl'), state_file: stateFile,
+  trace: resolve(directory, 'protocol.jsonl'), state_file: stateFile, tool_items: [transportProof(workspace)],
   response_order: 'after-completed', duplicate_events: true,
   answer: 'This simulated turn finished one stage.',
 });

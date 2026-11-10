@@ -1,0 +1,143 @@
+{
+  "schema_version": 1,
+  "scope": {
+    "task_id": "B0QI-historical-pattern-fixture",
+    "task_version": 1
+  },
+  "revision": 2,
+  "attempts": [
+    {
+      "attempt_id": "d56a85ea-0376-469c-b748-a1d0dbfb6fb9",
+      "task_version": 1,
+      "at": "2026-11-10T04:50:42.855Z",
+      "route": {
+        "route_id": "local-b0qi-artifact",
+        "resource": {
+          "kind": "artifact",
+          "id": "local-b0qi.csv"
+        },
+        "operation": "verify-fixture-coverage",
+        "hypothesis_id": "fixture-coverage",
+        "hypothesis": "The authorized local CSV can supply the two fixture dates.",
+        "expected_evidence": [
+          "Independently checked two-date fixture coverage"
+        ],
+        "status": "observed",
+        "evidence_ids": [
+          "local-probe-2"
+        ],
+        "actions": [
+          "Inspect the same missing local input."
+        ],
+        "expected_signal": "A checked two-row result or a concrete missing-file failure.",
+        "risk": "Fixture data proves only the acceptance exercise, not historical market coverage.",
+        "fallback": {
+          "route_id": null,
+          "when": "If the local artifact fails, collect its exact failure and replan; do not blindly retry Tushare."
+        },
+        "discriminating_check": null
+      },
+      "fingerprint": "0a799b462a152cbde3f6dc40315a3024247077be701199a4c980807892f39d36",
+      "family_fingerprint": "b342f493566af344a6ead73bfd60e32234d7e374946e215f60b5ee6835bdebe7",
+      "attempt_number": 1,
+      "family_attempt_number": 1,
+      "evidence_ids": [
+        "local-probe-5"
+      ],
+      "evidence": [
+        {
+          "id": "local-probe-5",
+          "source": "event",
+          "reference": "local-probe-5",
+          "observed_at": "2026-11-10T04:50:42.852Z",
+          "task_version": 1,
+          "content_sha256": "321d70c1d1c32e7f5c20a5434b0251bea11183544c45a1ef2d2163fb250384ac"
+        }
+      ],
+      "new_evidence_ids": [
+        "local-probe-5"
+      ],
+      "outcome": "transient_failure",
+      "failure_class": "missing_local_input",
+      "retry_condition": {
+        "kind": "not_before",
+        "not_before": "2020-01-01T00:00:00.000Z",
+        "description": "Synthetic elapsed retry window.",
+        "evidence_ids": [
+          "local-probe-5"
+        ]
+      },
+      "discriminating_check": null,
+      "next_attempt": {
+        "allowed": true,
+        "reason": "retry_condition_met",
+        "fingerprint": "0a799b462a152cbde3f6dc40315a3024247077be701199a4c980807892f39d36",
+        "family_fingerprint": "b342f493566af344a6ead73bfd60e32234d7e374946e215f60b5ee6835bdebe7",
+        "attempt_count": 1,
+        "next_attempt": 2
+      }
+    },
+    {
+      "attempt_id": "22e8b9e4-c381-45e4-8389-27baa064b6eb",
+      "task_version": 1,
+      "at": "2026-11-10T04:50:42.856Z",
+      "route": {
+        "route_id": "renamed-g0",
+        "resource": {
+          "kind": "artifact",
+          "id": "local-b0qi.csv"
+        },
+        "operation": "verify-fixture-coverage",
+        "hypothesis_id": "fixture-coverage",
+        "hypothesis": "The authorized local CSV can supply the two fixture dates.",
+        "expected_evidence": [
+          "Independently checked two-date fixture coverage"
+        ],
+        "status": "observed",
+        "evidence_ids": [
+          "local-probe-2"
+        ],
+        "actions": [
+          "Inspect the same missing local input."
+        ],
+        "expected_signal": "A checked two-row result or a concrete missing-file failure.",
+        "risk": "Fixture data proves only the acceptance exercise, not historical market coverage.",
+        "fallback": {
+          "route_id": null,
+          "when": "If the local artifact fails, collect its exact failure and replan; do not blindly retry Tushare."
+        },
+        "discriminating_check": null
+      },
+      "fingerprint": "0a799b462a152cbde3f6dc40315a3024247077be701199a4c980807892f39d36",
+      "family_fingerprint": "b342f493566af344a6ead73bfd60e32234d7e374946e215f60b5ee6835bdebe7",
+      "attempt_number": 2,
+      "family_attempt_number": 2,
+      "evidence_ids": [
+        "local-probe-5"
+      ],
+      "evidence": [
+        {
+          "id": "local-probe-5",
+          "source": "event",
+          "reference": "local-probe-5",
+          "observed_at": "2026-11-10T04:50:42.852Z",
+          "task_version": 1,
+          "content_sha256": "321d70c1d1c32e7f5c20a5434b0251bea11183544c45a1ef2d2163fb250384ac"
+        }
+      ],
+      "new_evidence_ids": [],
+      "outcome": "failure",
+      "failure_class": "missing_local_input",
+      "retry_condition": null,
+      "discriminating_check": null,
+      "next_attempt": {
+        "allowed": false,
+        "reason": "no_progress_limit",
+        "fingerprint": "0a799b462a152cbde3f6dc40315a3024247077be701199a4c980807892f39d36",
+        "family_fingerprint": "b342f493566af344a6ead73bfd60e32234d7e374946e215f60b5ee6835bdebe7",
+        "attempt_count": 2,
+        "next_attempt": 3
+      }
+    }
+  ]
+}

@@ -12,6 +12,18 @@ const task: Task = { schema_version: 1, task_id: 'planning', workspace: process.
 function snapshot(): Snapshot { return { snapshot_id: 'snapshot', task_id: task.task_id, task_version: 1, worker_thread_id: 'worker', worker_turn_id: 'stop', task: structuredClone(task), evidence: [], evidence_complete: true, omissions: [] }; }
 function context(input = snapshot(), state: Partial<State> = {}): Snapshot { return buildC2Context(input, { task_id: task.task_id, task_version: 1, task: input.task, mode: 'live', ...state }); }
 
+test('near-budget Stop proof becomes explicit incomplete inventory context while the task contract stays intact', () => {
+  const original = snapshot();
+  original.evidence.push({ id: 'large-proof', type: 'commandExecution', value: { output: 'x'.repeat(23_000) }, source: { event_id: 'actual-tool', observed_at: '2026-11-10T00:00:00.000Z' } });
+  const input = context(original);
+  assert.deepEqual(input.task, task);
+  assert.ok(JSON.stringify(input).length <= 24_000);
+  assert.equal(input.evidence_complete, false);
+  assert.match(input.omissions!.join(' '), /current Stop proof.*C2/i);
+  assert.equal(validateDecision(JSON.stringify(routeInventoryDecision(input)), input).action, 'CONTINUE');
+  assert.throws(() => validateDecision(JSON.stringify({ action: 'DONE', reason: 'Claimed done.', evidence_ids: ['large-proof'], next_message: '', external: null }), input), /unknown evidence|Incomplete/i);
+});
+
 test('missing route facts produce a concrete inventory CONTINUE without changing the task contract', () => {
   const input = context();
   assert.equal(input.task.c2, undefined);

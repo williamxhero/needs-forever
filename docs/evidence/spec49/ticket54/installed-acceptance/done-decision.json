@@ -1,0 +1,11 @@
+{
+  "action": "DONE",
+  "reason": "The actual local verifier checked every generated fixture acceptance item.",
+  "evidence_ids": [
+    "local-probe-4"
+  ],
+  "next_message": "",
+  "external": null,
+  "diagnosis": null,
+  "route_plan": null
+}

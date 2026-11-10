@@ -1,0 +1,70 @@
+{
+  "action": "CONTINUE",
+  "reason": "G0/G1、正式 S5/S6 和最终交付尚未完成。当前审计汇总不能替代原始验收证据；c2.catalog/ledger 为空且历史上下文被省略，尚不能排除授权替代路线或认定 WAIT_EXTERNAL。",
+  "evidence_ids": [
+    "1eec7ec9-4473-4f04-92d7-efa9c26e2544",
+    "6b18537a-7d8d-4869-b45d-316e951f6990",
+    "62daf235-4eb4-4fcb-9b88-44fd1b2544c3"
+  ],
+  "next_message": "执行一次有界、只读的路线盘点：读取现存 c2 catalog/ledger、既有 #793/G0 SPEC、fresh-authority-window-20261109.json 及其引用的原始失败记录，提取历史 resource/operation、失败次数、证据摘要、重试条件和 next-attempt permission；缺失项明确记为 unknown，不重试 capture。\n按原始 G0 验收，检查工作区现有 provider capability/config、缓存及导出 manifest、publication/readback 实现入口，列出可核验的替代 provider、既有数据复用、不同 API/实现路线和本地诊断路线。仅检查元数据与代码，不读取 forward holdout、不泄露凭据、不改生产状态；不能从名称推断可用性。\n输出精简且有命令/文件出处的 route catalog 和 ledger 摘要：每条含稳定 route_id、resource、operation、hypothesis_id、授权依据、已观察能力、失败历史、状态、下一步许可和判别检查；同时核实 fresh G1/S5/S6 证据文件是否存在及其摘要。明确选出一个可执行替代步骤，或逐路线列出尚缺的判别证据；不得仅复述 WAIT_EXTERNAL 或重复整套测试。",
+  "diagnosis": {
+    "class": "evidence_gap",
+    "statement": "限频窗口判断仅支持暂不盲重试该 capture，不证明所有授权路线均不可执行。缺失 catalog、ledger 和原始证据，需要先完成只读路线盘点。",
+    "evidence_ids": [
+      "6b18537a-7d8d-4869-b45d-316e951f6990",
+      "1eec7ec9-4473-4f04-92d7-efa9c26e2544",
+      "62daf235-4eb4-4fcb-9b88-44fd1b2544c3"
+    ]
+  },
+  "route_plan": {
+    "plan_id": "qr793-route-inventory-v1",
+    "candidates": [
+      {
+        "route_id": "qr793-diagnostic-route-inventory",
+        "resource": {
+          "kind": "diagnostic",
+          "id": "workspace-specs-configs-manifests-and-prior-attempt-records"
+        },
+        "operation": "read-only-route-and-retry-permission-inventory",
+        "hypothesis_id": "h-missing-route-context",
+        "hypothesis": "现有代码、配置、manifest 和历史记录可补足路线能力与重试许可事实，从而确定下一项授权工作。",
+        "expected_evidence": [
+          "带原始文件或命令出处的路线清单",
+          "历史失败、重试条件及下一次尝试许可",
+          "替代路线的可执行性或具体缺失判别证据",
+          "当前验收证据文件的存在性与摘要"
+        ],
+        "status": "candidate",
+        "evidence_ids": [
+          "1eec7ec9-4473-4f04-92d7-efa9c26e2544",
+          "6b18537a-7d8d-4869-b45d-316e951f6990",
+          "62daf235-4eb4-4fcb-9b88-44fd1b2544c3"
+        ],
+        "actions": [
+          "执行一次有界、只读的路线盘点：读取现存 c2 catalog/ledger、既有 #793/G0 SPEC、fresh-authority-window-20261109.json 及其引用的原始失败记录，提取历史 resource/operation、失败次数、证据摘要、重试条件和 next-attempt permission；缺失项明确记为 unknown，不重试 capture。",
+          "按原始 G0 验收，检查工作区现有 provider capability/config、缓存及导出 manifest、publication/readback 实现入口，列出可核验的替代 provider、既有数据复用、不同 API/实现路线和本地诊断路线。仅检查元数据与代码，不读取 forward holdout、不泄露凭据、不改生产状态；不能从名称推断可用性。",
+          "输出精简且有命令/文件出处的 route catalog 和 ledger 摘要：每条含稳定 route_id、resource、operation、hypothesis_id、授权依据、已观察能力、失败历史、状态、下一步许可和判别检查；同时核实 fresh G1/S5/S6 证据文件是否存在及其摘要。明确选出一个可执行替代步骤，或逐路线列出尚缺的判别证据；不得仅复述 WAIT_EXTERNAL 或重复整套测试。"
+        ],
+        "expected_signal": "获得可追溯的能力与历史尝试事实，支持选择实质不同的执行路线或进一步判别检查。",
+        "risk": "历史汇总可能掩盖失败重复或证据缺失；只认原始出处，保持 holdout 和生产状态不变。",
+        "fallback": {
+          "route_id": null,
+          "when": "记录缺失时报告精确缺口，并定位其源文件或调用入口，不调用未验证 provider。"
+        },
+        "discriminating_check": {
+          "description": "区分仅已知 capture 受限与所有授权路线均不可执行，并核实引用的审计文件是否实际存在。",
+          "evidence_ids": [
+            "6b18537a-7d8d-4869-b45d-316e951f6990",
+            "62daf235-4eb4-4fcb-9b88-44fd1b2544c3"
+          ]
+        }
+      }
+    ],
+    "selected_route_id": "qr793-diagnostic-route-inventory",
+    "selection_reason": "当前没有任何已观察 catalog 条目，不能实质选择 provider；先盘点避免盲重试并识别授权替代工作。",
+    "single_route_reason": "catalog 与 ledger 均为空、上下文不完整；目前只能选择不依赖未验证 provider 的诊断路线。",
+    "success_condition": "返回有出处的路线与尝试记录，并确定一个获许可的具体下一步或精确判别缺口。",
+    "stop_condition": "本次仅完成有界盘点；不执行 capture、正式研究或发布，不访问 holdout，不关闭 Issue。"
+  },
+  "external": null
+}
