@@ -41,6 +41,8 @@ The approved SPEC and ticket split define these interfaces: route catalog/ledger
 
 ## Progress
 
+- **Delivery completed:** #50–54 and SPEC #49 were independently read back CLOSED / COMPLETED after the final real native C2/unique-delivery/A-tool gate. Final comments and ticket54 checklist read back exactly. The temporary acceptance heartbeat is PAUSED; B0QI/global NF/NFG remain running. See [final delivery](spec49-final.md) and [tracker closure](../evidence/spec49/final/tracker-closure.json). Earlier pending entries below retain their capture-time meaning.
+
 - Native graph readback: #49 has #50–#54 as its sub-issues; blocking edges match the table.
 - Initial working tree was clean and main matched origin/main.
 - #50 implementation worktree created from the baseline. No other SPEC is being implemented by this execution.

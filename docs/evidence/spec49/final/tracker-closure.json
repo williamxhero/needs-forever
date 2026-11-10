@@ -1,0 +1,78 @@
+{
+  "at": "2026-11-10T16:07:51.646Z",
+  "delivery_main": "11971ee41f82d0c0c8920156ae4bb9663bf55824",
+  "comments": [
+    {
+      "number": 54,
+      "comment_id": "6772417091",
+      "body_readback_equal": true,
+      "body_sha256": "d64eec68df3fd641bbd58f48514eedc822b005046dc91dcb6719629dd27b7bc8"
+    },
+    {
+      "number": 49,
+      "comment_id": "6772418863",
+      "body_readback_equal": true,
+      "body_sha256": "d64eec68df3fd641bbd58f48514eedc822b005046dc91dcb6719629dd27b7bc8"
+    }
+  ],
+  "states": [
+    {
+      "number": 50,
+      "state": "CLOSED",
+      "stateReason": "COMPLETED"
+    },
+    {
+      "number": 51,
+      "state": "CLOSED",
+      "stateReason": "COMPLETED"
+    },
+    {
+      "number": 52,
+      "state": "CLOSED",
+      "stateReason": "COMPLETED"
+    },
+    {
+      "number": 53,
+      "state": "CLOSED",
+      "stateReason": "COMPLETED"
+    },
+    {
+      "number": 54,
+      "state": "CLOSED",
+      "stateReason": "COMPLETED"
+    },
+    {
+      "number": 49,
+      "state": "CLOSED",
+      "stateReason": "COMPLETED"
+    }
+  ],
+  "ticket54_checklist_body_readback_equal": true,
+  "native_subissues": [
+    {
+      "number": 50,
+      "state": "closed"
+    },
+    {
+      "number": 51,
+      "state": "closed"
+    },
+    {
+      "number": 52,
+      "state": "closed"
+    },
+    {
+      "number": 53,
+      "state": "closed"
+    },
+    {
+      "number": 54,
+      "state": "closed"
+    }
+  ],
+  "closure_order": [
+    54,
+    49
+  ],
+  "quantresearch_793_completion_claimed": false
+}

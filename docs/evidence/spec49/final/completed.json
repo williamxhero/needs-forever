@@ -1,0 +1,36 @@
+{
+  "at": "2026-11-10T16:09:04.519Z",
+  "spec49_closed_completed": true,
+  "tickets50_through54_closed_completed": true,
+  "temporary_acceptance_heartbeat": {
+    "id": "b0qi-stop-c2",
+    "status": "PAUSED",
+    "method": "Codex app automation_update and TOML readback"
+  },
+  "B0QI": {
+    "status": "ACTIVE",
+    "phase": "WORKER",
+    "binding": "BOUND",
+    "controller_pid": 60720,
+    "original_main_session_id": "01a1ae7a-9442-79e0-b32b-aa560f976453",
+    "contract_sha256": "db7ccc65dc3524ae4dcc40767bfd7bd11bd7e4a107a51c5e90d1bb5f3c576e54",
+    "recovery_window_present": false
+  },
+  "additional_real_round": {
+    "stop_attempt_id": "e22171b8-7c0e-4689-92fc-6a8f2d132830",
+    "stop_at": "2026-11-10T16:01:51.992Z",
+    "route_outcome_at": "2026-11-10T16:01:52.153Z",
+    "decision_at": "2026-11-10T16:05:59.281Z",
+    "action": "CONTINUE",
+    "plan_id": "qr793-v15-c2-visibility-diagnostic",
+    "route_id": "diagnostic-c2-omission-correlation",
+    "judge_attempts": 2,
+    "direction_at": "2026-11-10T16:05:59.333Z",
+    "delivery_id": "39d3d352-654e-4e4c-b2b8-55ad549e266f",
+    "direction_count": 1,
+    "real_tool_confirmation_at": "2026-11-10T16:06:32.501Z"
+  },
+  "global_NF_NFG_stopped": false,
+  "original_A_interrupted_for_acceptance": false,
+  "quantresearch_793_completion_claimed": false
+}
