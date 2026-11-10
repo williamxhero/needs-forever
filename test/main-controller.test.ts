@@ -6,8 +6,11 @@ import { join, resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { scheduleNativeRebindPrompt } from '../src/main-session-recovery.js';
 import type { MainSessionState } from '../src/main-session.js';
+import { routeInventoryDecision } from '../src/planning.js';
+import type { Snapshot } from '../src/types.js';
+import { createServer } from 'node:http';
 
-function installed(name: string, transport: unknown = {}, sessionId = name, boundStatus = 0, limits: Record<string, number> = {}, appServer?: Record<string, unknown>, desktopPid?: number) {
+function installed(name: string, transport: unknown = {}, sessionId = name, boundStatus = 0, limits: Record<string, number> = {}, appServer?: Record<string, unknown>, desktopPid?: number, c2Mode = 'legacy', authorization = 'Local files') {
   const directory = resolve('runs/main-controller', `${name}-${Date.now()}`);
   const workspace = join(directory, '工作 空间');
   const plugin = join(directory, '插件 安装副本');
@@ -19,7 +22,7 @@ function installed(name: string, transport: unknown = {}, sessionId = name, boun
   const trace = join(directory, 'protocol.jsonl');
   const scenario = join(directory, 'server.json');
   if (appServer) writeFileSync(scenario, JSON.stringify({ trace, ...appServer }));
-  writeFileSync(task, JSON.stringify({ schema_version: 1, task_id: name, workspace, c2: { mode: 'legacy' }, goal: 'Three stages', acceptance: [{ id: 'all', text: 'Three stages complete' }], authorization: 'Local files', limits }));
+  writeFileSync(task, JSON.stringify({ schema_version: 1, task_id: name, workspace, c2: { mode: c2Mode }, goal: 'Three stages', acceptance: [{ id: 'all', text: 'Three stages complete' }], authorization, limits }));
   writeFileSync(fixture, JSON.stringify({ desktop_version: 'simulated', cli_version: 'simulated', transport, ...(desktopPid ? { desktop_pid: desktopPid } : {}), ...(appServer ? { app_server_argv: [process.execPath, resolve('test/fixtures/app-server.mjs'), scenario] } : {}) }));
   const control = join(plugin, 'scripts/main-session.mjs');
   const run = (command: string, args: string[] = []) => spawnSync(process.execPath, [control, command, '--state', state, ...args], { cwd: workspace, encoding: 'utf8', timeout: 20_000 });
@@ -33,6 +36,68 @@ function installed(name: string, transport: unknown = {}, sessionId = name, boun
   const setDesktopPid = (pid: number) => writeFileSync(fixture, JSON.stringify({ ...JSON.parse(readFileSync(fixture, 'utf8')), desktop_pid: pid }));
   return { directory, workspace, plugin, task, state, fixture, trace, run, hook, setDesktopPid };
 }
+
+test('native C2 admission redacts the entire selected decision before checkpoint and recovery prompt', (t) => {
+  const secret = 'sk-abcdefghijklmnop'; // Deliberately fake credential, never a real account value.
+  const decision = routeInventoryDecision({} as Snapshot, `Inspect local proof ${secret}`, `Inspect the authorized artifact; remove ${secret} from the report.`);
+  decision.route_plan!.candidates[0]!.hypothesis += ` Synthetic test marker ${secret}.`;
+  const f = installed('c2-secret-boundary', { decision }, 'c2-secret-boundary', 0, {}, undefined, undefined, 'enforce');
+  t.after(() => f.run('pause'));
+  const stopped = f.hook({ hook_event_name: 'Stop' });
+  assert.equal(stopped.status, 0, stopped.stderr);
+  assert.equal(JSON.parse(stopped.stdout).reason, decision.next_message.replace(secret, '[REDACTED]'));
+  const state = JSON.parse(f.run('status').stdout);
+  assert.equal(state.pending_action.message, state.last_decision.route_plan.candidates[0].actions.join('\n'));
+  assert.equal(state.recovery_prompt.message, state.pending_action.message);
+  for (const path of [f.state, join(f.workspace, '.codex-supervisor', 'c2-secret-boundary', 'events.jsonl')]) assert.equal(readFileSync(path, 'utf8').includes(secret), false, path);
+});
+
+test('installed native Stop ingests the actual paired tool result before choosing a source-linked artifact', (t) => {
+  const f = installed('c2-native-inventory', {}, 'c2-native-inventory', 0, {}, { judge_actions: ['CONTINUE', 'CONTINUE'], judge_select_observed_artifact: true }, undefined, 'enforce');
+  t.after(() => f.run('pause'));
+  assert.equal(JSON.parse(f.hook({ hook_event_name: 'Stop' }).stdout).decision, 'block');
+  mkdirSync(join(f.workspace, 'cache'), { recursive: true });
+  writeFileSync(join(f.workspace, 'cache', 'result.csv'), 'date,close\n2026-11-09,17\n');
+  const inventory = { nf_route_inventory: { schema_version: 1, task_id: 'c2-native-inventory', task_version: 1, routes: [{ route_id: 'native-cache', resource: { kind: 'artifact', id: 'cache/result.csv' }, operation: 'read-local-artifact' }] } };
+  const tool = { tool_use_id: 'actual-inventory', tool_name: 'exec_command', tool_input: { command: 'node bounded-inventory.js' } };
+  assert.equal(f.hook({ ...tool, hook_event_name: 'PreToolUse' }).status, 0);
+  const result = spawnSync(process.execPath, ['-e', 'console.log(process.argv[1])', JSON.stringify(inventory)], { cwd: f.workspace, encoding: 'utf8', timeout: 5_000 });
+  assert.equal(result.status, 0);
+  assert.equal(f.hook({ ...tool, hook_event_name: 'PostToolUse', tool_response: { stdout: result.stdout, exitCode: result.status } }).status, 0);
+  const stopped = f.hook({ hook_event_name: 'Stop' });
+  assert.deepEqual(JSON.parse(stopped.stdout), { decision: 'block', reason: 'Read cache/result.csv and verify the required result.' });
+  const state = JSON.parse(f.run('status').stdout);
+  assert.equal(state.route_catalog.entries.find((entry: any) => entry.route_id === 'native-cache')?.status, 'observed');
+  assert.equal(state.pending_action.route_id, 'native-cache');
+  assert.equal(state.recovery_prompt.route_id, 'native-cache');
+  assert.equal(state.route_execution.route.route_id, 'native-cache');
+});
+
+test('installed native Code Mode accepts only a literal NF HTTP probe and selects the proven API', async (t) => {
+  let requests = 0;
+  const server = createServer((_request, response) => { requests++; response.end('{"rows":17}'); });
+  await new Promise<void>((resolve_) => server.listen(0, '127.0.0.1', resolve_)); t.after(() => server.close());
+  const url = `http://127.0.0.1:${(server.address() as { port: number }).port}/prices`;
+  const f = installed('c2-native-http', {}, 'c2-native-http', 0, {}, { judge_actions: ['CONTINUE', 'CONTINUE'], judge_select_observed_api: true }, undefined, 'enforce', `Local files and read-only GET to ${url}.`);
+  t.after(() => f.run('pause'));
+  assert.equal(JSON.parse(f.hook({ hook_event_name: 'Stop' }).stdout).decision, 'block');
+  const state = JSON.parse(f.run('status').stdout);
+  const argv = [...state.route_probe.argv_prefix, '--url', url];
+  const command = argv.map((arg: string) => `'${arg}'`).join(' ');
+  const code = `const result = await tools.exec_command({cmd:${JSON.stringify(command)}}); text(result);`;
+  const tool = { tool_use_id: 'actual-http-probe', tool_name: 'functions.exec', tool_input: { code } };
+  assert.equal(f.hook({ ...tool, hook_event_name: 'PreToolUse' }).status, 0);
+  const child = spawn(argv[0], argv.slice(1), { cwd: f.workspace, windowsHide: true });
+  let stdout = '', stderr = ''; child.stdout.on('data', (part) => { stdout += part; }); child.stderr.on('data', (part) => { stderr += part; });
+  assert.equal(await new Promise<number | null>((resolve_) => child.once('exit', resolve_)), 0, stderr);
+  assert.equal(f.hook({ ...tool, hook_event_name: 'PostToolUse', tool_response: { output: stdout } }).status, 0);
+  const stopped = f.hook({ hook_event_name: 'Stop' });
+  assert.equal(JSON.parse(stopped.stdout).reason, `Use the verified read-only API ${url} and verify the required result.`);
+  const after = JSON.parse(f.run('status').stdout);
+  assert.equal(after.route_catalog.entries.find((entry: any) => entry.resource.kind === 'api')?.status, 'observed');
+  assert.equal(after.pending_action.route_id, after.route_catalog.entries.find((entry: any) => entry.resource.kind === 'api').route_id);
+  assert.equal(requests, 1);
+});
 
 test('installed bound main session automatically owns an independent B and synchronous Stop returns direction without claiming execution', (t) => {
   const f = installed('automatic-B', { decision: { action: 'CONTINUE', next_message: 'Implement phase two and check phase-two.txt.' } });
@@ -289,6 +354,9 @@ test('automatic native rebind rotates the generation and rejects stale lifecycle
 
 test('native rebind recovery automatically prompts the original A instead of waiting forever', async (t) => {
   const f = installed('native-rebind-prompt', {}, 'native-rebind-prompt', 0, {}, { main_session_thread_id: 'native-rebind-prompt' });
+  // Exercise delivery/correlation without spending the production's 3s grace
+  // period inside this test's bounded acknowledgement deadline.
+  writeFileSync(f.fixture, JSON.stringify({ ...JSON.parse(readFileSync(f.fixture, 'utf8')), recovery_prompt_delay_ms: 0 }));
   t.after(() => f.run('pause'));
   const before = JSON.parse(f.run('status').stdout) as MainSessionState;
   assert.equal(f.run('pause').status, 0);

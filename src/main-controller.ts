@@ -20,6 +20,7 @@ import { classifyRecoveryError, nextBackoff, recordRecoveryFailure, type Recover
 import { reachedLimits } from './rules.js';
 import { armRecovery, cancelRecovery, createRecoveryPlan, markRecoveryRunning, acquireRecoveryOwner, waitForNativeReceipt, reconcileStaleOwner, type RecoveryReason } from './recovery-coordinator.js';
 import { scheduleNativeRebindPrompt } from './main-session-recovery.js';
+import { initializeHttpRouteProbe } from './http-route-probe.js';
 
 type Controller = NonNullable<MainSessionState['controller']>;
 type HookReply = { decision?: 'block'; reason?: string };
@@ -481,6 +482,7 @@ export async function runController(path: string, pluginRoot: string, fixturePat
           const outcome = captureRouteOutcome(state, buildMainSessionSnapshot(state, request, store.events()), request.stop_attempt_id, true);
           if (outcome) store.event(state, 'route_outcome', outcome);
           discoverLocalRoutes(state);
+          initializeHttpRouteProbe(state, path);
           store.save(state);
           if (fixture?.transport?.timeout_ms != null) request.deadline_at = new Date(Date.now() + Number(fixture.transport.timeout_ms)).toISOString();
           const current = { abort: new AbortController(), request, socket, valid: true, epoch: state.input_epoch ?? 0 }; active = current;

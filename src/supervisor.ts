@@ -20,6 +20,7 @@ import { classifyRecoveryError, nextBackoff, recordRecoveryFailure } from './rec
 import { setTimeout as delay } from 'node:timers/promises';
 import { armRecovery, cancelRecovery } from './recovery-coordinator.js';
 import { captureRouteOutcome, confirmRouteExecution, discoverLocalRoutes, plannerFailureFallback, prepareRouteExecution, routeCorrelation } from './route-execution.js';
+import { initializeHttpRouteProbe } from './http-route-probe.js';
 
 type TurnsListResponse = { data: Array<import('./protocol/generated/v2/Turn.js').Turn>; nextCursor: string | null };
 
@@ -622,6 +623,7 @@ export class Supervisor {
         const outcome = captureRouteOutcome(this.state, buildSnapshot(this.state, event.turn_id, this.store.events()), stopId);
         if (outcome) this.store.event(this.state, 'route_outcome', outcome);
         discoverLocalRoutes(this.state);
+        initializeHttpRouteProbe(this.state, this.store.path);
         this.save();
         const snapshot: Snapshot = buildSnapshot(this.state, event.turn_id, this.store.events());
         this.store.snapshot(snapshot, null);

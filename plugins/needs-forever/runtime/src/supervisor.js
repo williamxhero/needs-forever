@@ -11,6 +11,7 @@ import { classifyRecoveryError, nextBackoff, recordRecoveryFailure } from './rec
 import { setTimeout as delay } from 'node:timers/promises';
 import { armRecovery, cancelRecovery } from './recovery-coordinator.js';
 import { captureRouteOutcome, confirmRouteExecution, discoverLocalRoutes, plannerFailureFallback, prepareRouteExecution, routeCorrelation } from './route-execution.js';
+import { initializeHttpRouteProbe } from './http-route-probe.js';
 export class Supervisor {
     state;
     store;
@@ -722,6 +723,7 @@ export class Supervisor {
                 if (outcome)
                     this.store.event(this.state, 'route_outcome', outcome);
                 discoverLocalRoutes(this.state);
+                initializeHttpRouteProbe(this.state, this.store.path);
                 this.save();
                 const snapshot = buildSnapshot(this.state, event.turn_id, this.store.events());
                 this.store.snapshot(snapshot, null);

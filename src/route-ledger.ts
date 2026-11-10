@@ -124,11 +124,19 @@ export class RouteLedger {
   toJSON(): RouteLedgerData { return this.storage.read(); }
   evaluateAttempt(route: RouteIdentity, context: RouteAttemptContext = {}): RouteAttemptPermission { return permission(this.list(), route, context, this.now()); }
   recordAttempt(input: RouteAttemptInput): RouteAttempt {
+    return this.appendAttempt(input, true);
+  }
+  /** Record independent proof of execution that already happened. Permission
+   * still fences future planning; it must not erase an actual observed attempt. */
+  recordObservedAttempt(input: RouteAttemptInput): RouteAttempt {
+    return this.appendAttempt(input, false);
+  }
+  private appendAttempt(input: RouteAttemptInput, enforcePermission: boolean): RouteAttempt {
     validateInput(input);
     return this.storage.update((data) => {
       const context: RouteAttemptContext = { evidence_ids: input.evidence_ids, evidence: input.evidence ?? [], ...(input.discriminating_check ? { discriminating_check: input.discriminating_check } : {}) };
       const allowed = permission(data.attempts, input.route, context, this.now());
-      if (!allowed.allowed) throw new Error(`Route attempt rejected: ${allowed.reason}.`);
+      if (enforcePermission && !allowed.allowed) throw new Error(`Route attempt rejected: ${allowed.reason}.`);
       const fingerprint = fingerprintRoute(input.route), family = routeFamilyFingerprint(input.route);
       const previous = data.attempts.filter((attempt) => attempt.family_fingerprint === family);
       const known = new Set(previous.flatMap((attempt) => attempt.evidence.map((evidence) => evidence.content_sha256)));

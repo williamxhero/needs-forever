@@ -32,4 +32,5 @@ export interface C2Context {
   observations: RouteEvidence[];
   current_plan: RoutePlan | null;
   instruction: string;
+  http_probe?: { argv_prefix: string[]; instruction: string };
 }

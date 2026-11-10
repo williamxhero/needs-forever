@@ -3,6 +3,7 @@ import type { Decision, Snapshot } from './types.js';
 import { record, text } from './types.js';
 import { RouteLedger, canonicalExecutionRoute, fingerprintRoute, routeFamilyFingerprint } from './route-ledger.js';
 import type { RouteCandidate } from './planning-contract.js';
+import { activeRouteCatalog } from './route-catalog.js';
 
 export function planningEvidenceIds(snapshot: Snapshot): Set<string> {
   return new Set([...snapshot.evidence.map((entry) => entry.id), ...(snapshot.c2?.catalog.entries.flatMap((entry) => entry.evidence.map((item) => item.id)) ?? []), ...(snapshot.c2?.ledger.attempts.flatMap((entry) => entry.evidence.map((item) => item.id)) ?? [])]);
@@ -42,6 +43,7 @@ function routeCandidate(raw: unknown, snapshot: Snapshot): RouteCandidate {
   return route;
 }
 export function validateC2Decision(decision: Decision, snapshot: Snapshot): Decision {
+  if (snapshot.c2) snapshot = { ...snapshot, c2: { ...snapshot.c2, catalog: activeRouteCatalog({ task_id: snapshot.task_id, task_version: snapshot.task_version, task: snapshot.task, route_catalog: snapshot.c2.catalog }) } };
   const mode = snapshot.c2?.mode ?? 'enforce';
   if (mode === 'legacy') return decision;
   if (decision.action === 'CONTINUE') {
@@ -86,9 +88,11 @@ export function validateC2Decision(decision: Decision, snapshot: Snapshot): Deci
       for (const route of context.catalog.entries) {
         // B already performed this read-only inventory operation. It proves
         // readability, never relevance or unfinished work toward acceptance.
-        if (route.inventory_only && route.last_success && route.evidence.some((proof) => proof.source === 'probe' && proof.reference === `workspace-file:${route.resource.id}`) && decision.external?.attempted.some((reason) => reason.includes(route.route_id))) continue;
+        if (route.inventory_only && route.status === 'observed' && route.authorization.status === 'authorized' && route.last_success && route.evidence.some((proof) => proof.source === 'probe' && proof.reference === `workspace-file:${route.resource.id}`) && decision.external?.attempted.some((reason) => reason.includes(route.route_id))) continue;
         const attempt = context.ledger.attempts.findLast((attempt) => attempt.route.resource.kind === route.resource.kind && attempt.route.resource.id === route.resource.id && attempt.route.operation === route.operation);
-        if (!['forbidden', 'exhausted', 'blocked'].includes(route.status) || !route.evidence.length || (route.status !== 'forbidden' && !attempt) || !decision.external?.attempted.some((reason) => reason.includes(route.route_id))) throw new Error(`WAIT_EXTERNAL requires explicit attempted/excluded route ${route.route_id} with evidence and reason.`);
+        const currentFailure = attempt && attempt.task_version === snapshot.task_version && ['failure', 'blocked', 'exhausted'].includes(attempt.outcome) && context.observations.some((proof) => decision.evidence_ids.includes(proof.id) && attempt.evidence.some((observed) => observed.content_sha256 === proof.content_sha256) && decision.external?.attempted.some((reason) => reason.includes(route.route_id) && reason.includes(proof.id)));
+        const excluded = ['forbidden', 'exhausted', 'blocked'].includes(route.status) || (route.status === 'observed' && currentFailure);
+        if (!excluded || !route.evidence.length || (route.status !== 'forbidden' && !attempt) || !decision.external?.attempted.some((reason) => reason.includes(route.route_id))) throw new Error(`WAIT_EXTERNAL requires explicit attempted/excluded route ${route.route_id} with evidence and reason.`);
       }
     }
   }
@@ -97,7 +101,8 @@ export function validateC2Decision(decision: Decision, snapshot: Snapshot): Deci
 
 /** A safe executable direction; it makes no provider or authentication claim. */
 export function routeInventoryDecision(snapshot: Snapshot, reason = 'Required route facts are missing or the planner could not produce a valid decision.', message?: string): Decision {
-  const action = message ?? 'Collect a bounded read-only route inventory for the remaining acceptance items: inspect authorized local artifacts, configured provider/API capabilities and prior failures; record actual authorization, network, authentication and retry evidence with source references. Do not retry a failed provider blindly. Report one discriminating check and concise proof before choosing an execution route.';
+  const probe = snapshot.c2?.http_probe ? ` For an already authorized public API, original A may explicitly execute the exact literal Node argv ${JSON.stringify(snapshot.c2.http_probe.argv_prefix)} followed by --url and the credential-free URL. NF signs the bounded GET result; return its complete stdout in the real tool result. Do not add headers, credentials, redirects, compound commands or new authorization. A JSON URL hint alone never starts network access.` : '';
+  const action = message ?? `Collect a bounded read-only route inventory for remaining acceptance items. Inspect authorized local artifacts and prior failures; do not retry a failed provider blindly. Return this exact JSON object as the complete stdout of one real tool/command result (at most 8000 characters and four routes), never assistant prose: ${JSON.stringify({ nf_route_inventory: { schema_version: 1, task_id: snapshot.task_id, task_version: snapshot.task_version, routes: [{ route_id: 'specific-cache', resource: { kind: 'artifact', id: 'nested/path/to/cache.csv' }, operation: 'read-local-artifact' }] } })}. Replace the example with actual source paths. Only route_id/resource/operation are allowed per route. B independently reads at most 16384 bytes per non-secret regular file inside the workspace, rejects symlink parents and records source/contract/digest proof. These are discovery hints, not permission or availability assertions. Provider/API/command hints remain unverified candidates with unknown auth/network/quota; never emit credentials or invented facts. Report concise separate proof for relevance and remaining acceptance.${probe}`;
   const evidenceIds = snapshot.c2?.observations.map((entry) => entry.id) ?? [];
   return { action: 'CONTINUE', reason, evidence_ids: [], next_message: action, external: null,
     diagnosis: { class: 'evidence_gap', statement: reason, evidence_ids: [] },

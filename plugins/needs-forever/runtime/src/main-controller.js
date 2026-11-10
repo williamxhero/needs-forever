@@ -16,6 +16,7 @@ import { classifyRecoveryError, nextBackoff, recordRecoveryFailure } from './rec
 import { reachedLimits } from './rules.js';
 import { armRecovery, cancelRecovery, createRecoveryPlan, markRecoveryRunning, acquireRecoveryOwner, waitForNativeReceipt, reconcileStaleOwner } from './recovery-coordinator.js';
 import { scheduleNativeRebindPrompt } from './main-session-recovery.js';
+import { initializeHttpRouteProbe } from './http-route-probe.js';
 function scheduleMainSessionRecoveryPrompt(path, pluginRoot, fixturePath, state, message, sourceTurnId) {
     if (state.control_mode !== 'main-session' || !state.main_session_id || state.status !== 'ACTIVE')
         return;
@@ -681,6 +682,7 @@ export async function runController(path, pluginRoot, fixturePath) {
                     if (outcome)
                         store.event(state, 'route_outcome', outcome);
                     discoverLocalRoutes(state);
+                    initializeHttpRouteProbe(state, path);
                     store.save(state);
                     if (fixture?.transport?.timeout_ms != null)
                         request.deadline_at = new Date(Date.now() + Number(fixture.transport.timeout_ms)).toISOString();

@@ -173,11 +173,14 @@ function codeCommand(code) {
     return typeof options.cmd === 'string' ? options.cmd : null;
 }
 /** Exact opt-in intent shared by the native adapter and receipt correlation. */
-export function controlIntent(input, pluginRoot) {
+export function literalToolCommand(input) {
     if (!input || typeof input !== 'object' || Array.isArray(input))
         return null;
     const value = input;
-    const command = typeof value.code === 'string' ? codeCommand(value.code) : typeof value.cmd === 'string' ? value.cmd : typeof value.command === 'string' ? value.command : null;
+    return typeof value.code === 'string' ? codeCommand(value.code) : typeof value.cmd === 'string' ? value.cmd : typeof value.command === 'string' ? value.command : null;
+}
+export function controlIntent(input, pluginRoot) {
+    const command = literalToolCommand(input);
     const words = command === null ? null : shellWords(command);
     if (!words || !['node', 'node.exe'].includes(normalized(words[0] ?? '').split('/').at(-1)))
         return null;

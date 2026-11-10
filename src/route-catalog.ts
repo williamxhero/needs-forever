@@ -1,6 +1,9 @@
 import type { RouteCatalogData, RouteCatalogEntry, RoutePersistenceOptions, RouteScope } from './route-contract.js';
 import { clone, RouteStorage, strings, timestamp, validateEnvelope, validateEvidence } from './route-storage.js';
 import { record, text } from './types.js';
+import type { State } from './types.js';
+import { routeReadAuthorization } from './route-authorization.js';
+import { routeEvidenceDigest } from './route-ledger.js';
 
 function validateEntry(value: unknown): void {
   const entry = record(value);
@@ -71,4 +74,26 @@ export class RouteCatalog {
   list(): RouteCatalogEntry[] { return this.storage.read().entries; }
   get(route_id: string): RouteCatalogEntry | undefined { return this.list().find((entry) => entry.route_id === route_id); }
   toJSON(): RouteCatalogData { return this.storage.read(); }
+}
+
+/** Historical evidence is retained, but active permission and availability are
+ * projected against the current immutable contract/version at every boundary. */
+export function activeRouteCatalog(state: Pick<State, 'task_id' | 'task_version' | 'task'> & Partial<Pick<State, 'route_catalog'>>): RouteCatalogData {
+  const scope = { task_id: state.task_id, task_version: state.task_version };
+  const data = new RouteCatalog(scope, state.route_catalog ? { data: state.route_catalog } : {}).toJSON();
+  data.scope = scope;
+  for (const route of data.entries) {
+    const permission = ['artifact', 'api', 'provider'].includes(route.resource.kind) ? routeReadAuthorization(state.task, route.resource.id) : 'authorized';
+    if (permission === 'forbidden') {
+      const digest = routeEvidenceDigest({ task: state.task, task_version: state.task_version, excluded_resource: route.resource });
+      const id = `route-exclusion:${digest}`;
+      if (!route.evidence.some((proof) => proof.id === id)) route.evidence.push({ id, source: 'artifact', reference: `task-contract:${state.task_id}:${state.task_version}`, observed_at: new Date().toISOString(), task_version: state.task_version, content_sha256: digest });
+      route.status = 'forbidden'; route.authorization = { status: 'forbidden', evidence_ids: [id] };
+      continue;
+    }
+    const required = [route.authorization, route.network, route.authentication, route.rate_limit, ...(route.last_success ? [route.last_success] : [])];
+    const current = required.every((fact) => fact.evidence_ids.every((id) => route.evidence.some((proof) => proof.id === id && proof.task_version === state.task_version)));
+    if (permission !== 'authorized' || !current) { route.status = 'unknown'; route.authorization = { status: 'unknown', evidence_ids: [] }; }
+  }
+  return data;
 }

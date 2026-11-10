@@ -1,0 +1,325 @@
+
+> codex-supervisor@0.3.4 test
+> npm run build && node scripts/build-plugin.mjs && node --test --test-concurrency=2 "dist/test/*.test.js"
+
+
+> codex-supervisor@0.3.4 build
+> tsc
+
+Built self-contained plugin runtime (35 modules).
+✔ self-contained C2 runtime executes a concrete B0QI alternate and waits only after real route exclusions (3240.4658ms)
+✔ server requests preserve string ids and receive deterministic refusals (3276.2755ms)
+✔ start preserves the task and server identities; status reads WAIT_EXTERNAL without launching a server (3046.274ms)
+✔ start rejects a server policy granting writes outside the configured workspace before running a turn (1231.0943ms)
+✔ a second CLI cannot supervise the same task through another state file (1154.6389ms)
+✔ credential-shaped tool output is redacted before becoming a saved judge input (789.06ms)
+✔ inherited MCP names are disabled before creating any worker, including names with dots or quotes (801.2256ms)
+✔ the foreground CLI displays the worker reply and the supervisor waiting reason (711.8882ms)
+✔ server-provided turn identities cannot place snapshot evidence outside the snapshot directory (731.8508ms)
+✔ two early finishes continue the same worker then persist stable simulated DONE with prepared deliveries (987.0007ms)
+✔ a correlated started turn progresses to DONE even when turn/start never returns a response (827.8927ms)
+✔ started/completed before response and duplicate/foreign/stale events cannot add work (1607.4629ms)
+✔ unknown turn/start outcome preserves the sent delivery in RECOVERING without resending (2293.996ms)
+✔ failed worker terminal never reaches the fixed DONE judge (1827.8042ms)
+✔ a late failure for an already confirmed old delivery cannot cancel the next worker (1846.2735ms)
+✔ judge input is saved while its result is pending and duplicate terminal events do not start another judge (4898.6519ms)
+✔ T08 simulated worker pause is saved before interrupting its owned turn (2104.5892ms)
+✔ T08 simulated delayed judge success cannot overwrite durable PAUSED (1220.0116ms)
+✔ T08 simulated verification is interrupted after PAUSED and cannot mark DONE (921.7457ms)
+✔ explicit resume uses saved task and worker identity, and DONE cannot reopen (3042.153ms)
+✔ cumulative turn limit pauses before another send and resume requires an increased or removed limit (3835.2721ms)
+✔ ACTIVE time is checkpointed while waiting and the explicit total-time limit pauses a running worker (2823.495ms)
+✔ explicit resume preserves an unknown sent delivery and never blindly replays it (2884.8985ms)
+✔ resume reconciles an interrupted sent delivery into one new continuation (2666.5316ms)
+✔ resume records a failed sent delivery and enters unified recovery without confirming it (3659.9991ms)
+✔ resume reviews the saved completed worker turn without adding another worker round (7159.2607ms)
+✔ explicit resume reclaims only a dead supervisor lock and preserves checkpointed time after a crash (3903.5664ms)
+✔ ACTIVE resume rejects changed goal or authorization before altering the saved contract (1645.2399ms)
+✔ NF daemon discovers tasks, persists its manifest, and keeps audit after delete (60.6422ms)
+✔ NF daemon loopback API requires its token and exposes task control (266.9308ms)
+✔ provider-neutral adapter events are authenticated, durable, and deduplicated (51.5853ms)
+✔ ordinary production CLI graduates an explicitly executed NF HTTP probe and sends the alternate once (2800.7351ms)
+✔ NF receipts project only actual HTTP facts, reject forged sources, and allow an evidenced no-route wait (4984.3998ms)
+✔ isolated installed-package discovery reports untrusted hooks without claiming native effectiveness (1009.7901ms)
+✔ judge prompt states the terminal next_message contract (1.3796ms)
+✔ real judge boundary continues the original worker then completes with fresh archived read-only judges (1242.275ms)
+✔ judge outputs with unknown fields, references or illegal action combinations never finish the task (12065.8732ms)
+✔ worker claims alone cannot prove DONE or an external dependency (2456.4837ms)
+✔ bounded snapshots preserve the contract, real sources, recent instructions and failures while explicitly omitting large output (808.3036ms)
+✔ streamed completed items supply worker evidence and judge JSON when terminal turns have no items (748.9404ms)
+✔ a timed out known C with unconfirmed turn terminates and is archived without another model (3193.8036ms)
+✔ a timed out known C with confirmed turn terminates and is archived without another model (4153.855ms)
+✔ terminated judge archive rejection or timeout is bounded and never restarts a model or infers completion (9095.6876ms)
+✔ T06 WAIT_EXTERNAL cites an actual failed route, stays idle and notifies once despite duplicates (1901.2823ms)
+✔ fences, appended text and a second JSON object are rejected with the exact raw output retained (8133.4183ms)
+✔ judge policy expansion prevents its turn and archive failure cannot invalidate an otherwise valid decision (3328.582ms)
+✔ PAUSED wins over a real judge that is in flight and the owned judge connection terminates (1372.9257ms)
+✔ only the expected judge turn can supply the result even if a foreign completion arrives first (940.8224ms)
+✔ truncated tool output cannot be used to infer either terminal decision (5431.086ms)
+✔ an uncertain judge turn start terminates the old connection before entering recovery (5828.4439ms)
+✔ connection failure during a judge result wait preserves the actual error and ends the old call (7706.5944ms)
+✔ native C2 admission redacts the entire selected decision before checkpoint and recovery prompt (4284.4979ms)
+✔ installed native Stop ingests the actual paired tool result before choosing a source-linked artifact (19547.5446ms)
+✔ installed native Code Mode accepts only a literal NF HTTP probe and selects the proven API (11042.4702ms)
+✔ installed bound main session automatically owns an independent B and synchronous Stop returns direction without claiming execution (6760.0344ms)
+✖ NF automatically delivers a returned CONTINUE prompt when original A stays idle (9662.6895ms)
+✔ a manual pause cancels the pending NF recovery prompt before delivery (9378.3467ms)
+✔ installed Stop deadline invalidates delayed direction and retains an explicit recovery checkpoint (3879.4791ms)
+✔ a second task cannot own the same main session and its failed startup remains diagnosable (8232.1231ms)
+✔ an installed state rejects a second B without disturbing its owned controller (4459.1461ms)
+✔ disconnecting the owned hook before judgment invalidates late output instead of replaying it (5826.0485ms)
+✖ native Interrupt persists PAUSED before canceling a delayed judgment and cannot return its late direction (8774.0181ms)
+✔ a newer human prompt cancels old judgment while a later Stop in the same turn can still be supervised (13008.886ms)
+✔ explicit resume preserves original A and cumulative evidence, requiring a fresh same-A native receipt (8877.2201ms)
+✔ plugin start defaults to main-session and core CLI cannot mutate that checkpoint as a legacy worker (6541.0112ms)
+✔ foreign and stale generation Stop events do not replace a returned direction (5382.8875ms)
+✔ native host restart automatically rebinds the same A without a manual resume (8540.7052ms)
+✔ automatic native rebind rotates the generation and rejects stale lifecycle events (6228.9419ms)
+✔ native rebind recovery automatically prompts the original A instead of waiting forever (6848.5062ms)
+✔ legacy pending resume checkpoints migrate to automatic rebind on the next original-A lifecycle event (11508.5723ms)
+✔ foreign and late native rebind receipts cannot wake a paused or completed task (4952.7088ms)
+✔ a lifecycle receipt issued before armNativeRebind is rejected when run_generation is omitted (4223.7657ms)
+✔ a second installed plugin package cannot dispatch callbacks to the first package controller (3831.5744ms)
+✔ explicit cumulative turn and ACTIVE time limits pause durably without inventing a hidden limit (7350.2844ms)
+✔ prepared Desktop demo uses installed main-session control and preserves a fixed failing acceptance gate (2571.5084ms)
+✔ an installed but uninvoked plugin keeps ordinary lifecycle and doctor/status callbacks neutral without supervision UI text (34061.9969ms)
+✔ read-only rg mentioning an installed start command creates no opt-in artifacts (258.4124ms)
+✔ read-only echo mentioning an installed start command creates no opt-in artifacts (761.5611ms)
+✔ read-only code-example mentioning an installed start command creates no opt-in artifacts (401.4412ms)
+✔ installed main-session preparation stays pending without native identity despite guessed session environment (993.2366ms)
+✔ pause while native binding is pending prevents a late binding receipt from activating supervision (3558.5276ms)
+✔ concurrent installed preparations in one workspace retain every independent A registration (13771.6978ms)
+✔ binding accepts neutral task filenames and json-code without recording unrelated callbacks (4909.1047ms)
+✔ binding accepts neutral task filenames and literal-code without recording unrelated callbacks (4484.0257ms)
+✔ binding accepts neutral task filenames and assigned-code without recording unrelated callbacks (9841.7289ms)
+✔ binding accepts neutral task filenames and powershell-node without recording unrelated callbacks (5277.6071ms)
+✔ structured host callback binds only the matching preparation and keeps fixture evidence simulated (4493.4919ms)
+✔ bound Stop callback records distinct attempt identities without subagent recursion or foreign-session activity (7617.7329ms)
+✔ bound Stop persists only an explicit structured STOP_REASON (5542.9181ms)
+✔ Windows discovered hook commands stay neutral through PowerShell and cmd in a Chinese path with spaces (13310.4717ms)
+✔ Windows discovered powershell hook commands correlate simulated preparation and bind the original session (7377.13ms)
+✔ Windows discovered cmd hook commands correlate simulated preparation and bind the original session (5479.7598ms)
+✔ installed Stop creates fresh readonly C for each same-turn stop and confirms only subsequent A tool activity (14981.9201ms)
+✔ installed C2 correlates same-turn Stop executions and persists only confirmed source-linked observations (9666.8204ms)
+✔ installed native invalid C outputs return a bounded inventory through the active decision gate (5848.8832ms)
+✔ installed native empty C outputs return a bounded inventory through the active decision gate (7000.2889ms)
+✔ installed native timeout C outputs return a bounded inventory through the active decision gate (7500.6737ms)
+✔ assistant completion or blocked wording alone cannot support DONE or WAIT_EXTERNAL (7647.6689ms)
+✔ fixed isolated verifier failure reaches A and a subsequent repaired Stop alone can release the binding (14729.9975ms)
+✔ protected verifier changes refuse DONE before execution and retain original restoration content (20127.2882ms)
+✔ WAIT_EXTERNAL contains independently traceable condition and recovery without a continuation (9218.3732ms)
+✔ long assistant wording cannot crowd independent proof or the full original contract out of the 24k judge snapshot (6261.2249ms)
+✔ workspace changes during an otherwise successful fixed check invalidate DONE until a stable recheck (18766.7037ms)
+✔ custom checkpoint paths do not make controller heartbeat writes invalidate a stable fixed check (8682.3885ms)
+✔ task files beside a custom checkpoint still invalidate DONE when they change during verification (14124.2265ms)
+✔ unprotected UUID-named business JSON beside a custom checkpoint remains in the workspace change gate (15914.556ms)
+✔ protected files with checkpoint artifact names retain their fixed baseline enforcement (10009.5423ms)
+✔ truncated old tool output requests concise proof but cannot poison a later Stop with new complete evidence (10560.0929ms)
+✔ installed pause returns before bounded C cleanup and cleanup failure cannot restart A (9832.79ms)
+✔ human input during held JUDGE invalidates late success and current evidence must be gathered again (5641.7544ms)
+✔ human input during delayed VERIFY invalidates late success and current evidence must be gathered again (9420.3514ms)
+✔ a recoverable invalid judgment retries inside the original Stop deadline without turning failure into task completion (8949.4989ms)
+✔ recoverable model errors remove credential canaries from public state and the next supervisor input (10118.4171ms)
+✔ an adapter occurrence accepts one C and delivery while separate identical native invocations each judge (13468.5228ms)
+✔ released main-session binding leaves later ordinary native lifecycle completely neutral (5678.1346ms)
+✔ near-budget Stop proof becomes explicit incomplete inventory context while the task contract stays intact (32.4648ms)
+✔ missing route facts produce a concrete inventory CONTINUE without changing the task contract (1.1213ms)
+✔ Tushare limit evidence selects a real local artifact route and rejects a blind provider retry (6.2399ms)
+✔ route plans reject invented evidence, identities, availability, fallback and next-message drift (6.1012ms)
+✔ a third equivalent route without substantive new evidence is rejected despite renamed event IDs (19.3979ms)
+✔ terminal gates retain independent proof and require explicit route exhaustion for external wait (24.8733ms)
+✔ historical legacy CONTINUE remains readable while live default and explicit fixture modes are distinct (3.3846ms)
+✔ ordinary and native snapshots share source-linked route context, current plans and the 24k budget (112.1728ms)
+✔ proof digests ignore event/item labels but detect changed substantive content across Stop snapshots (1.7057ms)
+✔ multiple executable directions require two substantive candidates rather than a repeated inventory alternative (1.7197ms)
+✔ external waiting is accepted only with complete independently evidenced exhaustion of named routes (1.8409ms)
+✔ installed runtime exposes the same enforced C2 planning and historical-reading boundary (243.6848ms)
+✔ plugin ships the exact executable core and resolves all marketplace/skill resources locally (235.7601ms)
+✔ installed copy starts in background, pauses durably, resumes the original worker, then completes (6627.0068ms)
+✔ plugin reports failed startup and status never launches a worker (1216.4225ms)
+✔ status distinguishes an orphaned ACTIVE checkpoint from a live supervisor without changing it (454.2959ms)
+✔ recoverable judge failures preserve visible classification and retry before the bounded output fallback (1942.0284ms)
+✔ quota-shaped failure enters WAIT_EXTERNAL while ordinary 429 remains retryable (4164.2793ms)
+✔ real judge invalid JSON is archived before a fresh judge retries the same snapshot (2553.3665ms)
+✔ worker disconnect keeps the sent delivery, reconnects the same worker and resends only after history is absent (3115.6361ms)
+✖ live worker failed terminal recovers through history and a fresh continuation (5220.2698ms)
+✔ live worker interrupted terminal confirms history before a fresh continuation (4346.4764ms)
+✔ worker quota failure waits externally and explicit resume reconciles the failed turn (4883.7873ms)
+✖ periodic reconcile hydrates paginated history and compensates a missed completion once (5824.0872ms)
+✔ periodic reconcile never resends a sent delivery while history is still inconclusive (4052.2846ms)
+✖ thread closed notification reconnects the saved worker and follows recovered history (5522.1116ms)
+✔ failed native thread unload request clears the gate and reconciles completion after reconnect (3712.9693ms)
+✔ real judge timeout closes the old app-server, reconnects the worker and retries with a fresh judge (7381.5804ms)
+✔ three identical judge failures produce one bounded investigation direction before a new worker Stop (5060.5447ms)
+✔ transient initial app-server startup failure uses the same recovery backoff before creating the worker (2569.9785ms)
+✔ pausing during recovery cancels the backoff timer immediately (2719.9742ms)
+✔ automatic recovery persists bounded backoff and preserves generation across process reconstruction (4.0196ms)
+✔ manual cancellation is a durable boundary that rejects stale recovery results (1.4917ms)
+✔ only the current generation may acquire the recovery owner lease (10.273ms)
+✔ a restarted process reconciles a dead owner into a pending native receipt without starting B/C (1.8651ms)
+✔ a detached coordinator consumes a due retry and rotates the native receipt fence without starting B/C (10.1151ms)
+✔ recovery classification distinguishes timeout, invalid output, service/network, rate limit, auth and quota (2.2492ms)
+✔ backoff uses 5/15/60/300 seconds and remains at 300 (2.0485ms)
+✔ repeated recovery failures produce an investigation instruction at threshold three (0.6118ms)
+✔ inventory fallback passes active validation with two observed alternatives and incomplete proof (77.388ms)
+✔ completed generic file inventory does not claim relevant unfinished work or prevent an evidenced external wait (334.702ms)
+✔ confirmed route result survives restart, ignores relabeled identical proof and prevents another equivalent send (387.5899ms)
+✔ a newer human epoch cannot attribute its admitted native Stop to an older route (1.845ms)
+✔ public inventory execution ingests independently probed nested artifacts across restart and selects a correlated alternate (457.2518ms)
+✔ inventory hints cannot forge facts, reuse historical/model evidence, expand scope or traverse symlink parents (18.0342ms)
+✔ workspace inventory honors original protected-data access exclusions and keeps ambiguous authorization unverified (113.2124ms)
+✔ current contract/version revalidation fences inherited Catalog facts at context and delivery admission (18.854ms)
+✔ an observed artifact may be explicitly excluded after a correlated current failure without editing Catalog status (443.2522ms)
+✔ an independently observed reset time permits one evidenced transient route retry (202.974ms)
+✔ ordinary selected route delivery and next Stop retain one persisted execution and factual local inventory (3189.0235ms)
+✔ ordinary CLI ingests actual tool inventory before C selects and B delivers the executable alternate once (2890.462ms)
+✔ ordinary invalid C outputs produce one bounded factual inventory fallback (8822.4345ms)
+✔ ordinary empty C outputs produce one bounded factual inventory fallback (4959.9872ms)
+✔ ordinary timeout C outputs produce one bounded factual inventory fallback (12137.6638ms)
+✔ ordinary authentication-prose C outputs produce one bounded factual inventory fallback (4230.1977ms)
+✔ Route Catalog preserves all capability states and independently observed facts after restart (265.2727ms)
+✔ Route Ledger persists outcomes and evidence deltas while semantic identity ignores prompt wording (122.3727ms)
+✔ new event IDs do not manufacture evidence progress and reused IDs can carry new substantive evidence (30.8104ms)
+✔ only a meaningful transient retry is allowed before a third no-progress family attempt is rejected (3.8431ms)
+✔ same-class failure with genuinely new evidence requires a discriminating check or changed hypothesis (2.6615ms)
+✔ unproven availability and blind transient retries cannot be recorded as observed capability or progress (1.4874ms)
+✔ task resume retains route history, reloads other writers, and fences older task versions (174.7147ms)
+✔ DONE requires the fixed argv independent check in the explicit worker sandbox (3483.2978ms)
+✔ T04 nonzero independent output reaches the original worker and only the repaired check can finish (2228.5352ms)
+✔ server-side verification timeout returns its actual error to the worker without losing the healthy connection (4199.9256ms)
+✔ missing independent stdout or stderr cannot manufacture a successful DONE (2218.7439ms)
+✔ protected changes before checking refuse DONE and give the original worker exact restoration evidence (2873.0736ms)
+✔ a missing protected verifier is refused until the original worker restores it (2217.4203ms)
+✔ a protected change during a successful check invalidates it and requires restoration before DONE (2391.8345ms)
+✔ resume retains the original protected baseline and saved argv after the input file and verifier change (2459.5122ms)
+✔ PAUSED is durable before independent cancellation and a late successful check cannot set DONE (1078.2336ms)
+✔ a hung independent call ends its owned server and resumes the exact idle worker before sending failure evidence (4740.674ms)
+✔ TaskCatalog presents persisted state and groups events into worker rounds (60.9191ms)
+✔ NFG API projects the complete selected route audit without rewriting historical decisions (135.6547ms)
+✔ served NFG client shows compact routes and expands candidate evidence without claiming availability (179.7596ms)
+✔ legacy HTTP history displays a virtual unverified single route and keeps its stored decision intact (351.7522ms)
+✔ NFG timer refresh preserves expansion by task, Stop and plan after round insertion and isolates a replacement plan (711.8786ms)
+✔ served NFG escapes model text and route keys while its complete inline script executes (170.7066ms)
+✔ TaskCatalog exposes durable recovery metadata and distinguishes native waiting from user cancellation and DONE (49.0207ms)
+✔ TaskCatalog keeps active session IDs unique and reuses a completed ID (55.104ms)
+✔ TaskCatalog hides rounds until a real supervisor event completes A→B→C (12.2138ms)
+✔ TaskCatalog treats a main-session tool result as the A worker leg (13.5429ms)
+✔ TaskCatalog maps a native rebind prompt back to its parent Stop round and exposes the real prompt (27.4568ms)
+✔ TaskCatalog preserves an externally observed worker prompt without claiming NF sent it (12.5194ms)
+✔ TaskCatalog assigns repeated main-session work to the next matching Stop/C round (14.7655ms)
+✔ web server exposes task, record and validated control endpoints (63.6874ms)
+✔ NFG catalogs sessions from every daemon workspace (50.7288ms)
+✔ web delete removes the task directory while preserving a system audit record and root system events (164.3488ms)
+ℹ tests 203
+ℹ suites 0
+ℹ pass 198
+ℹ fail 5
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 452097.7086
+
+✖ failing tests:
+
+test at dist\test\main-controller.test.js:119:1
+✖ NF automatically delivers a returned CONTINUE prompt when original A stays idle (9662.6895ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+    assert.ok(types.includes('main_session_recovery_prompt_sent'))
+
+      at TestContext.<anonymous> (file:///C:/Users/will/.codex/worktrees/spec49-review-fixes/needs-forever/dist/test/main-controller.test.js:129:12)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist\test\main-controller.test.js:208:1
+✖ native Interrupt persists PAUSED before canceling a delayed judgment and cannot return its late direction (8774.0181ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+
+  + {
+  +   decision: 'block',
+  +   reason: 'Obsolete direction'
+  + }
+  - {}
+
+      at TestContext.<anonymous> (file:///C:/Users/will/.codex/worktrees/spec49-review-fixes/needs-forever/dist/test/main-controller.test.js:223:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: { decision: 'block', reason: 'Obsolete direction' },
+    expected: {},
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at dist\test\recovery-cli.test.js:84:1
+✖ live worker failed terminal recovers through history and a fresh continuation (5220.2698ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+  null !== 0
+
+      at TestContext.<anonymous> (file:///C:/Users/will/.codex/worktrees/spec49-review-fixes/needs-forever/dist/test/recovery-cli.test.js:90:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at dist\test\recovery-cli.test.js:137:1
+✖ periodic reconcile hydrates paginated history and compensates a missed completion once (5824.0872ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+  null !== 0
+
+      at TestContext.<anonymous> (file:///C:/Users/will/.codex/worktrees/spec49-review-fixes/needs-forever/dist/test/recovery-cli.test.js:146:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at dist\test\recovery-cli.test.js:172:1
+✖ thread closed notification reconnects the saved worker and follows recovered history (5522.1116ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+  null !== 0
+
+      at TestContext.<anonymous> (file:///C:/Users/will/.codex/worktrees/spec49-review-fixes/needs-forever/dist/test/recovery-cli.test.js:179:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

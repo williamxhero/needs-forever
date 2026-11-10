@@ -1,0 +1,175 @@
+{
+  "candidate_source_commit": "7e0c9bad744ed20e28f730166a5fa6d761b7ca10",
+  "release_test_commit": "a26213f3d60bcd845689babb913370e04f2b2e1a",
+  "mode": "installed-production-CLI-simulated-planner-actual-local-tools",
+  "runtime": "C:\\Users\\will\\.codex\\worktrees\\spec49-review-fixes\\needs-forever\\runs\\spec49-review\\budget-fixed-install\\codex-home\\plugins\\cache\\needs-forever-local\\needs-forever\\0.3.4\\runtime",
+  "runtime_index_sha256": "2ae51b3a91d3d554034c1362d2b6bfd5d7e3f1c0108cf89815f2a42937959c99",
+  "task_id": "installed-observation-loop",
+  "status": "DONE",
+  "decisions": [
+    {
+      "action": "CONTINUE",
+      "route_id": "route-inventory"
+    },
+    {
+      "action": "CONTINUE",
+      "route_id": "verified-cache"
+    },
+    {
+      "action": "DONE",
+      "route_id": null
+    }
+  ],
+  "source_linked_artifact": {
+    "route_id": "verified-cache",
+    "resource": {
+      "kind": "artifact",
+      "id": "cache/prices.csv"
+    },
+    "operation": "read-local-artifact",
+    "status": "observed",
+    "authorization": {
+      "status": "authorized",
+      "evidence_ids": [
+        "route-scope:19e4c057899c4d8f797b75a9e251fe731c9415b582a0d0d8a0e9c55600d4d5de"
+      ]
+    },
+    "network": {
+      "required": false,
+      "available": null,
+      "evidence_ids": [
+        "artifact-probe:c4c9966723110abd884f09dd03d6626c0cd1988603f5524c79096401bb7a3665"
+      ]
+    },
+    "authentication": {
+      "status": "not_required",
+      "evidence_ids": [
+        "artifact-probe:c4c9966723110abd884f09dd03d6626c0cd1988603f5524c79096401bb7a3665"
+      ]
+    },
+    "rate_limit": {
+      "status": "clear",
+      "retry_at": null,
+      "evidence_ids": [
+        "artifact-probe:c4c9966723110abd884f09dd03d6626c0cd1988603f5524c79096401bb7a3665"
+      ]
+    },
+    "last_success": {
+      "at": "2026-11-10T06:10:16.514Z",
+      "evidence_ids": [
+        "artifact-probe:c4c9966723110abd884f09dd03d6626c0cd1988603f5524c79096401bb7a3665"
+      ]
+    },
+    "capabilities": [
+      "B independently read at most 16384 bytes of this source-linked workspace artifact. Relevance, completeness and task success require separate evidence."
+    ],
+    "evidence": [
+      {
+        "id": "tool-observation:7828de0af9b064d04969e7d5e005744421e7d6ddf71280843095a99eebd10e70",
+        "source": "event",
+        "reference": "b18451ab-e380-460e-ba1b-3995a2c104f8",
+        "observed_at": "2026-11-10T06:10:16.503Z",
+        "task_version": 1,
+        "content_sha256": "24963af60ceccbab46337e6604001374aa4d50e923a6319244848dd3e82771b9"
+      },
+      {
+        "id": "artifact-probe:c4c9966723110abd884f09dd03d6626c0cd1988603f5524c79096401bb7a3665",
+        "source": "probe",
+        "reference": "workspace-file:cache/prices.csv",
+        "observed_at": "2026-11-10T06:10:16.514Z",
+        "task_version": 1,
+        "content_sha256": "c4c9966723110abd884f09dd03d6626c0cd1988603f5524c79096401bb7a3665"
+      },
+      {
+        "id": "route-scope:19e4c057899c4d8f797b75a9e251fe731c9415b582a0d0d8a0e9c55600d4d5de",
+        "source": "artifact",
+        "reference": "task-contract:installed-observation-loop:1",
+        "observed_at": "2026-11-10T06:10:16.514Z",
+        "task_version": 1,
+        "content_sha256": "19e4c057899c4d8f797b75a9e251fe731c9415b582a0d0d8a0e9c55600d4d5de"
+      }
+    ]
+  },
+  "correlation": {
+    "delivery_id": "3c642b2b-aede-46be-a9e7-775903454e0a",
+    "plan_id": "9d250703-d992-4b07-950a-fd72ae309f67",
+    "route_id": "verified-cache",
+    "source_stop_attempt_id": "worker:1:turn-2-from-server"
+  },
+  "tool_execution_count": 3,
+  "alternate_deliveries": 1,
+  "manually_injected_catalog": false,
+  "live_model": false,
+  "live_provider": false,
+  "limitations": "The installed production CLI executes actual local subprocesses and ingests real protocol results. The planner/server and quota blocker are deterministic fixtures; no native live Stop or original B0QI completion is claimed.",
+  "http_loop": {
+    "status": "DONE",
+    "selected_route": "http-api:16cdf2bb23980ee6342cb112",
+    "actual_requests": 2,
+    "alternate_deliveries": 1,
+    "manually_injected_catalog": false,
+    "source_linked_api": {
+      "route_id": "http-api:16cdf2bb23980ee6342cb112",
+      "resource": {
+        "kind": "api",
+        "id": "http://127.0.0.1:14573/prices"
+      },
+      "operation": "http-get",
+      "status": "observed",
+      "authorization": {
+        "status": "authorized",
+        "evidence_ids": [
+          "http-probe:6918b99478a2986e322f6637ba982843d0c9debbace9d6ec9894e0a0bca4b3b1"
+        ]
+      },
+      "network": {
+        "required": true,
+        "available": true,
+        "evidence_ids": [
+          "http-probe:6918b99478a2986e322f6637ba982843d0c9debbace9d6ec9894e0a0bca4b3b1"
+        ]
+      },
+      "authentication": {
+        "status": "not_required",
+        "evidence_ids": [
+          "http-probe:6918b99478a2986e322f6637ba982843d0c9debbace9d6ec9894e0a0bca4b3b1"
+        ]
+      },
+      "rate_limit": {
+        "status": "clear",
+        "retry_at": null,
+        "evidence_ids": [
+          "http-probe:6918b99478a2986e322f6637ba982843d0c9debbace9d6ec9894e0a0bca4b3b1"
+        ]
+      },
+      "last_success": {
+        "at": "2026-11-10T06:10:19.347Z",
+        "evidence_ids": [
+          "http-probe:6918b99478a2986e322f6637ba982843d0c9debbace9d6ec9894e0a0bca4b3b1"
+        ]
+      },
+      "capabilities": [
+        "Explicit A invocation of NF performed a credential-free GET; HTTP 200, 11 bytes hashed, truncated=false. This proves only this request, not future quota or task completeness."
+      ],
+      "evidence": [
+        {
+          "id": "http-source:dbc8e3e2f33ce8fa3dc723b5f5db850cbc4f18956d63609317e96f293a04f7a9",
+          "source": "event",
+          "reference": "9219e18a-d676-4aec-8350-99410f444ff2",
+          "observed_at": "2026-11-10T06:10:19.408Z",
+          "task_version": 1,
+          "content_sha256": "d171c53fd4409420805384e91793667b54706a4efbf43021525484c6fcf8ee11"
+        },
+        {
+          "id": "http-probe:6918b99478a2986e322f6637ba982843d0c9debbace9d6ec9894e0a0bca4b3b1",
+          "source": "probe",
+          "reference": "nf-http-get:http://127.0.0.1:14573/prices",
+          "observed_at": "2026-11-10T06:10:19.347Z",
+          "task_version": 1,
+          "content_sha256": "6918b99478a2986e322f6637ba982843d0c9debbace9d6ec9894e0a0bca4b3b1"
+        }
+      ]
+    },
+    "limits": "Local real HTTP fixture, simulated planner, original Task unchanged, no credential access or live external provider."
+  }
+}

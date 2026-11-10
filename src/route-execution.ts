@@ -1,11 +1,13 @@
-import { lstatSync, fstatSync, openSync, closeSync, readSync, readdirSync } from 'node:fs';
-import { resolve } from 'node:path';
-import { RouteCatalog } from './route-catalog.js';
+import { readdirSync } from 'node:fs';
+import { activeRouteCatalog, RouteCatalog } from './route-catalog.js';
 import { RouteLedger, canonicalExecutionRoute, routeEvidenceDigest } from './route-ledger.js';
 import { routeInventoryDecision } from './planning.js';
 import { validateDecision } from './judge.js';
 import type { Decision, RouteCorrelation, Snapshot, State } from './types.js';
 import type { RouteEvidence } from './route-contract.js';
+import { ingestRouteObservations, probeWorkspaceArtifact } from './route-observations.js';
+import { ingestHttpRouteProbes } from './http-route-probe.js';
+import { redact } from './redact.js';
 const scope = (state: State) => ({ task_id: state.task_id, task_version: state.task_version });
 function lifecycleFence(state: State): string {
   const native = state as State & { run_generation?: string; input_epoch?: number; contract_sha256?: string };
@@ -29,23 +31,16 @@ export function routeCorrelation(value?: RouteCorrelation | null): RouteCorrelat
 /** B reads only bounded local regular files. Contents are hashed, never sent to C.
  * Credentials, symlinks, networking and configured provider names prove nothing. */
 export function discoverLocalRoutes(state: State): void {
-  const catalog = new RouteCatalog(scope(state), state.route_catalog ? { data: state.route_catalog } : {});
+  const catalog = new RouteCatalog(scope(state), { data: activeRouteCatalog(state) });
   let files: string[];
   try { files = readdirSync(state.task.workspace).sort().filter((name) => !name.startsWith('.') && !/(?:secret|credential|token|password|auth|cookie|private|\.pem$|\.key$)/i.test(name)).slice(0, 32); }
   catch { state.route_catalog = catalog.toJSON(); return; }
   let observed = 0;
   for (const name of files) {
     if (observed >= 4) break;
-    const path = resolve(state.task.workspace, name);
     try {
-      const stat = lstatSync(path);
-      if (!stat.isFile() || stat.isSymbolicLink()) continue;
-      const fd = openSync(path, 'r');
-      let bytes: Buffer;
-      try { const opened = fstatSync(fd); if (!opened.isFile() || opened.ino !== stat.ino || opened.dev !== stat.dev) continue; const buffer = Buffer.alloc(Math.min(stat.size, 16_384)); bytes = buffer.subarray(0, readSync(fd, buffer, 0, buffer.length, 0)); }
-      finally { closeSync(fd); }
-      const digest = routeEvidenceDigest({ path: name, size: stat.size, prefix_sha256: routeEvidenceDigest([...bytes]) });
-      const evidence: RouteEvidence = { id: `local:${digest}`, source: 'probe', reference: `workspace-file:${name}`, observed_at: new Date().toISOString(), task_version: state.task_version, content_sha256: digest };
+      const evidence = probeWorkspaceArtifact(state, name);
+      if (!evidence) continue;
       const refs = [evidence.id];
       catalog.upsert({ inventory_only: true, route_id: `local-artifact:${name}`, resource: { kind: 'artifact', id: name }, operation: 'read-local-artifact', status: 'observed', authorization: { status: 'authorized', evidence_ids: refs }, network: { required: false, available: null, evidence_ids: refs }, authentication: { status: 'not_required', evidence_ids: refs }, rate_limit: { status: 'clear', retry_at: null, evidence_ids: refs }, last_success: { at: evidence.observed_at, evidence_ids: refs }, capabilities: ['Completed bounded local inspection; relevance and completeness remain unverified. This is not evidence of remaining executable task work.'], evidence: [evidence] });
       observed++;
@@ -55,8 +50,10 @@ export function discoverLocalRoutes(state: State): void {
   state.route_ledger = new RouteLedger(scope(state), state.route_ledger ? { data: state.route_ledger } : {}).toJSON();
 }
 export function prepareRouteExecution(state: State, decision: Decision, snapshot: Snapshot, deliveryId: string, sourceStopId: string): RouteCorrelation {
+  if (snapshot.task_id !== state.task_id || snapshot.task_version !== state.task_version || routeEvidenceDigest(snapshot.task) !== routeEvidenceDigest(redact(state.task))) throw new Error('Route admission rejected stale task scope/version or contract.');
+  if (snapshot.c2) snapshot = { ...snapshot, c2: { ...snapshot.c2, catalog: activeRouteCatalog(state) } };
+  decision = validateDecision(JSON.stringify(decision), snapshot);
   if (!decision.route_plan) return {};
-  validateDecision(JSON.stringify(decision), snapshot);
   const route = decision.route_plan.candidates.find((candidate) => candidate.route_id === decision.route_plan!.selected_route_id)!;
   const canonical = canonicalExecutionRoute(route, state.route_catalog?.entries ?? []);
   const evidence = structuredClone(snapshot.c2?.observations.filter((item) => route.evidence_ids.includes(item.id)) ?? []);
@@ -73,6 +70,8 @@ export function confirmRouteExecution(state: State, deliveryId: string): void {
 /** Called once at the next admitted real Stop, never at proposal/send/retry.
  * Native hosts may admit several Stops in the same turn. */
 export function captureRouteOutcome(state: State, snapshot: Snapshot, stopId: string, native = false): Record<string, unknown> | null {
+  ingestRouteObservations(state, snapshot);
+  ingestHttpRouteProbes(state, snapshot);
   const execution = state.route_execution;
   if (!execution || execution.lifecycle_fence !== lifecycleFence(state) || execution.task_version !== state.task_version || execution.completed_stop_attempt_id || (!native && !execution.confirmed) || stopId === execution.source_stop_attempt_id) return null;
   const observations = snapshot.c2?.observations ?? [];

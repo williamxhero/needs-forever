@@ -26,7 +26,7 @@ function fixture(name: string, options: Record<string, unknown>) {
   for (const page of scenario.turn_pages ?? []) for (const turn of page.data ?? []) if (turn.status === 'completed' && !turn.items?.length) turn.items = [proof];
   writeFileSync(config, JSON.stringify(scenario));
   writeFileSync(fixtureFile, JSON.stringify({ app_server_argv: [process.execPath, resolve('test/fixtures/app-server.mjs'), config], judge: { action: 'DONE', reason: 'Accepted fixture result.', evidence_ids: ['E1'], next_message: '', external: null }, recovery_enabled: true, recovery_delays_ms: [0, 0, 0], ...options }));
-  return { task, state, fixtureFile, trace, directory, run() { return spawnSync(process.execPath, [resolve('dist/src/cli.js'), 'start', '--task', task, '--state', state, '--test-fixture', fixtureFile], { encoding: 'utf8', timeout: 5000 }); } };
+  return { task, state, fixtureFile, trace, directory, run(timeout = 5000) { return spawnSync(process.execPath, [resolve('dist/src/cli.js'), 'start', '--task', task, '--state', state, '--test-fixture', fixtureFile], { encoding: 'utf8', timeout }); } };
 }
 
 test('recoverable judge failures preserve visible classification and retry before the bounded output fallback', () => {
@@ -268,7 +268,9 @@ test('three identical judge failures produce one bounded investigation direction
     tool_items: [{ type: 'commandExecution', id: 'check', command: 'check', status: 'completed', exitCode: 0, aggregatedOutput: 'A1 passes.' }],
     judge_outputs: [invalid, invalid, invalid, JSON.stringify({ action: 'DONE', reason: 'Accepted after investigation.', evidence_ids: ['E1'], next_message: '', external: null })],
   });
-  const result = run.run();
+  // Four real judge lifecycles plus fallback/worker execution exceed the
+  // ordinary single-judgment watchdog on a loaded Windows host.
+  const result = run.run(20_000);
   assert.equal(result.status, 0, result.stderr);
   const judgeInputs = readFileSync(run.trace, 'utf8').trim().split('\n').map((line) => JSON.parse(line))
     .filter((entry) => entry.message?.method === 'turn/start' && entry.message.params.threadId.startsWith('judge-'))
