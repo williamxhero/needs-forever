@@ -4,6 +4,7 @@ import { RouteCatalog } from './route-catalog.js';
 import { RouteLedger, canonicalExecutionRoute, routeEvidenceDigest } from './route-ledger.js';
 import { routeInventoryDecision } from './planning.js';
 import { validateDecision } from './judge.js';
+import { ingestRouteObservations } from './route-observations.js';
 const scope = (state) => ({ task_id: state.task_id, task_version: state.task_version });
 function lifecycleFence(state) {
     const native = state;
@@ -84,9 +85,9 @@ export function discoverLocalRoutes(state) {
     state.route_ledger = new RouteLedger(scope(state), state.route_ledger ? { data: state.route_ledger } : {}).toJSON();
 }
 export function prepareRouteExecution(state, decision, snapshot, deliveryId, sourceStopId) {
+    decision = validateDecision(JSON.stringify(decision), snapshot);
     if (!decision.route_plan)
         return {};
-    validateDecision(JSON.stringify(decision), snapshot);
     const route = decision.route_plan.candidates.find((candidate) => candidate.route_id === decision.route_plan.selected_route_id);
     const canonical = canonicalExecutionRoute(route, state.route_catalog?.entries ?? []);
     const evidence = structuredClone(snapshot.c2?.observations.filter((item) => route.evidence_ids.includes(item.id)) ?? []);
@@ -105,6 +106,7 @@ export function confirmRouteExecution(state, deliveryId) {
 /** Called once at the next admitted real Stop, never at proposal/send/retry.
  * Native hosts may admit several Stops in the same turn. */
 export function captureRouteOutcome(state, snapshot, stopId, native = false) {
+    ingestRouteObservations(state, snapshot);
     const execution = state.route_execution;
     if (!execution || execution.lifecycle_fence !== lifecycleFence(state) || execution.task_version !== state.task_version || execution.completed_stop_attempt_id || (!native && !execution.confirmed) || stopId === execution.source_stop_attempt_id)
         return null;

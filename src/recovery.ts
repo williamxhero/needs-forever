@@ -27,12 +27,18 @@ export interface RecoveryFailure {
 
 const DELAYS = [5, 15, 60, 300] as const;
 
+/** A rejected model result is never a transport/provider authentication fact. */
+export class JudgeOutputError extends Error {
+  override readonly name = 'JudgeOutputError';
+}
+
 function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
 export function classifyRecoveryError(error: unknown): RecoveryClassification {
   const message = messageOf(error);
+  if (error instanceof JudgeOutputError) return { kind: 'invalid_judge_output', recoverable: true, wait_external: false, message };
   const lower = message.toLowerCase();
   if (/(judge|supervisor).*(timeout|timed out)|timed out|timeout/.test(lower)) {
     return { kind: 'judge_timeout', recoverable: true, wait_external: false, message };

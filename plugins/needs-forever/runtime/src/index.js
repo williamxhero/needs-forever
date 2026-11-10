@@ -13,3 +13,4 @@ export { buildMainSessionSnapshot } from './main-supervision.js';
 export { routeInventoryDecision, validateC2Decision } from './planning.js';
 export { validateDecision, readHistoricalDecision, decisionSchema } from './judge.js';
 export { discoverLocalRoutes, prepareRouteExecution, confirmRouteExecution, captureRouteOutcome, plannerFailureFallback, routeCorrelation } from './route-execution.js';
+export { ingestRouteObservations } from './route-observations.js';

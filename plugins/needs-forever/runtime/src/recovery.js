@@ -1,9 +1,15 @@
 const DELAYS = [5, 15, 60, 300];
+/** A rejected model result is never a transport/provider authentication fact. */
+export class JudgeOutputError extends Error {
+    name = 'JudgeOutputError';
+}
 function messageOf(error) {
     return error instanceof Error ? error.message : String(error);
 }
 export function classifyRecoveryError(error) {
     const message = messageOf(error);
+    if (error instanceof JudgeOutputError)
+        return { kind: 'invalid_judge_output', recoverable: true, wait_external: false, message };
     const lower = message.toLowerCase();
     if (/(judge|supervisor).*(timeout|timed out)|timed out|timeout/.test(lower)) {
         return { kind: 'judge_timeout', recoverable: true, wait_external: false, message };

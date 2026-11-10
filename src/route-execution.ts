@@ -6,6 +6,7 @@ import { routeInventoryDecision } from './planning.js';
 import { validateDecision } from './judge.js';
 import type { Decision, RouteCorrelation, Snapshot, State } from './types.js';
 import type { RouteEvidence } from './route-contract.js';
+import { ingestRouteObservations } from './route-observations.js';
 const scope = (state: State) => ({ task_id: state.task_id, task_version: state.task_version });
 function lifecycleFence(state: State): string {
   const native = state as State & { run_generation?: string; input_epoch?: number; contract_sha256?: string };
@@ -55,8 +56,8 @@ export function discoverLocalRoutes(state: State): void {
   state.route_ledger = new RouteLedger(scope(state), state.route_ledger ? { data: state.route_ledger } : {}).toJSON();
 }
 export function prepareRouteExecution(state: State, decision: Decision, snapshot: Snapshot, deliveryId: string, sourceStopId: string): RouteCorrelation {
+  decision = validateDecision(JSON.stringify(decision), snapshot);
   if (!decision.route_plan) return {};
-  validateDecision(JSON.stringify(decision), snapshot);
   const route = decision.route_plan.candidates.find((candidate) => candidate.route_id === decision.route_plan!.selected_route_id)!;
   const canonical = canonicalExecutionRoute(route, state.route_catalog?.entries ?? []);
   const evidence = structuredClone(snapshot.c2?.observations.filter((item) => route.evidence_ids.includes(item.id)) ?? []);
@@ -73,6 +74,7 @@ export function confirmRouteExecution(state: State, deliveryId: string): void {
 /** Called once at the next admitted real Stop, never at proposal/send/retry.
  * Native hosts may admit several Stops in the same turn. */
 export function captureRouteOutcome(state: State, snapshot: Snapshot, stopId: string, native = false): Record<string, unknown> | null {
+  ingestRouteObservations(state, snapshot);
   const execution = state.route_execution;
   if (!execution || execution.lifecycle_fence !== lifecycleFence(state) || execution.task_version !== state.task_version || execution.completed_stop_attempt_id || (!native && !execution.confirmed) || stopId === execution.source_stop_attempt_id) return null;
   const observations = snapshot.c2?.observations ?? [];

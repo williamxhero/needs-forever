@@ -92,6 +92,15 @@ for await (const line of lines) {
       const snapshot = JSON.parse(message.params.input[0].text);
       const action = scenario.judge_actions?.[judges - 1] ?? 'DONE';
       const decision = action === 'CONTINUE' && snapshot.c2?.mode !== 'legacy' ? routeInventoryDecision(snapshot, 'A1 evidence checked.') : { action, reason: 'A1 evidence checked.', evidence_ids: snapshot.evidence.map((entry) => entry.id), next_message: action === 'CONTINUE' ? 'Check the remaining acceptance result.' : '', external: action === 'WAIT_EXTERNAL' ? { missing: 'Required credential.', attempted: ['Checked local credentials.'], why_no_other_work: 'The only remaining item requires the credential.', resume_when: 'User supplies credential.' } : null };
+      const artifact = scenario.judge_select_observed_artifact && snapshot.c2?.catalog.entries.find((entry) => !entry.inventory_only && entry.resource.kind === 'artifact' && entry.status === 'observed');
+      if (action === 'CONTINUE' && artifact && decision.route_plan) {
+        const route = decision.route_plan.candidates[0];
+        Object.assign(route, { route_id: artifact.route_id, resource: artifact.resource, operation: artifact.operation, status: 'observed', evidence_ids: artifact.evidence.map((proof) => proof.id), actions: [`Read ${artifact.resource.id} and verify the required result.`] });
+        decision.route_plan.selected_route_id = artifact.route_id;
+        decision.route_plan.selection_reason = 'B independently observed the source-linked local alternative.';
+        decision.route_plan.single_route_reason = 'Only this task-relevant artifact is independently observed; other providers remain unverified.';
+        decision.next_message = route.actions.join('\n');
+      }
       const judgeOutput = scenario.judge_outputs?.[judges - 1] ?? scenario.judge_output;
       const judgeItem = { type: 'agentMessage', id: 'judge-output', text: judgeOutput ?? JSON.stringify(decision), phase: 'final_answer' };
       if (scenario.wrong_judge_turn) send({ method: 'turn/completed', params: { threadId: message.params.threadId, turn: { id: 'unrelated-judge-turn', status: 'completed', items: [{ ...judgeItem, text: '{"action":"DONE"}' }] } } });

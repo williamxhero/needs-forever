@@ -24,3 +24,4 @@ export { validateDecision, readHistoricalDecision, decisionSchema } from './judg
 export type { C2Mode, Diagnosis, RouteCandidate, RoutePlan, C2Context } from './planning-contract.js';
 export { discoverLocalRoutes, prepareRouteExecution, confirmRouteExecution, captureRouteOutcome, plannerFailureFallback, routeCorrelation } from './route-execution.js';
 export type { RouteCorrelation, RouteExecution } from './types.js';
+export { ingestRouteObservations } from './route-observations.js';
