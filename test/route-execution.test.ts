@@ -75,6 +75,37 @@ test('a newer human epoch cannot attribute its admitted native Stop to an older 
   assert.equal(state.route_ledger?.attempts.length ?? 0, 0);
 });
 
+test('a diagnostic with omitted observation digests records an honest failed attempt at the next native Stop', () => {
+  const state = runtimeState('missing-diagnostic-digests');
+  const first = context(state, [{ id: 'E1', type: 'commandExecution', value: { exitCode: 0, stdout: 'Truncated current proof.' }, source: { event_id: 'source', observed_at: new Date().toISOString() } }], false);
+  const decision = routeInventoryDecision(first);
+  decision.route_plan!.candidates[0]!.evidence_ids = ['E1'];
+  decision.route_plan!.candidates[0]!.discriminating_check = { description: 'Read the authorized inventory to discriminate missing facts.', evidence_ids: ['E1'] };
+  prepareRouteExecution(state, decision, first, 'delivery', 'source-stop');
+  const next = context(state);
+  assert.doesNotThrow(() => captureRouteOutcome(state, next, 'next-native-stop', true));
+  assert.equal(state.route_ledger?.attempts.length, 1);
+  assert.equal(state.route_ledger!.attempts[0]!.outcome, 'failure');
+  assert.equal(state.route_ledger!.attempts[0]!.discriminating_check, null, 'Missing independent digests must not become a claimed factual check.');
+  assert.deepEqual(state.route_ledger!.attempts[0]!.evidence, []);
+  assert.equal(captureRouteOutcome(state, next, 'repeated-stop', true), null);
+});
+
+test('a reused evidence label at the next Stop cannot satisfy an omitted original diagnostic reference', () => {
+  const state = runtimeState('reused-diagnostic-label');
+  const proof = (event: string, value: string): Snapshot['evidence'] => [{ id: 'E1', type: 'commandExecution', value: { exitCode: 0, stdout: value }, source: { event_id: event, observed_at: new Date().toISOString() } }];
+  const first = context(state, proof('original-source', 'Original incomplete proof'), false);
+  const decision = routeInventoryDecision(first);
+  decision.route_plan!.candidates[0]!.evidence_ids = ['E1'];
+  decision.route_plan!.candidates[0]!.discriminating_check = { description: 'Original proposed check.', evidence_ids: ['E1'] };
+  prepareRouteExecution(state, decision, first, 'delivery', 'source-stop');
+  captureRouteOutcome(state, context(state, proof('different-source', 'Independent later observation')), 'next-stop', true);
+  const attempt = state.route_ledger!.attempts[0]!;
+  assert.equal(attempt.outcome, 'diagnostic', 'Real new observations may still establish progress.');
+  assert.equal(attempt.discriminating_check, null, 'A reused label must not substitute a different source for the original check.');
+  assert.equal(state.route_execution!.discriminating_check!.description, 'Original proposed check.');
+});
+
 test('public inventory execution ingests independently probed nested artifacts across restart and selects a correlated alternate', () => {
   const state = runtimeState('source-linked-inventory');
   mkdirSync(resolve(state.task.workspace, 'cache'), { recursive: true });

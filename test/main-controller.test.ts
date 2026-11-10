@@ -121,6 +121,24 @@ test('installed native Code Mode accepts only a literal NF HTTP probe and select
   assert.equal(requests, 1);
 });
 
+test('an installed second native Stop reaches C when the prior diagnostic proof digests were omitted', (t) => {
+  const name = 'c2-second-stop-missing-digests';
+  const f = installed(name, {}, name, 0, {}, { judge_actions: ['CONTINUE'], judge_check_current_proof: true }, undefined, 'enforce');
+  t.after(() => f.run('pause'));
+  const tool = { tool_use_id: 'truncated-proof', tool_name: 'exec_command', tool_input: { command: 'read-authorized-proof' } };
+  assert.equal(f.hook({ ...tool, hook_event_name: 'PreToolUse' }).status, 0);
+  assert.equal(f.hook({ ...tool, hook_event_name: 'PostToolUse', tool_response: { stdout: 'proof '.repeat(1_500), exitCode: 0 } }).status, 0);
+  assert.equal(JSON.parse(f.hook({ hook_event_name: 'Stop' }).stdout).decision, 'block');
+  const second = f.hook({ hook_event_name: 'Stop', stop_hook_active: true });
+  assert.equal(second.status, 0, second.stderr);
+  assert.equal(JSON.parse(second.stdout).decision, 'block', 'The next genuine Stop must reach C instead of disappearing during result bookkeeping.');
+  const events = readFileSync(join(f.workspace, '.codex-supervisor', name, 'events.jsonl'), 'utf8').split(/\r?\n/).filter(Boolean).map(line => JSON.parse(line));
+  assert.equal(events.filter(event => event.type === 'main_session_stop_observed').length, 2);
+  assert.equal(events.filter(event => event.type === 'judge_created').length, 2);
+  assert.equal(events.filter(event => event.type === 'route_outcome').length, 1);
+  assert.equal(JSON.parse(f.run('status').stdout).phase, 'WORKER');
+});
+
 test('installed bound main session automatically owns an independent B and synchronous Stop returns direction without claiming execution', (t) => {
   const f = installed('automatic-B', { decision: { action: 'CONTINUE', next_message: 'Implement phase two and check phase-two.txt.' } });
   t.after(() => f.run('pause'));

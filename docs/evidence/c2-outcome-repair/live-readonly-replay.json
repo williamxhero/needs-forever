@@ -1,0 +1,14 @@
+{
+  "at": "2026-11-10T15:46:01.367Z",
+  "source_state_sha256": "e20e56489d80ffa46c87bd6b0098a0b454afa8f57f28d3a08f88aeedd028551d",
+  "stop": "89ef1e41-f165-46e0-ba24-810699c5736f",
+  "diagnostic_plan": "qr793-route-context-recovery",
+  "selected_route": "qr793-inventory-local-evidence",
+  "retained_independent_digests": 0,
+  "proposed_check_refs": 2,
+  "result": "failure",
+  "persisted_check": null,
+  "new_attempts": 1,
+  "replayed_attempts": 0,
+  "production_state_written": false
+}

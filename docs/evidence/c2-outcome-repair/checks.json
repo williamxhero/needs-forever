@@ -1,0 +1,18 @@
+{
+  "at": "2026-11-10T15:50:54.584Z",
+  "baseline": "16077cfa963d0bd7bc6214e5c39822fa7d931d90",
+  "tests": 224,
+  "pass": 224,
+  "fail": 0,
+  "cancelled": 0,
+  "skipped": 0,
+  "command": "node --test --test-concurrency=1 \"dist/test/*.test.js\"",
+  "duration_ms": 280716.982,
+  "full_sha256": "dde510ffbe618c236564d78de432c22fd31204c4db0d1ea344316c0843d545a5",
+  "targeted": 3,
+  "standards_unresolved": 0,
+  "spec_unresolved": 0,
+  "original_review_p2": "Reused snapshot-local evidence label could substitute a different observation; fixed and independently re-reviewed.",
+  "superseded_run": "The earlier full candidate run was stopped after the Spec P2 finding and is not a passing receipt.",
+  "production_acceptance_claimed": false
+}

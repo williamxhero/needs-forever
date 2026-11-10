@@ -695,12 +695,6 @@ export async function runController(path, pluginRoot, fixturePath) {
                     if (!result.stop_request || state.status !== 'ACTIVE' || state.phase === 'RECOVERING')
                         return {};
                     const request = result.stop_request;
-                    const outcome = captureRouteOutcome(state, buildMainSessionSnapshot(state, request, store.events()), request.stop_attempt_id, true);
-                    if (outcome)
-                        store.event(state, 'route_outcome', outcome);
-                    discoverLocalRoutes(state);
-                    initializeHttpRouteProbe(state, path);
-                    store.save(state);
                     if (fixture?.transport?.timeout_ms != null)
                         request.deadline_at = new Date(Date.now() + Number(fixture.transport.timeout_ms)).toISOString();
                     const current = { abort: new AbortController(), request, socket, valid: true, epoch: state.input_epoch ?? 0 };
@@ -727,6 +721,14 @@ export async function runController(path, pluginRoot, fixturePath) {
                     socket.once('close', disconnected);
                     const timer = setTimeout(() => { invalidate('Stop hook deadline elapsed; late supervisor output is invalid.'); socket.end('{}\n'); }, Math.max(1, Date.parse(request.deadline_at) - Date.now()));
                     try {
+                        // Outcome/context failures belong to this admitted Stop too;
+                        // they must enter recovery instead of leaving an idle WORKER.
+                        const outcome = captureRouteOutcome(state, buildMainSessionSnapshot(state, request, store.events()), request.stop_attempt_id, true);
+                        if (outcome)
+                            store.event(state, 'route_outcome', outcome);
+                        discoverLocalRoutes(state);
+                        initializeHttpRouteProbe(state, path);
+                        store.save(state);
                         const valid = () => {
                             // The controller owns the task lock for the entire Stop. Read
                             // the in-process checkpoint here instead of reopening

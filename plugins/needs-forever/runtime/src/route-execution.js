@@ -111,7 +111,12 @@ export function captureRouteOutcome(state, snapshot, stopId, native = false) {
     const outcome = reset ? 'transient_failure' : !progress || failed ? 'failure' : 'diagnostic';
     const ledger = new RouteLedger(scope(state), state.route_ledger ? { data: state.route_ledger } : {});
     const check = execution.discriminating_check;
-    const discriminating = check ? { description: check.description, evidence_ids: unique.filter((item, index) => check.evidence_ids.includes(evidence[index].id)).map((item) => item.id) } : null;
+    // A plan may cite raw proof whose independent digest was omitted by the
+    // context budget. Keep the proposal for audit, but never persist an empty
+    // or partially evidenced check as a factual attempt condition.
+    const checkEvidence = execution.evidence.filter(item => check?.evidence_ids.includes(item.id));
+    const discriminating = check && check.evidence_ids.length > 0 && check.evidence_ids.every(id => checkEvidence.some(item => item.id === id))
+        ? { description: check.description, evidence_ids: checkEvidence.map(item => `${item.id}:${item.content_sha256.slice(0, 16)}`) } : null;
     const retry = reset?.at ? { kind: 'not_before', not_before: reset.at, description: 'A current independent tool result supplied a structured retry reset time.', evidence_ids: unique.filter((item) => item.content_sha256 === reset.proof.content_sha256).map((item) => item.id) } : null;
     const attempt = ledger.recordAttempt({ route: execution.route, outcome, evidence_ids: unique.map((item) => item.id), evidence: unique, ...(discriminating ? { discriminating_check: discriminating } : {}), ...(retry ? { retry_condition: retry } : {}), ...(['failure', 'transient_failure'].includes(outcome) ? { failure_class: failed ? 'observed_execution_failure' : 'no_independent_progress' } : {}) });
     state.route_ledger = ledger.toJSON();

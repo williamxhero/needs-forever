@@ -1,0 +1,11 @@
+✔ an installed second native Stop reaches C when the prior diagnostic proof digests were omitted (3223.8704ms)
+✔ a diagnostic with omitted observation digests records an honest failed attempt at the next native Stop (25.8794ms)
+✔ a reused evidence label at the next Stop cannot satisfy an omitted original diagnostic reference (2.9131ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3400.3158

@@ -1,0 +1,37 @@
+✖ a reused evidence label at the next Stop cannot satisfy an omitted original diagnostic reference (44.7362ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1208.4216
+
+✖ failing tests:
+
+test at dist\test\route-execution.test.js:86:1
+✖ a reused evidence label at the next Stop cannot satisfy an omitted original diagnostic reference (44.7362ms)
+  AssertionError [ERR_ASSERTION]: A reused label must not substitute a different source for the original check.
+  + actual - expected
+  
+  + {
+  +   description: 'Original proposed check.',
+  +   evidence_ids: [
+  +     'E1:a9cf8e0b3e3d774c'
+  +   ]
+  + }
+  - null
+  
+      at TestContext.<anonymous> (file:///D:/WILL/TOOLS/needs-forever/dist/test/route-execution.test.js:97:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.start (node:internal/test_runner/test:1242:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: { description: 'Original proposed check.', evidence_ids: [ 'E1:a9cf8e0b3e3d774c' ] },
+    expected: null,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

@@ -109,6 +109,12 @@ for await (const line of lines) {
         decision.diagnosis.evidence_ids = [...decision.evidence_ids];
         decision.route_plan.candidates[0].evidence_ids = [...decision.evidence_ids];
       }
+      if (scenario.judge_check_current_proof && decision.route_plan) {
+        const route = decision.route_plan.candidates[0];
+        route.evidence_ids = snapshot.evidence.map(entry => entry.id);
+        route.discriminating_check = route.evidence_ids.length ? { description: 'Read concise independent inventory facts.', evidence_ids: [...route.evidence_ids] } : null;
+        route.hypothesis_id = `inventory-after-${snapshot.c2.ledger.attempts.length}-attempts`;
+      }
       const artifact = scenario.judge_select_observed_artifact && snapshot.c2?.catalog.entries.find((entry) => !entry.inventory_only && entry.resource.kind === 'artifact' && entry.status === 'observed');
       if (action === 'CONTINUE' && artifact && decision.route_plan) {
         const route = decision.route_plan.candidates[0];
