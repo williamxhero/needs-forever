@@ -6,6 +6,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { codexCommand, connect } from './transport.js';
 import { readJson } from './main-session.js';
 import { Store } from './store.js';
+import { routeCorrelation } from './route-execution.js';
 function promptDelayMs(fixturePath) {
     const value = Number(fixturePath ? JSON.parse(readFileSync(fixturePath, 'utf8')).recovery_prompt_delay_ms : process.env.NF_RECOVERY_PROMPT_DELAY_MS ?? 3_000);
     return Number.isFinite(value) && value >= 0 ? value : 3_000;
@@ -102,7 +103,7 @@ function currentPrompt(statePath) {
             return null;
         if (state.task_version !== prompt.task_version || state.run_generation !== prompt.run_generation)
             return null;
-        if (prompt.kind !== 'native_rebind' && (!state.pending_action || state.pending_action.delivery_id !== prompt.delivery_id || state.pending_action.stage === 'confirmed' || state.continuation_confirmed))
+        if (prompt.kind !== 'native_rebind' && (!state.pending_action || state.pending_action.delivery_id !== prompt.delivery_id || state.pending_action.message !== prompt.message || state.pending_action.plan_id !== prompt.plan_id || state.pending_action.route_id !== prompt.route_id || state.pending_action.source_stop_attempt_id !== prompt.source_stop_attempt_id || state.pending_action.stage === 'confirmed' || state.continuation_confirmed))
             return null;
         if (prompt.kind === 'native_rebind' && (state.binding.status !== 'PENDING_NATIVE_HOOK' || state.binding.operation !== 'rebind'))
             return null;
@@ -114,7 +115,10 @@ function currentPrompt(statePath) {
 }
 function log(statePath, state, type, details = {}) {
     const parent = state.last_stop ?? state.recovery_parent;
-    new Store(statePath).event(state, type, { role: 'worker', source: 'nf', transport: 'codex-app-server', ...(parent?.stop_attempt_id ? { stop_attempt_id: parent.stop_attempt_id } : {}), ...(parent?.turn_id ? { turn_id: parent.turn_id } : {}), ...details });
+    const prompt = state.recovery_prompt;
+    const stopId = prompt?.source_stop_attempt_id ?? parent?.stop_attempt_id;
+    const turnId = prompt?.source_turn_id ?? parent?.turn_id;
+    new Store(statePath).event(state, type, { role: 'worker', source: 'nf', transport: 'codex-app-server', ...routeCorrelation(prompt), ...(stopId ? { stop_attempt_id: stopId } : {}), ...(turnId ? { turn_id: turnId } : {}), ...details });
 }
 function matchingClientId(turns, deliveryId) {
     for (const value of turns) {
@@ -170,6 +174,9 @@ export async function deliverMainSessionRecoveryPrompt(statePath, fixturePath) {
                 log(statePath, state, 'main_session_recovery_prompt_deferred', { delivery_id: prompt.delivery_id, main_session_id: state.main_session_id, reason: 'Original A already has an in-progress turn.' });
                 return;
             }
+            const latest = currentPrompt(statePath);
+            if (!latest || latest.prompt.delivery_id !== prompt.delivery_id || latest.prompt.message !== prompt.message)
+                return;
             log(statePath, state, 'main_session_recovery_prompt_sent', { delivery_id: prompt.delivery_id, main_session_id: state.main_session_id, message: prompt.message });
             const response = await connection.rpc.request('turn/start', { threadId: state.main_session_id, clientUserMessageId: prompt.delivery_id, input: [{ type: 'text', text: prompt.message, text_elements: [] }] });
             const targetTurnId = typeof response?.turn?.id === 'string' ? response.turn.id : null;

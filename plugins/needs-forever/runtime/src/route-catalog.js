@@ -52,6 +52,8 @@ function validateEntry(value) {
     if (entry.status === 'observed' && (ids.size === 0 || authorization.status !== 'authorized' || !['present', 'not_required'].includes(String(authentication.status)) || rate.status !== 'clear' || network.required === null || (network.required && network.available !== true))) {
         throw new Error('Observed routes require independently evidenced authorization, authentication, network and rate-limit facts.');
     }
+    if (entry.inventory_only !== undefined && (entry.inventory_only !== true || resource.kind !== 'artifact' || entry.operation !== 'read-local-artifact' || entry.last_success === null || !entry.evidence.some((proof) => proof.source === 'probe' && proof.reference === `workspace-file:${resource.id}`)))
+        throw new Error('Completed generic inventory requires a source-linked local file probe.');
 }
 function validateData(value) {
     validateEnvelope(value);

@@ -12,6 +12,8 @@ export interface RouteEvidence {
   content_sha256: string;
 }
 export interface RouteCatalogEntry {
+  /** B completed a generic local inspection; no relevance to unmet acceptance is asserted. */
+  inventory_only?: true;
   route_id: string;
   resource: RouteResource;
   operation: string;

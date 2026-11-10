@@ -272,7 +272,7 @@ export class NFDaemon {
     if (!state) throw new Error('Task state is unavailable or invalid.');
     if (action === 'pause') {
       if (state.status !== 'DONE') {
-        state.status = 'PAUSED'; state.phase = 'IDLE'; state.pause_reason = 'user';
+        state.status = 'PAUSED'; state.phase = 'IDLE'; state.pause_reason = 'user'; delete state.route_execution;
         cancelRecovery(state, 'pause', this.now());
         const store = new Store(record.statePath); store.save(state); store.event(state, 'daemon_paused', { source: 'nf-daemon' });
       }

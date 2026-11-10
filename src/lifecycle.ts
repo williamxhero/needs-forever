@@ -9,6 +9,7 @@ import { record, text } from './types.js';
 import { redact } from './redact.js';
 import { controlIntent } from './control-intent.js';
 import { createRecoveryPlan } from './recovery-coordinator.js';
+import { confirmRouteExecution, routeCorrelation } from './route-execution.js';
 
 const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 function strings(value: unknown): string[] {
@@ -121,8 +122,11 @@ export function handleLifecycle(input: unknown, host: HookHost, pluginRoot: stri
           state.pending_action.stage = 'confirmed';
           state.pending_action.target_turn_id = typeof event.turn_id === 'string' ? event.turn_id : null;
           state.continuation_confirmed = true;
+          confirmRouteExecution(state, context.delivery_id);
           delete state.recovery_prompt;
-          store.event(state, 'main_session_continuation_confirmed', { session_id: session, turn_id: event.turn_id ?? null, delivery_id: context.delivery_id, tool_use_id: toolId, original_event: name });
+          const correlation = routeCorrelation(state.pending_action);
+          store.event(state, 'main_session_continuation_confirmed', { ...correlation, session_id: session, turn_id: event.turn_id ?? null, delivery_id: context.delivery_id, tool_use_id: toolId, original_event: name });
+          store.event(state, 'send_confirmed', { ...correlation, delivery_id: context.delivery_id, turn_id: event.turn_id ?? null, via: 'native-tool-activity' });
         }
         delete state.tool_starts[toolId];
         state.processed_tool_ids = [...(state.processed_tool_ids ?? []), toolId];
@@ -142,7 +146,7 @@ export function handleLifecycle(input: unknown, host: HookHost, pluginRoot: stri
       const store = new Store(path);
       store.save(state);
       const stopReasonValue = stopReason(event.stop_reason ?? event.STOP_REASON) ?? stopReason(request.last_assistant_message);
-      store.event(state, 'main_session_stop_observed', { session_id: session, turn_id: request.turn_id, stop_attempt_id: request.stop_attempt_id, run_generation: state.run_generation, host_source: host.source, ...(stopReasonValue ? { stop_reason: stopReasonValue } : {}) });
+      store.event(state, 'main_session_stop_observed', { ...routeCorrelation(state.pending_action), session_id: session, turn_id: request.turn_id, stop_attempt_id: request.stop_attempt_id, run_generation: state.run_generation, host_source: host.source, ...(stopReasonValue ? { stop_reason: stopReasonValue } : {}) });
       // This only creates the request. The B adapter must validate an active
       // lease and return a supported host decision before claiming readiness.
       return state.status === 'ACTIVE' ? { state_path: path, stop_request: request } : {};

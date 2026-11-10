@@ -22,3 +22,5 @@ export { buildMainSessionSnapshot } from './main-supervision.js';
 export { routeInventoryDecision, validateC2Decision } from './planning.js';
 export { validateDecision, readHistoricalDecision, decisionSchema } from './judge.js';
 export type { C2Mode, Diagnosis, RouteCandidate, RoutePlan, C2Context } from './planning-contract.js';
+export { discoverLocalRoutes, prepareRouteExecution, confirmRouteExecution, captureRouteOutcome, plannerFailureFallback, routeCorrelation } from './route-execution.js';
+export type { RouteCorrelation, RouteExecution } from './types.js';
