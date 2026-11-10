@@ -53,9 +53,10 @@ test('ordinary production CLI graduates an explicitly executed NF HTTP probe and
 test('NF receipts project only actual HTTP facts, reject forged sources, and allow an evidenced no-route wait', async (t) => {
   let requests = 0;
   let body = 'Do not persist raw response content sk-abcdefghijklmnop';
+  let statusOverride: number | null = null;
   const server = createServer((request, response) => {
     requests++;
-    const code = Number(request.url!.slice(1));
+    const code = statusOverride ?? Number(request.url!.slice(1));
     response.writeHead(code, { ...(code === 429 ? { 'retry-after': '60' } : {}), 'set-cookie': 'secret=sk-abcdefghijklmnop' });
     response.end(body);
   });
@@ -103,6 +104,19 @@ test('NF receipts project only actual HTTP facts, reject forged sources, and all
     assert.equal(entry.network.available, true);
     assert.equal(entry.last_success, null);
   }
+  statusOverride = 200; const older = await probe(200);
+  statusOverride = 429; const newer = await probe(200); statusOverride = null;
+  const monotonic = structuredClone(state); delete monotonic.route_catalog; delete monotonic.route_ledger;
+  const newestFirst = buildC2Context({ ...newer.input, evidence: [{ ...newer.input.evidence[0]!, id: 'E429' }, { ...older.input.evidence[0]!, id: 'E200' }] }, monotonic);
+  assert.equal(ingestHttpRouteProbes(monotonic, newestFirst), 2);
+  assert.equal(monotonic.route_catalog!.entries[0]!.status, 'blocked', 'Native newest-first snapshots must not let older HTTP200 overwrite the real later429.');
+  assert.equal(monotonic.route_catalog!.entries[0]!.rate_limit.status, 'limited');
+  assert.equal(monotonic.route_ledger!.attempts.at(-1)!.outcome, 'blocked');
+  const attempts = monotonic.route_ledger!.attempts.length;
+  assert.equal(ingestHttpRouteProbes(monotonic, newestFirst), 0, 'Cross-Stop rereads of signed receipts are not new attempts.');
+  assert.equal(monotonic.route_ledger!.attempts.length, attempts);
+  assert.equal(ingestHttpRouteProbes(monotonic, older.input), 0);
+  assert.equal(monotonic.route_catalog!.entries[0]!.status, 'blocked');
   // A separately scoped no-route task records the actual probe itself as an
   // attempt even when the selected C route was inventory, not the API.
   const noRoute = structuredClone(state); delete noRoute.route_catalog; delete noRoute.route_ledger;

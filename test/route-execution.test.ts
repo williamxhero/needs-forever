@@ -160,6 +160,7 @@ test('workspace inventory honors original protected-data access exclusions and k
   writeFileSync(resolve(state.task.workspace, 'reports', 'manifest.json'), '{"holdout_registered":true}');
   writeFileSync(resolve(state.task.workspace, 'restricted.csv'), 'restricted data');
   writeFileSync(resolve(state.task.workspace, '.scratch', 'route-audit.json'), '{"local_cache_present":true}');
+  writeFileSync(resolve(state.task.workspace, '.scratch', 'sensitive-audit.json'), '{"forbidden":true}');
   state.task.authorization += ' Do not read restricted.csv.';
   state.task.acceptance.push({ id: 'S5', text: '登记时间门 holdout；不提前读取或执行 holdout。' });
   discoverLocalRoutes(state);
@@ -172,8 +173,8 @@ test('workspace inventory honors original protected-data access exclusions and k
   assert.equal(observe('restricted', 'restricted.csv'), 1);
   for (const id of ['holdout', 'restricted']) {
     const entry = state.route_catalog!.entries.find((item) => item.route_id === id)!;
-    assert.equal(entry.status, 'candidate');
-    assert.equal(entry.authorization.status, 'unknown');
+    assert.notEqual(entry.status, 'observed');
+    assert.notEqual(entry.authorization.status, 'authorized');
     assert.equal(entry.evidence.some((proof) => proof.source === 'probe'), false);
     assert.equal(entry.last_success, null);
   }
@@ -181,9 +182,30 @@ test('workspace inventory honors original protected-data access exclusions and k
   assert.equal(state.route_catalog!.entries.find((item) => item.route_id === 'metadata')!.status, 'observed');
   assert.equal(observe('scratch-audit', '.scratch/route-audit.json'), 1);
   assert.equal(state.route_catalog!.entries.find((item) => item.route_id === 'scratch-audit')!.status, 'observed');
+  state.task.authorization += ' Do not read .scratch/sensitive-audit.json.';
+  assert.equal(observe('forbidden-scratch', '.scratch/sensitive-audit.json'), 1);
+  assert.equal(state.route_catalog!.entries.find((item) => item.route_id === 'forbidden-scratch')!.status, 'candidate');
   state.task.authorization += ' Never read any restricted material.';
   assert.equal(observe('ambiguous', 'reports/manifest.json'), 1);
   assert.equal(state.route_catalog!.entries.find((item) => item.route_id === 'ambiguous')!.status, 'candidate');
+});
+
+test('current contract/version revalidation fences inherited Catalog facts at context and delivery admission', () => {
+  const state = runtimeState('catalog-authorization-fence');
+  writeFileSync(resolve(state.task.workspace, 'restricted.csv'), 'task data');
+  discoverLocalRoutes(state);
+  const before = context(state), entry = before.c2!.catalog.entries[0]!;
+  const selected = routeInventoryDecision(before);
+  Object.assign(selected.route_plan!.candidates[0]!, { route_id: entry.route_id, resource: entry.resource, operation: entry.operation, status: 'observed', evidence_ids: entry.evidence.map((proof) => proof.id) });
+  selected.route_plan!.selected_route_id = entry.route_id;
+  state.task = { ...state.task, authorization: 'Local workspace inspection. Do not read restricted.csv.' }; state.task_version++;
+  discoverLocalRoutes(state);
+  const after = context(state);
+  assert.notEqual(after.c2!.catalog.entries[0]!.status, 'observed');
+  assert.notEqual(state.route_catalog!.entries[0]!.authorization.status, 'authorized');
+  assert.ok(after.c2!.catalog.entries[0]!.evidence.some((proof) => proof.task_version === 1), 'Old observations stay available for audit.');
+  assert.throws(() => validateDecision(JSON.stringify(selected), after), /Ungrounded|not executable|unknown evidence/);
+  assert.throws(() => prepareRouteExecution(state, selected, before, 'stale-delivery', 'new-stop'), /scope|contract|version/i);
 });
 
 test('an observed artifact may be explicitly excluded after a correlated current failure without editing Catalog status', () => {

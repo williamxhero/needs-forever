@@ -1,0 +1,19 @@
+✔ ordinary production CLI graduates an explicitly executed NF HTTP probe and sends the alternate once (3444.2809ms)
+✔ NF receipts project only actual HTTP facts, reject forged sources, and allow an evidenced no-route wait (7012.4951ms)
+✔ native C2 admission redacts the entire selected decision before checkpoint and recovery prompt (4171.2729ms)
+✔ installed native Stop ingests the actual paired tool result before choosing a source-linked artifact (11741.579ms)
+✔ installed native Code Mode accepts only a literal NF HTTP probe and selects the proven API (12235.0849ms)
+✔ public inventory execution ingests independently probed nested artifacts across restart and selects a correlated alternate (250.1916ms)
+✔ inventory hints cannot forge facts, reuse historical/model evidence, expand scope or traverse symlink parents (18.0929ms)
+✔ workspace inventory honors original protected-data access exclusions and keeps ambiguous authorization unverified (27.9677ms)
+✔ an observed artifact may be explicitly excluded after a correlated current failure without editing Catalog status (210.4869ms)
+✔ ordinary CLI ingests actual tool inventory before C selects and B delivers the executable alternate once (3501.7029ms)
+✔ ordinary authentication-prose C outputs produce one bounded factual inventory fallback (7927.8207ms)
+ℹ tests 11
+ℹ suites 0
+ℹ pass 11
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 28489.1007

@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
+import { createServer } from 'node:http';
 
 const flags = {};
 for (let index = 2; index < process.argv.length; index += 2) {
@@ -47,5 +48,32 @@ const report = { mode: 'installed-production-CLI-simulated-planner-actual-local-
   source_linked_artifact: artifact, correlation: { delivery_id: selected.delivery_id, plan_id: selected.plan_id, route_id: selected.route_id, source_stop_attempt_id: selected.source_stop_attempt_id },
   tool_execution_count: 3, alternate_deliveries: 1, manually_injected_catalog: false, live_model: false, live_provider: false,
   limitations: 'The installed production CLI executes actual local subprocesses and ingests real protocol results. The planner/server and quota blocker are deterministic fixtures; no native live Stop or original B0QI completion is claimed.' };
+// Exercise the actual installed CLI's signed public-API route too. The server
+// lives here, so use an asynchronous child while it handles the real requests.
+let requests = 0;
+const server = createServer((request, response) => {
+  requests++;
+  assert.equal(request.headers.authorization, undefined); assert.equal(request.headers.cookie, undefined);
+  response.end('{"rows":17}');
+});
+await new Promise((resolve_) => server.listen(0, '127.0.0.1', resolve_));
+try {
+  const url = `http://127.0.0.1:${server.address().port}/prices`, httpDirectory = resolve(directory, 'http-fixture'), httpWorkspace = resolve(httpDirectory, 'workspace');
+  mkdirSync(httpWorkspace, { recursive: true });
+  const httpState = resolve(httpDirectory, 'state.json'), httpScenario = resolve(httpDirectory, 'server.json'), httpFixture = resolve(httpDirectory, 'fixture.json'), httpTask = resolve(httpDirectory, 'task.json');
+  writeFileSync(httpScenario, JSON.stringify({ trace: resolve(httpDirectory, 'protocol.jsonl'), state_file: httpState, real_judge: true, judge_actions: ['CONTINUE', 'CONTINUE', 'DONE'], judge_select_observed_api: true, worker_commands: [[[process.execPath, '-e', 'console.log("Synthetic original provider failed; probe authorized API.")']]], worker_probe_urls: [[], [url], [url]] }));
+  writeFileSync(httpFixture, JSON.stringify({ real_judge: true, app_server_argv: [process.execPath, resolve('test/fixtures/app-server.mjs'), httpScenario] }));
+  writeFileSync(httpTask, JSON.stringify({ schema_version: 1, task_id: 'installed-http-loop', workspace: httpWorkspace, goal: 'Read the authorized alternate API.', acceptance: [{ id: 'A1', text: 'Actual local fixture GET success.' }], authorization: `Read-only GET to ${url}. No credentials or writes.` }));
+  const child = spawn(process.execPath, [resolve(runtime, 'src/cli.js'), 'start', '--task', httpTask, '--state', httpState, '--test-fixture', httpFixture], { windowsHide: true });
+  child.stdout.resume(); let stderr = ''; child.stderr.on('data', (part) => { stderr += part; });
+  const timer = setTimeout(() => child.kill(), 30000);
+  const code = await new Promise((resolve_) => child.once('exit', resolve_)); clearTimeout(timer); assert.equal(code, 0, stderr);
+  const checkpoint = JSON.parse(readFileSync(httpState, 'utf8')), api = checkpoint.route_catalog.entries.find((entry) => entry.resource.kind === 'api');
+  assert.equal(checkpoint.status, 'DONE'); assert.equal(api.status, 'observed'); assert.equal(api.resource.id, url); assert.equal(requests, 2);
+  const httpEvents = readFileSync(resolve(httpDirectory, 'events.jsonl'), 'utf8').trim().split('\n').map(JSON.parse);
+  const deliveries = httpEvents.filter((entry) => entry.type === 'send_prepared' && entry.route_id === api.route_id); assert.equal(deliveries.length, 1);
+  for (const type of ['send_attempted', 'send_confirmed', 'route_outcome']) assert.equal(httpEvents.filter((entry) => entry.type === type && entry.delivery_id === deliveries[0].delivery_id).length, 1);
+  report.http_loop = { status: checkpoint.status, selected_route: api.route_id, actual_requests: requests, alternate_deliveries: 1, manually_injected_catalog: false, source_linked_api: api, limits: 'Local real HTTP fixture, simulated planner, original Task unchanged, no credential access or live external provider.' };
+} finally { server.close(); }
 writeFileSync(resolve(directory, 'report.json'), JSON.stringify(report, null, 2) + '\n');
 console.log(JSON.stringify(report, null, 2));

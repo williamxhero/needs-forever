@@ -1,6 +1,7 @@
 import { closeSync, fstatSync, lstatSync, openSync, readSync, realpathSync } from 'node:fs';
 import { isAbsolute, relative, resolve } from 'node:path';
-import { RouteCatalog } from './route-catalog.js';
+import { activeRouteCatalog, RouteCatalog } from './route-catalog.js';
+import { routeReadAuthorization } from './route-authorization.js';
 import { routeEvidenceDigest } from './route-ledger.js';
 import { snapshotRouteEvidence } from './planning-context.js';
 import { redact } from './redact.js';
@@ -16,21 +17,7 @@ const inside = (root: string, path: string) => { const suffix = relative(root, p
  * general authorization interpreter. Recognized path/holdout exclusions are
  * enforced; an ambiguous read/access restriction cannot authorize a probe. */
 export function artifactReadAuthorized(state: State, path: string): boolean {
-  const contract = [state.task.authorization, state.task.goal, ...state.task.acceptance.map((item) => item.text)].join('\n');
-  const clauses = contract.split(/[。；;\n]|(?<=[.!?])\s+/);
-  const forbiddenAccess = /(?:do\s+not|must\s+not|never|forbid(?:den)?|prohibit(?:ed)?)\s+(?:\w+\s+){0,2}(?:read|access|open|inspect|run|execute|use)|\bno\s+access\b|(?:不|禁止|不得|不可|不能)(?:提前)?(?:读取|访问|打开|查看|使用|执行|运行)/i;
-  const normalized = path.toLowerCase().replaceAll('\\', '/');
-  for (const clause of clauses.filter((item) => forbiddenAccess.test(item))) {
-    const holdout = /holdout|留出/i.test(clause);
-    if (holdout && /holdout|留出/i.test(normalized)) return false;
-    const paths = clause.match(/(?:[A-Za-z]:[\\/])?[\p{L}\p{N}_-]+(?:[\\/][\p{L}\p{N}_.-]+)+|[\p{L}\p{N}_-]+\.(?:csv|json|parquet|jsonl|txt|db|sqlite|bin|md)\b/gu) ?? [];
-    for (const excluded of paths) {
-      const target = excluded.toLowerCase().replaceAll('\\', '/').replace(/[.,]+$/, '');
-      if (normalized === target || normalized.startsWith(`${target}/`) || normalized.endsWith(`/${target}`) || resolve(state.task.workspace, path).toLowerCase().replaceAll('\\', '/') === target) return false;
-    }
-    if (!holdout && !paths.length) return false;
-  }
-  return true;
+  return routeReadAuthorization(state.task, path) === 'authorized';
 }
 
 /** A descriptor supplies a path, never availability or permission. B performs
@@ -80,7 +67,7 @@ function output(entry: Snapshot['evidence'][number]): unknown {
  * network, quota, capabilities, success or an observed provider status. */
 export function ingestRouteObservations(state: State, snapshot: Snapshot): number {
   if (snapshot.evidence_complete === false || snapshot.task_id !== state.task_id || snapshot.task_version !== state.task_version || routeEvidenceDigest(snapshot.task) !== routeEvidenceDigest(redact(state.task)) || snapshot.worker_thread_id !== ((state as State & { main_session_id?: string }).main_session_id ?? state.worker_thread_id)) return 0;
-  const catalog = new RouteCatalog({ task_id: state.task_id, task_version: state.task_version }, state.route_catalog ? { data: state.route_catalog } : {});
+  const catalog = new RouteCatalog({ task_id: state.task_id, task_version: state.task_version }, { data: activeRouteCatalog(state) });
   const proofs = snapshotRouteEvidence(snapshot);
   let accepted = 0, inspected = 0;
   for (const entry of snapshot.evidence.slice(0, 32)) {

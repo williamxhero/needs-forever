@@ -3,6 +3,7 @@ import type { Decision, Snapshot } from './types.js';
 import { record, text } from './types.js';
 import { RouteLedger, canonicalExecutionRoute, fingerprintRoute, routeFamilyFingerprint } from './route-ledger.js';
 import type { RouteCandidate } from './planning-contract.js';
+import { activeRouteCatalog } from './route-catalog.js';
 
 export function planningEvidenceIds(snapshot: Snapshot): Set<string> {
   return new Set([...snapshot.evidence.map((entry) => entry.id), ...(snapshot.c2?.catalog.entries.flatMap((entry) => entry.evidence.map((item) => item.id)) ?? []), ...(snapshot.c2?.ledger.attempts.flatMap((entry) => entry.evidence.map((item) => item.id)) ?? [])]);
@@ -42,6 +43,7 @@ function routeCandidate(raw: unknown, snapshot: Snapshot): RouteCandidate {
   return route;
 }
 export function validateC2Decision(decision: Decision, snapshot: Snapshot): Decision {
+  if (snapshot.c2) snapshot = { ...snapshot, c2: { ...snapshot.c2, catalog: activeRouteCatalog({ task_id: snapshot.task_id, task_version: snapshot.task_version, task: snapshot.task, route_catalog: snapshot.c2.catalog }) } };
   const mode = snapshot.c2?.mode ?? 'enforce';
   if (mode === 'legacy') return decision;
   if (decision.action === 'CONTINUE') {
@@ -86,9 +88,9 @@ export function validateC2Decision(decision: Decision, snapshot: Snapshot): Deci
       for (const route of context.catalog.entries) {
         // B already performed this read-only inventory operation. It proves
         // readability, never relevance or unfinished work toward acceptance.
-        if (route.inventory_only && route.last_success && route.evidence.some((proof) => proof.source === 'probe' && proof.reference === `workspace-file:${route.resource.id}`) && decision.external?.attempted.some((reason) => reason.includes(route.route_id))) continue;
+        if (route.inventory_only && route.status === 'observed' && route.authorization.status === 'authorized' && route.last_success && route.evidence.some((proof) => proof.source === 'probe' && proof.reference === `workspace-file:${route.resource.id}`) && decision.external?.attempted.some((reason) => reason.includes(route.route_id))) continue;
         const attempt = context.ledger.attempts.findLast((attempt) => attempt.route.resource.kind === route.resource.kind && attempt.route.resource.id === route.resource.id && attempt.route.operation === route.operation);
-        const currentFailure = attempt && ['failure', 'blocked', 'exhausted'].includes(attempt.outcome) && context.observations.some((proof) => decision.evidence_ids.includes(proof.id) && attempt.evidence.some((observed) => observed.content_sha256 === proof.content_sha256) && decision.external?.attempted.some((reason) => reason.includes(route.route_id) && reason.includes(proof.id)));
+        const currentFailure = attempt && attempt.task_version === snapshot.task_version && ['failure', 'blocked', 'exhausted'].includes(attempt.outcome) && context.observations.some((proof) => decision.evidence_ids.includes(proof.id) && attempt.evidence.some((observed) => observed.content_sha256 === proof.content_sha256) && decision.external?.attempted.some((reason) => reason.includes(route.route_id) && reason.includes(proof.id)));
         const excluded = ['forbidden', 'exhausted', 'blocked'].includes(route.status) || (route.status === 'observed' && currentFailure);
         if (!excluded || !route.evidence.length || (route.status !== 'forbidden' && !attempt) || !decision.external?.attempted.some((reason) => reason.includes(route.route_id))) throw new Error(`WAIT_EXTERNAL requires explicit attempted/excluded route ${route.route_id} with evidence and reason.`);
       }

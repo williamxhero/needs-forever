@@ -1,4 +1,4 @@
-import { RouteCatalog } from './route-catalog.js';
+import { activeRouteCatalog } from './route-catalog.js';
 import { RouteLedger, routeEvidenceDigest } from './route-ledger.js';
 import { redact } from './redact.js';
 export function effectiveC2Mode(state) {
@@ -43,7 +43,7 @@ export function snapshotRouteEvidence(snapshot) {
  */
 export function buildC2Context(snapshot, state, maxChars = 24_000) {
     const scope = { task_id: state.task_id, task_version: state.task_version };
-    const catalog = new RouteCatalog(scope, state.route_catalog ? { data: state.route_catalog } : {}).toJSON();
+    const catalog = activeRouteCatalog(state);
     const ledger = new RouteLedger(scope, state.route_ledger ? { data: state.route_ledger } : {}).toJSON();
     snapshot.omissions ??= [];
     snapshot.plan ??= { missing: 'No current worker plan observed.' };

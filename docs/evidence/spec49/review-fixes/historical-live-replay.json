@@ -1,0 +1,309 @@
+{
+  "mode": "actual-live-C-historical-Stop-replay",
+  "source": "D:\\WILL\\STOCK\\QuantResearch\\.codex-supervisor\\quantresearch-793-supervise\\snapshots\\8784db86-45b6-4130-bcff-fbe45b4a2c3f.json",
+  "source_sha256": "e2477f70746dc3809b53224eb19db4d5159a818e178af6d4c7951c91b9abf30d",
+  "historical_input_sha256": "8487e9ca8304d1c26317e410d117b60326038cef744fa698dfe8d2212f5dc116",
+  "replay_input_sha256": "75e5fc2e00017944524b0e6d03ac4519bf9eea376874aeea01015323e5784538",
+  "source_stop_attempt_id": "5fd1abd7-e5ed-4756-bf2a-1d3e322e11b1",
+  "source_snapshot_id": "8784db86-45b6-4130-bcff-fbe45b4a2c3f",
+  "source_thread_id": "01a1ae7a-9442-79e0-b32b-aa560f976453",
+  "source_task_id": "quantresearch-793-supervise",
+  "original_contract_sha256": "db7ccc65dc3524ae4dcc40767bfd7bd11bd7e4a107a51c5e90d1bb5f3c576e54",
+  "replay_contract_sha256": "db7ccc65dc3524ae4dcc40767bfd7bd11bd7e4a107a51c5e90d1bb5f3c576e54",
+  "historical_action": "WAIT_EXTERNAL",
+  "historical_next_message": "",
+  "current_evidence": [
+    {
+      "id": "6126729b-f9a9-4d48-a528-00a8ca35c8d4",
+      "type": "functionCallOutput",
+      "source": {
+        "event_id": "6126729b-f9a9-4d48-a528-00a8ca35c8d4",
+        "thread_id": "01a1ae7a-9442-79e0-b32b-aa560f976453",
+        "turn_id": "01a1bda1-5657-77c2-ace5-afbd2fd45993",
+        "item_id": "exec-27f1c693-2a4e-4cf1-a496-8cda67986d5d"
+      },
+      "value_sha256": "9b7a18b0a2c4ea3a858c844f0427940f79dcb2f36314a4db5d1563e9bc31ddd1"
+    },
+    {
+      "id": "2ba627f1-d484-4445-8a38-0573313b42bf",
+      "type": "functionCallOutput",
+      "source": {
+        "event_id": "2ba627f1-d484-4445-8a38-0573313b42bf",
+        "thread_id": "01a1ae7a-9442-79e0-b32b-aa560f976453",
+        "turn_id": "01a1bda1-5657-77c2-ace5-afbd2fd45993",
+        "item_id": "exec-60ca68d7-35ea-4fc6-99c2-0f40ef2ec0d4"
+      },
+      "value_sha256": "0e355105e199476a7f89b6c9353c7f9b05a622aaf39c7fcc7d79f44c7417555f"
+    },
+    {
+      "id": "1eec7ec9-4473-4f04-92d7-efa9c26e2544",
+      "type": "functionCallOutput",
+      "source": {
+        "event_id": "1eec7ec9-4473-4f04-92d7-efa9c26e2544",
+        "thread_id": "01a1ae7a-9442-79e0-b32b-aa560f976453",
+        "turn_id": "01a1bda1-5657-77c2-ace5-afbd2fd45993",
+        "item_id": "exec-d91b7332-c058-4563-b92b-da23e4e440f4"
+      },
+      "value_sha256": "ae827f306fd83cc7301e305af85bccbaba4ead41a2b8f39253bb2e53e8104a8a"
+    },
+    {
+      "id": "3c3d34f1-5977-47d1-8844-f34facd55f2f",
+      "type": "functionCallOutput",
+      "source": {
+        "event_id": "3c3d34f1-5977-47d1-8844-f34facd55f2f",
+        "thread_id": "01a1ae7a-9442-79e0-b32b-aa560f976453",
+        "turn_id": "01a1bda1-5657-77c2-ace5-afbd2fd45993",
+        "item_id": "call_c42e48ff0c9645d4b8a0d45232a34ee8"
+      },
+      "value_sha256": "c9ad87b99f094fb9cd8f152cde1892c1abe93d3fb5aa5380fc81f34887144d7a"
+    },
+    {
+      "id": "0c5f0411-2643-4eb8-9fb6-82677977a8aa",
+      "type": "functionCallOutput",
+      "source": {
+        "event_id": "0c5f0411-2643-4eb8-9fb6-82677977a8aa",
+        "thread_id": "01a1ae7a-9442-79e0-b32b-aa560f976453",
+        "turn_id": "01a1bda1-5657-77c2-ace5-afbd2fd45993",
+        "item_id": "call_8c370f22e5c045fb80d1735778d4cd80"
+      },
+      "value_sha256": "c9ad87b99f094fb9cd8f152cde1892c1abe93d3fb5aa5380fc81f34887144d7a"
+    },
+    {
+      "id": "6b18537a-7d8d-4869-b45d-316e951f6990",
+      "type": "functionCallOutput",
+      "source": {
+        "event_id": "6b18537a-7d8d-4869-b45d-316e951f6990",
+        "thread_id": "01a1ae7a-9442-79e0-b32b-aa560f976453",
+        "turn_id": "01a1bda1-5657-77c2-ace5-afbd2fd45993",
+        "item_id": "call_6364f6905219499b995f7f631581ca91"
+      },
+      "value_sha256": "18ce0d44d495cfbe0189116aadf3216d773a4aaada4bb3cbc17b4719049523c2"
+    },
+    {
+      "id": "4f4e5cef-61dc-43ac-8c71-8da4cf70479d",
+      "type": "functionCallOutput",
+      "source": {
+        "event_id": "4f4e5cef-61dc-43ac-8c71-8da4cf70479d",
+        "thread_id": "01a1ae7a-9442-79e0-b32b-aa560f976453",
+        "turn_id": "01a1bda1-5657-77c2-ace5-afbd2fd45993",
+        "item_id": "call_9ba3009f7d0a4f2488bd9265b4797f43"
+      },
+      "value_sha256": "8c99fbef52bc8d977fa6634c3f074921d91799bc06f9efc6d98767bbfc1b7e8d"
+    },
+    {
+      "id": "7ca0bf01-2f51-4bb4-bdd0-09d1699b98f9",
+      "type": "functionCallOutput",
+      "source": {
+        "event_id": "7ca0bf01-2f51-4bb4-bdd0-09d1699b98f9",
+        "thread_id": "01a1ae7a-9442-79e0-b32b-aa560f976453",
+        "turn_id": "01a1bda1-5657-77c2-ace5-afbd2fd45993",
+        "item_id": "call_9308f39b3559464d9d0c178d2f33e420"
+      },
+      "value_sha256": "c9ad87b99f094fb9cd8f152cde1892c1abe93d3fb5aa5380fc81f34887144d7a"
+    },
+    {
+      "id": "885d63ec-0abd-41a1-9206-0e3e3ba76e97",
+      "type": "functionCallOutput",
+      "source": {
+        "event_id": "885d63ec-0abd-41a1-9206-0e3e3ba76e97",
+        "thread_id": "01a1ae7a-9442-79e0-b32b-aa560f976453",
+        "turn_id": "01a1bda1-5657-77c2-ace5-afbd2fd45993",
+        "item_id": "call_0959ce2868454974a5382ea371436abe"
+      },
+      "value_sha256": "c9ad87b99f094fb9cd8f152cde1892c1abe93d3fb5aa5380fc81f34887144d7a"
+    },
+    {
+      "id": "7e917530-9cb2-4166-871a-89b5c1164050",
+      "type": "functionCallOutput",
+      "source": {
+        "event_id": "7e917530-9cb2-4166-871a-89b5c1164050",
+        "thread_id": "01a1ae7a-9442-79e0-b32b-aa560f976453",
+        "turn_id": "01a1bda1-5657-77c2-ace5-afbd2fd45993",
+        "item_id": "call_942441244685458e93fab19d358098be"
+      },
+      "value_sha256": "c9ad87b99f094fb9cd8f152cde1892c1abe93d3fb5aa5380fc81f34887144d7a"
+    },
+    {
+      "id": "39941ff6-cb05-47dc-b812-2c68f939aa38",
+      "type": "functionCallOutput",
+      "source": {
+        "event_id": "39941ff6-cb05-47dc-b812-2c68f939aa38",
+        "thread_id": "01a1ae7a-9442-79e0-b32b-aa560f976453",
+        "turn_id": "01a1bda1-5657-77c2-ace5-afbd2fd45993",
+        "item_id": "call_458c4def18bf4e1fa8aa7e9687e87483"
+      },
+      "value_sha256": "c9ad87b99f094fb9cd8f152cde1892c1abe93d3fb5aa5380fc81f34887144d7a"
+    },
+    {
+      "id": "6346e7ed-9fd2-44de-8068-2ff07dd041e1",
+      "type": "functionCallOutput",
+      "source": {
+        "event_id": "6346e7ed-9fd2-44de-8068-2ff07dd041e1",
+        "thread_id": "01a1ae7a-9442-79e0-b32b-aa560f976453",
+        "turn_id": "01a1bda1-5657-77c2-ace5-afbd2fd45993",
+        "item_id": "call_b997553c61f5454eb764f9226d00bb3c"
+      },
+      "value_sha256": "8c99fbef52bc8d977fa6634c3f074921d91799bc06f9efc6d98767bbfc1b7e8d"
+    },
+    {
+      "id": "c3d51ba7-3528-409e-ad97-da90995b9dbd",
+      "type": "functionCallOutput",
+      "source": {
+        "event_id": "c3d51ba7-3528-409e-ad97-da90995b9dbd",
+        "thread_id": "01a1ae7a-9442-79e0-b32b-aa560f976453",
+        "turn_id": "01a1bda1-5657-77c2-ace5-afbd2fd45993",
+        "item_id": "call_22a86262b1694f42a097d2da164fc381"
+      },
+      "value_sha256": "18ce0d44d495cfbe0189116aadf3216d773a4aaada4bb3cbc17b4719049523c2"
+    },
+    {
+      "id": "89bfd226-01af-4aed-97dd-1ad634642beb",
+      "type": "functionCallOutput",
+      "source": {
+        "event_id": "89bfd226-01af-4aed-97dd-1ad634642beb",
+        "thread_id": "01a1ae7a-9442-79e0-b32b-aa560f976453",
+        "turn_id": "01a1bda1-5657-77c2-ace5-afbd2fd45993",
+        "item_id": "call_76173a40a222480cb6cce31d17894549"
+      },
+      "value_sha256": "8c99fbef52bc8d977fa6634c3f074921d91799bc06f9efc6d98767bbfc1b7e8d"
+    },
+    {
+      "id": "013abbac-59af-402e-8f65-4ecc9dcec626",
+      "type": "functionCallOutput",
+      "source": {
+        "event_id": "013abbac-59af-402e-8f65-4ecc9dcec626",
+        "thread_id": "01a1ae7a-9442-79e0-b32b-aa560f976453",
+        "turn_id": "01a1bda1-5657-77c2-ace5-afbd2fd45993",
+        "item_id": "call_ff918639c7f34e00a52f30dfe611b7b9"
+      },
+      "value_sha256": "8c99fbef52bc8d977fa6634c3f074921d91799bc06f9efc6d98767bbfc1b7e8d"
+    },
+    {
+      "id": "06f12e4d-8a51-4bf1-9253-351255e93b7b",
+      "type": "functionCallOutput",
+      "source": {
+        "event_id": "06f12e4d-8a51-4bf1-9253-351255e93b7b",
+        "thread_id": "01a1ae7a-9442-79e0-b32b-aa560f976453",
+        "turn_id": "01a1bda1-5657-77c2-ace5-afbd2fd45993",
+        "item_id": "call_23600f3499554f0bb406f8f88d724226"
+      },
+      "value_sha256": "c9ad87b99f094fb9cd8f152cde1892c1abe93d3fb5aa5380fc81f34887144d7a"
+    },
+    {
+      "id": "b7fbcc74-f6b9-44bf-acba-7192040da745",
+      "type": "functionCallOutput",
+      "source": {
+        "event_id": "b7fbcc74-f6b9-44bf-acba-7192040da745",
+        "thread_id": "01a1ae7a-9442-79e0-b32b-aa560f976453",
+        "turn_id": "01a1bda1-5657-77c2-ace5-afbd2fd45993",
+        "item_id": "call_638c84ac1d654f71b94cca911264f213"
+      },
+      "value_sha256": "a28e3a5fd45b187a103967a9dd6f9b9d958a01d35fd929d91279fdc42955b3fe"
+    },
+    {
+      "id": "f3a0a9f8-c510-41f1-85eb-d323658d2935",
+      "type": "functionCallOutput",
+      "source": {
+        "event_id": "f3a0a9f8-c510-41f1-85eb-d323658d2935",
+        "thread_id": "01a1ae7a-9442-79e0-b32b-aa560f976453",
+        "turn_id": "01a1bda1-5657-77c2-ace5-afbd2fd45993",
+        "item_id": "call_2831aa955a6542ae9a7a78eee8d985b2"
+      },
+      "value_sha256": "d26f97f6b1355a391761c4ea303ba78512aede3f917fcd20407c147d9db6110c"
+    },
+    {
+      "id": "f79a6819-7d68-4085-8a43-fedd3ba4995b",
+      "type": "functionCallOutput",
+      "source": {
+        "event_id": "f79a6819-7d68-4085-8a43-fedd3ba4995b",
+        "thread_id": "01a1ae7a-9442-79e0-b32b-aa560f976453",
+        "turn_id": "01a1bda1-5657-77c2-ace5-afbd2fd45993",
+        "item_id": "call_94c3729f445a42f59b6c572614f0d4df"
+      },
+      "value_sha256": "8c99fbef52bc8d977fa6634c3f074921d91799bc06f9efc6d98767bbfc1b7e8d"
+    },
+    {
+      "id": "62daf235-4eb4-4fcb-9b88-44fd1b2544c3",
+      "type": "functionCallOutput",
+      "source": {
+        "event_id": "62daf235-4eb4-4fcb-9b88-44fd1b2544c3",
+        "thread_id": "01a1ae7a-9442-79e0-b32b-aa560f976453",
+        "turn_id": "01a1bda1-5657-77c2-ace5-afbd2fd45993",
+        "item_id": "exec-d6147324-6162-47db-a39a-8e0e553d97ea"
+      },
+      "value_sha256": "084696f7475a4bc587bb2b6da0e737428e2d11258a8e801d28ac8a0072d3866b"
+    },
+    {
+      "id": "2f6de07e-0a49-40bb-8c8a-9af0e8c7da8a",
+      "type": "functionCallOutput",
+      "source": {
+        "event_id": "2f6de07e-0a49-40bb-8c8a-9af0e8c7da8a",
+        "thread_id": "01a1ae7a-9442-79e0-b32b-aa560f976453",
+        "turn_id": "01a1bda1-5657-77c2-ace5-afbd2fd45993",
+        "item_id": "exec-4ba4e65f-4493-4dfe-80a2-d2e3130ab5e0"
+      },
+      "value_sha256": "60bb5f5a35a062f4b2c7ec780c6238e650cdfe1525bd18db28c31f75955e9f3e"
+    },
+    {
+      "id": "30635d54-38f2-434a-95b8-864860d47759",
+      "type": "functionCallOutput",
+      "source": {
+        "event_id": "30635d54-38f2-434a-95b8-864860d47759",
+        "thread_id": "01a1ae7a-9442-79e0-b32b-aa560f976453",
+        "turn_id": "01a1bda1-5657-77c2-ace5-afbd2fd45993",
+        "item_id": "exec-c52f3246-cb04-43fe-92ad-a04ff1ede9e8"
+      },
+      "value_sha256": "2b45627e5b2d0e0c8a5f0c5f0d391c9f33db23a20482c7d00391dc02e3858647"
+    },
+    {
+      "id": "fcdc08b1-f688-4791-bba3-98e0e0b5adf5",
+      "type": "functionCallOutput",
+      "source": {
+        "event_id": "fcdc08b1-f688-4791-bba3-98e0e0b5adf5",
+        "thread_id": "01a1ae7a-9442-79e0-b32b-aa560f976453",
+        "turn_id": "01a1bda1-5657-77c2-ace5-afbd2fd45993",
+        "item_id": "call_aa047063f020464c830ebfe0e64b1ab6"
+      },
+      "value_sha256": "8c99fbef52bc8d977fa6634c3f074921d91799bc06f9efc6d98767bbfc1b7e8d"
+    },
+    {
+      "id": "d3e3f62a-5f64-41c5-8309-72302f752192",
+      "type": "functionCallOutput",
+      "source": {
+        "event_id": "d3e3f62a-5f64-41c5-8309-72302f752192",
+        "thread_id": "01a1ae7a-9442-79e0-b32b-aa560f976453",
+        "turn_id": "01a1bda1-5657-77c2-ace5-afbd2fd45993",
+        "item_id": "call_46dbfc111ff64726b417b21d51c4482a"
+      },
+      "value_sha256": "8c99fbef52bc8d977fa6634c3f074921d91799bc06f9efc6d98767bbfc1b7e8d"
+    }
+  ],
+  "c2_mode": "enforce",
+  "context_complete": false,
+  "evidence_complete": false,
+  "input_characters": 23042,
+  "live_model": "completed",
+  "original_A_contacted": false,
+  "source_written": false,
+  "native_live_Stop": false,
+  "route_execution": "not_run",
+  "limits": "Actual C model receives a historical Stop in a new isolated read-only/network-disabled/tool-free judge. Original A and its active state are untouched. Missing historical Route Catalog/Ledger is explicit and requires inventory. This does not prove a native live Stop, live route execution, or completion of the original B0QI task.",
+  "codex_version": "codex-cli 0.167.0",
+  "disabled_mcp_count": 4,
+  "owned_C_thread_id": "01a1c3f1-c6fa-7cb0-9691-950bb283d1ec",
+  "owned_C_archived": true,
+  "validated": true,
+  "action": "CONTINUE",
+  "selected_route": "local-artifact-route-inventory",
+  "diagnosis": {
+    "class": "evidence_gap",
+    "statement": "汇总文件的生成命令包含预填结论，不能独立证明验收；当前另一条文件检查还报告相关 readback 不存在。缺少完整源证据及可选择的 observed 路线，需要先做有界本地发现。",
+    "evidence_ids": [
+      "1eec7ec9-4473-4f04-92d7-efa9c26e2544",
+      "62daf235-4eb4-4fcb-9b88-44fd1b2544c3"
+    ]
+  },
+  "next_message": "执行一次只读本地路线发现：在 QuantResearch 工作区寻找最多四个非秘密、无符号链接父目录、大小不超过 16384 字节的普通文件，优先选择能够定位 G0 替代数据路线及 G1 原始合同/实现入口的现有索引或证据文件。不要重试受限 provider，不执行网络请求、Runtime submission 或 holdout 访问；不要以新写的结论摘要替代原始证据。\n返回一次完整、未截断、最多 8000 字符的 JSON tool/command result，严格只有以下结构和键：{\"nf_route_inventory\":{\"schema_version\":1,\"task_id\":\"quantresearch-793-supervise\",\"task_version\":9,\"routes\":[{\"route_id\":\"stable-id\",\"resource\":{\"kind\":\"artifact\",\"id\":\"nested/relative/path\"},\"operation\":\"read-local-artifact\"}]}}。routes 最多四项，路径必须是实际发现的工作区相对路径；未找到则返回空数组。此清单仅是发现提示，不是可用性或授权声明；随后由 B 独立检查普通文件、父目录、16384 字节上限，并记录 source/contract/digest 证据。",
+  "inventory_acceptance_pass": true,
+  "source_snapshot_unchanged": true
+}

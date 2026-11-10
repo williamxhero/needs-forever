@@ -1,5 +1,5 @@
 import { readdirSync } from 'node:fs';
-import { RouteCatalog } from './route-catalog.js';
+import { activeRouteCatalog, RouteCatalog } from './route-catalog.js';
 import { RouteLedger, canonicalExecutionRoute, routeEvidenceDigest } from './route-ledger.js';
 import { routeInventoryDecision } from './planning.js';
 import { validateDecision } from './judge.js';
@@ -7,6 +7,7 @@ import type { Decision, RouteCorrelation, Snapshot, State } from './types.js';
 import type { RouteEvidence } from './route-contract.js';
 import { ingestRouteObservations, probeWorkspaceArtifact } from './route-observations.js';
 import { ingestHttpRouteProbes } from './http-route-probe.js';
+import { redact } from './redact.js';
 const scope = (state: State) => ({ task_id: state.task_id, task_version: state.task_version });
 function lifecycleFence(state: State): string {
   const native = state as State & { run_generation?: string; input_epoch?: number; contract_sha256?: string };
@@ -30,7 +31,7 @@ export function routeCorrelation(value?: RouteCorrelation | null): RouteCorrelat
 /** B reads only bounded local regular files. Contents are hashed, never sent to C.
  * Credentials, symlinks, networking and configured provider names prove nothing. */
 export function discoverLocalRoutes(state: State): void {
-  const catalog = new RouteCatalog(scope(state), state.route_catalog ? { data: state.route_catalog } : {});
+  const catalog = new RouteCatalog(scope(state), { data: activeRouteCatalog(state) });
   let files: string[];
   try { files = readdirSync(state.task.workspace).sort().filter((name) => !name.startsWith('.') && !/(?:secret|credential|token|password|auth|cookie|private|\.pem$|\.key$)/i.test(name)).slice(0, 32); }
   catch { state.route_catalog = catalog.toJSON(); return; }
@@ -49,6 +50,8 @@ export function discoverLocalRoutes(state: State): void {
   state.route_ledger = new RouteLedger(scope(state), state.route_ledger ? { data: state.route_ledger } : {}).toJSON();
 }
 export function prepareRouteExecution(state: State, decision: Decision, snapshot: Snapshot, deliveryId: string, sourceStopId: string): RouteCorrelation {
+  if (snapshot.task_id !== state.task_id || snapshot.task_version !== state.task_version || routeEvidenceDigest(snapshot.task) !== routeEvidenceDigest(redact(state.task))) throw new Error('Route admission rejected stale task scope/version or contract.');
+  if (snapshot.c2) snapshot = { ...snapshot, c2: { ...snapshot.c2, catalog: activeRouteCatalog(state) } };
   decision = validateDecision(JSON.stringify(decision), snapshot);
   if (!decision.route_plan) return {};
   const route = decision.route_plan.candidates.find((candidate) => candidate.route_id === decision.route_plan!.selected_route_id)!;
