@@ -13,7 +13,7 @@ The user approved the five-ticket split on 2026-11-10. Each ticket body was uplo
 
 | Ticket | Deliverable | Blocked by | Stage |
 | --- | --- | --- | --- |
-| #50 | Route contract and durable catalog/ledger | None | Implementing |
+| #50 | Route contract and durable catalog/ledger | None | Integrated and targeted tests passed |
 | #51 | Shared context and structured C2 planning | #50 | Not started |
 | #52 | B route delivery, correlation and repetition guard | #51 | Not started |
 | #53 | NFG route audit display | #51, #52 | Not started |
@@ -43,3 +43,5 @@ The approved SPEC and ticket split define these interfaces: route catalog/ledger
 - Native graph readback: #49 has #50–#54 as its sub-issues; blocking edges match the table.
 - Initial working tree was clean and main matched origin/main.
 - #50 implementation worktree created from the baseline. No other SPEC is being implemented by this execution.
+- #50 integrated on 2026-11-10: source `25877a82f115e3f1bef6acf37fe82699a5bf9679` included the then-current integration tip `58ab458a895720b2e68bbbb76720c146f8f721ba`; ordinary `--no-ff` merge commit `4f568bd61f259645324647cb025bb259f674767a` preserves both histories.
+- #50 integration verification: `npm run plugin:build` passed (27 runtime modules); `node --test dist/test/routes.test.js` passed 7/7 with no skipped or failed tests. The build produced no tracked changes. Release-wide checks and issue delivery/closure remain outstanding.
