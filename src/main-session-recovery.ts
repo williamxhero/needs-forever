@@ -67,7 +67,15 @@ function spawnPrompt(path: string, pluginRoot: string, fixturePath: string | und
   const script = resolve(pluginRoot, 'scripts/recovery-prompt.mjs');
   if (!existsSync(script)) throw new Error('Installed recovery prompt entry point is missing.');
   const child = spawn(process.execPath, [script, path, ...(fixturePath ? ['--test-fixture', fixturePath] : [])], { cwd: workspace, detached: true, windowsHide: true, stdio: 'ignore' });
-  child.once('error', () => { const state = readJson(path) as MainSessionState; log(path, state, 'main_session_recovery_prompt_failed', { error: 'Unable to start the installed recovery helper.' }); });
+  child.once('error', () => {
+    // A detached helper can fail after the caller has returned.  Never let a
+    // state-read or audit-write failure become an uncaught exception in this
+    // callback; the next global watchdog tick remains responsible for retry.
+    try {
+      const state = readJson(path) as MainSessionState;
+      log(path, state, 'main_session_recovery_prompt_failed', { error: 'Unable to start the installed recovery helper.' });
+    } catch { /* preserve the checkpoint and let the watchdog retry */ }
+  });
   child.unref();
 }
 
@@ -282,35 +290,53 @@ export async function deliverMainSessionRecoveryPrompt(statePath: string, fixtur
  * prompt can be created, and the recovery deadline remains the hard stop.
  */
 function deferRecoveryPrompt(statePath: string, deliveryId: string, reason: string, error?: unknown, retryable = true): void {
-  const initial = currentPrompt(statePath);
-  if (!initial?.prompt || initial.prompt.delivery_id !== deliveryId) return;
-  const store = new Store(statePath);
-  const latest = currentPrompt(statePath);
-  if (!latest?.prompt || latest.prompt.delivery_id !== deliveryId) return;
-  const previousAttempt = Number.isInteger(latest.prompt.retry_attempt) ? latest.prompt.retry_attempt! : 0;
-  const retryAttempt = previousAttempt + 1;
-  const delayMs = RECOVERY_PROMPT_RETRY_DELAYS_MS[Math.min(retryAttempt - 1, RECOVERY_PROMPT_RETRY_DELAYS_MS.length - 1)] ?? RECOVERY_PROMPT_RETRY_DELAYS_MS.at(-1)!;
-  const retryAt = new Date(Date.now() + delayMs).toISOString();
-  latest.prompt.retry_attempt = retryAttempt;
-  latest.prompt.due_at = retryAt;
-  latest.state.recovery_condition = {
-    kind: 'recovery_active_writer',
-    message: reason,
-    resume_when: '原始 A 当前回合结束后，NF 将按退避时间自动重试；恢复窗口到期会明确标记为中断。',
-  };
-  // An active writer is expected while A is finishing.  Do not let a stale
-  // transport error make NFG claim that the task is permanently failing.
-  delete latest.state.last_error;
-  // Recovery helpers intentionally do not take the long-lived controller
-  // task lock: B may still own it while A is finishing its active turn.
-  store.save(latest.state);
-  store.event(latest.state, 'main_session_recovery_prompt_deferred', {
-    delivery_id: deliveryId,
-    main_session_id: latest.state.main_session_id,
-    reason,
-    retryable,
-    retry_attempt: retryAttempt,
-    retry_at: retryAt,
-    ...(error ? { error: String(redact(error instanceof Error ? error.message : String(error))) } : {}),
-  });
+  try {
+    const initial = currentPrompt(statePath);
+    if (!initial?.prompt || initial.prompt.delivery_id !== deliveryId) return;
+    const store = new Store(statePath);
+    const latest = currentPrompt(statePath);
+    if (!latest?.prompt || latest.prompt.delivery_id !== deliveryId) return;
+    const previousAttempt = Number.isInteger(latest.prompt.retry_attempt) ? latest.prompt.retry_attempt! : 0;
+    const retryAttempt = previousAttempt + 1;
+    const delayMs = RECOVERY_PROMPT_RETRY_DELAYS_MS[Math.min(retryAttempt - 1, RECOVERY_PROMPT_RETRY_DELAYS_MS.length - 1)] ?? RECOVERY_PROMPT_RETRY_DELAYS_MS.at(-1)!;
+    const retryAt = new Date(Date.now() + delayMs).toISOString();
+    latest.prompt.retry_attempt = retryAttempt;
+    latest.prompt.due_at = retryAt;
+    latest.state.recovery_condition = {
+      kind: 'recovery_active_writer',
+      message: reason,
+      resume_when: '原始 A 当前回合结束后，NF 将按退避时间自动重试；恢复窗口到期会明确标记为中断。',
+    };
+    // An active writer is expected while A is finishing.  Do not let a stale
+    // transport error make NFG claim that the task is permanently failing.
+    delete latest.state.last_error;
+    // Recovery helpers intentionally do not take the long-lived controller
+    // task lock: B may still own it while A is finishing its active turn.
+    store.save(latest.state);
+    store.event(latest.state, 'main_session_recovery_prompt_deferred', {
+      delivery_id: deliveryId,
+      main_session_id: latest.state.main_session_id,
+      reason,
+      retryable,
+      retry_attempt: retryAttempt,
+      retry_at: retryAt,
+      ...(error ? { error: String(redact(error instanceof Error ? error.message : String(error))) } : {}),
+    });
+  } catch (failure) {
+    // Deferral is best-effort bookkeeping around a transient writer race.
+    // Never turn a lock/rename race into an unhandled detached-process error.
+    // Keep a separate audit marker when possible; the original Stop and
+    // prompt remain intact and the watchdog will make the next attempt.
+    try {
+      const latest = currentPrompt(statePath);
+      if (latest?.prompt.delivery_id === deliveryId) {
+        new Store(statePath).event(latest.state, 'main_session_recovery_prompt_defer_failed', {
+          delivery_id: deliveryId,
+          main_session_id: latest.state.main_session_id,
+          reason: 'NF 无法持久化本次暂缓，watchdog 将继续重试。',
+          error: String(redact(failure instanceof Error ? failure.message : String(failure))),
+        });
+      }
+    } catch { /* preserve the checkpoint; the next watchdog tick retries */ }
+  }
 }
