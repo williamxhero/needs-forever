@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync, mkdirSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, mkdirSync, writeFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { test } from 'node:test';
@@ -89,9 +89,11 @@ test('reported completion needs evidence and blocked progress needs an explanati
 test('failed local writes are surfaced and cannot be mistaken for a saved record', () => {
   const { root } = storePath();
   try {
-    const path = join(root, 'as-directory');
-    mkdirSync(path);
+    const parentFile = join(root, 'parent-file');
+    writeFileSync(parentFile, 'not a directory');
+    const path = join(parentFile, 'tracking.json');
     const store = new LocalTrackingStore({ backend: 'local-json', path });
-    assert.throws(() => store.create(task(), clarification), /EISDIR|directory|rename|write/i);
+    assert.throws(() => store.create(task(), clarification), /EEXIST|ENOTDIR|EISDIR|directory|rename|write/i);
+    assert.equal(existsSync(path), false);
   } finally { cleanup(root); }
 });
