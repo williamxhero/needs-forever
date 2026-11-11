@@ -43,6 +43,7 @@ export class Rpc {
     wake;
     failure;
     closing;
+    stderrBuffer = '';
     onAbort = () => { void this.close(); };
     requestHandler;
     constructor(argv, cwd, overrides, signal) {
@@ -52,8 +53,12 @@ export class Rpc {
         if (!executable)
             throw new Error('Empty app-server argv.');
         this.child = spawn(executable, [...arguments_, 'app-server', ...overrides.flatMap((value) => ['-c', value])], { cwd, windowsHide: true, stdio: 'pipe' });
-        // stderr may contain configuration/auth details; it is never copied into task logs.
-        this.child.stderr.resume();
+        // stderr may contain configuration/auth details. Keep only a bounded tail
+        // in memory so a timeout can explain the transport boundary without
+        // persisting an unbounded or unredacted provider log.
+        this.child.stderr.on('data', (chunk) => {
+            this.stderrBuffer = `${this.stderrBuffer}${String(chunk)}`.slice(-8_192);
+        });
         createInterface({ input: this.child.stdout }).on('line', (line) => {
             try {
                 const message = record(JSON.parse(line));
@@ -106,6 +111,7 @@ export class Rpc {
         catch { /* exit path */ }
     }
     get processId() { return this.child.pid; }
+    get stderrTail() { return String(redact(this.stderrBuffer.slice(-4_096))); }
     fail(error) {
         this.failure = error;
         for (const request of this.pending.values())

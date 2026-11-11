@@ -41,6 +41,7 @@ export class Rpc {
   private wake: (() => void) | undefined;
   private failure: Error | undefined;
   private closing: Promise<void> | undefined;
+  private stderrBuffer = '';
   private readonly onAbort = () => { void this.close(); };
   private requestHandler: ((id: string | number, method: string, params: unknown) => Promise<unknown>) | undefined;
   constructor(argv: string[], cwd: string, overrides: string[], private readonly signal?: AbortSignal) {
@@ -48,8 +49,12 @@ export class Rpc {
     const [executable, ...arguments_] = argv;
     if (!executable) throw new Error('Empty app-server argv.');
     this.child = spawn(executable, [...arguments_, 'app-server', ...overrides.flatMap((value) => ['-c', value])], { cwd, windowsHide: true, stdio: 'pipe' });
-    // stderr may contain configuration/auth details; it is never copied into task logs.
-    this.child.stderr.resume();
+    // stderr may contain configuration/auth details. Keep only a bounded tail
+    // in memory so a timeout can explain the transport boundary without
+    // persisting an unbounded or unredacted provider log.
+    this.child.stderr.on('data', (chunk) => {
+      this.stderrBuffer = `${this.stderrBuffer}${String(chunk)}`.slice(-8_192);
+    });
     createInterface({ input: this.child.stdout }).on('line', (line) => {
       try {
         const message = record(JSON.parse(line));
@@ -89,6 +94,7 @@ export class Rpc {
     try { this.child.stdin.write(`${JSON.stringify(response)}\n`); } catch { /* exit path */ }
   }
   get processId(): number | undefined { return this.child.pid; }
+  get stderrTail(): string { return String(redact(this.stderrBuffer.slice(-4_096))); }
   private fail(error: Error): void {
     this.failure = error;
     for (const request of this.pending.values()) request.reject(error);

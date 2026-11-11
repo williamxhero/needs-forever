@@ -104,7 +104,7 @@ test('installed C2 correlates same-turn Stop executions and persists only confir
 });
 
 for (const failure of ['invalid', 'empty', 'timeout']) test(`installed native ${failure} C outputs return a bounded inventory through the active decision gate`, (t) => {
-  const f = setup(`native-fallback-${failure}`, failure === 'timeout' ? { hold_judge_until: 3 } : { judge_outputs: [failure === 'invalid' ? '{broken' : '', failure === 'invalid' ? '{broken' : '', failure === 'invalid' ? '{broken' : ''] }, false, join('.codex-supervisor', `native-fallback-${failure}`), ['verify.mjs'], { recovery_delays_ms: [0], judge_timeout_ms: failure === 'timeout' ? 100 : 1000 });
+  const f = setup(`native-fallback-${failure}`, failure === 'timeout' ? { hold_judge_until: 3, judge_stderr: 'fixture judge backend unavailable' } : { judge_outputs: [failure === 'invalid' ? '{broken' : '', failure === 'invalid' ? '{broken' : '', failure === 'invalid' ? '{broken' : ''] }, false, join('.codex-supervisor', `native-fallback-${failure}`), ['verify.mjs'], { recovery_delays_ms: [0], judge_timeout_ms: failure === 'timeout' ? 100 : 1000 });
   t.after(() => f.run('pause'));
   const reply = f.stop();
   assert.equal(reply.decision, 'block');
@@ -115,6 +115,17 @@ for (const failure of ['invalid', 'empty', 'timeout']) test(`installed native ${
   assert.equal(events.filter((entry) => entry.type === 'main_session_retry').length, 3);
   assert.equal(events.filter((entry) => entry.type === 'send_prepared').length, 1);
   assert.equal(events.find((entry) => entry.type === 'judge_inventory_fallback').failures, 3);
+  if (failure === 'timeout') {
+    const timeout = events.find((entry) => entry.type === 'judge_timeout');
+    assert.ok(timeout, 'A judge timeout must retain a diagnostic event.');
+    assert.equal(timeout.phase, 'turn_completion');
+    assert.equal(typeof timeout.thread_id, 'string');
+    assert.equal(typeof timeout.turn_id, 'string');
+    assert.equal(typeof timeout.app_server_process_id, 'number');
+    assert.equal(timeout.raw_output_length, 0);
+    assert.equal(timeout.last_event_method, null);
+    assert.match(timeout.stderr_tail, /fixture judge backend unavailable/);
+  }
 });
 
 test('assistant completion or blocked wording alone cannot support DONE or WAIT_EXTERNAL', (t) => {

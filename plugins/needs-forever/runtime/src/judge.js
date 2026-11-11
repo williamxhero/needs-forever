@@ -119,6 +119,9 @@ export class AppServerJudge {
     completedTurns = new Map();
     expectedTurn;
     raw = '';
+    startedAt = 0;
+    phase = 'thread_start';
+    lastEventMethod;
     get rawOutput() { return this.raw; }
     bind(rpc, event, archiveTerminated) { this.rpc = rpc; this.event = event; this.archiveTerminated = archiveTerminated; }
     connectionFailed(error) { this.terminal?.reject(error); }
@@ -130,6 +133,7 @@ export class AppServerJudge {
         throw new RpcServerError(-32601, 'Method not found.');
     }
     observe(method, params) {
+        this.lastEventMethod = method;
         if (!['turn/completed', 'item/completed'].includes(method) || !this.terminal)
             return;
         const data = record(params);
@@ -155,6 +159,9 @@ export class AppServerJudge {
             throw new Error('A judge is already active.');
         signal?.throwIfAborted();
         this.raw = '';
+        this.startedAt = Date.now();
+        this.phase = 'thread_start';
+        this.lastEventMethod = undefined;
         let completed = false;
         let turnId;
         let requestedTurn = false;
@@ -173,7 +180,21 @@ export class AppServerJudge {
         };
         const aborted = () => { this.terminal?.reject(new Error('Judge cancelled.')); void stop(); };
         signal?.addEventListener('abort', aborted, { once: true });
-        const timer = setTimeout(() => { timedOut = true; this.terminal?.reject(new Error('Judge timeout.')); void stop(); }, this.timeoutMs);
+        const timer = setTimeout(() => {
+            timedOut = true;
+            this.event('judge_timeout', {
+                thread_id: this.thread ?? null,
+                turn_id: turnId ?? null,
+                phase: this.phase,
+                elapsed_ms: Date.now() - this.startedAt,
+                app_server_process_id: this.rpc.processId ?? null,
+                last_event_method: this.lastEventMethod ?? null,
+                raw_output_length: this.raw.length,
+                stderr_tail: this.rpc.stderrTail,
+            });
+            this.terminal?.reject(new Error('Judge timeout.'));
+            void stop();
+        }, this.timeoutMs);
         try {
             const params = { cwd: snapshot.task.workspace, approvalPolicy: 'never', sandbox: 'read-only', ephemeral: false, baseInstructions: judgeInstructions };
             const created = await this.rpc.request('thread/start', params);
@@ -186,10 +207,12 @@ export class AppServerJudge {
             // A timeout/abort can occur while turn/start still awaits its response.
             // Attach a rejection handler immediately, before awaiting that request.
             void terminal.catch(() => { });
+            this.phase = 'turn_start';
             const turnParams = { threadId: this.thread, approvalPolicy: 'never', sandboxPolicy: { type: 'readOnly', networkAccess: false }, outputSchema: decisionSchema, input: [{ type: 'text', text: JSON.stringify(snapshot), text_elements: [] }] };
             requestedTurn = true;
             const response = await this.rpc.request('turn/start', turnParams);
             turnId = response.turn.id;
+            this.phase = 'turn_completion';
             this.expectedTurn = turnId;
             const observedTerminal = this.completedTurns.get(turnId);
             if (observedTerminal)
@@ -201,6 +224,7 @@ export class AppServerJudge {
             const all = this.observed.get(response.turn.id) ?? new Map();
             for (const item of (Array.isArray(turn.items) ? turn.items : []).map(record))
                 all.set(text(item.id, 'judge item id'), item);
+            this.phase = 'validation';
             const messages = [...all.values()].filter((item) => item.type === 'agentMessage' && (item.phase === undefined || item.phase === null || item.phase === 'final_answer'));
             this.raw = messages.map((item) => text(item.text, 'judge output')).join('\n');
             this.event('judge_output', { thread_id: this.thread, turn_id: turn.id, snapshot_id: snapshot.snapshot_id, raw_output: this.raw });

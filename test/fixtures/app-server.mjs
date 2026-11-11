@@ -92,6 +92,7 @@ for await (const line of lines) {
     }
     if (judgeThreads.has(message.params.threadId)) {
       const turnId = `judge-turn-${judges}`;
+      if (scenario.judge_stderr) console.error(String(scenario.judge_stderr));
       if (scenario.judge_request_once && !scenario.judge_request_consumed) {
         scenario.judge_request_consumed = true;
         writeFileSync(process.argv[2], JSON.stringify(scenario));
