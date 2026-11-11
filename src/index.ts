@@ -27,4 +27,6 @@ export type { RouteCorrelation, RouteExecution } from './types.js';
 export { ingestRouteObservations } from './route-observations.js';
 export { LocalTrackingStore, contractIdentity } from './local-tracking.js';
 export type { ClarificationConclusions, LocalTrackingStoreOptions, TrackingAcceptanceItem, TrackingBackend, TrackingProgressStatus, TrackingRecord, TrackingUpdate } from './local-tracking.js';
+export { GhCliAdapter, GitHubTrackingStore, GITHUB_TRACKING_END, GITHUB_TRACKING_START } from './github-tracking.js';
+export type { GitHubCliAdapter, GitHubCommandResult, GitHubTrackingStoreOptions } from './github-tracking.js';
 export { initializeHttpRouteProbe, executeHttpRouteProbe, ingestHttpRouteProbes } from './http-route-probe.js';

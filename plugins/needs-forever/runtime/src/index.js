@@ -15,4 +15,5 @@ export { validateDecision, readHistoricalDecision, decisionSchema } from './judg
 export { discoverLocalRoutes, prepareRouteExecution, confirmRouteExecution, captureRouteOutcome, plannerFailureFallback, routeCorrelation } from './route-execution.js';
 export { ingestRouteObservations } from './route-observations.js';
 export { LocalTrackingStore, contractIdentity } from './local-tracking.js';
+export { GhCliAdapter, GitHubTrackingStore, GITHUB_TRACKING_END, GITHUB_TRACKING_START } from './github-tracking.js';
 export { initializeHttpRouteProbe, executeHttpRouteProbe, ingestHttpRouteProbes } from './http-route-probe.js';
