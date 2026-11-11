@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import type { Task } from './types.js';
 import {
   contractIdentity,
@@ -60,7 +60,7 @@ function normalizedTask(task: Task): Task {
     const id = required(item.id, 'acceptance id'); const text = required(item.text, 'acceptance text');
     if (ids.has(id)) throw new Error(`Duplicate acceptance id: ${id}`); ids.add(id); return { id, text };
   });
-  return { ...structuredClone(task), task_id: required(task.task_id, 'task_id'), workspace: required(task.workspace, 'workspace'), goal: required(task.goal, 'goal'), acceptance, authorization: required(task.authorization, 'authorization'), limits: { ...task.limits } };
+  return { ...structuredClone(task), task_id: required(task.task_id, 'task_id'), workspace: resolve(required(task.workspace, 'workspace')), goal: required(task.goal, 'goal'), acceptance, authorization: required(task.authorization, 'authorization'), limits: { ...task.limits } };
 }
 function locator(repository: string, issue: number): string { return `github:${repository}#${issue}`; }
 function validateRecord(value: unknown, expectedLocator: string): TrackingRecord {
@@ -160,12 +160,15 @@ export class GitHubTrackingStore {
   }
   update(task: Task, update: TrackingUpdate): TrackingRecord {
     if (this.issue === undefined) throw new Error('An explicit existing Issue is required to update GitHub tracking.');
-    const current = this.load(task); const id = required(update.acceptance_id, 'acceptance_id'); const item = current.acceptance.find((candidate) => candidate.id === id); if (!item) throw new Error(`Unknown acceptance id: ${id}`);
-    if (!['TODO', 'IN_PROGRESS', 'REPORTED_DONE', 'BLOCKED'].includes(update.status)) throw new Error(`Invalid acceptance status for ${id}.`);
-    const notes = typeof update.notes === 'string' ? update.notes.trim() : ''; const refs = evidenceRefs(update.evidence_refs);
-    if (update.status === 'REPORTED_DONE' && refs.length === 0) throw new Error(`Reported completion for ${id} requires evidence.`); if (update.status === 'BLOCKED' && !notes) throw new Error(`Blocked acceptance ${id} requires notes.`);
-    item.status = update.status as TrackingProgressStatus; item.notes = notes; item.evidence_refs = refs; current.updated_at = new Date().toISOString();
-    const viewed = this.view(this.issue); const body = replaceBlock(viewed.body, current, current.locator); const temporary = join(tmpdir(), `needs-forever-${randomUUID()}.md`);
-    try { writeFileSync(temporary, body.replace(/^\uFEFF/, ''), { encoding: 'utf8' }); command(this.adapter, ['issue', 'edit', String(this.issue), '--repo', this.repository, '--body-file', temporary]); return this.readBack(this.issue, current); } catch (error) { throw new Error(`GitHub tracking update was not saved; no local fallback was attempted: ${(error as Error).message}`, { cause: error }); } finally { try { unlinkSync(temporary); } catch { /* best effort */ } }
+    let temporary: string | undefined;
+    try {
+      const current = this.load(task); const id = required(update.acceptance_id, 'acceptance_id'); const item = current.acceptance.find((candidate) => candidate.id === id); if (!item) throw new Error(`Unknown acceptance id: ${id}`);
+      if (!['TODO', 'IN_PROGRESS', 'REPORTED_DONE', 'BLOCKED'].includes(update.status)) throw new Error(`Invalid acceptance status for ${id}.`);
+      const notes = typeof update.notes === 'string' ? update.notes.trim() : ''; const refs = evidenceRefs(update.evidence_refs);
+      if (update.status === 'REPORTED_DONE' && refs.length === 0) throw new Error(`Reported completion for ${id} requires evidence.`); if (update.status === 'BLOCKED' && !notes) throw new Error(`Blocked acceptance ${id} requires notes.`);
+      item.status = update.status as TrackingProgressStatus; item.notes = notes; item.evidence_refs = refs; current.updated_at = new Date().toISOString();
+      const viewed = this.view(this.issue); const body = replaceBlock(viewed.body, current, current.locator); temporary = join(tmpdir(), `needs-forever-${randomUUID()}`);
+      writeFileSync(temporary, body.replace(/^\uFEFF/, ''), { encoding: 'utf8' }); command(this.adapter, ['issue', 'edit', String(this.issue), '--repo', this.repository, '--body-file', temporary]); return this.readBack(this.issue, current);
+    } catch (error) { throw new Error(`GitHub tracking update was not saved; no local fallback was attempted: ${(error as Error).message}`, { cause: error }); } finally { if (temporary) try { unlinkSync(temporary); } catch { /* best effort */ } }
   }
 }

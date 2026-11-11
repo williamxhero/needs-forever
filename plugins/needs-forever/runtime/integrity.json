@@ -6,7 +6,7 @@
     "src/control-intent.js": "13c30d85dacd68e50616aad9feeee832ae1bb24a11d846c47ca65588b9fbd3d2",
     "src/daemon-cli.js": "4388cbea334e3747d81e30cf9736c50db27891969d1e457e9f1f160c2b67b69f",
     "src/daemon.js": "df8248a4105e89aa4975b4c455cce2603c5f6f347485e79c9ba77ca6056c4254",
-    "src/github-tracking.js": "e2d6ecb37fe6e094d19789bcab419ff481b0226abed1049ad701651e2ca8094d",
+    "src/github-tracking.js": "043f2ab9ad6ee9b58f8bf9bcb2008b1a3f3d7257959378f11265aaf9dd39f28d",
     "src/hook-host.js": "b01a45383ab017f55cc3a1445b40effa21434fa29b8bacd935571e68c12115e1",
     "src/http-route-probe.js": "bbe63bed4abf141621579aec5e04be7bcda57935331ba9ece96e3d39d3129062",
     "src/index.js": "f1310733655cffef4b3b18799c61db2bcc0c3ccc9df0ee6de3e1794cc65b5637",

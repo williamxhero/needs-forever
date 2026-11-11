@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { contractIdentity, } from './local-tracking.js';
 export const GITHUB_TRACKING_START = '<!-- needs-forever:tracking:start -->';
 export const GITHUB_TRACKING_END = '<!-- needs-forever:tracking:end -->';
@@ -47,7 +47,7 @@ function normalizedTask(task) {
         ids.add(id);
         return { id, text };
     });
-    return { ...structuredClone(task), task_id: required(task.task_id, 'task_id'), workspace: required(task.workspace, 'workspace'), goal: required(task.goal, 'goal'), acceptance, authorization: required(task.authorization, 'authorization'), limits: { ...task.limits } };
+    return { ...structuredClone(task), task_id: required(task.task_id, 'task_id'), workspace: resolve(required(task.workspace, 'workspace')), goal: required(task.goal, 'goal'), acceptance, authorization: required(task.authorization, 'authorization'), limits: { ...task.limits } };
 }
 function locator(repository, issue) { return `github:${repository}#${issue}`; }
 function validateRecord(value, expectedLocator) {
@@ -210,27 +210,28 @@ export class GitHubTrackingStore {
     update(task, update) {
         if (this.issue === undefined)
             throw new Error('An explicit existing Issue is required to update GitHub tracking.');
-        const current = this.load(task);
-        const id = required(update.acceptance_id, 'acceptance_id');
-        const item = current.acceptance.find((candidate) => candidate.id === id);
-        if (!item)
-            throw new Error(`Unknown acceptance id: ${id}`);
-        if (!['TODO', 'IN_PROGRESS', 'REPORTED_DONE', 'BLOCKED'].includes(update.status))
-            throw new Error(`Invalid acceptance status for ${id}.`);
-        const notes = typeof update.notes === 'string' ? update.notes.trim() : '';
-        const refs = evidenceRefs(update.evidence_refs);
-        if (update.status === 'REPORTED_DONE' && refs.length === 0)
-            throw new Error(`Reported completion for ${id} requires evidence.`);
-        if (update.status === 'BLOCKED' && !notes)
-            throw new Error(`Blocked acceptance ${id} requires notes.`);
-        item.status = update.status;
-        item.notes = notes;
-        item.evidence_refs = refs;
-        current.updated_at = new Date().toISOString();
-        const viewed = this.view(this.issue);
-        const body = replaceBlock(viewed.body, current, current.locator);
-        const temporary = join(tmpdir(), `needs-forever-${randomUUID()}.md`);
+        let temporary;
         try {
+            const current = this.load(task);
+            const id = required(update.acceptance_id, 'acceptance_id');
+            const item = current.acceptance.find((candidate) => candidate.id === id);
+            if (!item)
+                throw new Error(`Unknown acceptance id: ${id}`);
+            if (!['TODO', 'IN_PROGRESS', 'REPORTED_DONE', 'BLOCKED'].includes(update.status))
+                throw new Error(`Invalid acceptance status for ${id}.`);
+            const notes = typeof update.notes === 'string' ? update.notes.trim() : '';
+            const refs = evidenceRefs(update.evidence_refs);
+            if (update.status === 'REPORTED_DONE' && refs.length === 0)
+                throw new Error(`Reported completion for ${id} requires evidence.`);
+            if (update.status === 'BLOCKED' && !notes)
+                throw new Error(`Blocked acceptance ${id} requires notes.`);
+            item.status = update.status;
+            item.notes = notes;
+            item.evidence_refs = refs;
+            current.updated_at = new Date().toISOString();
+            const viewed = this.view(this.issue);
+            const body = replaceBlock(viewed.body, current, current.locator);
+            temporary = join(tmpdir(), `needs-forever-${randomUUID()}`);
             writeFileSync(temporary, body.replace(/^\uFEFF/, ''), { encoding: 'utf8' });
             command(this.adapter, ['issue', 'edit', String(this.issue), '--repo', this.repository, '--body-file', temporary]);
             return this.readBack(this.issue, current);
@@ -239,10 +240,11 @@ export class GitHubTrackingStore {
             throw new Error(`GitHub tracking update was not saved; no local fallback was attempted: ${error.message}`, { cause: error });
         }
         finally {
-            try {
-                unlinkSync(temporary);
-            }
-            catch { /* best effort */ }
+            if (temporary)
+                try {
+                    unlinkSync(temporary);
+                }
+                catch { /* best effort */ }
         }
     }
 }
