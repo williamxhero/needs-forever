@@ -853,19 +853,37 @@ function roundHtml(r,index){
   const decisionText=decisionValue?.reason||(timeouts.length?'SUPERVISOR '+timeouts.length+' 次判断超时，未产生有效 decision。':'尚未产生有效 SUPERVISOR 判断。');
   const recoverySent=r.continuation.find(e=>e.eventType==='main_session_recovery_prompt_sent');
   const recoveryAck=r.continuation.find(e=>e.eventType==='main_session_recovery_prompt_acknowledged');
-  const observedPrompt=r.continuation.find(e=>e.eventType==='main_session_worker_prompt_observed');
-  const recoveryFailure=r.continuation.find(e=>e.eventType==='main_session_recovery_prompt_failed');
-  const direction=r.continuation.find(e=>e.eventType==='stop_hook_direction_returned');
+  const observedPrompt=r.continuation.findLast(e=>e.eventType==='main_session_worker_prompt_observed'&&typeof e.details.message==='string'&&e.details.message.length>0);
+  const recoveryFailure=r.continuation.findLast(e=>e.eventType==='main_session_recovery_prompt_failed');
   const ordinarySent=r.technicalEvents.findLast(e=>e.eventType==='send_prepared'&&e.deliveryId&&r.technicalEvents.some(s=>s.eventType==='send_confirmed'&&s.deliveryId===e.deliveryId));
   const ordinaryConfirmation=ordinarySent&&r.technicalEvents.find(e=>e.eventType==='send_confirmed'&&e.deliveryId===ordinarySent.deliveryId);
-  const prompt=typeof observedPrompt?.details.message==='string'?observedPrompt.details.message:typeof recoverySent?.details.message==='string'?recoverySent.details.message:typeof ordinarySent?.details.message==='string'?ordinarySent.details.message:direction&&typeof decisionValue?.next_message==='string'?decisionValue.next_message:'';
+  // A direction returned by the hook is only a proposal.  It does not prove
+  // that A received a prompt.  The Worker received row must be backed by an
+  // observed prompt, an acknowledged recovery delivery, or a confirmed
+  // ordinary delivery with its prepared message.
+  const acknowledgedRecovery = recoveryAck && (
+    typeof recoveryAck.details.message==='string' && recoveryAck.details.message.length>0
+      ? recoveryAck
+      : recoverySent && recoveryAck.deliveryId && recoverySent.deliveryId===recoveryAck.deliveryId && typeof recoverySent.details.message==='string' && recoverySent.details.message.length>0
+        ? recoverySent
+        : null
+  );
+  const deliveredPrompt = observedPrompt
+    ? { event: observedPrompt, message: String(observedPrompt.details.message) }
+    : acknowledgedRecovery
+      ? { event: recoveryAck, message: typeof acknowledgedRecovery.details.message==='string' ? acknowledgedRecovery.details.message : String(recoverySent.details.message) }
+      : ordinaryConfirmation && ordinarySent && typeof ordinarySent.details.message==='string' && ordinarySent.details.message.length>0
+        ? { event: ordinaryConfirmation, message: String(ordinarySent.details.message) }
+        : null;
+  const prompt=deliveredPrompt?.message||'';
   const stopAt=r.stop?.at||r.endedAt;
   const decisionAt=decisionEvent?.at||lastJudge?.at||stopAt;
-  const returnedAt=observedPrompt?.at||direction?.at||recoveryAck?.at||recoverySent?.at||ordinaryConfirmation?.at;
+  const returnedAt=deliveredPrompt?.event.at;
   const stopReason=typeof r.stop?.details.stop_reason==='string'?r.stop.details.stop_reason:'';
   const key=JSON.stringify([app.taskId,r.id]);
   const stepTime=v=>'<span class="step-time">'+esc(shortHourMinute(v))+'</span>';
-  const recoveryLine=recoverySent?'<div class="flow-line">'+stepTime(recoverySent.at)+' <strong>NF 推动 A：</strong> <span class="event-result">已发送恢复 prompt</span></div>':recoveryFailure?'<div class="flow-line">'+stepTime(recoveryFailure.at)+' <strong>NF 推动 A：</strong> <span class="event-result result-error">发送失败</span></div>':'';
+  const recoveryFailureReason=recoveryFailure&&((typeof recoveryFailure.details.error==='string'&&recoveryFailure.details.error)|| (typeof recoveryFailure.details.message==='string'&&recoveryFailure.details.message)||'');
+  const recoveryLine=(recoverySent?'<div class="flow-line">'+stepTime(recoverySent.at)+' <strong>NF 推动 A：</strong> <span class="event-result">已发送恢复 prompt</span></div>':'')+(recoveryFailure?'<div class="flow-line">'+stepTime(recoveryFailure.at)+' <strong>NF 推动 A：</strong> <span class="event-result result-error">发送失败'+(recoveryFailureReason?'：'+esc(recoveryFailureReason):'')+'</span></div>':'');
   const recoveryAckLine=recoveryAck?'<div class="flow-line">'+stepTime(recoveryAck.at)+' <strong>A thread：</strong> <span class="event-result">已接收恢复 prompt</span></div>':'';
   return '<article class="round" data-round="'+esc(r.id)+'"><div class="round-head"><span class="round-title">第 '+(index+1)+' 轮</span><span class="round-time">'+esc(shortDate(stopAt))+'</span></div><div class="round-body"><div class="flow-line">'+stepTime(stopAt)+' <strong>WORKER 发出：</strong> <span class="event-result">Stop</span></div>'+(stopReason?collapsibleHtml('decision-block stop-reason-block',stopReason,key+':stop'):'')+'<div class="flow-line">'+stepTime(decisionAt)+' <strong>SUPERVISOR 判断：</strong> <span class="event-result">'+esc(action)+'</span></div>'+collapsibleHtml('decision-block',decisionText,key+':decision')+routeHtml(r,key)+'<div class="flow-line">'+(returnedAt?stepTime(returnedAt)+' ':'')+'<strong>WORKER 收到：</strong>'+(prompt?'':' <span class="event-result">未交付</span>')+'</div>'+(prompt?collapsibleHtml('prompt-block',prompt,key+':prompt'):'')+recoveryLine+recoveryAckLine+'</div></article>';
 }

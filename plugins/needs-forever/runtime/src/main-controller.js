@@ -332,7 +332,8 @@ export async function launchController(path, pluginRoot, fixture) {
     child.unref();
     try {
         const coordinator = resolve(pluginRoot, 'scripts/recovery-coordinator.mjs');
-        const watchdog = spawn(process.execPath, [coordinator, path], { cwd: state.task.workspace, detached: true, windowsHide: true, stdio: 'ignore' });
+        const watchdogArgs = [coordinator, path, ...(fixture ? ['--test-fixture', fixture] : [])];
+        const watchdog = spawn(process.execPath, watchdogArgs, { cwd: state.task.workspace, detached: true, windowsHide: true, stdio: 'ignore' });
         watchdog.unref();
     }
     catch {

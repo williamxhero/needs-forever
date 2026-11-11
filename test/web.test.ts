@@ -31,11 +31,15 @@ function routeDecision(): Decision {
   };
 }
 
-function writeRouteRound(directory: string, value: Decision = routeDecision()): void {
+function writeRouteRound(directory: string, value: Decision = routeDecision(), delivered = true): void {
   const events = [
     { at: '2026-11-01T08:00:00.000Z', type: 'main_session_stop_observed', turn_id: 'turn-001', stop_attempt_id: 'stop-001', stop_reason: 'provider 429' },
     { at: '2026-11-01T08:00:01.000Z', type: 'decision', role: 'judge', stop_attempt_id: 'stop-001', decision: value },
-    { at: '2026-11-01T08:00:02.000Z', type: 'stop_hook_direction_returned', stop_attempt_id: 'stop-001' },
+    { at: '2026-11-01T08:00:02.000Z', type: 'stop_hook_direction_returned', stop_attempt_id: 'stop-001', ...(delivered ? { delivery_id: 'delivery-001' } : {}) },
+    ...(delivered ? [
+      { at: '2026-11-01T08:00:02.100Z', type: 'send_prepared', role: 'worker', source_stop_attempt_id: 'stop-001', source_turn_id: 'turn-001', delivery_id: 'delivery-001', message: value.next_message },
+      { at: '2026-11-01T08:00:03.000Z', type: 'send_confirmed', role: 'worker', source_stop_attempt_id: 'stop-001', turn_id: 'turn-002', delivery_id: 'delivery-001' },
+    ] : []),
   ];
   writeFileSync(resolve(directory, 'events.jsonl'), events.map((event) => JSON.stringify(event)).join('\n') + '\n');
 }
@@ -210,7 +214,7 @@ test('served NFG client shows compact routes and expands candidate evidence with
 test('legacy HTTP history displays a virtual unverified single route and keeps its stored decision intact', async () => {
   const data = fixture();
   const legacy: Decision = { action: 'CONTINUE', reason: '还有一个阶段。', evidence_ids: ['E1'], next_message: '继续第二阶段。', external: null };
-  writeRouteRound(data.directory, legacy);
+  writeRouteRound(data.directory, legacy, false);
   const eventsPath = resolve(data.directory, 'events.jsonl');
   const before = readFileSync(eventsPath, 'utf8');
   const running = await startWebServer({ workspace: data.workspace, port: 0 });
@@ -568,6 +572,29 @@ test('native rounds correlate delivery confirmations to their source Stop and sh
     assert.match(latest, /超时/);
     assert.match(latest, /未交付/);
     assert.doesNotMatch(latest, /prompt-block/);
+  } finally { await running.close(); data.cleanup(); }
+});
+
+test('NFG never renders a received prompt for an active-writer recovery failure', async () => {
+  const data = fixture();
+  const statePath = resolve(data.directory, 'state.json');
+  const state = JSON.parse(readFileSync(statePath, 'utf8')); state.mode = 'live'; writeFileSync(statePath, JSON.stringify(state));
+  const events = [
+    { at: '2026-11-11T00:38:00Z', type: 'main_session_stop_observed', turn_id: 'turn-seventeen', stop_attempt_id: 'stop-seventeen', stop_reason: '本轮本地上下文恢复已完成。' },
+    { at: '2026-11-11T00:38:01Z', type: 'decision', role: 'judge', stop_attempt_id: 'stop-seventeen', decision: { action: 'CONFIRMED', reason: '下一轮已确认开始。', next_message: '请继续执行当前任务。' } },
+    { at: '2026-11-11T00:38:02Z', type: 'stop_hook_direction_returned', stop_attempt_id: 'stop-seventeen', delivery_id: 'delivery-seventeen', execution_confirmed: false },
+    { at: '2026-11-11T00:38:03Z', type: 'main_session_recovery_prompt_failed', delivery_id: 'delivery-seventeen', error: '-32600: already has an active writer' },
+  ];
+  writeFileSync(resolve(data.directory, 'events.jsonl'), events.map(e => JSON.stringify(e)).join('\n') + '\n');
+  const running = await startWebServer({ workspace: data.workspace, port: 0 });
+  try {
+    const client = await openWebClient(`${running.url}tasks/demo-001`);
+    const html = client.document.querySelector('#timeline')!.innerHTML;
+    assert.match(html, /NF 推动 A：<\/strong> <span class="event-result result-error">发送失败：-32600: already has an active writer/);
+    assert.match(html, /WORKER 收到：<\/strong> <span class="event-result">未交付<\/span>/);
+    assert.doesNotMatch(html, /prompt-block/);
+    assert.doesNotMatch(html, /请继续执行当前任务。/);
+    assert.doesNotMatch(html, /00:38<\/span> <strong>WORKER 收到/);
   } finally { await running.close(); data.cleanup(); }
 });
 

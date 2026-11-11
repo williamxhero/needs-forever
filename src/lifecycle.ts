@@ -134,6 +134,13 @@ export function handleLifecycle(input: unknown, host: HookHost, pluginRoot: stri
           state.pending_action.stage = 'confirmed';
           state.pending_action.target_turn_id = typeof event.turn_id === 'string' ? event.turn_id : null;
           state.continuation_confirmed = true;
+          // A real tool result from the original A proves that the writer is
+          // reachable again. Clear stale recovery diagnostics before NFG
+          // projects the next round; an old -32600 must not remain visible
+          // while B/C are already working.
+          delete state.last_error;
+          delete state.recovery_condition;
+          delete state.recovery_window;
           confirmRouteExecution(state, context.delivery_id);
           delete state.recovery_prompt;
           const correlation = routeCorrelation(state.pending_action);
@@ -155,6 +162,11 @@ export function handleLifecycle(input: unknown, host: HookHost, pluginRoot: stri
         last_assistant_message: typeof event.last_assistant_message === 'string' ? String(redact(event.last_assistant_message)).slice(0, 32_000) : null,
       };
       state.last_stop = request;
+      // A fresh native Stop is new lifecycle progress. Any previous recovery
+      // transport error has been superseded and must not describe this round.
+      delete state.last_error;
+      delete state.recovery_condition;
+      delete state.recovery_window;
       const store = new Store(path);
       store.save(state);
       const stopReasonValue = stopReason(event.stop_reason ?? event.STOP_REASON) ?? stopReason(request.last_assistant_message);
