@@ -283,6 +283,17 @@ export async function deliverMainSessionRecoveryPrompt(statePath, fixturePath) {
     let monitor;
     let writerPreflight = 'unknown';
     try {
+        // A live Desktop A is owned by the Codex Windows app-server that already
+        // serves the visible thread. Starting another `codex.exe app-server`
+        // here creates a second owner for the same thread. Codex then reports
+        // "already has an active writer" and the Desktop UI says the session is
+        // open in another application. Test fixtures are the only exception;
+        // they deliberately provide their own isolated transport.
+        if (!fixturePath && state.mode === 'live' && state.host.source === 'native-desktop') {
+            const reason = '原始 A 由 Codex Desktop 主宿主管理；NF 没有可用的 Desktop provider adapter，拒绝通过独立 app-server 接管原始 thread，以免产生“已在另一个应用中打开”。请通过 Codex Desktop 原始 thread 释放/恢复后再继续。';
+            log(statePath, state, 'main_session_recovery_prompt_blocked', { delivery_id: prompt.delivery_id, main_session_id: state.main_session_id, reason });
+            throw new RecoverySetupError(reason);
+        }
         log(statePath, state, 'main_session_recovery_prompt_attempted', { delivery_id: prompt.delivery_id, main_session_id: state.main_session_id, message: prompt.message, task_version: prompt.task_version, run_generation: prompt.run_generation });
         const connection = await connectWorker(fixtureCommand(fixturePath, state), state.task.workspace, abort.signal);
         try {

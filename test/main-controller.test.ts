@@ -4,7 +4,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import { cpSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
-import { driveNativeRecovery, scheduleNativeRebindPrompt } from '../src/main-session-recovery.js';
+import { deliverMainSessionRecoveryPrompt, driveNativeRecovery, scheduleNativeRebindPrompt } from '../src/main-session-recovery.js';
 import { NFDaemon } from '../src/daemon.js';
 import type { MainSessionState } from '../src/main-session.js';
 import { routeInventoryDecision } from '../src/planning.js';
@@ -454,6 +454,36 @@ test('native rebind recovery automatically prompts the original A instead of wai
   assert.equal(sent.turn_id, 'turn-parent-001');
   assert.equal(acknowledged.stop_attempt_id, 'stop-parent-001');
   assert.equal(acknowledged.turn_id, 'turn-parent-001');
+});
+
+test('live Desktop recovery refuses to create a second app-server owner for A', async (t) => {
+  const f = installed('native-desktop-recovery-owner-guard', {}, 'native-desktop-recovery-owner-guard');
+  t.after(() => f.run('pause'));
+  const before = JSON.parse(f.run('status').stdout) as MainSessionState;
+  assert.equal(f.run('pause').status, 0);
+  const now = Date.now();
+  const pending = {
+    ...before,
+    status: 'ACTIVE',
+    phase: 'RECOVERING',
+    mode: 'live',
+    controller: undefined,
+    run_generation: 'desktop-owner-guard-generation',
+    host: { ...before.host, source: 'native-desktop', desktop_binary: 'C:\\Users\\will\\AppData\\Local\\OpenAI\\Codex\\bin\\codex.exe' },
+    binding: { ...before.binding, status: 'PENDING_NATIVE_HOOK', operation: 'rebind', expected_run_generation: 'desktop-owner-guard-generation', armed_at: new Date(now).toISOString() },
+    recovery_condition: { kind: 'native_rebind', message: 'Binding expired.', resume_when: 'A native receipt.' },
+    recovery_parent: { stop_attempt_id: 'stop-desktop-owner-guard', turn_id: 'turn-desktop-owner-guard' },
+    recovery_window: { started_at: new Date(now).toISOString(), deadline_at: new Date(now + 30_000).toISOString() },
+    recovery_prompt: { plugin_root: f.plugin, kind: 'native_rebind', delivery_id: 'delivery-desktop-owner-guard', source_turn_id: 'turn-desktop-owner-guard', task_version: before.task_version, run_generation: 'desktop-owner-guard-generation', message: 'Rebind the original Desktop A.', due_at: new Date(now).toISOString() },
+  } as unknown as MainSessionState;
+  writeFileSync(f.state, `${JSON.stringify(pending)}\n`);
+  await deliverMainSessionRecoveryPrompt(f.state);
+  const status = JSON.parse(f.run('status').stdout);
+  assert.equal(status.status, 'INTERRUPTED');
+  assert.match(status.last_error, /拒绝通过独立 app-server/);
+  const events = readFileSync(join(f.workspace, '.codex-supervisor', 'native-desktop-recovery-owner-guard', 'events.jsonl'), 'utf8').split(/\r?\n/).filter(Boolean).map((line) => JSON.parse(line));
+  assert.ok(events.some((event) => event.type === 'main_session_recovery_prompt_blocked'));
+  assert.equal(events.some((event) => event.type === 'main_session_recovery_prompt_attempted'), false);
 });
 
 test('active-writer recovery defers the same prompt with bounded backoff and retries automatically', async (t) => {
