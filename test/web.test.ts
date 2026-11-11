@@ -517,6 +517,29 @@ test('TaskCatalog assigns repeated main-session work to the next matching Stop/C
   }
 });
 
+test('independent worker keeps its confirmed direction in the source round and hides an unconfirmed proposal', async () => {
+  const data = fixture();
+  writeFileSync(resolve(data.directory, 'events.jsonl'), [
+    { at: '2026-11-10T16:21:00Z', type: 'worker_completed', turn_id: 'turn-one', status: 'completed' },
+    { at: '2026-11-10T16:21:01Z', type: 'decision', turn_id: 'turn-one', decision: routeDecision() },
+    { at: '2026-11-10T16:21:02Z', type: 'send_prepared', source_stop_attempt_id: 'turn-one', source_turn_id: 'turn-one', delivery_id: 'ordinary-delivery', message: 'Actually delivered ordinary direction.' },
+    { at: '2026-11-10T16:21:03Z', type: 'send_attempted', source_stop_attempt_id: 'turn-one', delivery_id: 'ordinary-delivery' },
+    { at: '2026-11-10T16:21:04Z', type: 'send_confirmed', source_stop_attempt_id: 'turn-one', turn_id: 'turn-two', delivery_id: 'ordinary-delivery' },
+    { at: '2026-11-10T16:21:05Z', type: 'send_prepared', source_turn_id: 'turn-one', delivery_id: 'not-sent', message: 'Never delivered proposal.' },
+  ].map(e => JSON.stringify(e)).join('\n') + '\n');
+  const running = await startWebServer({ workspace: data.workspace, port: 0 });
+  try {
+    const record = new TaskCatalog({ workspace: data.workspace }).read('demo-001');
+    assert.equal(record.rounds.length, 1);
+    assert.ok(record.rounds[0]!.technicalEvents.some(e => e.eventType === 'send_confirmed'));
+    const client = await openWebClient(`${running.url}tasks/demo-001`);
+    const html = client.document.querySelector('#timeline')!.innerHTML;
+    assert.match(html, /Actually delivered ordinary direction/);
+    assert.match(html, /prompt-block/);
+    assert.doesNotMatch(html, /未交付|Never delivered proposal/);
+  } finally { await running.close(); data.cleanup(); }
+});
+
 test('native rounds correlate delivery confirmations to their source Stop and show a timeout without a fictional prompt', async () => {
   const data = fixture();
   const statePath = resolve(data.directory, 'state.json');

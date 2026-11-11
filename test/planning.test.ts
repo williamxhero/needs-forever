@@ -144,6 +144,14 @@ test('a truncated sibling does not erase a complete native tool observation or p
   assert.throws(() => validateDecision(JSON.stringify({ action: 'DONE', reason: 'Claimed done.', evidence_ids: ['complete'], next_message: '', external: null }), input), /Incomplete/);
 });
 
+test('clipped fixed verification output cannot form a complete observation or support DONE', () => {
+  const state = baseState();
+  const input = buildSnapshot(state, 'stop', [{ event_id: 'large-verifier', at: state.updated_at, type: 'verification_result', passed: true, stdout: 'Verification details '.repeat(200) }]);
+  assert.equal(input.evidence_complete, false);
+  assert.equal(input.c2!.observations.some(e => e.reference === 'large-verifier'), false);
+  assert.throws(() => validateDecision(JSON.stringify({ action: 'DONE', reason: 'Claimed done.', evidence_ids: [input.evidence[0]!.id], next_message: '', external: null }), input), /Incomplete/);
+});
+
 test('large current tool payloads cannot evict every catalog entry and retry attempt from C2', () => {
   const state = baseState(), catalog = new RouteCatalog(scope), ledger = new RouteLedger(scope);
   for (let i = 0; i < 8; i++) catalog.upsert(catalogEntry(`local-${i}.json`));

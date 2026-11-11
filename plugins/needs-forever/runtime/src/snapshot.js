@@ -106,7 +106,13 @@ export function buildSnapshot(state, workerTurnId, events) {
         }
     }
     if (verification) {
-        const entry = { id: `E${snapshot.evidence.length + 1}`, type: 'verification_result', value: clip(verification, 1800), source: { event_id: String(verification.event_id), ...(typeof verification.at === 'string' ? { observed_at: verification.at } : {}) } };
+        const value = clip(verification, 1800);
+        const complete = JSON.stringify(value) === JSON.stringify(verification);
+        if (!complete) {
+            snapshot.evidence_complete = false;
+            snapshot.omissions.push('Fixed verification output truncated; gather concise independent verification proof before a terminal decision.');
+        }
+        const entry = { id: `E${snapshot.evidence.length + 1}`, type: 'verification_result', value, complete, source: { event_id: String(verification.event_id), ...(typeof verification.at === 'string' ? { observed_at: verification.at } : {}) } };
         snapshot.evidence.push(entry);
         if (JSON.stringify(snapshot).length > PROOF_BUDGET - 600) {
             snapshot.evidence.pop();

@@ -475,10 +475,15 @@ function routeAuditForRound(round: WorkRound): RouteAuditView | null {
 function makeRounds(events: Record<string, unknown>[]): WorkRound[] {
   const stopAttemptsByTurn = new Map<string, { at: string; stopAttemptId: string }[]>();
   const stopsByDelivery = new Map<string, string>();
+  const turnsByDelivery = new Map<string, string>();
+  const nativeStops = new Set(events.filter(raw => raw.type === 'main_session_stop_observed').map(raw => stringValue(raw.stop_attempt_id)));
   for (const raw of events) {
     const delivery = stringValue(raw.delivery_id);
     const stop = stringValue(raw.stop_attempt_id) ?? stringValue(raw.source_stop_attempt_id);
-    if (delivery && stop && ['send_prepared', 'stop_hook_direction_returned'].includes(String(raw.type))) stopsByDelivery.set(delivery, stop);
+    if (delivery && ['send_prepared', 'stop_hook_direction_returned'].includes(String(raw.type))) {
+      if (stop && nativeStops.has(stop)) stopsByDelivery.set(delivery, stop);
+      else if (typeof raw.source_turn_id === 'string') turnsByDelivery.set(delivery, raw.source_turn_id);
+    }
   }
   for (const raw of events) {
     if (stringValue(raw.type) !== 'main_session_stop_observed') continue;
@@ -492,14 +497,15 @@ function makeRounds(events: Record<string, unknown>[]): WorkRound[] {
   for (const attempts of stopAttemptsByTurn.values()) attempts.sort((left, right) => left.at.localeCompare(right.at));
   const rounds = new Map<string, WorkRound>();
   for (const raw of events) {
-    const explicitStopAttempt = stringValue(raw.stop_attempt_id) ?? stringValue(raw.source_stop_attempt_id) ?? stopsByDelivery.get(String(raw.delivery_id)) ?? null;
+    const sourceStop = stringValue(raw.source_stop_attempt_id);
+    const explicitStopAttempt = stringValue(raw.stop_attempt_id) ?? (sourceStop && nativeStops.has(sourceStop) && raw.type !== 'main_tool_result' ? sourceStop : null) ?? stopsByDelivery.get(String(raw.delivery_id)) ?? null;
     const turnId = stringValue(raw.turn_id) ?? stringValue(raw.worker_turn_id) ?? stringValue(raw.source_turn_id);
     const mappedAttempts = turnId ? stopAttemptsByTurn.get(turnId) ?? [] : [];
     const type = stringValue(raw.type) ?? '';
     const previousAttempt = [...mappedAttempts].reverse().find((attempt) => attempt.at <= eventTime(raw))?.stopAttemptId ?? null;
     const nextAttempt = mappedAttempts.find((attempt) => attempt.at >= eventTime(raw))?.stopAttemptId ?? null;
     const mappedStopAttempt = ['main_session_continuation_confirmed', 'send_confirmed'].includes(type) ? previousAttempt : nextAttempt;
-    const id = explicitStopAttempt ? `stop:${explicitStopAttempt}` : mappedStopAttempt ? `stop:${mappedStopAttempt}` : turnId ?? 'run';
+    const id = explicitStopAttempt ? `stop:${explicitStopAttempt}` : turnsByDelivery.get(String(raw.delivery_id)) ?? (mappedStopAttempt ? `stop:${mappedStopAttempt}` : turnId ?? 'run');
     let round = rounds.get(id);
     if (!round) {
       const at = eventTime(raw);
@@ -952,10 +958,12 @@ function roundHtml(r,index){
   const observedPrompt=r.continuation.find(e=>e.eventType==='main_session_worker_prompt_observed');
   const recoveryFailure=r.continuation.find(e=>e.eventType==='main_session_recovery_prompt_failed');
   const direction=r.continuation.find(e=>e.eventType==='stop_hook_direction_returned');
-  const prompt=typeof observedPrompt?.details.message==='string'?observedPrompt.details.message:typeof recoverySent?.details.message==='string'?recoverySent.details.message:direction&&typeof decisionValue?.next_message==='string'?decisionValue.next_message:'';
+  const ordinarySent=r.technicalEvents.findLast(e=>e.eventType==='send_prepared'&&e.deliveryId&&r.technicalEvents.some(s=>s.eventType==='send_confirmed'&&s.deliveryId===e.deliveryId));
+  const ordinaryConfirmation=ordinarySent&&r.technicalEvents.find(e=>e.eventType==='send_confirmed'&&e.deliveryId===ordinarySent.deliveryId);
+  const prompt=typeof observedPrompt?.details.message==='string'?observedPrompt.details.message:typeof recoverySent?.details.message==='string'?recoverySent.details.message:typeof ordinarySent?.details.message==='string'?ordinarySent.details.message:direction&&typeof decisionValue?.next_message==='string'?decisionValue.next_message:'';
   const stopAt=r.stop?.at||r.endedAt;
   const decisionAt=decisionEvent?.at||lastJudge?.at||stopAt;
-  const returnedAt=observedPrompt?.at||direction?.at||recoveryAck?.at||recoverySent?.at;
+  const returnedAt=observedPrompt?.at||direction?.at||recoveryAck?.at||recoverySent?.at||ordinaryConfirmation?.at;
   const stopReason=typeof r.stop?.details.stop_reason==='string'?r.stop.details.stop_reason:'';
   const key=JSON.stringify([app.taskId,r.id]);
   const stepTime=v=>'<span class="step-time">'+esc(shortHourMinute(v))+'</span>';
