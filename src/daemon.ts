@@ -252,9 +252,11 @@ export class NFDaemon {
           const prompt = (refreshed as MainSessionState).recovery_prompt;
           if (refreshed.status === 'ACTIVE' && (refreshed as MainSessionState).control_mode === 'main-session' && prompt) {
             const dueAt = Date.parse(prompt.due_at);
-            if (Number.isFinite(dueAt)) recoveryPromptAt = Math.min(recoveryPromptAt ?? dueAt, dueAt);
+            if (Number.isFinite(dueAt)) {
+              if (dueAt > this.now()) recoveryPromptAt = Math.min(recoveryPromptAt ?? dueAt, dueAt);
+              else this.dispatchRecovery(statePath);
+            }
           }
-          if (prompt && Number.isFinite(Date.parse(prompt.due_at)) && Date.parse(prompt.due_at) <= this.now()) this.dispatchRecovery(statePath);
         }
       }
     }
