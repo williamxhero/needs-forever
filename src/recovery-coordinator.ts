@@ -92,6 +92,12 @@ function recoveryTimeoutMessage(state: MainSessionState): { kind: string; messag
   const activeWriterCapped = !!window?.active_writer_capped_at
     || (Number.isFinite(activeWriterMaxDeadline) && Number.isFinite(Date.parse(window?.deadline_at ?? '')) && Date.parse(window!.deadline_at) >= activeWriterMaxDeadline);
   const cause = state.recovery_condition?.message ?? state.recovery_plan?.reason.message ?? state.last_error ?? '';
+  if (state.recovery_condition?.kind === 'recovery_stale_writer') {
+    return {
+      kind: 'recovery_stale_writer_timeout',
+      message: `Codex 宿主 writer 锁疑似残留，自动恢复在有限窗口内未成功，监督已中断。${cause ? `最后原因：${cause}` : ''}请重启 Codex 宿主后点击“恢复”。`,
+    };
+  }
   if (activeWriterCapped && Number.isFinite(activeWriterStartedAt) && Number.isFinite(activeWriterMaxDeadline)) {
     const minutes = Math.max(1, Math.round((activeWriterMaxDeadline - activeWriterStartedAt) / 60_000));
     return {

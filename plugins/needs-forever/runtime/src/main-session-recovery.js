@@ -24,6 +24,28 @@ function isActiveWriterError(error) {
     const message = error instanceof Error ? error.message : String(error);
     return /active writer|already has an active writer|writer is active|writer.*in progress|正在.*进行中|已有.*写入/i.test(message);
 }
+/**
+ * A read-only reconciliation for Codex's active-writer rejection.  Desktop
+ * can leave a writer lock behind after the thread is already idle; this probe
+ * distinguishes that host condition without mutating A or deleting a lock.
+ */
+async function readThreadActivity(rpc, threadId) {
+    try {
+        const result = await rpc.request('thread/read', { threadId, includeTurns: true });
+        const thread = result?.thread;
+        if (!thread || thread.id !== threadId)
+            return null;
+        const status = typeof thread.status?.type === 'string' ? thread.status.type : null;
+        const turns = Array.isArray(thread.turns) ? thread.turns : [];
+        return { status, hasInProgressTurn: turns.some((turn) => turn?.status === 'inProgress') };
+    }
+    catch {
+        return null;
+    }
+}
+function isStaleWriterObservation(observation) {
+    return !!observation && !observation.hasInProgressTurn && (observation.status === 'idle' || observation.status === 'notLoaded');
+}
 async function verifyRecoveryHooks(rpc, workspace, pluginRoot) {
     const result = await rpc.request('hooks/list', { cwds: [workspace] });
     const source = canonicalPath(resolve(pluginRoot, 'hooks/hooks.json'));
@@ -250,6 +272,11 @@ export async function deliverMainSessionRecoveryPrompt(statePath, fixturePath) {
     if (!lease)
         return;
     const { state, prompt } = current;
+    const mainSessionId = state.main_session_id;
+    if (!mainSessionId) {
+        lease.release();
+        return;
+    }
     const abort = new AbortController();
     const remaining = state.recovery_window ? Date.parse(state.recovery_window.deadline_at) - Date.now() : 30_000;
     const timer = setTimeout(() => abort.abort(), Math.max(1, Math.min(30_000, remaining)));
@@ -262,7 +289,23 @@ export async function deliverMainSessionRecoveryPrompt(statePath, fixturePath) {
             const pluginRoot = prompt.plugin_root ?? state.controller?.plugin_root;
             if (pluginRoot)
                 await verifyRecoveryHooks(connection.rpc, state.task.workspace, pluginRoot);
-            const resumed = await connection.rpc.request('thread/resume', { threadId: state.main_session_id, cwd: state.task.workspace, excludeTurns: false });
+            let resumed;
+            try {
+                resumed = await connection.rpc.request('thread/resume', { threadId: mainSessionId, cwd: state.task.workspace, excludeTurns: false });
+            }
+            catch (error) {
+                if (!isActiveWriterError(error))
+                    throw error;
+                const activity = await readThreadActivity(connection.rpc, mainSessionId);
+                if (isStaleWriterObservation(activity)) {
+                    const status = activity?.status ?? 'unknown';
+                    deferRecoveryPrompt(statePath, prompt.delivery_id, `Codex thread/read 显示原始 A 为 ${status} 且没有进行中的回合，但 thread/resume 仍被 active writer 拒绝；疑似宿主写锁未释放。NF 不会删除锁或终止 Codex，需重启 Codex 宿主后再恢复。`, error, true, 'recovery_stale_writer', 'unknown', false);
+                }
+                else {
+                    deferRecoveryPrompt(statePath, prompt.delivery_id, '原始 A 当前仍有进行中的回合，NF 等待其完成后自动重试。', error);
+                }
+                return;
+            }
             if (!resumed?.thread || resumed.thread.id !== state.main_session_id)
                 throw new Error('Recovery adapter resumed a different thread; no prompt was sent.');
             const turns = Array.isArray(resumed.thread.turns) ? resumed.thread.turns : [];
@@ -361,7 +404,7 @@ export async function deliverMainSessionRecoveryPrompt(statePath, fixturePath) {
  * turn).  The helper owns the same delivery id across retries, so no duplicate
  * prompt can be created, and the recovery deadline remains the hard stop.
  */
-function deferRecoveryPrompt(statePath, deliveryId, reason, error, retryable = true, conditionKind = 'recovery_active_writer', writerPreflight = 'unknown') {
+function deferRecoveryPrompt(statePath, deliveryId, reason, error, retryable = true, conditionKind = 'recovery_active_writer', writerPreflight = 'unknown', extendActiveWriterWindow = true) {
     try {
         const initial = currentPrompt(statePath);
         if (!initial?.prompt || initial.prompt.delivery_id !== deliveryId)
@@ -375,7 +418,7 @@ function deferRecoveryPrompt(statePath, deliveryId, reason, error, retryable = t
         const delayMs = RECOVERY_PROMPT_RETRY_DELAYS_MS[Math.min(retryAttempt - 1, RECOVERY_PROMPT_RETRY_DELAYS_MS.length - 1)] ?? RECOVERY_PROMPT_RETRY_DELAYS_MS.at(-1);
         const retryAt = new Date(Date.now() + delayMs).toISOString();
         const hadActiveWriterCap = latest.state.recovery_window?.active_writer_capped_at;
-        const activeWriterWindow = extendRecoveryWindowForActiveWriter(latest.state, Date.now(), delayMs);
+        const activeWriterWindow = extendActiveWriterWindow ? extendRecoveryWindowForActiveWriter(latest.state, Date.now(), delayMs) : null;
         latest.prompt.retry_attempt = retryAttempt;
         latest.prompt.due_at = retryAt;
         latest.state.recovery_condition = {
