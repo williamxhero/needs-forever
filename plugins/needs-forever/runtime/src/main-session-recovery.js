@@ -292,7 +292,8 @@ export async function deliverMainSessionRecoveryPrompt(statePath, fixturePath) {
         if (!fixturePath && state.mode === 'live' && state.host.source === 'native-desktop') {
             const reason = '原始 A 由 Codex Desktop 主宿主管理；NF 没有可用的 Desktop provider adapter，拒绝通过独立 app-server 接管原始 thread，以免产生“已在另一个应用中打开”。请通过 Codex Desktop 原始 thread 释放/恢复后再继续。';
             log(statePath, state, 'main_session_recovery_prompt_blocked', { delivery_id: prompt.delivery_id, main_session_id: state.main_session_id, reason });
-            throw new RecoverySetupError(reason);
+            deferRecoveryPrompt(statePath, prompt.delivery_id, reason, undefined, true, 'recovery_desktop_provider_unavailable', 'unknown', false);
+            return;
         }
         log(statePath, state, 'main_session_recovery_prompt_attempted', { delivery_id: prompt.delivery_id, main_session_id: state.main_session_id, message: prompt.message, task_version: prompt.task_version, run_generation: prompt.run_generation });
         const connection = await connectWorker(fixtureCommand(fixturePath, state), state.task.workspace, abort.signal);
@@ -475,7 +476,9 @@ function deferRecoveryPrompt(statePath, deliveryId, reason, error, retryable = t
             message: reason,
             resume_when: conditionKind === 'recovery_stale_active_writer'
                 ? '宿主应释放残留 writer；NF 将按退避时间有限重试并保留诊断，仍未恢复会明确标记为中断。'
-                : '原始 A 当前回合结束后，NF 将按退避时间自动重试；active-writer 最多延长至首次证据后 10 分钟，仍未恢复会明确标记为中断。',
+                : conditionKind === 'recovery_desktop_provider_unavailable'
+                    ? '请在 Codex Desktop 原始 thread 关闭并重新打开，或产生新的受信任 native lifecycle receipt；NF 不会创建第二个 app-server。'
+                    : '原始 A 当前回合结束后，NF 将按退避时间自动重试；active-writer 最多延长至首次证据后 10 分钟，仍未恢复会明确标记为中断。',
         };
         // An active writer is expected while A is finishing.  Do not let a stale
         // transport error make NFG claim that the task is permanently failing.

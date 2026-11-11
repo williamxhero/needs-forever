@@ -479,10 +479,13 @@ test('live Desktop recovery refuses to create a second app-server owner for A', 
   writeFileSync(f.state, `${JSON.stringify(pending)}\n`);
   await deliverMainSessionRecoveryPrompt(f.state);
   const status = JSON.parse(f.run('status').stdout);
-  assert.equal(status.status, 'INTERRUPTED');
-  assert.match(status.last_error, /拒绝通过独立 app-server/);
+  assert.equal(status.status, 'ACTIVE');
+  assert.equal(status.phase, 'RECOVERING');
+  assert.equal(status.recovery_condition.kind, 'recovery_desktop_provider_unavailable');
+  assert.match(status.recovery_condition.message, /拒绝通过独立 app-server/);
   const events = readFileSync(join(f.workspace, '.codex-supervisor', 'native-desktop-recovery-owner-guard', 'events.jsonl'), 'utf8').split(/\r?\n/).filter(Boolean).map((line) => JSON.parse(line));
   assert.ok(events.some((event) => event.type === 'main_session_recovery_prompt_blocked'));
+  assert.ok(events.some((event) => event.type === 'main_session_recovery_prompt_deferred'));
   assert.equal(events.some((event) => event.type === 'main_session_recovery_prompt_attempted'), false);
 });
 
