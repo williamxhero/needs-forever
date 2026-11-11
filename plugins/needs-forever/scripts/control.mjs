@@ -11,7 +11,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { codexCommand, PROTOCOL_VERSION, SUPPORTED_PROTOCOL_VERSIONS } from '../runtime/src/transport.js';
 import { NATIVE_BINDING_COMMAND_HINT } from '../runtime/src/control-intent.js';
 import { redact } from '../runtime/src/redact.js';
-import { prepareMainSession, resumeMainSession } from '../runtime/src/main-session.js';
+import { prepareMainSession, resumeMainSession, loadMainSessionTracking, updateMainSessionTracking } from '../runtime/src/main-session.js';
 import { controllerStatus, pauseMainController, prepareControllerResume } from '../runtime/src/main-controller.js';
 
 const script = fileURLToPath(import.meta.url);
@@ -38,11 +38,37 @@ function options(args) {
   for (let i = 0; i < args.length; i += 2) {
     const key = args[i];
     const value = args[i + 1];
-    if (!['--task', '--state', '--test-fixture', '--control-mode', '--workspace', '--port'].includes(key) || flags[key] || !value || value.startsWith('--')) throw new Error('Expected unique --task, --state, --test-fixture, --control-mode, --workspace or --port flags.');
+    const known = ['--task', '--state', '--test-fixture', '--control-mode', '--workspace', '--port', '--tracking-backend', '--tracking-path', '--tracking-repository', '--tracking-issue', '--tracking-title', '--tracking-clarification', '--tracking-update', '--acceptance-id', '--tracking-status', '--tracking-notes', '--tracking-evidence'];
+    if (!known.includes(key) || flags[key] || !value || value.startsWith('--')) throw new Error('Expected unique task/state/control/tracking flags.');
     if (key === '--control-mode') { if (!['main-session', 'independent-worker'].includes(value)) throw new Error('Invalid control mode.'); flags[key] = value; }
-    else flags[key] = key === '--port' ? value : absolute(value, key);
+    else if (['--port', '--tracking-backend', '--tracking-repository', '--tracking-issue', '--tracking-title', '--tracking-status', '--tracking-notes', '--tracking-evidence', '--acceptance-id'].includes(key)) flags[key] = value;
+    else flags[key] = absolute(value, key);
   }
   return flags;
+}
+function tracking(flags, required = false) {
+  const keys = ['--tracking-backend', '--tracking-path', '--tracking-repository', '--tracking-issue', '--tracking-title', '--tracking-clarification'];
+  const selected = keys.some((key) => flags[key] !== undefined);
+  if (!selected) { if (required) throw new Error('Tracking selection is required.'); return undefined; }
+  const backend = flags['--tracking-backend'];
+  if (!['local-json', 'github-issue'].includes(backend)) throw new Error('Tracking requires an explicit --tracking-backend local-json or github-issue.');
+  const result = { backend };
+  if (backend === 'local-json') {
+    if (!flags['--tracking-path'] || flags['--tracking-repository'] || flags['--tracking-issue'] || flags['--tracking-title']) throw new Error('local-json tracking requires --tracking-path and no GitHub options.');
+    result.path = flags['--tracking-path'];
+  } else {
+    if (!flags['--tracking-repository'] || flags['--tracking-path']) throw new Error('github-issue tracking requires --tracking-repository and no local path.');
+    result.repository = flags['--tracking-repository'];
+    if (flags['--tracking-issue']) { if (!/^\d+$/.test(flags['--tracking-issue']) || Number(flags['--tracking-issue']) < 1) throw new Error('--tracking-issue must be a positive integer.'); result.issue = Number(flags['--tracking-issue']); }
+    if (flags['--tracking-title']) result.title = flags['--tracking-title'];
+  }
+  if (flags['--tracking-clarification']) result.clarification = read(flags['--tracking-clarification']);
+  return result;
+}
+function update(flags) {
+  if (!flags['--tracking-update'] && (!flags['--acceptance-id'] || !flags['--tracking-status'])) throw new Error('tracking-update requires --tracking-update FILE or acceptance/status flags.');
+  if (flags['--tracking-update']) return read(flags['--tracking-update']);
+  return { acceptance_id: flags['--acceptance-id'], status: flags['--tracking-status'], notes: flags['--tracking-notes'] ?? '', evidence_refs: flags['--tracking-evidence'] ? flags['--tracking-evidence'].split(',').map((value) => value.trim()).filter(Boolean) : [] };
 }
 function request(receipt, command) {
   return new Promise((resolve_, reject) => {
@@ -237,21 +263,25 @@ async function main() {
     if (command === 'start') {
       const task = read(absolute(flags['--task'], '--task'));
       const path = flags['--state'] ?? resolve(absolute(task.workspace, 'task.workspace'), '.codex-supervisor', task.task_id, 'state.json');
-      const state = prepareMainSession(flags['--task'], path, Boolean(flags['--test-fixture']));
+      const state = prepareMainSession(flags['--task'], path, Boolean(flags['--test-fixture']), tracking(flags));
       return emit({ prepared: true, binding_instruction: NATIVE_BINDING_COMMAND_HINT, control_mode: state.control_mode, binding: state.binding, state_path: path });
     }
     const path = absolute(flags['--state'], '--state');
     if (command === 'status') return emit(await controllerStatus(path));
-    if (command === 'resume') { await prepareControllerResume(path); const state = resumeMainSession(path, flags['--task'], Boolean(flags['--test-fixture'])); return emit({ prepared: true, binding_instruction: NATIVE_BINDING_COMMAND_HINT, control_mode: state.control_mode, binding: state.binding, state_path: path }); }
+    if (command === 'resume') { await prepareControllerResume(path); const state = resumeMainSession(path, flags['--task'], Boolean(flags['--test-fixture']), tracking(flags)); return emit({ prepared: true, binding_instruction: NATIVE_BINDING_COMMAND_HINT, control_mode: state.control_mode, binding: state.binding, state_path: path }); }
+    if (command === 'tracking-load') return emit(loadMainSessionTracking(path));
+    if (command === 'tracking-update') return emit(updateMainSessionTracking(path, update(flags)));
     if (command === 'pause') {
       return emit(await pauseMainController(path));
     }
     throw new Error('Commands: start/status/pause/resume/web.');
   }
   if (command === 'start' || command === 'resume') return emit(await launch(command, flags));
-  if (command !== 'status' && command !== 'pause') throw new Error('Commands: doctor | web --workspace DIRECTORY [--port PORT] | start --task FILE [--state FILE] | status/pause/resume --state FILE.');
+  if (command !== 'status' && command !== 'pause' && command !== 'tracking-load' && command !== 'tracking-update') throw new Error('Commands: doctor | web --workspace DIRECTORY [--port PORT] | start --task FILE [--state FILE] | status/pause/resume/tracking-load/tracking-update --state FILE.');
   const statePath = absolute(flags['--state'], '--state');
   const state = read(statePath);
+  if (command === 'tracking-load') return emit(loadMainSessionTracking(statePath));
+  if (command === 'tracking-update') return emit(updateMainSessionTracking(statePath, update(flags)));
   const receipt = existsSync(receiptPath(statePath)) ? read(receiptPath(statePath)) : null;
   if (command === 'status') {
     let live = false;

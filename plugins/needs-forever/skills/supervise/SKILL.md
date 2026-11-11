@@ -17,6 +17,21 @@ description: 仅在用户显式调用本技能执行任务，或明确要求启�
 
 ## 选择操作
 
+### 启动前澄清
+
+当本轮目标仍是“持续优化”或其他方向性表述时，先暂停启动并主动做一轮澄清。先查已有上下文和项目事实，只向用户询问仍会改变行动的取舍；每个问题给出基于已知事实的推荐答案和可直接选择的选项。至少确认：
+
+1. **关心的结果与价值**：本轮要改善或判断什么，为什么现在值得做？推荐把结果写成一个有限周期内可观察的变化。
+2. **优先级**：速度、可靠性、成本、范围或其他指标如何排序？推荐给出第一优先级及可接受的次级权衡。
+3. **证据**：什么事实、测试、产物或对照能证明结果？推荐选择能在本轮直接回读的证据。
+4. **允许做什么**：工作区、网络、外部服务、发布和写入范围是什么？推荐只授予完成本轮验收所需的最小范围。
+5. **停止条件与预算**：何时算本轮完成、受阻或不值得继续？最多允许多少轮、时间或其他资源？推荐先设有限周期，并允许“有证据的无需修改”。
+6. **记录位置**：选择 `GitHub Issue` 或 `本地 JSON`。GitHub 需要仓库及新建/复用的 Issue；本地 JSON 需要实际绝对路径。没有明确选择时保持澄清，不默选，也不启动监督。
+
+将用户回答整理成结构化澄清 JSON，回读并展示摘要；只有价值、优先级、证据、授权、停止/预算和记录后端都已明确，且固定 acceptance 已形成后，才继续执行启动命令。已有明确结论时沿用并只询问缺口，不机械重问。
+
+启动前若需要可跟踪清单，先由用户明确选择一个后端：`local-json` 需要绝对 `--tracking-path`，`github-issue` 需要仓库及新建 Issue 标题（或恢复时明确已有 Issue 编号）。两者都需要 `--tracking-clarification` 指向包含 `value`、`priority`、`evidence`、`authorization`、`stop_condition`、`budget` 的 JSON。创建及回读成功后，checkpoint 才保存 backend、locator 和合同摘要并允许后续绑定；创建失败不会启动监督。不要根据工作区扫描结果猜测记录位置，也不要在 GitHub 失败时静默切换本地记录。
+
 - **启动**：确认上述明确启用授权后，先运行 `node <control> doctor`，然后读取 [任务合同](references/task.md)，保存原始目标、逐项验收及真实授权。将命令工作目录设为合同 workspace，在当前 A 中执行 `node <control> start --task <绝对配置路径>`；可加 `--state <绝对路径>`，默认位置为 `<workspace>/.codex-supervisor/<task_id>/state.json`。真实 native PreToolUse/PostToolUse 回执必须关联该命令、任务和随机 challenge，才会绑定 A 并自动启动 B。参数或环境变量中的 session ID 不能建立绑定。该技术凭据只关联实际控制命令与 A，不能验证 UI 中是否调用过技能；执行命令前由当前 A 核实上述人类授权。
 - **查询**：按用户明确查询请求执行 `node <control> status --state <绝对路径>`。分别报告 control_mode、main_session_id、status/phase、controller_reachable、host_process_alive、hook_effective、continuation_confirmed 和 recovery_required。B 可达、hook 已返回方向和 A 实际继续活动是三个不同证据。查看同目录 `summary.md`、`events.jsonl`、`snapshots` 及 `<state>.controller.log`。
 - **暂停**：按用户明确暂停请求执行 `node <control> pause --state <绝对路径>`。确认返回 `paused:true` 与持久状态 `PAUSED` 后报告成功；控制句柄失效时保留检查点并报告，不能按旧 PID 杀进程。
@@ -27,6 +42,8 @@ description: 仅在用户显式调用本技能执行任务，或明确要求启�
 完成条件是脚本结果与持久状态一致。`PENDING_NATIVE_HOOK` 或 `RECOVERING` 不能报告监督已生效。待信任时请用户在 Codex Settings > Hooks 审阅插件定义并按宿主要求重载；doctor 只检查 Node/CLI，不能证明 Desktop hook 能力或信任。只有真实 Stop 返回后的原 A 匹配工具活动才能确认续跑。身份、hook、版本或宿主不支持时保留检查点，清楚说明原因及待验证步骤。
 
 ## 持续推进与授权
+
+记录更新是显式的可观察辅助操作，不由 B/C 自动写入。使用 `tracking-load --state <绝对路径>` 读取当前记录；使用 `tracking-update --state <绝对路径> --acceptance-id <id> --tracking-status TODO|IN_PROGRESS|REPORTED_DONE|BLOCKED` 更新单项，并按需附带 `--tracking-notes` 与 `--tracking-evidence`。`REPORTED_DONE` 需要证据，`BLOCKED` 需要说明；这些状态只表示 Agent 报告的进度，不能授予 NF 的 `DONE`。恢复时 NF 从 checkpoint 中保存的 locator 加载记录并核对 task_id、合同摘要和 acceptance 身份；locator 或合同不一致会拒绝恢复，不会扫描或切换后端。合同或 acceptance 变更必须先形成 PAUSED checkpoint，并重新完成记录核对。
 
 已有明确启用授权时完成合同与启动，继续在当前 A 中执行原任务。B 独立运行；A 的执行内容和工具仍在当前聊天可见。Interrupt/pause 先落 PAUSED，再取消 C/验收；新 UserPromptSubmit 使旧判断和方向失效，但不自动修改目标/授权。恢复需要明确操作。状态不明先查询，避免重复启动。
 

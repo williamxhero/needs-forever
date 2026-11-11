@@ -25,4 +25,11 @@ export type { C2Mode, Diagnosis, RouteCandidate, RoutePlan, C2Context } from './
 export { discoverLocalRoutes, prepareRouteExecution, confirmRouteExecution, captureRouteOutcome, plannerFailureFallback, routeCorrelation } from './route-execution.js';
 export type { RouteCorrelation, RouteExecution } from './types.js';
 export { ingestRouteObservations } from './route-observations.js';
+export { LocalTrackingStore, contractIdentity } from './local-tracking.js';
+export type { ClarificationConclusions, LocalTrackingStoreOptions, TrackingAcceptanceItem, TrackingBackend, TrackingProgressStatus, TrackingRecord, TrackingUpdate } from './local-tracking.js';
+export { GhCliAdapter, GitHubTrackingStore, GITHUB_TRACKING_END, GITHUB_TRACKING_START } from './github-tracking.js';
+export type { GitHubCliAdapter, GitHubCommandResult, GitHubTrackingStoreOptions } from './github-tracking.js';
+export { createTracking, loadTracking, updateTracking, locatorForSelection, storeForLocator, trackingLocator, assertTrackingContract } from './tracking-integration.js';
+export type { TrackingSelection, TrackingLocator } from './tracking-integration.js';
+export { loadMainSessionTracking, updateMainSessionTracking } from './main-session.js';
 export { initializeHttpRouteProbe, executeHttpRouteProbe, ingestHttpRouteProbes } from './http-route-probe.js';
