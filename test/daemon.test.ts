@@ -155,3 +155,26 @@ test('daemon resume dispatches recovery immediately and ticks retry it without a
   await daemon.tick();
   assert.equal(dispatched.length, 2, 'Manual pause must stop the driver.');
 });
+
+test('global daemon dispatches a due ordinary recovery prompt when its coordinator is absent', async () => {
+  const root = mkdtempSync(resolve(tmpdir(), 'nf-prompt-watchdog-'));
+  const path = fixture(root, 'ACTIVE');
+  const value = JSON.parse(readFileSync(path, 'utf8')) as Record<string, any>;
+  const generation = 'ordinary-prompt-generation';
+  Object.assign(value, {
+    control_mode: 'main-session', main_session_id: 'original-A', run_generation: generation,
+    contract_sha256: 'contract',
+    binding: { status: 'BOUND', operation: 'resume', tool_use_id: 'native-tool', bound_at: new Date().toISOString(), challenge: 'challenge', task_path: path },
+    host: { desktop_version: null, cli_version: null, hook_effective: true, source: 'simulated', reason: '' },
+    recovery_window: { started_at: new Date(Date.now() - 1_000).toISOString(), deadline_at: new Date(Date.now() + 120_000).toISOString() },
+    recovery_plan: { owner: null, generation, task_version: 1, attempt: 0, next_retry_at: null, status: 'armed', reason: { kind: 'ordinary', message: 'A is idle.', resume_when: 'prompt delivery' }, cancellation_boundary: null },
+    pending_action: { plan_id: 'plan-1', route_id: null, source_stop_attempt_id: 'stop-1', delivery_id: 'delivery-1', message: 'continue', stage: 'sent' },
+    recovery_prompt: { kind: 'continuation', plugin_root: root, delivery_id: 'delivery-1', source_turn_id: 'turn-1', task_version: 1, run_generation: generation, message: 'continue', due_at: new Date(Date.now() - 1).toISOString(), plan_id: 'plan-1', source_stop_attempt_id: 'stop-1' },
+  });
+  writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+  const dispatched: string[] = [];
+  const daemon = new NFDaemon({ workspaces: [root], dataPath: resolve(root, 'daemon.json'), intervalMs: 0, recoverTask: statePath => { dispatched.push(statePath); } });
+  const result = await daemon.tick();
+  assert.equal(result.waitingNative, 0, 'An ordinary prompt does not need a native waiting plan.');
+  assert.deepEqual(dispatched, [path], 'The global watchdog must drive a due prompt even without the B coordinator.');
+});

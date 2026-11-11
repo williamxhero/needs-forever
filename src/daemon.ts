@@ -218,6 +218,7 @@ export class NFDaemon {
     let waitingNative = 0;
     let nextRetryAt: string | null = null;
     let recoveryDeadline: number | null = null;
+    let recoveryPromptAt: number | null = null;
     for (const workspace of this.workspaceRoots) {
       for (const statePath of discoverStateFiles(workspace)) {
         const state = readState(statePath);
@@ -243,6 +244,17 @@ export class NFDaemon {
             const deadline = Date.parse(refreshed.recovery_window.deadline_at);
             if (Number.isFinite(deadline)) recoveryDeadline = Math.min(recoveryDeadline ?? deadline, deadline);
           }
+          // The detached coordinator is normally responsible for fallback
+          // prompts, but it may exit while B is still alive (or before it is
+          // restarted).  Keep the global NF watchdog authoritative for every
+          // due prompt, including ordinary continuation prompts whose
+          // recovery plan is `armed` rather than `waiting_native`.
+          const prompt = (refreshed as MainSessionState).recovery_prompt;
+          if (refreshed.status === 'ACTIVE' && (refreshed as MainSessionState).control_mode === 'main-session' && prompt) {
+            const dueAt = Date.parse(prompt.due_at);
+            if (Number.isFinite(dueAt)) recoveryPromptAt = Math.min(recoveryPromptAt ?? dueAt, dueAt);
+          }
+          if (prompt && Number.isFinite(Date.parse(prompt.due_at)) && Date.parse(prompt.due_at) <= this.now()) this.dispatchRecovery(statePath);
         }
       }
     }
@@ -251,8 +263,9 @@ export class NFDaemon {
     this.tickCount++;
     // Honor the persisted deadline even between the ordinary discovery polls.
     if (this.recoveryTimer) clearTimeout(this.recoveryTimer);
-    this.recoveryTimer = this.running && recoveryDeadline !== null
-      ? setTimeout(() => { void this.tick(); }, Math.max(1, recoveryDeadline - this.now()))
+    const nextWakeAt = [recoveryDeadline, recoveryPromptAt].filter((value): value is number => value !== null).reduce<number | null>((earliest, value) => Math.min(earliest ?? value, value), null);
+    this.recoveryTimer = this.running && nextWakeAt !== null
+      ? setTimeout(() => { void this.tick(); }, Math.max(1, nextWakeAt - this.now()))
       : undefined;
     const result = { at, discovered, changed, waitingNative, nextRetryAt };
     for (const callback of this.callbacks) callback(result);
