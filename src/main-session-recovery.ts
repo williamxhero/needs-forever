@@ -254,6 +254,17 @@ export async function deliverMainSessionRecoveryPrompt(statePath: string, fixtur
       } catch (error) {
         if (!isActiveWriterError(error)) throw error;
         const activity = await readThreadActivity(connection.rpc, mainSessionId);
+        // A few Codex hosts report the thread itself as `active` even after
+        // its turn history is idle.  Once the same delivery has already
+        // survived one retry, an active-writer rejection with no
+        // in-progress turn is the legacy stale-writer evidence we already
+        // persist and bound.  Keep this fallback for those hosts while the
+        // explicit idle/notLoaded classification above remains preferred.
+        const repeatedIdleWriter = typeof prompt.retry_attempt === 'number'
+          && Number.isInteger(prompt.retry_attempt)
+          && prompt.retry_attempt >= 1
+          && !!activity
+          && !activity.hasInProgressTurn;
         if (isStaleWriterObservation(activity)) {
           const status = activity?.status ?? 'unknown';
           deferRecoveryPrompt(
@@ -265,6 +276,16 @@ export async function deliverMainSessionRecoveryPrompt(statePath: string, fixtur
             'recovery_stale_writer',
             'unknown',
             false,
+          );
+        } else if (repeatedIdleWriter) {
+          deferRecoveryPrompt(
+            statePath,
+            prompt.delivery_id,
+            'Codex 宿主的 thread 历史已没有进行中的回合，但 thread/resume 仍报告 active writer；疑似宿主 writer 锁残留，NF 将继续有限重试并记录诊断。',
+            error,
+            true,
+            'recovery_stale_active_writer',
+            'idle',
           );
         } else {
           deferRecoveryPrompt(statePath, prompt.delivery_id, '原始 A 当前仍有进行中的回合，NF 等待其完成后自动重试。', error);
@@ -296,6 +317,11 @@ export async function deliverMainSessionRecoveryPrompt(statePath: string, fixtur
       } catch (error) {
         if (!isActiveWriterError(error)) throw error;
         const activity = await readThreadActivity(connection.rpc, mainSessionId);
+        const repeatedIdleWriter = typeof prompt.retry_attempt === 'number'
+          && Number.isInteger(prompt.retry_attempt)
+          && prompt.retry_attempt >= 1
+          && !!activity
+          && !activity.hasInProgressTurn;
         if (isStaleWriterObservation(activity)) {
           const status = activity?.status ?? 'unknown';
           deferRecoveryPrompt(
@@ -307,6 +333,16 @@ export async function deliverMainSessionRecoveryPrompt(statePath: string, fixtur
             'recovery_stale_writer',
             'idle',
             false,
+          );
+        } else if (repeatedIdleWriter) {
+          deferRecoveryPrompt(
+            statePath,
+            prompt.delivery_id,
+            'Codex 宿主的 thread 历史已没有进行中的回合，但 turn/start 仍报告 active writer；疑似宿主 writer 锁残留，NF 将继续有限重试并记录诊断。',
+            error,
+            true,
+            'recovery_stale_active_writer',
+            'idle',
           );
         } else {
           deferRecoveryPrompt(statePath, prompt.delivery_id, '原始 A 当前仍有进行中的回合，NF 等待其完成后自动重试。', error);
