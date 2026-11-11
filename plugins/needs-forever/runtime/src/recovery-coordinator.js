@@ -6,6 +6,9 @@ import { nextBackoff } from './recovery.js';
 import { Store } from './store.js';
 const DELAYS = [5, 15, 60, 300];
 export const RECOVERY_TIMEOUT_MS = 120_000;
+/** Active-writer evidence is a bounded extension, not an unbounded keepalive. */
+export const ACTIVE_WRITER_RECOVERY_MAX_MS = 10 * 60_000;
+export const ACTIVE_WRITER_RECOVERY_EXTENSION_MS = 60_000;
 /** One window per recovery episode, independent of retry/generation changes. */
 function ensureRecoveryWindow(state, now) {
     if (state.recovery_window)
@@ -18,6 +21,59 @@ function ensureRecoveryWindow(state, now) {
 export function resetRecoveryWindow(state, now = Date.now()) {
     delete state.recovery_interruption;
     state.recovery_window = { started_at: new Date(now).toISOString(), deadline_at: new Date(now + RECOVERY_TIMEOUT_MS).toISOString() };
+}
+/**
+ * Extend a recovery episode only after a real active-writer observation.
+ * The first observation starts a separate ten-minute budget; each call may
+ * move the deadline by one bounded step, never beyond that budget.  Callers
+ * must persist the state and append the returned change as an audit event.
+ */
+export function extendRecoveryWindowForActiveWriter(state, now = Date.now(), extensionMs = ACTIVE_WRITER_RECOVERY_EXTENSION_MS) {
+    if (state.status === 'DONE' || state.status === 'PAUSED' || state.status === 'INTERRUPTED')
+        return null;
+    // Older checkpoints may have scheduled a prompt before the recovery window
+    // was introduced.  A real active-writer receipt is enough to establish a
+    // fresh bounded window; ordinary transport errors never call this helper.
+    if (!state.recovery_window)
+        ensureRecoveryWindow(state, now);
+    const window = state.recovery_window;
+    if (!window)
+        return null;
+    const currentDeadline = Date.parse(window.deadline_at);
+    if (!Number.isFinite(currentDeadline))
+        return null;
+    const existingStarted = Date.parse(window.active_writer_started_at ?? '');
+    const startedAt = Number.isFinite(existingStarted) ? existingStarted : now;
+    const maxDeadline = Number.isFinite(Date.parse(window.active_writer_max_deadline_at ?? ''))
+        ? Date.parse(window.active_writer_max_deadline_at)
+        : startedAt + ACTIVE_WRITER_RECOVERY_MAX_MS;
+    const previous = window.deadline_at;
+    const boundedStep = Math.max(ACTIVE_WRITER_RECOVERY_EXTENSION_MS, Math.min(extensionMs, ACTIVE_WRITER_RECOVERY_EXTENSION_MS));
+    const nextDeadline = Math.min(Math.max(currentDeadline, now) + boundedStep, maxDeadline);
+    window.active_writer_started_at = new Date(startedAt).toISOString();
+    window.active_writer_max_deadline_at = new Date(maxDeadline).toISOString();
+    if (nextDeadline > currentDeadline) {
+        window.deadline_at = new Date(nextDeadline).toISOString();
+        return {
+            extended: true,
+            capped: nextDeadline >= maxDeadline,
+            previous_deadline_at: previous,
+            deadline_at: window.deadline_at,
+            active_writer_started_at: window.active_writer_started_at,
+            active_writer_max_deadline_at: window.active_writer_max_deadline_at,
+        };
+    }
+    const capped = maxDeadline <= currentDeadline;
+    if (capped && !window.active_writer_capped_at)
+        window.active_writer_capped_at = new Date(now).toISOString();
+    return {
+        extended: false,
+        capped,
+        previous_deadline_at: previous,
+        deadline_at: window.deadline_at,
+        active_writer_started_at: window.active_writer_started_at,
+        active_writer_max_deadline_at: window.active_writer_max_deadline_at,
+    };
 }
 export function interruptRecovery(state, now, explicitReason) {
     const cause = state.recovery_condition?.message ?? state.recovery_plan?.reason.message ?? state.last_error ?? '';
