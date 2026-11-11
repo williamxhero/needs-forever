@@ -493,6 +493,11 @@ test('active-writer recovery defers the same prompt with bounded backoff and ret
   const saved = JSON.parse(readFileSync(f.state, 'utf8')) as MainSessionState;
   assert.equal(saved.recovery_prompt?.retry_attempt, 1);
   assert.equal(saved.recovery_condition?.kind, 'recovery_active_writer');
+  const extension = events.find((event) => event.type === 'recovery_active_writer_window_extended');
+  assert.ok(extension, 'The first active-writer evidence must extend and audit the bounded recovery window.');
+  assert.ok(saved.recovery_window?.active_writer_started_at, 'The active-writer evidence start must be persisted.');
+  assert.ok(saved.recovery_window?.active_writer_max_deadline_at, 'The active-writer hard cap must be persisted.');
+  assert.ok(Date.parse(saved.recovery_window!.deadline_at) > Date.parse(extension.previous_deadline_at), 'The recovery deadline must move forward after active-writer evidence.');
   const retryAt = Date.parse(saved.recovery_prompt!.due_at);
   assert.ok(retryAt > Date.now() - 250, 'The retry must be scheduled in the future.');
 

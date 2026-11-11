@@ -82,7 +82,16 @@ export interface State {
   recovery_failures?: { signature: string; kind: string; count: number; message: string; instruction: string; at: string }[];
   recovery_condition?: { kind: string; message: string; resume_when: string };
   recovery_plan?: RecoveryPlan;
-  recovery_window?: { started_at: string; deadline_at: string };
+  recovery_window?: {
+    started_at: string;
+    deadline_at: string;
+    /** First confirmed active-writer evidence for this recovery episode. */
+    active_writer_started_at?: string;
+    /** Hard cap: active-writer waiting may never exceed ten minutes after evidence. */
+    active_writer_max_deadline_at?: string;
+    /** Set once when the active-writer extension reaches its hard cap. */
+    active_writer_capped_at?: string;
+  };
   recovery_interruption?: { at: string; reason: string };
   route_catalog?: RouteCatalogData;
   route_probe?: { state_path: string; nonce: string; scope_sha256: string; argv_prefix: string[]; seen_receipts?: string[]; omitted_url_sha256?: string[] };

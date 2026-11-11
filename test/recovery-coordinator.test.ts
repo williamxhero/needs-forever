@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { createRecoveryPlan, armRecovery, waitForNativeReceipt, cancelRecovery, recoveryCurrent, acquireRecoveryOwner, reconcileStaleOwner, reconcileRecoveryTick, resetRecoveryWindow } from '../src/recovery-coordinator.js';
+import { createRecoveryPlan, armRecovery, waitForNativeReceipt, cancelRecovery, recoveryCurrent, acquireRecoveryOwner, reconcileStaleOwner, reconcileRecoveryTick, resetRecoveryWindow, extendRecoveryWindowForActiveWriter } from '../src/recovery-coordinator.js';
 import type { MainSessionState } from '../src/main-session.js';
 import { Store } from '../src/store.js';
 import { spawnSync } from 'node:child_process';
@@ -37,6 +37,26 @@ test('automatic recovery persists bounded backoff and preserves generation acros
   assert.equal(second.generation, first.generation);
   assert.equal(second.attempt, 2);
   assert.equal(second.next_retry_at, '1970-01-01T00:00:20.000Z');
+});
+
+test('active-writer evidence extends recovery in bounded audited-sized steps and caps at ten minutes', () => {
+  const value = state('active-writer-window');
+  value.phase = 'RECOVERING';
+  value.recovery_window = { started_at: new Date(0).toISOString(), deadline_at: new Date(120_000).toISOString() };
+  const first = extendRecoveryWindowForActiveWriter(value, 120_000, 5_000);
+  assert.equal(first?.extended, true);
+  assert.equal(first?.previous_deadline_at, new Date(120_000).toISOString());
+  assert.equal(first?.deadline_at, new Date(180_000).toISOString());
+  assert.equal(first?.active_writer_started_at, new Date(120_000).toISOString());
+  assert.equal(first?.active_writer_max_deadline_at, new Date(720_000).toISOString());
+  const second = extendRecoveryWindowForActiveWriter(value, 180_000, 15_000);
+  assert.equal(second?.extended, true);
+  assert.equal(second?.deadline_at, new Date(240_000).toISOString());
+  value.recovery_window.deadline_at = new Date(720_000).toISOString();
+  const capped = extendRecoveryWindowForActiveWriter(value, 720_000, 60_000);
+  assert.equal(capped?.extended, false);
+  assert.equal(capped?.capped, true);
+  assert.equal(value.recovery_window.active_writer_capped_at, new Date(720_000).toISOString());
 });
 
 test('manual cancellation is a durable boundary that rejects stale recovery results', () => {

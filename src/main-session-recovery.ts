@@ -7,7 +7,7 @@ import { codexCommand, connectWorker, type Rpc } from './transport.js';
 import { canonicalPath, readJson, type MainSessionState } from './main-session.js';
 import { Store } from './store.js';
 import { routeCorrelation } from './route-execution.js';
-import { interruptRecovery } from './recovery-coordinator.js';
+import { extendRecoveryWindowForActiveWriter, interruptRecovery } from './recovery-coordinator.js';
 import { redact } from './redact.js';
 
 type RecoveryPrompt = NonNullable<MainSessionState['recovery_prompt']>;
@@ -300,12 +300,14 @@ function deferRecoveryPrompt(statePath: string, deliveryId: string, reason: stri
     const retryAttempt = previousAttempt + 1;
     const delayMs = RECOVERY_PROMPT_RETRY_DELAYS_MS[Math.min(retryAttempt - 1, RECOVERY_PROMPT_RETRY_DELAYS_MS.length - 1)] ?? RECOVERY_PROMPT_RETRY_DELAYS_MS.at(-1)!;
     const retryAt = new Date(Date.now() + delayMs).toISOString();
+    const hadActiveWriterCap = latest.state.recovery_window?.active_writer_capped_at;
+    const activeWriterWindow = extendRecoveryWindowForActiveWriter(latest.state, Date.now(), delayMs);
     latest.prompt.retry_attempt = retryAttempt;
     latest.prompt.due_at = retryAt;
     latest.state.recovery_condition = {
       kind: 'recovery_active_writer',
       message: reason,
-      resume_when: '原始 A 当前回合结束后，NF 将按退避时间自动重试；恢复窗口到期会明确标记为中断。',
+      resume_when: '原始 A 当前回合结束后，NF 将按退避时间自动重试；active-writer 最多延长至首次证据后 10 分钟，仍未恢复会明确标记为中断。',
     };
     // An active writer is expected while A is finishing.  Do not let a stale
     // transport error make NFG claim that the task is permanently failing.
@@ -313,6 +315,27 @@ function deferRecoveryPrompt(statePath: string, deliveryId: string, reason: stri
     // Recovery helpers intentionally do not take the long-lived controller
     // task lock: B may still own it while A is finishing its active turn.
     store.save(latest.state);
+    if (activeWriterWindow?.extended) {
+      store.event(latest.state, 'recovery_active_writer_window_extended', {
+        delivery_id: deliveryId,
+        main_session_id: latest.state.main_session_id,
+        previous_deadline_at: activeWriterWindow.previous_deadline_at,
+        deadline_at: activeWriterWindow.deadline_at,
+        active_writer_started_at: activeWriterWindow.active_writer_started_at,
+        active_writer_max_deadline_at: activeWriterWindow.active_writer_max_deadline_at,
+        capped: activeWriterWindow.capped,
+      });
+    } else if (activeWriterWindow?.capped && !hadActiveWriterCap) {
+      // The cap is represented in state; emit an explicit marker once when
+      // the budget can no longer be extended.
+      store.event(latest.state, 'recovery_active_writer_window_capped', {
+        delivery_id: deliveryId,
+        main_session_id: latest.state.main_session_id,
+        deadline_at: activeWriterWindow.deadline_at,
+        active_writer_started_at: activeWriterWindow.active_writer_started_at,
+        active_writer_max_deadline_at: activeWriterWindow.active_writer_max_deadline_at,
+      });
+    }
     store.event(latest.state, 'main_session_recovery_prompt_deferred', {
       delivery_id: deliveryId,
       main_session_id: latest.state.main_session_id,
