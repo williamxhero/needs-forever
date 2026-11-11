@@ -1,0 +1,50 @@
+[
+  {
+    "warnings": [],
+    "errors": [],
+    "hooks": [
+      {
+        "key": "needs-forever@needs-forever-local:hooks/hooks.json:pre_tool_use:0:0",
+        "event": "preToolUse",
+        "enabled": true,
+        "trust": "trusted",
+        "hash": "sha256:2c355eae4ac5811e0548b8ec187bff9866b07dc01cd3ad67b0a6b87abe70cb61"
+      },
+      {
+        "key": "needs-forever@needs-forever-local:hooks/hooks.json:post_tool_use:0:0",
+        "event": "postToolUse",
+        "enabled": true,
+        "trust": "trusted",
+        "hash": "sha256:534fec7213c3108476ddeb182249307e5b1771be284f69d0ccbd18f0786ec203"
+      },
+      {
+        "key": "needs-forever@needs-forever-local:hooks/hooks.json:session_start:0:0",
+        "event": "sessionStart",
+        "enabled": true,
+        "trust": "trusted",
+        "hash": "sha256:e16c255ab3cc0dcf80ea1104967a04b942484841256f19c220ccea445e6c9b7f"
+      },
+      {
+        "key": "needs-forever@needs-forever-local:hooks/hooks.json:user_prompt_submit:0:0",
+        "event": "userPromptSubmit",
+        "enabled": true,
+        "trust": "trusted",
+        "hash": "sha256:f3664aa3685b481bab61e480d911ff3f9a262b092b24bfc28d703d7a2b354c53"
+      },
+      {
+        "key": "needs-forever@needs-forever-local:hooks/hooks.json:stop:0:0",
+        "event": "stop",
+        "enabled": true,
+        "trust": "trusted",
+        "hash": "sha256:35ffcb45b97f8cbabb3748aa45d3970a8388c8a2d83f13809c5d8b6cae24e91b"
+      },
+      {
+        "key": "needs-forever@needs-forever-local:hooks/hooks.json:interrupt:0:0",
+        "event": "interrupt",
+        "enabled": true,
+        "trust": "trusted",
+        "hash": "sha256:99f11d6eb39f5f1512970d319d7536400b2f7f26fdb901151c6a0a34f4107cc0"
+      }
+    ]
+  }
+]
