@@ -66,7 +66,7 @@ function output(entry: Snapshot['evidence'][number]): unknown {
  * B's supported independent probes; arbitrary stdout JSON cannot grant auth,
  * network, quota, capabilities, success or an observed provider status. */
 export function ingestRouteObservations(state: State, snapshot: Snapshot): number {
-  if (snapshot.evidence_complete === false || snapshot.task_id !== state.task_id || snapshot.task_version !== state.task_version || routeEvidenceDigest(snapshot.task) !== routeEvidenceDigest(redact(state.task)) || snapshot.worker_thread_id !== ((state as State & { main_session_id?: string }).main_session_id ?? state.worker_thread_id)) return 0;
+  if (snapshot.task_id !== state.task_id || snapshot.task_version !== state.task_version || routeEvidenceDigest(snapshot.task) !== routeEvidenceDigest(redact(state.task)) || snapshot.worker_thread_id !== ((state as State & { main_session_id?: string }).main_session_id ?? state.worker_thread_id)) return 0;
   const catalog = new RouteCatalog({ task_id: state.task_id, task_version: state.task_version }, { data: activeRouteCatalog(state) });
   const proofs = snapshotRouteEvidence(snapshot);
   let accepted = 0, inspected = 0;

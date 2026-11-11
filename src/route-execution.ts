@@ -96,6 +96,20 @@ export function captureRouteOutcome(state: State, snapshot: Snapshot, stopId: st
   execution.completed_stop_attempt_id = stopId;
   return { ...routeCorrelation(execution), delivery_id: execution.delivery_id, stop_attempt_id: stopId, attempt_id: attempt.attempt_id, outcome: attempt.outcome, new_evidence: attempt.new_evidence_ids, evidence_ids: attempt.evidence_ids };
 }
-export function plannerFailureFallback(snapshot: Snapshot, reason: string): Decision {
-  return validateDecision(JSON.stringify(routeInventoryDecision(snapshot, reason)), snapshot);
+export class PlannerFallbackUnavailableError extends Error {}
+export function plannerFailureFallback(snapshot: Snapshot, reason: string, state?: State): Decision {
+  try {
+    const candidate = routeInventoryDecision(snapshot, reason);
+    const selected = candidate.route_plan!.candidates[0]!;
+    if (selected.evidence_ids.length) selected.discriminating_check = { description: 'Use the complete current independent results to distinguish changed route facts before another inventory attempt.', evidence_ids: [...selected.evidence_ids] };
+    const decision = validateDecision(JSON.stringify(candidate), snapshot);
+    // A budget-trimmed ledger is context for C, never permission to dispatch.
+    // Validate the fallback against full current state without persisting a
+    // proposal, counting an attempt or creating a real delivery.
+    if (state) prepareRouteExecution(structuredClone(state), decision, snapshot, 'fallback-admission-check', 'fallback-admission-check');
+    return decision;
+  } catch (error) {
+    if (!state) throw error;
+    throw new PlannerFallbackUnavailableError(`C 连续三次未产生可交付判断，备用诊断也未获准：${String(redact((error as Error).message))} 未向 WORKER 发送新指令。`);
+  }
 }

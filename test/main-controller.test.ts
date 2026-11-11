@@ -11,7 +11,7 @@ import { routeInventoryDecision } from '../src/planning.js';
 import type { Snapshot } from '../src/types.js';
 import { createServer } from 'node:http';
 
-function installed(name: string, transport: unknown = {}, sessionId = name, boundStatus = 0, limits: Record<string, number> = {}, appServer?: Record<string, unknown>, desktopPid?: number, c2Mode = 'legacy', authorization = 'Local files') {
+function installed(name: string, transport: unknown = {}, sessionId = name, boundStatus = 0, limits: Record<string, number> = {}, appServer?: Record<string, unknown>, desktopPid?: number, c2Mode = 'legacy', authorization = 'Local files', fixtureOptions: Record<string, unknown> = {}) {
   const directory = resolve('runs/main-controller', `${name}-${Date.now()}`);
   const workspace = join(directory, '工作 空间');
   const plugin = join(directory, '插件 安装副本');
@@ -24,7 +24,7 @@ function installed(name: string, transport: unknown = {}, sessionId = name, boun
   const scenario = join(directory, 'server.json');
   if (appServer) writeFileSync(scenario, JSON.stringify({ trace, plugin_root: plugin, ...appServer }));
   writeFileSync(task, JSON.stringify({ schema_version: 1, task_id: name, workspace, c2: { mode: c2Mode }, goal: 'Three stages', acceptance: [{ id: 'all', text: 'Three stages complete' }], authorization, limits }));
-  writeFileSync(fixture, JSON.stringify({ desktop_version: 'simulated', cli_version: 'simulated', transport, ...(desktopPid ? { desktop_pid: desktopPid } : {}), ...(appServer ? { app_server_argv: [process.execPath, resolve('test/fixtures/app-server.mjs'), scenario] } : {}) }));
+  writeFileSync(fixture, JSON.stringify({ desktop_version: 'simulated', cli_version: 'simulated', transport, ...(desktopPid ? { desktop_pid: desktopPid } : {}), ...(appServer ? { app_server_argv: [process.execPath, resolve('test/fixtures/app-server.mjs'), scenario] } : {}), ...fixtureOptions }));
   const control = join(plugin, 'scripts/main-session.mjs');
   const run = (command: string, args: string[] = []) => spawnSync(process.execPath, [control, command, '--state', state, ...args], { cwd: workspace, encoding: 'utf8', timeout: 20_000 });
   const hook = (event: Record<string, unknown>) => spawnSync(process.execPath, [join(plugin, 'scripts/lifecycle.mjs'), '--test-fixture', fixture], { cwd: workspace, env: { ...process.env, PLUGIN_ROOT: plugin }, input: JSON.stringify({ session_id: sessionId, cwd: workspace, turn_id: 'same-turn', ...event }), encoding: 'utf8', timeout: 20_000 });
@@ -37,6 +37,23 @@ function installed(name: string, transport: unknown = {}, sessionId = name, boun
   const setDesktopPid = (pid: number) => writeFileSync(fixture, JSON.stringify({ ...JSON.parse(readFileSync(fixture, 'utf8')), desktop_pid: pid }));
   return { directory, workspace, plugin, task, state, fixture, trace, run, hook, setDesktopPid };
 }
+
+test('a forbidden planner fallback interrupts immediately with its cause and never emits an empty worker direction', (t) => {
+  const f = installed('c2-fallback-interruption', { decision: { action: 'CONTINUE', reason: 'Invalid planner output.', evidence_ids: [], next_message: 'Audit.', external: null } }, 'c2-fallback-interruption', 0, {}, undefined, undefined, 'enforce', 'Local files', { recovery_delays_ms: [0, 0, 0] });
+  t.after(() => f.run('pause'));
+  assert.equal(JSON.parse(f.hook({ hook_event_name: 'Stop' }).stdout).decision, 'block');
+  const second = f.hook({ hook_event_name: 'Stop' });
+  assert.equal(second.status, 0, second.stderr);
+  assert.deepEqual(JSON.parse(second.stdout), {});
+  const state = JSON.parse(f.run('status').stdout);
+  assert.equal(state.status, 'INTERRUPTED');
+  assert.equal(state.recovery_condition.kind, 'recovery_unavailable');
+  assert.match(state.last_error, /备用诊断.*未获准/);
+  assert.equal(state.pending_action, null);
+  const events = readFileSync(join(f.workspace, '.codex-supervisor', 'c2-fallback-interruption', 'events.jsonl'), 'utf8').trim().split(/\r?\n/).map(line => JSON.parse(line));
+  assert.equal(events.filter(e => e.type === 'send_prepared').length, 1);
+  assert.equal(events.at(-1).type, 'recovery_interrupted');
+});
 
 test('native C2 admission redacts the entire selected decision before checkpoint and recovery prompt', (t) => {
   const secret = 'sk-abcdefghijklmnop'; // Deliberately fake credential, never a real account value.

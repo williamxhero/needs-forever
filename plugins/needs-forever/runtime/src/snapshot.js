@@ -35,6 +35,7 @@ export function buildSnapshot(state, workerTurnId, events) {
     const planItem = [...observed.values()].findLast((entry) => entry.item.type === 'plan');
     const plans = latestPlan ? object(latestPlan.params).plan : planItem?.item.text;
     const verification = events.findLast((entry) => ['verification_result', 'verification_passed', 'verification_failed', 'protected_file_changed'].includes(String(entry.type)));
+    const historicalVerification = !!verification && current.some((entry) => events.indexOf(entry) > events.indexOf(verification));
     const instructions = events.filter((entry) => entry.type === 'send_prepared' && entry.source_turn_id).slice(-2).map((entry) => {
         const confirmation = events.find((event) => event.type === 'send_confirmed' && event.delivery_id === entry.delivery_id);
         const result = workerEvents.findLast((event) => event.method === 'turn/completed' && turnId(event) === confirmation?.turn_id);
@@ -64,7 +65,7 @@ export function buildSnapshot(state, workerTurnId, events) {
         snapshot_id: randomUUID(), task_id: state.task_id, task_version: state.task_version, worker_thread_id: state.worker_thread_id, worker_turn_id: workerTurnId,
         task: redact(state.task), evidence: [],
         plan: plans ? { observed: clip(plans, 1800), remaining: Array.isArray(plans) ? clip(plans.filter((entry) => object(entry).status !== 'completed'), 1800) : 'See observed worker plan; not independently verified.' } : { missing: 'No current plan or remaining-items update observed.' },
-        recent_verification: verification ? clip(verification, 1800) : { missing: 'No independent verification result recorded yet.' },
+        recent_verification: verification ? { ...object(clip(verification, 1800)), ...(historicalVerification ? { historical_context_only: true } : {}) } : { missing: 'No independent verification result recorded yet.' },
         recent_instructions: instructions,
         repeated_failure: {
             investigate: repeatedSignatures.length > 0,
@@ -77,6 +78,8 @@ export function buildSnapshot(state, workerTurnId, events) {
         snapshot.omissions.push('Current plan and remaining items were not observed.');
     if (!verification)
         snapshot.omissions.push('Independent verification has not run.');
+    if (historicalVerification)
+        snapshot.omissions.push('Previous fixed verification is historical context only; current proof must independently support a new verification run.');
     if (JSON.stringify(snapshot).length > PROOF_BUDGET - 1800)
         throw new Error('Task contract and mandatory snapshot metadata exceed the 24000-character budget; goal, acceptance and authorization were not truncated.');
     const candidates = [...observed.values()].sort((left, right) => {
@@ -87,10 +90,11 @@ export function buildSnapshot(state, workerTurnId, events) {
     for (const { item, event } of candidates) {
         if (!['commandExecution', 'fileChange', 'functionCallOutput', 'agentMessage', 'plan'].includes(String(item.type)))
             continue;
-        const entry = { id: `E${snapshot.evidence.length + 1}`, type: String(item.type), value: item, source: { event_id: String(event.event_id), ...(typeof event.at === 'string' ? { observed_at: event.at } : {}), thread_id: state.worker_thread_id, turn_id: workerTurnId, item_id: String(item.id) } };
+        const entry = { id: `E${snapshot.evidence.length + 1}`, type: String(item.type), value: item, complete: true, source: { event_id: String(event.event_id), ...(typeof event.at === 'string' ? { observed_at: event.at } : {}), thread_id: state.worker_thread_id, turn_id: workerTurnId, item_id: String(item.id) } };
         snapshot.evidence.push(entry);
         if (JSON.stringify(snapshot).length > PROOF_BUDGET - 600) {
             snapshot.evidence_complete = false;
+            entry.complete = false;
             snapshot.omissions.push(`${entry.id}: item payload truncated; full record is at source.event_id.`);
             for (const limit of [1800, 600, 160]) {
                 entry.value = clip(item, limit);
@@ -104,8 +108,14 @@ export function buildSnapshot(state, workerTurnId, events) {
             }
         }
     }
-    if (verification) {
-        const entry = { id: `E${snapshot.evidence.length + 1}`, type: 'verification_result', value: clip(verification, 1800), source: { event_id: String(verification.event_id), ...(typeof verification.at === 'string' ? { observed_at: verification.at } : {}) } };
+    if (verification && !historicalVerification) {
+        const value = clip(verification, 1800);
+        const complete = JSON.stringify(value) === JSON.stringify(verification);
+        if (!complete) {
+            snapshot.evidence_complete = false;
+            snapshot.omissions.push('Fixed verification output truncated; gather concise independent verification proof before a terminal decision.');
+        }
+        const entry = { id: `E${snapshot.evidence.length + 1}`, type: 'verification_result', value, complete, source: { event_id: String(verification.event_id), ...(typeof verification.at === 'string' ? { observed_at: verification.at } : {}) } };
         snapshot.evidence.push(entry);
         if (JSON.stringify(snapshot).length > PROOF_BUDGET - 600) {
             snapshot.evidence.pop();

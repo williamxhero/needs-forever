@@ -132,7 +132,7 @@ function supersedesCatalog(catalog, receipt, proof) {
 }
 export function ingestHttpRouteProbes(state, snapshot) {
     const context = state.route_probe;
-    if (!context || context.scope_sha256 !== scopeDigest(state) || JSON.stringify(context.argv_prefix) !== JSON.stringify(argvPrefix(context.state_path)) || snapshot.evidence_complete === false || snapshot.task_id !== state.task_id || snapshot.task_version !== state.task_version || routeEvidenceDigest(snapshot.task) !== routeEvidenceDigest(redact(state.task)))
+    if (!context || context.scope_sha256 !== scopeDigest(state) || JSON.stringify(context.argv_prefix) !== JSON.stringify(argvPrefix(context.state_path)) || snapshot.task_id !== state.task_id || snapshot.task_version !== state.task_version || routeEvidenceDigest(snapshot.task) !== routeEvidenceDigest(redact(state.task)))
         return 0;
     const worker = state.main_session_id ?? state.worker_thread_id;
     if (snapshot.worker_thread_id !== worker)
