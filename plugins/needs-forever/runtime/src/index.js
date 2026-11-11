@@ -14,4 +14,8 @@ export { routeInventoryDecision, validateC2Decision } from './planning.js';
 export { validateDecision, readHistoricalDecision, decisionSchema } from './judge.js';
 export { discoverLocalRoutes, prepareRouteExecution, confirmRouteExecution, captureRouteOutcome, plannerFailureFallback, routeCorrelation } from './route-execution.js';
 export { ingestRouteObservations } from './route-observations.js';
+export { LocalTrackingStore, contractIdentity } from './local-tracking.js';
+export { GhCliAdapter, GitHubTrackingStore, GITHUB_TRACKING_END, GITHUB_TRACKING_START } from './github-tracking.js';
+export { createTracking, loadTracking, updateTracking, locatorForSelection, storeForLocator, trackingLocator, assertTrackingContract } from './tracking-integration.js';
+export { loadMainSessionTracking, updateMainSessionTracking } from './main-session.js';
 export { initializeHttpRouteProbe, executeHttpRouteProbe, ingestHttpRouteProbes } from './http-route-probe.js';
