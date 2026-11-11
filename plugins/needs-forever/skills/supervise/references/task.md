@@ -25,4 +25,8 @@
 
 两个 limits 默认均为 null；用户主动要求时才填写正数。限制触发 PAUSED/user_limit 后，显式提高或移除限制才能恢复。不要在 authorization 中存放密钥。
 
+可选的跟踪记录必须由用户显式选择后端。启动时传入 `--tracking-backend local-json --tracking-path <绝对 JSON 路径> --tracking-clarification <绝对澄清 JSON>`，或传入 `--tracking-backend github-issue --tracking-repository <owner/repo> --tracking-title <Issue 标题> --tracking-clarification <绝对澄清 JSON>`。澄清 JSON 的字段为 `value`、`priority`、`evidence`、`authorization`、`stop_condition`、`budget`。插件会先创建并回读记录，再写入 checkpoint 的 backend、locator 和合同摘要；记录失败时不开始监督，也不会静默换用另一后端。恢复沿用 checkpoint 的 locator，并拒绝显式 locator 或合同不匹配。
+
+记录检查点使用 `tracking-load --state <绝对路径>` 和 `tracking-update --state <绝对路径> --acceptance-id <id> --tracking-status <TODO|IN_PROGRESS|REPORTED_DONE|BLOCKED> --tracking-evidence <证据>`。记录的 `REPORTED_DONE` 仅表示 Agent 已报告完成，仍需现有 C/独立验收产生 NF 的 `DONE`；跟踪记录不能改变 `DONE`、`WAIT_EXTERNAL` 或暂停语义。
+
 start 的回执包含 `state_path`、日志路径和 session。保存这些路径；所有可变任务数据都在工作区或显式 --state 目录，插件升级或重装不应删掉任务记录。

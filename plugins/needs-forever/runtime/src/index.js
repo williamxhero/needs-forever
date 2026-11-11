@@ -16,4 +16,6 @@ export { discoverLocalRoutes, prepareRouteExecution, confirmRouteExecution, capt
 export { ingestRouteObservations } from './route-observations.js';
 export { LocalTrackingStore, contractIdentity } from './local-tracking.js';
 export { GhCliAdapter, GitHubTrackingStore, GITHUB_TRACKING_END, GITHUB_TRACKING_START } from './github-tracking.js';
+export { createTracking, loadTracking, updateTracking, locatorForSelection, storeForLocator, trackingLocator, assertTrackingContract } from './tracking-integration.js';
+export { loadMainSessionTracking, updateMainSessionTracking } from './main-session.js';
 export { initializeHttpRouteProbe, executeHttpRouteProbe, ingestHttpRouteProbes } from './http-route-probe.js';

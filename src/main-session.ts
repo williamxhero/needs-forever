@@ -7,6 +7,8 @@ import { Store } from './store.js';
 import { record, text } from './types.js';
 import type { State, Task } from './types.js';
 import { createRecoveryPlan, waitForNativeReceipt, resetRecoveryWindow } from './recovery-coordinator.js';
+import { assertTrackingContract, createTracking, loadTracking, locatorForSelection, trackingLocator, updateTracking, type TrackingLocator, type TrackingSelection } from './tracking-integration.js';
+import type { TrackingUpdate, TrackingRecord } from './local-tracking.js';
 
 export interface MainSessionState extends State {
   control_mode: 'main-session';
@@ -71,6 +73,7 @@ export interface MainSessionState extends State {
   processed_tool_ids?: string[];
   recovery_history?: unknown[];
   controller_startup_deadline?: string;
+  tracking?: TrackingLocator;
 }
 export interface StopRequest {
   schema_version: 1;
@@ -207,10 +210,11 @@ export function validateTask(input: unknown): Task {
   return result;
 }
 function validatedTask(path: string): Task { return validateTask(readJson(path)); }
-export function prepareMainSession(taskPath: string, statePath: string, simulated = false): MainSessionState {
+export function prepareMainSession(taskPath: string, statePath: string, simulated = false, tracking?: TrackingSelection): MainSessionState {
   if (existsSync(statePath)) throw new Error('Task state already exists; use explicit resume.');
   const task = validatedTask(taskPath);
   if (canonicalPath(process.cwd()) !== canonicalPath(task.workspace)) throw new Error('Preparation cwd must match the task workspace.');
+  const trackingRecord = tracking ? createTracking(task, tracking) : undefined;
   const store = new Store(statePath);
   store.lock(task);
   try {
@@ -223,6 +227,7 @@ export function prepareMainSession(taskPath: string, statePath: string, simulate
       handled_turn_ids: [], pending_action: null, retry: { kind: null, attempt: 0, next_at: null }, last_decision: null,
       worker_turn_count: 0, elapsed_active_seconds: 0, updated_at: new Date().toISOString(), codex_version: null, mode: simulated ? 'simulated' : 'live',
       recovery_condition: { kind: 'native_hook_required', message: 'Awaiting a correlated native Desktop hook; supervision is not active.', resume_when: 'Review/trust the plugin hooks and run preparation from the intended main session.' },
+      ...(trackingRecord ? { tracking: trackingLocator(trackingRecord) } : {}),
     };
     state.recovery_plan = createRecoveryPlan(state, state.recovery_condition!, true);
     store.protect(state);
@@ -232,7 +237,7 @@ export function prepareMainSession(taskPath: string, statePath: string, simulate
     return state;
   } finally { store.release(); }
 }
-export function resumeMainSession(statePath: string, taskPath?: string, simulated = false): MainSessionState {
+export function resumeMainSession(statePath: string, taskPath?: string, simulated = false, tracking?: TrackingSelection): MainSessionState {
   let state = readJson(statePath) as MainSessionState;
   if (state.control_mode !== 'main-session' || (!state.main_session_id && state.binding.status !== 'PENDING_NATIVE_HOOK') || state.status === 'DONE') throw new Error('Explicit resume requires an unfinished main-session checkpoint.');
   const store = new Store(statePath); store.lock(state.task, true);
@@ -246,8 +251,14 @@ export function resumeMainSession(statePath: string, taskPath?: string, simulate
     const task = taskPath ? validatedTask(taskPath) : validateTask(state.task);
     if (task.task_id !== state.task_id || canonicalPath(task.workspace) !== canonicalPath(state.task.workspace) || canonicalPath(process.cwd()) !== canonicalPath(task.workspace)) throw new Error('Resume must preserve task and workspace identity.');
     if ((state.mode === 'simulated') !== simulated) throw new Error('Resume must preserve live/simulated mode.');
-    if (state.status !== 'PAUSED' && (task.goal !== state.task.goal || task.authorization !== state.task.authorization)) throw new Error('Changing goal or authorization requires durable PAUSED first.');
+    if (state.status !== 'PAUSED' && (task.goal !== state.task.goal || task.authorization !== state.task.authorization || JSON.stringify(task.acceptance) !== JSON.stringify(state.task.acceptance))) throw new Error('Changing goal, authorization, or acceptance requires durable PAUSED first.');
     if (JSON.stringify(task.verify) !== JSON.stringify(state.task.verify)) throw new Error('The original independent verifier and protected baseline are fixed for this task.');
+    if (state.tracking) {
+      const expected = tracking ? locatorForSelection(tracking) : state.tracking;
+      if (expected.backend !== state.tracking.backend || expected.locator !== state.tracking.locator) throw new Error('Resume tracking selection does not match the persisted locator.');
+      const record = loadTracking(task, state.tracking);
+      assertTrackingContract(record, task, state.tracking);
+    } else if (tracking) throw new Error('Cannot add tracking to an existing checkpoint without an explicit new task.');
     const limits = reachedLimits(task.limits, state);
     if (limits.turns || limits.time) throw new Error('Cumulative user_limit reached; explicitly raise/remove limits before resume.');
     const leasePath = state.main_session_id ? mainLeasePath(state.main_session_id) : null;
@@ -274,6 +285,22 @@ export function resumeMainSession(statePath: string, taskPath?: string, simulate
     store.save(state); store.event(state, 'main_session_resume_prepared', { main_session_id: state.main_session_id, run_generation: state.run_generation });
     registerState(task.workspace, statePath); return state;
   } finally { store.release(); }
+}
+
+export function loadMainSessionTracking(statePath: string): TrackingRecord {
+  const state = readJson(statePath) as MainSessionState;
+  if (!state.tracking) throw new Error('This checkpoint has no tracking record.');
+  const record = loadTracking(state.task, state.tracking);
+  assertTrackingContract(record, state.task, state.tracking);
+  return record;
+}
+
+export function updateMainSessionTracking(statePath: string, update: TrackingUpdate): TrackingRecord {
+  const state = readJson(statePath) as MainSessionState;
+  if (!state.tracking) throw new Error('This checkpoint has no tracking record.');
+  const record = updateTracking(state.task, state.tracking, update);
+  assertTrackingContract(record, state.task, state.tracking);
+  return record;
 }
 export function mainSessionStatus(path: string): Record<string, unknown> {
   const state = readJson(path);
