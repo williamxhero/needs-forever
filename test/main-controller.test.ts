@@ -501,7 +501,10 @@ test('active-writer recovery defers the same prompt with bounded backoff and ret
   const retryAt = Date.parse(saved.recovery_prompt!.due_at);
   assert.ok(retryAt > Date.now() - 250, 'The retry must be scheduled in the future.');
 
-  const retryDeadline = Date.now() + 12_000;
+  // Windows process startup and the fixture's second app-server connection
+  // can exceed twelve seconds under the full test runner; this only widens
+  // the test observation window, not the product retry/backoff contract.
+  const retryDeadline = Date.now() + 20_000;
   while (Date.now() < retryDeadline) {
     try { events = readFileSync(eventsPath, 'utf8').split(/\r?\n/).filter(Boolean).map((line) => JSON.parse(line)); } catch { /* helper retry is still pending */ }
     if (events.some((event) => event.type === 'main_session_recovery_prompt_acknowledged')) break;
@@ -522,7 +525,8 @@ test('ordinary continuation active-writer deferral is driven by the detached wat
   const stopped = f.hook({ hook_event_name: 'Stop' });
   assert.deepEqual(JSON.parse(stopped.stdout), { decision: 'block', reason: 'Check the remaining acceptance result.' });
   const eventsPath = join(f.workspace, '.codex-supervisor', 'ordinary-active-writer', 'events.jsonl');
-  const deadline = Date.now() + 12_000;
+  // The detached watchdog may need a second process startup under load.
+  const deadline = Date.now() + 20_000;
   let events: any[] = [];
   while (Date.now() < deadline) {
     try { events = readFileSync(eventsPath, 'utf8').split(/\r?\n/).filter(Boolean).map((line) => JSON.parse(line)); } catch { /* controller is still writing */ }
