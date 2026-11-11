@@ -52,7 +52,8 @@ for await (const line of lines) {
     send({ id: message.id, result: { config, origins: {}, layers: null } });
   } else if (message.method === 'hooks/list') {
     const names = ['sessionStart', 'userPromptSubmit', 'preToolUse', 'postToolUse', 'stop', 'interrupt'];
-    send({ id: message.id, result: { data: [{ hooks: names.map(eventName => ({ eventName, sourcePath: resolve(scenario.plugin_root ?? '.', 'hooks/hooks.json'), enabled: true, trustStatus: scenario.recovery_hook_trust ?? 'trusted' })) }] } });
+    const sourcePath = resolve(scenario.plugin_root ?? '.', 'hooks/hooks.json');
+    send({ id: message.id, result: { data: [{ hooks: names.map(eventName => ({ eventName, sourcePath, enabled: true, trustStatus: scenario.recovery_hook_trust ?? 'trusted' })) }] } });
   } else if (message.method === 'thread/start' || message.method === 'thread/resume') {
     const judge = message.params.sandbox === 'read-only';
     const threadId = judge ? `judge-${++judges}` : (scenario.main_session_thread_id ?? 'worker-from-server');
@@ -139,6 +140,18 @@ for await (const line of lines) {
       const finishJudge = () => send({ method: 'turn/completed', params: { threadId: message.params.threadId, turn: { id: turnId, status: 'completed', items: scenario.stream_items ? [] : [judgeItem] } } });
       const holdThisJudge = scenario.hold_judge || (scenario.hold_judge_once && judges === 1) || judges <= (scenario.hold_judge_until ?? 0);
       if (!holdThisJudge) { if (scenario.judge_delay_ms) setTimeout(finishJudge, scenario.judge_delay_ms); else finishJudge(); }
+      continue;
+    }
+    // Recovery tests can model Codex's -32600 active-writer race: history is
+    // idle at thread/resume time, then the original A claims the writer before
+    // NF's turn/start reaches the host.  The production helper must defer the
+    // same delivery id and retry with bounded backoff.
+    const recoveryText = String(message.params.input?.[0]?.text ?? '');
+    const recoveryMatch = String(scenario.recovery_active_writer_match ?? 'NF 自动恢复绑定');
+    if (scenario.recovery_active_writer_once && !scenario.recovery_active_writer_consumed && recoveryText.includes(recoveryMatch)) {
+      scenario.recovery_active_writer_consumed = true;
+      writeFileSync(process.argv[2], JSON.stringify(scenario));
+      send({ id: message.id, error: { code: -32600, message: 'already has an active writer' } });
       continue;
     }
     turns++;

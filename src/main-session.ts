@@ -57,6 +57,8 @@ export interface MainSessionState extends State {
     run_generation: string;
     message: string;
     due_at: string;
+    /** Number of bounded automatic delivery deferrals for the current prompt. */
+    retry_attempt?: number;
   };
   stop_transport?: { request: StopRequest; outcome: 'pending' | 'returned' | 'unknown' | 'failed'; error?: string; delivery_id?: string };
   continuation_confirmed?: boolean;

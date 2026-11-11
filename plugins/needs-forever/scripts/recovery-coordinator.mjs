@@ -7,7 +7,9 @@ import { fileURLToPath } from 'node:url';
 
 const statePath = process.argv[2];
 if (!statePath) throw new Error('Recovery coordinator requires a state path.');
-const interval = Math.max(100, Number(process.argv[3] ?? 250));
+const interval = Math.max(100, Number(process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : 250));
+const fixtureFlag = process.argv.indexOf('--test-fixture');
+const fixturePath = fixtureFlag >= 0 ? process.argv[fixtureFlag + 1] : undefined;
 const pluginRoot = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const leasePath = `${statePath}.recovery-coordinator.lock`;
 let leaseFd;
@@ -40,15 +42,22 @@ try { while (!stopping && existsSync(statePath)) {
   if (snapshot.status === 'DONE' || snapshot.status === 'INTERRUPTED' || (snapshot.status === 'PAUSED' && (snapshot.phase !== 'RECOVERING' || snapshot.pause_reason || !snapshot.main_session_id)) || snapshot.recovery_plan?.status === 'cancelled') break;
   try {
     const result = reconcileRecoveryTick(statePath);
-    if (result.waitingNative) {
+    const promptDue = snapshot.recovery_prompt && Date.parse(snapshot.recovery_prompt.due_at ?? '') <= Date.now();
+    if (result.waitingNative || promptDue) {
       try {
-        driveNativeRecovery(statePath, pluginRoot);
+        driveNativeRecovery(statePath, pluginRoot, fixturePath);
       } catch { /* The next tick retries after an interrupted checkpoint. */ }
-      // Native A is the only authority that can produce the next B. Polling
-      // remains bounded and quiet while it waits for that real receipt.
-      await new Promise((resolve) => setTimeout(resolve, interval));
+      // Native A is the only authority that can produce the next B. Ordinary
+      // continuation prompts also use this watchdog: an active-writer race is
+      // deferred with a persisted due_at and must be retried automatically.
+      const nextPromptAt = snapshot.recovery_prompt ? Date.parse(snapshot.recovery_prompt.due_at ?? '') : NaN;
+      const wait = Number.isFinite(nextPromptAt) ? Math.max(100, Math.min(interval, nextPromptAt - Date.now())) : interval;
+      await new Promise((resolve) => setTimeout(resolve, wait));
     } else {
-      const due = result.nextRetryAt ? Math.max(0, Date.parse(result.nextRetryAt) - Date.now()) : interval;
+      const nextPromptAt = snapshot.recovery_prompt ? Date.parse(snapshot.recovery_prompt.due_at ?? '') : NaN;
+      const retryAt = result.nextRetryAt ? Date.parse(result.nextRetryAt) : NaN;
+      const candidates = [nextPromptAt, retryAt].filter(Number.isFinite);
+      const due = candidates.length ? Math.max(0, Math.min(...candidates) - Date.now()) : interval;
       await new Promise((resolve) => setTimeout(resolve, Math.min(interval, Math.max(100, due))));
     }
   } catch {

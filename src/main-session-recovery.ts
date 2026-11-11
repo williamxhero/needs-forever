@@ -14,13 +14,26 @@ type RecoveryPrompt = NonNullable<MainSessionState['recovery_prompt']>;
 
 class RecoverySetupError extends Error {}
 
+/**
+ * A native app-server can reject turn/start while the original A still owns
+ * its writer.  This is a transient race, not a failed delivery and must not
+ * overwrite the recovery checkpoint with a misleading error.  Keep retries
+ * bounded by the existing recovery window (normally two minutes).
+ */
+const RECOVERY_PROMPT_RETRY_DELAYS_MS = [5_000, 15_000, 30_000, 60_000] as const;
+
+function isActiveWriterError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return /active writer|already has an active writer|writer is active|writer.*in progress|正在.*进行中|已有.*写入/i.test(message);
+}
+
 async function verifyRecoveryHooks(rpc: Rpc, workspace: string, pluginRoot: string): Promise<void> {
   const result = await rpc.request<any>('hooks/list', { cwds: [workspace] });
   const source = canonicalPath(resolve(pluginRoot, 'hooks/hooks.json'));
   const hooks = (result?.data ?? []).flatMap((entry: any) => entry.hooks ?? []).filter((hook: any) => typeof hook.sourcePath === 'string' && canonicalPath(hook.sourcePath) === source);
   for (const name of ['sessionStart', 'userPromptSubmit', 'preToolUse', 'postToolUse', 'stop', 'interrupt']) {
     const hook = hooks.find((entry: any) => entry.eventName === name);
-    if (!hook) throw new RecoverySetupError('Codex 未加载 Needs Forever hook；请检查插件是否已启用并重新加载宿主。');
+    if (!hook) throw new RecoverySetupError(`Codex 未加载 Needs Forever hook（${name}；期望 ${source}）；请检查插件是否已启用并重新加载宿主。`);
     if (!hook.enabled) throw new RecoverySetupError('Needs Forever hook 已被禁用；请在 Codex 设置 → Hooks 中启用。');
     if (hook.trustStatus !== 'trusted') throw new RecoverySetupError('Needs Forever hook 尚未信任；请在 Codex 设置 → Hooks 中审阅并信任。');
   }
@@ -29,16 +42,19 @@ async function verifyRecoveryHooks(rpc: Rpc, workspace: string, pluginRoot: stri
 /** The global host also drives recovery when no B/coordinator is alive. */
 export function driveNativeRecovery(path: string, pluginRoot: string, fixturePath?: string): void {
   const state = readJson(path) as MainSessionState;
-  if (state.status !== 'ACTIVE' || state.control_mode !== 'main-session' || state.binding?.status !== 'PENDING_NATIVE_HOOK' || state.binding.operation !== 'rebind') return;
-  if (state.recovery_window && Date.parse(state.recovery_window.deadline_at) <= Date.now()) return;
+  if (state.status !== 'ACTIVE' || state.control_mode !== 'main-session' || !state.main_session_id) return;
   const prompt = state.recovery_prompt;
-  if (prompt?.kind === 'native_rebind' && prompt.run_generation === state.run_generation) {
+  if (prompt && prompt.run_generation === state.run_generation && (prompt.kind !== 'native_rebind' || (state.binding?.status === 'PENDING_NATIVE_HOOK' && state.binding.operation === 'rebind'))) {
+    if (state.recovery_window && Date.parse(state.recovery_window.deadline_at) <= Date.now()) return;
     // The helper owns the worker turn until completion, not just its RPC ack.
     try {
       const owner = JSON.parse(readFileSync(`${path}.recovery-prompt.lock`, 'utf8')) as { pid: number };
       try { process.kill(owner.pid, 0); return; } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ESRCH') return; }
     } catch { /* No live delivery helper; reconcile the saved delivery. */ }
-    if (Date.parse(prompt.due_at) + 30_000 > Date.now()) return;
+    // `due_at` is advanced after every bounded deferral.  Older checkpoints
+    // used a fixed thirty-second grace period; honoring the persisted due time
+    // avoids both a busy loop and an unnecessary extra thirty-second stall.
+    if (Date.parse(prompt.due_at) > Date.now()) return;
     // Keep the delivery id for uncertain outcomes; the helper reconciles it
     // against original-A history before considering any new send.
     spawnPrompt(path, pluginRoot, fixturePath, state.task.workspace);
@@ -96,12 +112,19 @@ function eventPath(statePath: string): string { return resolve(resolve(statePath
 
 function hasDeliveryEvent(statePath: string, deliveryId: string, types: Set<string>): boolean {
   if (!existsSync(eventPath(statePath))) return false;
-  return readFileSync(eventPath(statePath), 'utf8').split(/\r?\n/).filter(Boolean).some((line) => {
+  let unresolved = false;
+  for (const line of readFileSync(eventPath(statePath), 'utf8').split(/\r?\n/).filter(Boolean)) {
     try {
       const event = JSON.parse(line) as Record<string, unknown>;
-      return types.has(String(event.type ?? '')) && event.delivery_id === deliveryId;
-    } catch { return false; }
-  });
+      if (types.has(String(event.type ?? '')) && event.delivery_id === deliveryId) unresolved = true;
+      // A known active-writer rejection proves that the preceding `sent`
+      // audit was a preflight marker, not an accepted provider delivery. It
+      // may therefore be retried with the same id. Unknown send outcomes keep
+      // the conservative no-duplicate behavior (retryable=false).
+      if (event.type === 'main_session_recovery_prompt_deferred' && event.delivery_id === deliveryId && event.retryable === true) unresolved = false;
+    } catch { /* ignore malformed historical lines */ }
+  }
+  return unresolved;
 }
 
 function acquireLease(statePath: string): { release: () => void } | null {
@@ -192,11 +215,11 @@ export async function deliverMainSessionRecoveryPrompt(statePath: string, fixtur
         return;
       }
       if (hasDeliveryEvent(statePath, prompt.delivery_id, new Set(['main_session_recovery_prompt_sent']))) {
-        log(statePath, state, 'main_session_recovery_prompt_deferred', { delivery_id: prompt.delivery_id, reason: 'Previous send outcome is uncertain; no duplicate message was sent.' });
+        deferRecoveryPrompt(statePath, prompt.delivery_id, '上一次发送结果不确定，NF 不重复发送；确认原始 A 历史后自动重试。', undefined, false);
         return;
       }
       if (turns.some((turn: any) => turn?.status === 'inProgress')) {
-        log(statePath, state, 'main_session_recovery_prompt_deferred', { delivery_id: prompt.delivery_id, main_session_id: state.main_session_id, reason: 'Original A already has an in-progress turn.' });
+        deferRecoveryPrompt(statePath, prompt.delivery_id, '原始 A 当前已有进行中的回合，NF 将在其结束后自动重试。');
         return;
       }
       const latest = currentPrompt(statePath);
@@ -232,6 +255,11 @@ export async function deliverMainSessionRecoveryPrompt(statePath: string, fixtur
         const store = new Store(statePath); store.save(latest.state);
         store.event(latest.state, 'recovery_interrupted', { reason: error.message, cause: 'hook_setup' });
       }
+    } else if (isActiveWriterError(error)) {
+      // Codex -32600 / "already has an active writer" means A is still
+      // running.  Preserve the Stop and prompt identities, clear the stale
+      // failure text, and record an auditable bounded retry instead.
+      deferRecoveryPrompt(statePath, prompt.delivery_id, '原始 A 当前仍有进行中的回合，NF 等待其完成后自动重试。', error);
     } else {
       const latest = currentPrompt(statePath);
       if (latest?.prompt.delivery_id === prompt.delivery_id) {
@@ -241,6 +269,48 @@ export async function deliverMainSessionRecoveryPrompt(statePath: string, fixtur
         new Store(statePath).save(latest.state);
       }
     }
-    log(statePath, state, 'main_session_recovery_prompt_failed', { delivery_id: prompt.delivery_id, main_session_id: state.main_session_id, error: error instanceof Error ? error.message : String(error) });
+    if (!isActiveWriterError(error)) {
+      log(statePath, state, 'main_session_recovery_prompt_failed', { delivery_id: prompt.delivery_id, main_session_id: state.main_session_id, error: error instanceof Error ? error.message : String(error) });
+    }
   } finally { clearTimeout(timer); if (monitor) clearInterval(monitor); lease.release(); }
+}
+
+/**
+ * Persist a single retry schedule for a prompt that could not be delivered
+ * because A was still writing (or because the preflight observed an active
+ * turn).  The helper owns the same delivery id across retries, so no duplicate
+ * prompt can be created, and the recovery deadline remains the hard stop.
+ */
+function deferRecoveryPrompt(statePath: string, deliveryId: string, reason: string, error?: unknown, retryable = true): void {
+  const initial = currentPrompt(statePath);
+  if (!initial?.prompt || initial.prompt.delivery_id !== deliveryId) return;
+  const store = new Store(statePath);
+  const latest = currentPrompt(statePath);
+  if (!latest?.prompt || latest.prompt.delivery_id !== deliveryId) return;
+  const previousAttempt = Number.isInteger(latest.prompt.retry_attempt) ? latest.prompt.retry_attempt! : 0;
+  const retryAttempt = previousAttempt + 1;
+  const delayMs = RECOVERY_PROMPT_RETRY_DELAYS_MS[Math.min(retryAttempt - 1, RECOVERY_PROMPT_RETRY_DELAYS_MS.length - 1)] ?? RECOVERY_PROMPT_RETRY_DELAYS_MS.at(-1)!;
+  const retryAt = new Date(Date.now() + delayMs).toISOString();
+  latest.prompt.retry_attempt = retryAttempt;
+  latest.prompt.due_at = retryAt;
+  latest.state.recovery_condition = {
+    kind: 'recovery_active_writer',
+    message: reason,
+    resume_when: '原始 A 当前回合结束后，NF 将按退避时间自动重试；恢复窗口到期会明确标记为中断。',
+  };
+  // An active writer is expected while A is finishing.  Do not let a stale
+  // transport error make NFG claim that the task is permanently failing.
+  delete latest.state.last_error;
+  // Recovery helpers intentionally do not take the long-lived controller
+  // task lock: B may still own it while A is finishing its active turn.
+  store.save(latest.state);
+  store.event(latest.state, 'main_session_recovery_prompt_deferred', {
+    delivery_id: deliveryId,
+    main_session_id: latest.state.main_session_id,
+    reason,
+    retryable,
+    retry_attempt: retryAttempt,
+    retry_at: retryAt,
+    ...(error ? { error: String(redact(error instanceof Error ? error.message : String(error))) } : {}),
+  });
 }

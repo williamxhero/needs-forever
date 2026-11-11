@@ -456,6 +456,79 @@ test('native rebind recovery automatically prompts the original A instead of wai
   assert.equal(acknowledged.turn_id, 'turn-parent-001');
 });
 
+test('active-writer recovery defers the same prompt with bounded backoff and retries automatically', async (t) => {
+  const f = installed('native-rebind-active-writer', {}, 'native-rebind-active-writer', 0, {}, {
+    main_session_thread_id: 'native-rebind-active-writer',
+    recovery_active_writer_once: true,
+  });
+  writeFileSync(f.fixture, JSON.stringify({ ...JSON.parse(readFileSync(f.fixture, 'utf8')), recovery_prompt_delay_ms: 0 }));
+  t.after(() => f.run('pause'));
+  const before = JSON.parse(f.run('status').stdout) as MainSessionState;
+  assert.equal(f.run('pause').status, 0);
+  const pending = {
+    ...before,
+    status: 'ACTIVE', phase: 'RECOVERING', controller: undefined,
+    run_generation: 'active-writer-generation',
+    binding: { ...before.binding, status: 'PENDING_NATIVE_HOOK', operation: 'rebind', expected_run_generation: 'active-writer-generation', armed_at: new Date().toISOString() },
+    recovery_condition: { kind: 'native_rebind', message: 'Binding expired.', resume_when: 'A native receipt.' },
+    recovery_parent: { stop_attempt_id: 'stop-active-writer', turn_id: 'turn-active-writer' },
+    recovery_plan: { ...(before.recovery_plan ?? { owner: null, generation: 'active-writer-generation', task_version: before.task_version, attempt: 0, next_retry_at: null, reason: { kind: 'native_rebind', message: 'Binding expired.', resume_when: 'A native receipt.' }, status: 'waiting_native', cancellation_boundary: null }), owner: null, generation: 'active-writer-generation', status: 'waiting_native' },
+  } as unknown as MainSessionState;
+  writeFileSync(f.state, `${JSON.stringify(pending)}\n`);
+  assert.equal(scheduleNativeRebindPrompt(f.state, f.plugin, f.fixture, pending, 'Binding expired.'), true);
+  const eventsPath = join(f.workspace, '.codex-supervisor', 'native-rebind-active-writer', 'events.jsonl');
+  const coordinator = spawn(process.execPath, [join(f.plugin, 'scripts/recovery-coordinator.mjs'), f.state, '100', '--test-fixture', f.fixture], { cwd: f.workspace, windowsHide: true, stdio: 'ignore' });
+  t.after(() => coordinator.kill());
+  const deferredDeadline = Date.now() + 4_000;
+  let events: any[] = [];
+  while (Date.now() < deferredDeadline) {
+    try { events = readFileSync(eventsPath, 'utf8').split(/\r?\n/).filter(Boolean).map((line) => JSON.parse(line)); } catch { /* helper has not written the event yet */ }
+    if (events.some((event) => event.type === 'main_session_recovery_prompt_deferred')) break;
+    await delay(25);
+  }
+  const deferred = events.find((event) => event.type === 'main_session_recovery_prompt_deferred');
+  assert.ok(deferred, 'An active-writer race must be recorded as a deferral.');
+  assert.match(deferred.error, /active writer/i);
+  assert.equal(events.some((event) => event.type === 'main_session_recovery_prompt_failed'), false, 'The expected active-writer race is not a failed delivery.');
+  const saved = JSON.parse(readFileSync(f.state, 'utf8')) as MainSessionState;
+  assert.equal(saved.recovery_prompt?.retry_attempt, 1);
+  assert.equal(saved.recovery_condition?.kind, 'recovery_active_writer');
+  const retryAt = Date.parse(saved.recovery_prompt!.due_at);
+  assert.ok(retryAt > Date.now() - 250, 'The retry must be scheduled in the future.');
+
+  const retryDeadline = Date.now() + 12_000;
+  while (Date.now() < retryDeadline) {
+    try { events = readFileSync(eventsPath, 'utf8').split(/\r?\n/).filter(Boolean).map((line) => JSON.parse(line)); } catch { /* helper retry is still pending */ }
+    if (events.some((event) => event.type === 'main_session_recovery_prompt_acknowledged')) break;
+    await delay(50);
+  }
+  assert.ok(events.some((event) => event.type === 'main_session_recovery_prompt_sent'), 'The deferred prompt must be retried.');
+  assert.ok(events.some((event) => event.type === 'main_session_recovery_prompt_acknowledged'), 'The retry must be acknowledged by the original A transport.');
+});
+
+test('ordinary continuation active-writer deferral is driven by the detached watchdog', async (t) => {
+  const f = installed('ordinary-active-writer', {}, 'ordinary-active-writer', 0, {}, {
+    main_session_thread_id: 'ordinary-active-writer',
+    judge_actions: ['CONTINUE'],
+    recovery_active_writer_once: true,
+    recovery_active_writer_match: 'Check the remaining acceptance result.',
+  });
+  t.after(() => f.run('pause'));
+  const stopped = f.hook({ hook_event_name: 'Stop' });
+  assert.deepEqual(JSON.parse(stopped.stdout), { decision: 'block', reason: 'Check the remaining acceptance result.' });
+  const eventsPath = join(f.workspace, '.codex-supervisor', 'ordinary-active-writer', 'events.jsonl');
+  const deadline = Date.now() + 12_000;
+  let events: any[] = [];
+  while (Date.now() < deadline) {
+    try { events = readFileSync(eventsPath, 'utf8').split(/\r?\n/).filter(Boolean).map((line) => JSON.parse(line)); } catch { /* controller is still writing */ }
+    if (events.some((event) => event.type === 'main_session_recovery_prompt_acknowledged')) break;
+    await delay(50);
+  }
+  assert.ok(events.some((event) => event.type === 'main_session_recovery_prompt_deferred'), 'The active-writer race must be visible as a deferral.');
+  assert.equal(events.some((event) => event.type === 'main_session_recovery_prompt_failed'), false);
+  assert.ok(events.some((event) => event.type === 'main_session_recovery_prompt_acknowledged'), 'The detached coordinator must retry ordinary continuation delivery.');
+});
+
 test('global daemon resume runs the installed helper, binds the original A and restores Stop supervision', async (t) => {
   const name = 'daemon-native-recovery';
   const f = installed(name, { decision: { action: 'CONTINUE', next_message: 'Continue the original acceptance work.' } }, name, 0, {}, { main_session_thread_id: name, worker_completion_delay_ms: 300 });
