@@ -18,7 +18,9 @@ class RecoverySetupError extends Error {}
  * A native app-server can reject turn/start while the original A still owns
  * its writer.  This is a transient race, not a failed delivery and must not
  * overwrite the recovery checkpoint with a misleading error.  Keep retries
- * bounded by the existing recovery window (normally two minutes).
+ * bounded by the existing recovery window (normally two minutes, with a
+ * separately capped active-writer extension when the host proves that A is
+ * still writing).
  */
 const RECOVERY_PROMPT_RETRY_DELAYS_MS = [5_000, 15_000, 30_000, 60_000] as const;
 
@@ -26,6 +28,8 @@ function isActiveWriterError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
   return /active writer|already has an active writer|writer is active|writer.*in progress|正在.*进行中|已有.*写入/i.test(message);
 }
+
+type WriterPreflight = 'in_progress' | 'idle' | 'unknown';
 
 async function verifyRecoveryHooks(rpc: Rpc, workspace: string, pluginRoot: string): Promise<void> {
   const result = await rpc.request<any>('hooks/list', { cwds: [workspace] });
@@ -208,6 +212,7 @@ export async function deliverMainSessionRecoveryPrompt(statePath: string, fixtur
   const remaining = state.recovery_window ? Date.parse(state.recovery_window.deadline_at) - Date.now() : 30_000;
   const timer = setTimeout(() => abort.abort(), Math.max(1, Math.min(30_000, remaining)));
   let monitor: NodeJS.Timeout | undefined;
+  let writerPreflight: WriterPreflight = 'unknown';
   try {
     log(statePath, state, 'main_session_recovery_prompt_attempted', { delivery_id: prompt.delivery_id, main_session_id: state.main_session_id, message: prompt.message, task_version: prompt.task_version, run_generation: prompt.run_generation });
     const connection = await connectWorker(fixtureCommand(fixturePath, state), state.task.workspace, abort.signal);
@@ -226,7 +231,8 @@ export async function deliverMainSessionRecoveryPrompt(statePath: string, fixtur
         deferRecoveryPrompt(statePath, prompt.delivery_id, '上一次发送结果不确定，NF 不重复发送；确认原始 A 历史后自动重试。', undefined, false);
         return;
       }
-      if (turns.some((turn: any) => turn?.status === 'inProgress')) {
+      writerPreflight = turns.some((turn: any) => turn?.status === 'inProgress') ? 'in_progress' : 'idle';
+      if (writerPreflight === 'in_progress') {
         deferRecoveryPrompt(statePath, prompt.delivery_id, '原始 A 当前已有进行中的回合，NF 将在其结束后自动重试。');
         return;
       }
@@ -267,7 +273,19 @@ export async function deliverMainSessionRecoveryPrompt(statePath: string, fixtur
       // Codex -32600 / "already has an active writer" means A is still
       // running.  Preserve the Stop and prompt identities, clear the stale
       // failure text, and record an auditable bounded retry instead.
-      deferRecoveryPrompt(statePath, prompt.delivery_id, '原始 A 当前仍有进行中的回合，NF 等待其完成后自动重试。', error);
+      const retryAttempt = Number.isInteger(prompt.retry_attempt) ? (prompt.retry_attempt as number) : 0;
+      const staleWriter = writerPreflight === 'idle' && retryAttempt >= 1;
+      deferRecoveryPrompt(
+        statePath,
+        prompt.delivery_id,
+        staleWriter
+          ? 'Codex 宿主的 thread 历史已没有进行中的回合，但 turn/start 仍报告 active writer；疑似宿主 writer 锁残留，NF 将继续有限重试并记录诊断。'
+          : '原始 A 当前仍有进行中的回合，NF 等待其结束后自动重试。',
+        error,
+        true,
+        staleWriter ? 'recovery_stale_active_writer' : 'recovery_active_writer',
+        writerPreflight,
+      );
     } else {
       const latest = currentPrompt(statePath);
       if (latest?.prompt.delivery_id === prompt.delivery_id) {
@@ -289,7 +307,7 @@ export async function deliverMainSessionRecoveryPrompt(statePath: string, fixtur
  * turn).  The helper owns the same delivery id across retries, so no duplicate
  * prompt can be created, and the recovery deadline remains the hard stop.
  */
-function deferRecoveryPrompt(statePath: string, deliveryId: string, reason: string, error?: unknown, retryable = true): void {
+function deferRecoveryPrompt(statePath: string, deliveryId: string, reason: string, error?: unknown, retryable = true, conditionKind = 'recovery_active_writer', writerPreflight: WriterPreflight = 'unknown'): void {
   try {
     const initial = currentPrompt(statePath);
     if (!initial?.prompt || initial.prompt.delivery_id !== deliveryId) return;
@@ -305,9 +323,11 @@ function deferRecoveryPrompt(statePath: string, deliveryId: string, reason: stri
     latest.prompt.retry_attempt = retryAttempt;
     latest.prompt.due_at = retryAt;
     latest.state.recovery_condition = {
-      kind: 'recovery_active_writer',
+      kind: conditionKind,
       message: reason,
-      resume_when: '原始 A 当前回合结束后，NF 将按退避时间自动重试；active-writer 最多延长至首次证据后 10 分钟，仍未恢复会明确标记为中断。',
+      resume_when: conditionKind === 'recovery_stale_active_writer'
+        ? '宿主应释放残留 writer；NF 将按退避时间有限重试并保留诊断，仍未恢复会明确标记为中断。'
+        : '原始 A 当前回合结束后，NF 将按退避时间自动重试；active-writer 最多延长至首次证据后 10 分钟，仍未恢复会明确标记为中断。',
     };
     // An active writer is expected while A is finishing.  Do not let a stale
     // transport error make NFG claim that the task is permanently failing.
@@ -324,6 +344,8 @@ function deferRecoveryPrompt(statePath: string, deliveryId: string, reason: stri
         active_writer_started_at: activeWriterWindow.active_writer_started_at,
         active_writer_max_deadline_at: activeWriterWindow.active_writer_max_deadline_at,
         capped: activeWriterWindow.capped,
+        preflight: writerPreflight,
+        diagnosis: conditionKind,
       });
     } else if (activeWriterWindow?.capped && !hadActiveWriterCap) {
       // The cap is represented in state; emit an explicit marker once when
@@ -343,6 +365,8 @@ function deferRecoveryPrompt(statePath: string, deliveryId: string, reason: stri
       retryable,
       retry_attempt: retryAttempt,
       retry_at: retryAt,
+      preflight: writerPreflight,
+      diagnosis: conditionKind,
       ...(error ? { error: String(redact(error instanceof Error ? error.message : String(error))) } : {}),
     });
   } catch (failure) {

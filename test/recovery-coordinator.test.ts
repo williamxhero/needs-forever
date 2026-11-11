@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { createRecoveryPlan, armRecovery, waitForNativeReceipt, cancelRecovery, recoveryCurrent, acquireRecoveryOwner, reconcileStaleOwner, reconcileRecoveryTick, resetRecoveryWindow, extendRecoveryWindowForActiveWriter } from '../src/recovery-coordinator.js';
+import { createRecoveryPlan, armRecovery, waitForNativeReceipt, cancelRecovery, recoveryCurrent, acquireRecoveryOwner, reconcileStaleOwner, reconcileRecoveryTick, resetRecoveryWindow, extendRecoveryWindowForActiveWriter, interruptRecovery } from '../src/recovery-coordinator.js';
 import type { MainSessionState } from '../src/main-session.js';
 import { Store } from '../src/store.js';
 import { spawnSync } from 'node:child_process';
@@ -57,6 +57,23 @@ test('active-writer evidence extends recovery in bounded audited-sized steps and
   assert.equal(capped?.extended, false);
   assert.equal(capped?.capped, true);
   assert.equal(value.recovery_window.active_writer_capped_at, new Date(720_000).toISOString());
+});
+
+test('active-writer timeout reports the bounded ten-minute window instead of the base two-minute window', () => {
+  const value = state('active-writer-timeout-reason');
+  value.phase = 'RECOVERING';
+  value.recovery_condition = { kind: 'recovery_active_writer', message: '原始 A 当前仍有进行中的回合，NF 等待其完成后自动重试。', resume_when: 'retry' };
+  value.recovery_window = {
+    started_at: new Date(0).toISOString(),
+    deadline_at: new Date(720_000).toISOString(),
+    active_writer_started_at: new Date(120_000).toISOString(),
+    active_writer_max_deadline_at: new Date(720_000).toISOString(),
+    active_writer_capped_at: new Date(700_000).toISOString(),
+  };
+  interruptRecovery(value, 720_000);
+  assert.equal(value.recovery_condition?.kind, 'recovery_active_writer_timeout');
+  assert.match(value.recovery_interruption?.reason ?? '', /active writer 已达 10 分钟/);
+  assert.doesNotMatch(value.recovery_interruption?.reason ?? '', /超过 2 分钟/);
 });
 
 test('manual cancellation is a durable boundary that rejects stale recovery results', () => {

@@ -514,6 +514,44 @@ test('active-writer recovery defers the same prompt with bounded backoff and ret
   assert.ok(events.some((event) => event.type === 'main_session_recovery_prompt_acknowledged'), 'The retry must be acknowledged by the original A transport.');
 });
 
+test('repeated active-writer errors after an idle thread history persist a stale-writer diagnosis', async (t) => {
+  const f = installed('native-rebind-stale-writer', {}, 'native-rebind-stale-writer', 0, {}, {
+    main_session_thread_id: 'native-rebind-stale-writer',
+    recovery_active_writer_always: true,
+  });
+  writeFileSync(f.fixture, JSON.stringify({ ...JSON.parse(readFileSync(f.fixture, 'utf8')), recovery_prompt_delay_ms: 0 }));
+  t.after(() => f.run('pause'));
+  const before = JSON.parse(f.run('status').stdout) as MainSessionState;
+  assert.equal(f.run('pause').status, 0);
+  const pending = {
+    ...before,
+    status: 'ACTIVE', phase: 'RECOVERING', controller: undefined,
+    run_generation: 'stale-writer-generation',
+    binding: { ...before.binding, status: 'PENDING_NATIVE_HOOK', operation: 'rebind', expected_run_generation: 'stale-writer-generation', armed_at: new Date().toISOString() },
+    recovery_condition: { kind: 'native_rebind', message: 'Binding expired.', resume_when: 'A native receipt.' },
+    recovery_parent: { stop_attempt_id: 'stop-stale-writer', turn_id: 'turn-stale-writer' },
+    recovery_plan: { ...(before.recovery_plan ?? { owner: null, generation: 'stale-writer-generation', task_version: before.task_version, attempt: 0, next_retry_at: null, reason: { kind: 'native_rebind', message: 'Binding expired.', resume_when: 'A native receipt.' }, status: 'waiting_native', cancellation_boundary: null }), owner: null, generation: 'stale-writer-generation', status: 'waiting_native' },
+  } as unknown as MainSessionState;
+  writeFileSync(f.state, `${JSON.stringify(pending)}\n`);
+  assert.equal(scheduleNativeRebindPrompt(f.state, f.plugin, f.fixture, pending, 'Binding expired.'), true);
+  const eventsPath = join(f.workspace, '.codex-supervisor', 'native-rebind-stale-writer', 'events.jsonl');
+  const coordinator = spawn(process.execPath, [join(f.plugin, 'scripts/recovery-coordinator.mjs'), f.state, '100', '--test-fixture', f.fixture], { cwd: f.workspace, windowsHide: true, stdio: 'ignore' });
+  t.after(() => coordinator.kill());
+  const deadline = Date.now() + 20_000;
+  let events: any[] = [];
+  while (Date.now() < deadline) {
+    try { events = readFileSync(eventsPath, 'utf8').split(/\r?\n/).filter(Boolean).map((line) => JSON.parse(line)); } catch { /* helper has not written the event yet */ }
+    const deferred = events.filter((event) => event.type === 'main_session_recovery_prompt_deferred');
+    if (deferred.some((event) => event.diagnosis === 'recovery_stale_active_writer')) break;
+    await delay(50);
+  }
+  const deferred = events.find((event) => event.diagnosis === 'recovery_stale_active_writer');
+  assert.ok(deferred, 'Repeated active-writer errors after idle history must be classified as stale-writer evidence.');
+  const saved = JSON.parse(readFileSync(f.state, 'utf8')) as MainSessionState;
+  assert.equal(saved.recovery_condition?.kind, 'recovery_stale_active_writer');
+  assert.equal(deferred.preflight, 'idle');
+});
+
 test('ordinary continuation active-writer deferral is driven by the detached watchdog', async (t) => {
   const f = installed('ordinary-active-writer', {}, 'ordinary-active-writer', 0, {}, {
     main_session_thread_id: 'ordinary-active-writer',

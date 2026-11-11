@@ -148,7 +148,7 @@ for await (const line of lines) {
     // same delivery id and retry with bounded backoff.
     const recoveryText = String(message.params.input?.[0]?.text ?? '');
     const recoveryMatch = String(scenario.recovery_active_writer_match ?? 'NF 自动恢复绑定');
-    if (scenario.recovery_active_writer_once && !scenario.recovery_active_writer_consumed && recoveryText.includes(recoveryMatch)) {
+    if ((scenario.recovery_active_writer_once || scenario.recovery_active_writer_always) && (scenario.recovery_active_writer_always || !scenario.recovery_active_writer_consumed) && recoveryText.includes(recoveryMatch)) {
       scenario.recovery_active_writer_consumed = true;
       writeFileSync(process.argv[2], JSON.stringify(scenario));
       send({ id: message.id, error: { code: -32600, message: 'already has an active writer' } });

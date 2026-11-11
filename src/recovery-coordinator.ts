@@ -85,13 +85,34 @@ export function extendRecoveryWindowForActiveWriter(state: State, now = Date.now
   };
 }
 
-export function interruptRecovery(state: MainSessionState, now: number, explicitReason?: string): void {
+function recoveryTimeoutMessage(state: MainSessionState): { kind: string; message: string } {
+  const window = state.recovery_window;
+  const activeWriterStartedAt = Date.parse(window?.active_writer_started_at ?? '');
+  const activeWriterMaxDeadline = Date.parse(window?.active_writer_max_deadline_at ?? '');
+  const activeWriterCapped = !!window?.active_writer_capped_at
+    || (Number.isFinite(activeWriterMaxDeadline) && Number.isFinite(Date.parse(window?.deadline_at ?? '')) && Date.parse(window!.deadline_at) >= activeWriterMaxDeadline);
   const cause = state.recovery_condition?.message ?? state.recovery_plan?.reason.message ?? state.last_error ?? '';
-  const reason = explicitReason ?? `自动恢复超过 2 分钟仍未成功，监督已中断。${cause ? `最后原因：${cause}` : ''}可点击“恢复”重新尝试。`;
+  if (activeWriterCapped && Number.isFinite(activeWriterStartedAt) && Number.isFinite(activeWriterMaxDeadline)) {
+    const minutes = Math.max(1, Math.round((activeWriterMaxDeadline - activeWriterStartedAt) / 60_000));
+    return {
+      kind: 'recovery_active_writer_timeout',
+      message: `自动恢复等待原始 A 释放 active writer 已达 ${minutes} 分钟，仍未成功，监督已中断。${cause ? `最后原因：${cause}` : ''}可点击“恢复”重新尝试。`,
+    };
+  }
+  const minutes = Math.max(1, Math.round(RECOVERY_TIMEOUT_MS / 60_000));
+  return {
+    kind: 'recovery_timeout',
+    message: `自动恢复超过 ${minutes} 分钟仍未成功，监督已中断。${cause ? `最后原因：${cause}` : ''}可点击“恢复”重新尝试。`,
+  };
+}
+
+export function interruptRecovery(state: MainSessionState, now: number, explicitReason?: string): void {
+  const timeout = recoveryTimeoutMessage(state);
+  const reason = explicitReason ?? timeout.message;
   state.status = 'INTERRUPTED';
   state.phase = 'IDLE';
   state.recovery_interruption = { at: new Date(now).toISOString(), reason };
-  state.recovery_condition = { kind: explicitReason ? 'recovery_unavailable' : 'recovery_timeout', message: reason, resume_when: 'Explicit manual resume starts a new recovery window.' };
+  state.recovery_condition = { kind: explicitReason ? 'recovery_unavailable' : timeout.kind, message: reason, resume_when: 'Explicit manual resume starts a new recovery window.' };
   state.last_error = reason;
   state.input_epoch = (state.input_epoch ?? 0) + 1;
   state.pending_action = null;
