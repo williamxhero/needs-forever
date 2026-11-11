@@ -41,7 +41,7 @@ for await (const line of lines) {
     send({ id: message.id, error: { code: -32600, message: 'initialize handshake missing' } });
   } else if (message.method === 'config/read') {
     const overrides = process.argv.slice(3).filter((value) => !value.startsWith('-'));
-    const config = { features: {}, mcp_servers: {}, web_search: 'disabled' };
+    const config = { features: {}, mcp_servers: {}, web_search: 'disabled', ...(scenario.model ? { model: scenario.model, model_provider: scenario.model_provider ?? 'OpenAI' } : {}) };
     for (const value of overrides) {
       const match = /^features\.([\w_]+)=false$/.exec(value);
       if (match) config.features[match[1]] = false;

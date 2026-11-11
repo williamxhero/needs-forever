@@ -219,7 +219,9 @@ export async function connect(argv, workspace, signal, versionTimeoutMs = 10_000
         const servers = record(config.mcp_servers ?? {});
         if (Object.values(servers).some((server) => record(server).enabled !== false))
             throw new Error('External MCP isolation verification failed.');
-        return { rpc, version, disabled_mcp: names };
+        const model = typeof config.model === 'string' && config.model.trim() ? config.model.trim() : null;
+        const model_provider = typeof config.model_provider === 'string' && config.model_provider.trim() ? config.model_provider.trim() : null;
+        return { rpc, version, disabled_mcp: names, model, model_provider };
     }
     catch (error) {
         await rpc.close();

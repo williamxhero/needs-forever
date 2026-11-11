@@ -107,9 +107,12 @@ export async function archiveTerminatedJudge(argv, workspace, threadId) {
 }
 export class AppServerJudge {
     timeoutMs;
-    constructor(timeoutMs = 120_000) {
+    model;
+    constructor(timeoutMs = 120_000, model = null) {
         this.timeoutMs = timeoutMs;
+        this.model = model;
     }
+    setModel(model) { this.model = model; }
     rpc;
     event;
     archiveTerminated;
@@ -196,10 +199,10 @@ export class AppServerJudge {
             void stop();
         }, this.timeoutMs);
         try {
-            const params = { cwd: snapshot.task.workspace, approvalPolicy: 'never', sandbox: 'read-only', ephemeral: false, baseInstructions: judgeInstructions };
+            const params = { ...(this.model ? { model: this.model } : {}), cwd: snapshot.task.workspace, approvalPolicy: 'never', sandbox: 'read-only', ephemeral: false, baseInstructions: judgeInstructions };
             const created = await this.rpc.request('thread/start', params);
             this.thread = text(created.thread.id, 'judge thread id');
-            this.event('judge_created', { thread_id: this.thread, snapshot_id: snapshot.snapshot_id });
+            this.event('judge_created', { thread_id: this.thread, snapshot_id: snapshot.snapshot_id, model: created.model ?? this.model ?? null, model_provider: created.modelProvider ?? null });
             if (created.approvalPolicy !== 'never' || created.sandbox.type !== 'readOnly' || created.sandbox.networkAccess !== false || resolve(created.cwd) !== snapshot.task.workspace)
                 throw new Error('Judge readOnly/never policy verification failed.');
             signal?.throwIfAborted();
@@ -208,7 +211,7 @@ export class AppServerJudge {
             // Attach a rejection handler immediately, before awaiting that request.
             void terminal.catch(() => { });
             this.phase = 'turn_start';
-            const turnParams = { threadId: this.thread, approvalPolicy: 'never', sandboxPolicy: { type: 'readOnly', networkAccess: false }, outputSchema: decisionSchema, input: [{ type: 'text', text: JSON.stringify(snapshot), text_elements: [] }] };
+            const turnParams = { threadId: this.thread, ...(this.model ? { model: this.model } : {}), approvalPolicy: 'never', sandboxPolicy: { type: 'readOnly', networkAccess: false }, outputSchema: decisionSchema, input: [{ type: 'text', text: JSON.stringify(snapshot), text_elements: [] }] };
             requestedTurn = true;
             const response = await this.rpc.request('turn/start', turnParams);
             turnId = response.turn.id;

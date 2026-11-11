@@ -19,6 +19,7 @@ import { redact } from './redact.js';
 export interface Judge {
   judge(snapshot: Snapshot, signal?: AbortSignal): Promise<Decision>;
   bind?(rpc: Rpc, event: (type: string, details: Record<string, unknown>) => void, archiveTerminated?: (threadId: string) => Promise<void>): void;
+  setModel?(model: string | null): void;
   observe?(method: string, params: unknown): void;
   connectionFailed?(error: Error): void;
   serverRequest?(method: string, params: unknown): Promise<unknown>;
@@ -107,7 +108,8 @@ export async function archiveTerminatedJudge(argv: string[], workspace: string, 
 }
 
 export class AppServerJudge implements Judge {
-  constructor(private readonly timeoutMs = 120_000) {}
+  constructor(private readonly timeoutMs = 120_000, private model: string | null = null) {}
+  setModel(model: string | null): void { this.model = model; }
   private rpc!: Rpc;
   private event!: (type: string, details: Record<string, unknown>) => void;
   private archiveTerminated: ((threadId: string) => Promise<void>) | undefined;
@@ -188,10 +190,10 @@ export class AppServerJudge implements Judge {
       void stop();
     }, this.timeoutMs);
     try {
-      const params: ThreadStartParams = { cwd: snapshot.task.workspace, approvalPolicy: 'never', sandbox: 'read-only', ephemeral: false, baseInstructions: judgeInstructions };
+      const params: ThreadStartParams = { ...(this.model ? { model: this.model } : {}), cwd: snapshot.task.workspace, approvalPolicy: 'never', sandbox: 'read-only', ephemeral: false, baseInstructions: judgeInstructions };
       const created = await this.rpc.request<ThreadStartResponse>('thread/start', params);
       this.thread = text(created.thread.id, 'judge thread id');
-      this.event('judge_created', { thread_id: this.thread, snapshot_id: snapshot.snapshot_id });
+      this.event('judge_created', { thread_id: this.thread, snapshot_id: snapshot.snapshot_id, model: created.model ?? this.model ?? null, model_provider: created.modelProvider ?? null });
       if (created.approvalPolicy !== 'never' || created.sandbox.type !== 'readOnly' || created.sandbox.networkAccess !== false || resolve(created.cwd) !== snapshot.task.workspace) throw new Error('Judge readOnly/never policy verification failed.');
       signal?.throwIfAborted();
       const terminal = new Promise<Record<string, unknown>>((resolve_, reject) => { this.terminal = { resolve: resolve_, reject }; });
@@ -199,7 +201,7 @@ export class AppServerJudge implements Judge {
       // Attach a rejection handler immediately, before awaiting that request.
       void terminal.catch(() => {});
         this.phase = 'turn_start';
-        const turnParams: TurnStartParams = { threadId: this.thread, approvalPolicy: 'never', sandboxPolicy: { type: 'readOnly', networkAccess: false }, outputSchema: decisionSchema, input: [{ type: 'text', text: JSON.stringify(snapshot), text_elements: [] }] };
+        const turnParams: TurnStartParams = { threadId: this.thread, ...(this.model ? { model: this.model } : {}), approvalPolicy: 'never', sandboxPolicy: { type: 'readOnly', networkAccess: false }, outputSchema: decisionSchema, input: [{ type: 'text', text: JSON.stringify(snapshot), text_elements: [] }] };
         requestedTurn = true;
         const response = await this.rpc.request<TurnStartResponse>('turn/start', turnParams);
         turnId = response.turn.id;

@@ -58,7 +58,7 @@ test('judge prompt states the terminal next_message contract', () => {
 });
 
 test('real judge boundary continues the original worker then completes with fresh archived read-only judges', () => {
-  const fixture = scenario('fresh-judges', { judge_actions: ['CONTINUE', 'DONE'], tool_items: [{ type: 'commandExecution', id: 'check', command: 'check-result', exitCode: 0, status: 'completed', aggregatedOutput: 'A1 passes.' }] });
+  const fixture = scenario('fresh-judges', { model: 'gpt-6.1-sol', judge_actions: ['CONTINUE', 'DONE'], tool_items: [{ type: 'commandExecution', id: 'check', command: 'check-result', exitCode: 0, status: 'completed', aggregatedOutput: 'A1 passes.' }] });
   const result = fixture.run();
   assert.equal(result.status, 0, result.stderr);
   assert.equal(json(fixture.state).status, 'DONE');
@@ -71,6 +71,8 @@ test('real judge boundary continues the original worker then completes with fres
   const turns = fixture.protocol().filter((entry) => entry.message?.method === 'turn/start');
   assert.equal(turns.filter((entry) => entry.message.params.threadId === 'worker-from-server').length, 2);
   assert.ok(turns.filter((entry) => entry.message.params.threadId.startsWith('judge-')).every((entry) => entry.message.params.outputSchema?.additionalProperties === false && entry.message.params.sandboxPolicy.type === 'readOnly'));
+  assert.ok(starts.filter((entry) => entry.message.params.sandbox === 'read-only').every((entry) => entry.message.params.model === 'gpt-6.1-sol'));
+  assert.ok(turns.filter((entry) => entry.message.params.threadId.startsWith('judge-')).every((entry) => entry.message.params.model === 'gpt-6.1-sol'));
   assert.ok(fixture.snapshots().every((entry) => entry.validation === 'valid' && typeof entry.raw_output === 'string'));
 });
 

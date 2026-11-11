@@ -185,7 +185,7 @@ export class Supervisor {
     if (this.state.phase === 'WORKER' && this.state.retry.kind === null) delete this.state.recovery_window;
     this.store.save(this.state);
   }
-  private async connectWithRecovery(argv: string[]): Promise<{ rpc: Rpc; version: string; disabled_mcp: string[] }> {
+  private async connectWithRecovery(argv: string[]): Promise<{ rpc: Rpc; version: string; disabled_mcp: string[]; model: string | null; model_provider: string | null }> {
     const enabled = this.fixture?.recovery_enabled === true || this.fixture?.recovery_delays_ms !== undefined || this.fixture === undefined;
     let failure: unknown;
     while (this.state.status === 'ACTIVE') {
@@ -238,7 +238,8 @@ export class Supervisor {
     throw new RpcServerError(-32601, 'Method not found.');
   }
   private bindRpc(rpc: Rpc): Rpc { this.rpc = rpc; rpc.setRequestHandler((_id, method, params) => this.handleServerRequest(method, params)); return rpc; }
-  private bindJudge(rpc: Rpc, argv: string[]): void {
+  private bindJudge(rpc: Rpc, argv: string[], model: string | null = null): void {
+    this.judge.setModel?.(model);
     this.judge.bind?.(rpc, (type, details) => {
       if (type === 'judge_created' && typeof details.thread_id === 'string') { (this.state.judge_thread_ids ??= []).push(details.thread_id); this.save(); }
       this.store.event(this.state, type, { role: 'judge', ...details });
@@ -377,14 +378,14 @@ export class Supervisor {
     if (this.state.status !== 'ACTIVE') return;
     const connection = await connect(argv, this.state.task.workspace, this.abort.signal);
     const rpc = this.bindRpc(connection.rpc);
-    this.bindJudge(rpc, argv);
+    this.bindJudge(rpc, argv, connection.model);
     const params: ThreadResumeParams = { threadId: this.state.worker_thread_id!, cwd: this.state.task.workspace, approvalPolicy: 'never', sandbox: 'workspace-write', excludeTurns: false };
     const resumed = await this.hydrateWorkerTurns(rpc, await rpc.request<ThreadResumeResponse>('thread/resume', params));
     if (this.state.status !== 'ACTIVE') return;
     if (resumed.thread.id !== this.state.worker_thread_id) throw new Error('Recovery changed worker identity.');
     this.validateWorker(resumed);
     this.state.codex_version = connection.version;
-    this.store.event(this.state, 'connection_reconnected', { thread_id: this.state.worker_thread_id, server_process_id: rpc.processId, codex_version: connection.version });
+    this.store.event(this.state, 'connection_reconnected', { thread_id: this.state.worker_thread_id, server_process_id: rpc.processId, codex_version: connection.version, model: connection.model, model_provider: connection.model_provider });
     await this.reconcileWorkerHistory(resumed);
     if (this.state.status !== 'ACTIVE') return;
     void this.pump(rpc);
@@ -442,7 +443,7 @@ export class Supervisor {
     if (resumed.thread.id !== this.state.worker_thread_id) throw new Error('Verification recovery changed worker identity.');
     this.validateWorker(resumed);
     if (resumed.thread.turns.some((turn) => turn.status === 'inProgress')) throw new Error('Verification recovery found an unexpected active worker turn; no send performed.');
-    this.bindJudge(rpc, argv);
+    this.bindJudge(rpc, argv, connection.model);
     this.store.event(this.state, 'verification_worker_restored', { thread_id: this.state.worker_thread_id, server_process_id: rpc.processId });
     void this.pump(rpc);
   }
@@ -494,10 +495,10 @@ export class Supervisor {
       if (resume && !this.state.worker_thread_id) throw new Error('Resume requires the saved worker thread identity; explicit recovery cannot proceed.');
       const connection = await this.connectWithRecovery(argv);
       const rpc = this.bindRpc(connection.rpc);
-      this.bindJudge(rpc, argv);
+      this.bindJudge(rpc, argv, connection.model);
       if (this.state.status !== 'ACTIVE') return;
       this.state.codex_version = connection.version;
-      this.store.event(this.state, 'connection_verified', { codex_version: connection.version, disabled_mcp: connection.disabled_mcp, server_process_id: rpc.processId });
+      this.store.event(this.state, 'connection_verified', { codex_version: connection.version, disabled_mcp: connection.disabled_mcp, server_process_id: rpc.processId, model: connection.model, model_provider: connection.model_provider });
       if (this.state.status !== 'ACTIVE') return;
       this.state.retry = { kind: null, attempt: 0, next_at: null };
       this.state.phase = 'WORKER';

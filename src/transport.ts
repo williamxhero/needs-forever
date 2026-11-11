@@ -149,7 +149,7 @@ export async function connectWorker(argv: string[], workspace: string, signal?: 
   }
   catch (error) { await rpc.close(); throw error; }
 }
-export async function connect(argv: string[], workspace: string, signal?: AbortSignal, versionTimeoutMs = 10_000): Promise<{ rpc: Rpc; version: string; disabled_mcp: string[] }> {
+export async function connect(argv: string[], workspace: string, signal?: AbortSignal, versionTimeoutMs = 10_000): Promise<{ rpc: Rpc; version: string; disabled_mcp: string[]; model: string | null; model_provider: string | null }> {
   signal?.throwIfAborted();
   const [executable, ...arguments_] = argv;
   if (!executable) throw new Error('Empty Codex command.');
@@ -184,6 +184,8 @@ export async function connect(argv: string[], workspace: string, signal?: AbortS
     if (disabledFeatures.some((feature) => features[feature] !== false) || config.web_search !== 'disabled') throw new Error('app-server isolation feature verification failed.');
     const servers = record(config.mcp_servers ?? {});
     if (Object.values(servers).some((server) => record(server).enabled !== false)) throw new Error('External MCP isolation verification failed.');
-    return { rpc, version, disabled_mcp: names };
+    const model = typeof config.model === 'string' && config.model.trim() ? config.model.trim() : null;
+    const model_provider = typeof config.model_provider === 'string' && config.model_provider.trim() ? config.model_provider.trim() : null;
+    return { rpc, version, disabled_mcp: names, model, model_provider };
   } catch (error) { await rpc.close(); throw error; }
 }

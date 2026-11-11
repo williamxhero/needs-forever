@@ -255,7 +255,7 @@ export async function superviseStop(state, request, fixture, signal, store, snap
     store.snapshot(snapshot, null);
     const connection = await connect(commandFor(state, fixture), state.task.workspace, signal);
     const timeout = state.mode === 'simulated' && Number.isFinite(fixture?.judge_timeout_ms) ? Math.max(1, Number(fixture.judge_timeout_ms)) : 120_000;
-    const judge = new AppServerJudge(Math.min(timeout, Math.max(1, Date.parse(request.deadline_at) - Date.now() - 1_000)));
+    const judge = new AppServerJudge(Math.min(timeout, Math.max(1, Date.parse(request.deadline_at) - Date.now() - 1_000)), connection.model);
     judge.bind(connection.rpc, (type, details) => {
         if (type === 'judge_created' && typeof details.thread_id === 'string') {
             state.judge_thread_ids ??= [];
