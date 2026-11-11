@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileS
 import { dirname, isAbsolute, resolve } from 'node:path';
 import type { Task } from './types.js';
 
-export type TrackingBackend = 'local-json';
+export type TrackingBackend = 'local-json' | 'github-issue';
 export type TrackingProgressStatus = 'TODO' | 'IN_PROGRESS' | 'REPORTED_DONE' | 'BLOCKED';
 
 export interface ClarificationConclusions {
