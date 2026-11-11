@@ -131,6 +131,15 @@ function parseJson(output, description) { try {
 catch (error) {
     throw new Error(`GitHub ${description} returned invalid JSON.`, { cause: error });
 } }
+function createdIssueNumber(output, repository) {
+    const url = output.trim().match(/https?:\/\/[^/\s]+\/([^/\s]+\/[^/\s]+)\/issues\/(\d+)/i);
+    if (!url || url[1] !== repository)
+        throw new Error('GitHub create response did not contain an Issue URL for the requested repository.');
+    const issue = Number(url[2]);
+    if (!Number.isInteger(issue) || issue <= 0)
+        throw new Error('GitHub create response did not contain a valid Issue number.');
+    return issue;
+}
 export class GitHubTrackingStore {
     backend = 'github-issue';
     repository;
@@ -170,10 +179,7 @@ export class GitHubTrackingStore {
             // The issue number is unknown until creation; create with a temporary marked body,
             // then replace its pending locator after GitHub assigns the Issue number.
             writeFileSync(temporary, `${block(base)}\n`, { encoding: 'utf8' });
-            const created = parseJson(command(this.adapter, ['issue', 'create', '--repo', this.repository, '--title', this.title, '--body-file', temporary, '--json', 'number']), 'create response');
-            const issue = Number(created.number);
-            if (!Number.isInteger(issue) || issue <= 0)
-                throw new Error('GitHub create response did not contain an Issue number.');
+            const issue = createdIssueNumber(command(this.adapter, ['issue', 'create', '--repo', this.repository, '--title', this.title, '--body-file', temporary]), this.repository);
             const record = { ...base, locator: locator(this.repository, issue) };
             writeFileSync(temporary, `${block(record)}\n`, { encoding: 'utf8' });
             // Adapters may emulate create by reading the body file; real gh needs the file populated first.

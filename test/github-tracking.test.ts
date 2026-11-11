@@ -22,7 +22,7 @@ class FakeGh implements GitHubCliAdapter {
     this.calls.push([...args]);
     if (args[0] === 'repo') return result(JSON.stringify({ nameWithOwner: 'acme/reports' }));
     if (args[0] === 'issue' && args[1] === 'view') return result(JSON.stringify({ number: this.issue, title: 'Tracking', body: this.body }));
-    if (args[0] === 'issue' && args[1] === 'create') { this.body = readFileSync(String(args[args.indexOf('--body-file') + 1]), 'utf8'); return result(JSON.stringify({ number: this.issue })); }
+    if (args[0] === 'issue' && args[1] === 'create') { assert.equal(args.includes('--json'), false); this.body = readFileSync(String(args[args.indexOf('--body-file') + 1]), 'utf8'); return result(`https://github.com/acme/reports/issues/${this.issue}\n`); }
     if (args[0] === 'issue' && args[1] === 'edit') { this.body = readFileSync(String(args[args.indexOf('--body-file') + 1]), 'utf8'); return result(''); }
     return { status: 1, stdout: '', stderr: 'unexpected command' };
   }

@@ -109,6 +109,13 @@ function command(adapter: GitHubCliAdapter, args: readonly string[]): string {
   const result = adapter.run(args); if (result.status !== 0) throw new Error(`GitHub command failed (${args.join(' ')}): ${result.stderr.trim() || `exit ${result.status}`}`); return result.stdout;
 }
 function parseJson(output: string, description: string): any { try { return JSON.parse(output); } catch (error) { throw new Error(`GitHub ${description} returned invalid JSON.`, { cause: error }); } }
+function createdIssueNumber(output: string, repository: string): number {
+  const url = output.trim().match(/https?:\/\/[^/\s]+\/([^/\s]+\/[^/\s]+)\/issues\/(\d+)/i);
+  if (!url || url[1] !== repository) throw new Error('GitHub create response did not contain an Issue URL for the requested repository.');
+  const issue = Number(url[2]);
+  if (!Number.isInteger(issue) || issue <= 0) throw new Error('GitHub create response did not contain a valid Issue number.');
+  return issue;
+}
 
 export class GitHubTrackingStore {
   readonly backend = 'github-issue' as const;
@@ -141,8 +148,7 @@ export class GitHubTrackingStore {
       // The issue number is unknown until creation; create with a temporary marked body,
       // then replace its pending locator after GitHub assigns the Issue number.
       writeFileSync(temporary, `${block(base)}\n`, { encoding: 'utf8' });
-      const created = parseJson(command(this.adapter, ['issue', 'create', '--repo', this.repository, '--title', this.title!, '--body-file', temporary, '--json', 'number']), 'create response');
-      const issue = Number(created.number); if (!Number.isInteger(issue) || issue <= 0) throw new Error('GitHub create response did not contain an Issue number.');
+      const issue = createdIssueNumber(command(this.adapter, ['issue', 'create', '--repo', this.repository, '--title', this.title!, '--body-file', temporary]), this.repository);
       const record = { ...base, locator: locator(this.repository, issue) };
       writeFileSync(temporary, `${block(record)}\n`, { encoding: 'utf8' });
       // Adapters may emulate create by reading the body file; real gh needs the file populated first.
