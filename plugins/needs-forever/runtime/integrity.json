@@ -6,7 +6,7 @@
     "src/control-intent.js": "13c30d85dacd68e50616aad9feeee832ae1bb24a11d846c47ca65588b9fbd3d2",
     "src/daemon-cli.js": "4388cbea334e3747d81e30cf9736c50db27891969d1e457e9f1f160c2b67b69f",
     "src/daemon.js": "df8248a4105e89aa4975b4c455cce2603c5f6f347485e79c9ba77ca6056c4254",
-    "src/github-tracking.js": "b39e657f7b9a78a38e48acfb7cdc1a21093b15a561cf9bc56684ba59739685d8",
+    "src/github-tracking.js": "2ccf8c74c3ac06f007dc6f03beb3e75ec258c83cd8300ad7520133773efe6ade",
     "src/hook-host.js": "b01a45383ab017f55cc3a1445b40effa21434fa29b8bacd935571e68c12115e1",
     "src/http-route-probe.js": "bbe63bed4abf141621579aec5e04be7bcda57935331ba9ece96e3d39d3129062",
     "src/index.js": "b92bac154bdde5ac01fc5a941e4a00311ebc3ac1a60d6703fda68dcdf022da08",
@@ -35,7 +35,7 @@
     "src/snapshot.js": "28c0b0b6f879bed8d32ce8aaab7795efcddc0ad79419c09b864114494f7108e6",
     "src/store.js": "623384b82a2b3bdcf12009229f29fc10a29380896c19cd8c1736c0ae2314f00d",
     "src/supervisor.js": "5f45a0c369363af4c73b8b4d2c6caefb7c3d199647459908c50c045cf923589e",
-    "src/tracking-integration.js": "46e786b815e173cbf433929b61c73d9e66c459c5b893ba89af6be7482138535c",
+    "src/tracking-integration.js": "2fab480a768cda638dfeb59bdfa9aee0cedc51c4a3c44ba67bc6c13511560909",
     "src/transport.js": "53ae453bb8646a3340c02ec82e78310b2b6b78fe61359c92bff14532382649f2",
     "src/types.js": "1d776e8997c21eccad34b1b01358b1a3f8df090b5647a855ba3972d361311f08",
     "src/web.js": "46e32246c521075b1be5546178118e61e97f7ed3222c9c680b79819545713d6c"

@@ -50,9 +50,7 @@ export function createTracking(task, selection) {
     validateSelection(selection, true);
     if (selection.backend === 'local-json')
         return new LocalTrackingStore({ backend: 'local-json', path: selection.path }).create(task, selection.clarification);
-    if (selection.issue !== undefined)
-        throw new Error('GitHub tracking creation requires a new Issue selection; use load for an existing Issue.');
-    return new GitHubTrackingStore({ backend: 'github-issue', repository: selection.repository, ...(selection.title ? { title: selection.title } : {}) }).create(task, selection.clarification);
+    return new GitHubTrackingStore({ backend: 'github-issue', repository: selection.repository, ...(selection.issue !== undefined ? { issue: selection.issue } : {}), ...(selection.title ? { title: selection.title } : {}) }).create(task, selection.clarification);
 }
 export function loadTracking(task, locator) {
     return storeForLocator(locator).load(task);

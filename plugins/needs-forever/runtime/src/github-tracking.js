@@ -170,12 +170,22 @@ export class GitHubTrackingStore {
         return { number: viewed.number, title: String(viewed.title ?? ''), body: viewed.body };
     }
     create(task, clarificationValue) {
-        if (this.issue !== undefined)
-            throw new Error('This GitHub tracking store targets an existing Issue; use load or update.');
         const temporary = join(tmpdir(), `needs-forever-${randomUUID()}.md`);
-        const base = { schema_version: 1, backend: 'github-issue', locator: 'github:pending#0', task_id: required(task.task_id, 'task_id'), contract_identity: contractIdentity(task), contract: normalizedTask(task), clarification: clarification(clarificationValue), acceptance: normalizedTask(task).acceptance.map(({ id, text }) => ({ id, text, status: 'TODO', notes: '', evidence_refs: [] })), updated_at: new Date().toISOString() };
+        const base = { schema_version: 1, backend: 'github-issue', locator: this.issue === undefined ? 'github:pending#0' : locator(this.repository, this.issue), task_id: required(task.task_id, 'task_id'), contract_identity: contractIdentity(task), contract: normalizedTask(task), clarification: clarification(clarificationValue), acceptance: normalizedTask(task).acceptance.map(({ id, text }) => ({ id, text, status: 'TODO', notes: '', evidence_refs: [] })), updated_at: new Date().toISOString() };
         try {
             this.verifyRepository();
+            if (this.issue !== undefined) {
+                const viewed = this.view(this.issue);
+                const hasMarker = viewed.body.includes(GITHUB_TRACKING_START) || viewed.body.includes(GITHUB_TRACKING_END);
+                if (hasMarker) {
+                    const existing = extract(viewed.body, base.locator);
+                    compareContract(existing, task);
+                    return existing;
+                }
+                writeFileSync(temporary, `${viewed.body.replace(/\s*$/, '')}\n\n${block(base)}\n`, { encoding: 'utf8' });
+                command(this.adapter, ['issue', 'edit', String(this.issue), '--repo', this.repository, '--body-file', temporary]);
+                return this.readBack(this.issue, base);
+            }
             // The issue number is unknown until creation; create with a temporary marked body,
             // then replace its pending locator after GitHub assigns the Issue number.
             writeFileSync(temporary, `${block(base)}\n`, { encoding: 'utf8' });

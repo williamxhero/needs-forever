@@ -51,6 +51,16 @@ test('updates only the NF block and preserves unrelated Issue content', () => {
   } finally { gh.close(); }
 });
 
+test('initializes an explicitly selected existing Issue and preserves its body', () => {
+  const gh = new FakeGh(); gh.body = 'Existing project notes';
+  try {
+    const record = new GitHubTrackingStore({ backend: 'github-issue', repository: 'acme/reports', issue: 42, adapter: gh }).create(task(), clarification);
+    assert.equal(record.locator, 'github:acme/reports#42');
+    assert.match(gh.body, /^Existing project notes/);
+    assert.match(gh.body, new RegExp(GITHUB_TRACKING_START));
+  } finally { gh.close(); }
+});
+
 test('rejects task or contract mismatch and never falls back locally', () => {
   const gh = new FakeGh();
   try {
