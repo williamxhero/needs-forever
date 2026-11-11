@@ -25,4 +25,6 @@ export type { C2Mode, Diagnosis, RouteCandidate, RoutePlan, C2Context } from './
 export { discoverLocalRoutes, prepareRouteExecution, confirmRouteExecution, captureRouteOutcome, plannerFailureFallback, routeCorrelation } from './route-execution.js';
 export type { RouteCorrelation, RouteExecution } from './types.js';
 export { ingestRouteObservations } from './route-observations.js';
+export { LocalTrackingStore, contractIdentity } from './local-tracking.js';
+export type { ClarificationConclusions, LocalTrackingStoreOptions, TrackingAcceptanceItem, TrackingBackend, TrackingProgressStatus, TrackingRecord, TrackingUpdate } from './local-tracking.js';
 export { initializeHttpRouteProbe, executeHttpRouteProbe, ingestHttpRouteProbes } from './http-route-probe.js';
