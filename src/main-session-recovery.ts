@@ -290,7 +290,29 @@ export async function deliverMainSessionRecoveryPrompt(statePath: string, fixtur
       const latest = currentPrompt(statePath);
       if (!latest || latest.prompt.delivery_id !== prompt.delivery_id || latest.prompt.message !== prompt.message) return;
       log(statePath, state, 'main_session_recovery_prompt_sent', { delivery_id: prompt.delivery_id, main_session_id: state.main_session_id, message: prompt.message });
-      const response = await connection.rpc.request<any>('turn/start', { threadId: state.main_session_id, clientUserMessageId: prompt.delivery_id, input: [{ type: 'text', text: prompt.message, text_elements: [] }] });
+      let response: any;
+      try {
+        response = await connection.rpc.request<any>('turn/start', { threadId: state.main_session_id, clientUserMessageId: prompt.delivery_id, input: [{ type: 'text', text: prompt.message, text_elements: [] }] });
+      } catch (error) {
+        if (!isActiveWriterError(error)) throw error;
+        const activity = await readThreadActivity(connection.rpc, mainSessionId);
+        if (isStaleWriterObservation(activity)) {
+          const status = activity?.status ?? 'unknown';
+          deferRecoveryPrompt(
+            statePath,
+            prompt.delivery_id,
+            `Codex thread/read 显示原始 A 为 ${status} 且没有进行中的回合，但 turn/start 仍被 active writer 拒绝；疑似宿主写锁未释放。NF 不会删除锁或终止 Codex，需重启 Codex 宿主后再恢复。`,
+            error,
+            true,
+            'recovery_stale_writer',
+            'idle',
+            false,
+          );
+        } else {
+          deferRecoveryPrompt(statePath, prompt.delivery_id, '原始 A 当前仍有进行中的回合，NF 等待其完成后自动重试。', error);
+        }
+        return;
+      }
       const targetTurnId = typeof response?.turn?.id === 'string' ? response.turn.id : null;
       log(statePath, state, 'main_session_recovery_prompt_acknowledged', { delivery_id: prompt.delivery_id, main_session_id: state.main_session_id, target_turn_id: targetTurnId, reconciled: false });
       if (!targetTurnId) throw new Error('Recovery turn acknowledgement has no turn id.');
@@ -418,6 +440,7 @@ function deferRecoveryPrompt(statePath: string, deliveryId: string, reason: stri
       retry_at: retryAt,
       preflight: writerPreflight,
       diagnosis: conditionKind,
+      ...(conditionKind === 'recovery_stale_writer' ? { diagnostic: 'thread/read 为空闲或未加载且无 inProgress 回合；未删除 Codex writer lock。' } : {}),
       ...(error ? { error: String(redact(error instanceof Error ? error.message : String(error))) } : {}),
     });
   } catch (failure) {

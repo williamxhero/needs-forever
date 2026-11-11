@@ -552,6 +552,47 @@ test('repeated active-writer errors after an idle thread history persist a stale
   assert.equal(deferred.preflight, 'idle');
 });
 
+test('idle thread/read plus active-writer rejection is diagnosed as a stale host writer lock', async (t) => {
+  const f = installed('native-rebind-stale-writer-read', {}, 'native-rebind-stale-writer-read', 0, {}, {
+    main_session_thread_id: 'native-rebind-stale-writer-read',
+    recovery_active_writer_once: true,
+    thread_read_status: 'notLoaded',
+  });
+  writeFileSync(f.fixture, JSON.stringify({ ...JSON.parse(readFileSync(f.fixture, 'utf8')), recovery_prompt_delay_ms: 0 }));
+  t.after(() => f.run('pause'));
+  const before = JSON.parse(f.run('status').stdout) as MainSessionState;
+  assert.equal(f.run('pause').status, 0);
+  const pending = {
+    ...before,
+    status: 'ACTIVE', phase: 'RECOVERING', controller: undefined,
+    run_generation: 'stale-writer-read-generation',
+    binding: { ...before.binding, status: 'PENDING_NATIVE_HOOK', operation: 'rebind', expected_run_generation: 'stale-writer-read-generation', armed_at: new Date().toISOString() },
+    recovery_condition: { kind: 'native_rebind', message: 'Binding expired.', resume_when: 'A native receipt.' },
+    recovery_parent: { stop_attempt_id: 'stop-stale-writer-read', turn_id: 'turn-stale-writer-read' },
+    recovery_plan: { ...(before.recovery_plan ?? { owner: null, generation: 'stale-writer-read-generation', task_version: before.task_version, attempt: 0, next_retry_at: null, reason: { kind: 'native_rebind', message: 'Binding expired.', resume_when: 'A native receipt.' }, status: 'waiting_native', cancellation_boundary: null }), owner: null, generation: 'stale-writer-read-generation', status: 'waiting_native' },
+  } as unknown as MainSessionState;
+  writeFileSync(f.state, `${JSON.stringify(pending)}\n`);
+  assert.equal(scheduleNativeRebindPrompt(f.state, f.plugin, f.fixture, pending, 'Binding expired.'), true);
+  const eventsPath = join(f.workspace, '.codex-supervisor', 'native-rebind-stale-writer-read', 'events.jsonl');
+  const coordinator = spawn(process.execPath, [join(f.plugin, 'scripts/recovery-coordinator.mjs'), f.state, '100', '--test-fixture', f.fixture], { cwd: f.workspace, windowsHide: true, stdio: 'ignore' });
+  t.after(() => coordinator.kill());
+  const deadline = Date.now() + 8_000;
+  let events: any[] = [];
+  while (Date.now() < deadline) {
+    try { events = readFileSync(eventsPath, 'utf8').split(/\r?\n/).filter(Boolean).map((event) => JSON.parse(event)); } catch { /* helper has not written the event yet */ }
+    if (events.some((event) => event.type === 'main_session_recovery_prompt_deferred')) break;
+    await delay(25);
+  }
+  const deferred = events.find((event) => event.type === 'main_session_recovery_prompt_deferred');
+  assert.ok(deferred, 'The active-writer rejection must still be retried with one delivery id.');
+  assert.match(deferred.reason, /写锁|writer lock/i);
+  assert.equal(deferred.diagnostic, 'thread/read 为空闲或未加载且无 inProgress 回合；未删除 Codex writer lock。');
+  const saved = JSON.parse(readFileSync(f.state, 'utf8')) as MainSessionState;
+  assert.equal(saved.recovery_condition?.kind, 'recovery_stale_writer');
+  assert.match(saved.recovery_condition?.message ?? '', /thread\/read.*notLoaded.*active writer/);
+  assert.equal(events.some((event) => event.type === 'recovery_active_writer_window_extended'), false, 'A stale host lock must not be mistaken for a live A turn.');
+});
+
 test('ordinary continuation active-writer deferral is driven by the detached watchdog', async (t) => {
   const f = installed('ordinary-active-writer', {}, 'ordinary-active-writer', 0, {}, {
     main_session_thread_id: 'ordinary-active-writer',

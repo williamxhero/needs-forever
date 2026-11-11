@@ -54,6 +54,11 @@ for await (const line of lines) {
     const names = ['sessionStart', 'userPromptSubmit', 'preToolUse', 'postToolUse', 'stop', 'interrupt'];
     const sourcePath = resolve(scenario.plugin_root ?? '.', 'hooks/hooks.json');
     send({ id: message.id, result: { data: [{ hooks: names.map(eventName => ({ eventName, sourcePath, enabled: true, trustStatus: scenario.recovery_hook_trust ?? 'trusted' })) }] } });
+  } else if (message.method === 'thread/read') {
+    const threadId = scenario.main_session_thread_id ?? 'worker-from-server';
+    const status = scenario.thread_read_status ?? 'active';
+    const turns = scenario.thread_read_turns ?? scenario.resume_turns ?? [];
+    send({ id: message.id, result: { thread: { id: threadId, status: { type: status }, turns: message.params.includeTurns === false ? [] : turns } } });
   } else if (message.method === 'thread/start' || message.method === 'thread/resume') {
     const judge = message.params.sandbox === 'read-only';
     const threadId = judge ? `judge-${++judges}` : (scenario.main_session_thread_id ?? 'worker-from-server');
