@@ -152,6 +152,20 @@ test('clipped fixed verification output cannot form a complete observation or su
   assert.throws(() => validateDecision(JSON.stringify({ action: 'DONE', reason: 'Claimed done.', evidence_ids: [input.evidence[0]!.id], next_message: '', external: null }), input), /Incomplete/);
 });
 
+test('a historical clipped verifier remains context without blocking fresh repair proof and verifier rerun', () => {
+  const state = baseState();
+  const input = buildSnapshot(state, 'repair', [
+    { event_id: 'old-verifier', at: state.updated_at, type: 'verification_result', passed: false, stdout: 'Old failure details '.repeat(200) },
+    { event_id: 'fresh-repair', at: state.updated_at, type: 'worker_evidence', thread_id: 'worker', method: 'item/completed', params: { turnId: 'repair', item: { id: 'check', type: 'commandExecution', command: 'check-coverage', exitCode: 0, aggregatedOutput: 'Current independent coverage passes.' } } },
+  ]);
+  assert.equal(input.evidence_complete, true);
+  assert.match(JSON.stringify(input.recent_verification), /old-verifier/);
+  assert.equal(input.evidence.some(e => e.source?.event_id === 'old-verifier'), false);
+  assert.equal(input.c2!.observations.some(e => e.reference === 'old-verifier'), false);
+  const evidence = input.evidence.find(e => e.source?.event_id === 'fresh-repair')!;
+  assert.equal(validateDecision(JSON.stringify({ action: 'DONE', reason: 'Fresh coverage supports running the fixed verifier again.', evidence_ids: [evidence.id], next_message: '', external: null }), input).action, 'DONE');
+});
+
 test('large current tool payloads cannot evict every catalog entry and retry attempt from C2', () => {
   const state = baseState(), catalog = new RouteCatalog(scope), ledger = new RouteLedger(scope);
   for (let i = 0; i < 8; i++) catalog.upsert(catalogEntry(`local-${i}.json`));

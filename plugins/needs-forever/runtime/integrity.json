@@ -30,7 +30,7 @@
     "src/route-observations.js": "c7009e277c93e2b81cf27cc925f2bf489fa35a51084d877cef64cdff25a047bd",
     "src/route-storage.js": "ed3a083a8a6e5f52edfcf55dca6d0c1dc6e20b2ea111e6e69560db9076a08034",
     "src/rules.js": "e743c10107cb043bf2c06957b2646cb9fc723474bd456d0f96a02861d5d376fc",
-    "src/snapshot.js": "2dd802cb3ab33756ec71cbe15a0756c080726192ed588dcb23d5599f86f4f655",
+    "src/snapshot.js": "28c0b0b6f879bed8d32ce8aaab7795efcddc0ad79419c09b864114494f7108e6",
     "src/store.js": "623384b82a2b3bdcf12009229f29fc10a29380896c19cd8c1736c0ae2314f00d",
     "src/supervisor.js": "5f45a0c369363af4c73b8b4d2c6caefb7c3d199647459908c50c045cf923589e",
     "src/transport.js": "53ae453bb8646a3340c02ec82e78310b2b6b78fe61359c92bff14532382649f2",

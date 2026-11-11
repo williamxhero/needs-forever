@@ -31,6 +31,7 @@ export function buildSnapshot(state: State, workerTurnId: string, events: Record
   const planItem = [...observed.values()].findLast((entry) => entry.item.type === 'plan');
   const plans = latestPlan ? object(latestPlan.params).plan : planItem?.item.text;
   const verification = events.findLast((entry) => ['verification_result', 'verification_passed', 'verification_failed', 'protected_file_changed'].includes(String(entry.type)));
+  const historicalVerification = !!verification && current.some((entry) => events.indexOf(entry) > events.indexOf(verification));
   const instructions = events.filter((entry) => entry.type === 'send_prepared' && entry.source_turn_id).slice(-2).map((entry) => {
     const confirmation = events.find((event) => event.type === 'send_confirmed' && event.delivery_id === entry.delivery_id);
     const result = workerEvents.findLast((event) => event.method === 'turn/completed' && turnId(event) === confirmation?.turn_id);
@@ -55,7 +56,7 @@ export function buildSnapshot(state: State, workerTurnId: string, events: Record
     snapshot_id: randomUUID(), task_id: state.task_id, task_version: state.task_version, worker_thread_id: state.worker_thread_id!, worker_turn_id: workerTurnId,
     task: redact(state.task) as State['task'], evidence: [],
     plan: plans ? { observed: clip(plans, 1800), remaining: Array.isArray(plans) ? clip(plans.filter((entry) => object(entry).status !== 'completed'), 1800) : 'See observed worker plan; not independently verified.' } : { missing: 'No current plan or remaining-items update observed.' },
-    recent_verification: verification ? clip(verification, 1800) : { missing: 'No independent verification result recorded yet.' },
+    recent_verification: verification ? { ...object(clip(verification, 1800)), ...(historicalVerification ? { historical_context_only: true } : {}) } : { missing: 'No independent verification result recorded yet.' },
     recent_instructions: instructions,
     repeated_failure: {
       investigate: repeatedSignatures.length > 0,
@@ -66,6 +67,7 @@ export function buildSnapshot(state: State, workerTurnId: string, events: Record
   };
   if (!plans) snapshot.omissions!.push('Current plan and remaining items were not observed.');
   if (!verification) snapshot.omissions!.push('Independent verification has not run.');
+  if (historicalVerification) snapshot.omissions!.push('Previous fixed verification is historical context only; current proof must independently support a new verification run.');
   if (JSON.stringify(snapshot).length > PROOF_BUDGET - 1800) throw new Error('Task contract and mandatory snapshot metadata exceed the 24000-character budget; goal, acceptance and authorization were not truncated.');
   const candidates = [...observed.values()].sort((left, right) => {
     const priority = (item: Record<string, unknown>) => item.type === 'commandExecution' && (item.status === 'failed' || (typeof item.exitCode === 'number' && item.exitCode !== 0)) ? 0 : item.type === 'fileChange' ? 1 : item.type === 'commandExecution' ? 2 : 3;
@@ -87,7 +89,7 @@ export function buildSnapshot(state: State, workerTurnId: string, events: Record
       if (JSON.stringify(snapshot).length > PROOF_BUDGET - 600) { snapshot.evidence.pop(); snapshot.omissions!.pop(); omitted++; }
     }
   }
-  if (verification) {
+  if (verification && !historicalVerification) {
     const value = clip(verification, 1800);
     const complete = JSON.stringify(value) === JSON.stringify(verification);
     if (!complete) {
