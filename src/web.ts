@@ -192,6 +192,8 @@ function eventSummary(event: Record<string, unknown>): string {
     case 'main_session_recovery_prompt_acknowledged': return 'A thread 已接收 NF 恢复 prompt';
     case 'main_session_worker_prompt_observed': return 'A thread 已收到监督恢复 prompt';
     case 'main_session_recovery_prompt_deferred': return 'A 已有进行中的回合，NF 暂缓发送';
+    case 'recovery_active_writer_window_extended': return '确认 A 仍在执行，NF 延长恢复等待窗口';
+    case 'recovery_active_writer_window_capped': return 'A 的 active writer 等待已达到恢复上限';
     case 'main_session_recovery_prompt_failed': return error ? `NF 推动 A 失败：${error}` : 'NF 推动 A 失败';
     case 'worker_created': return 'worker 已创建';
     case 'worker_resumed': return 'worker 已恢复';
