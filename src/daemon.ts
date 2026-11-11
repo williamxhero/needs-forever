@@ -329,9 +329,41 @@ export class NFDaemon {
     catch { this.audit('recovery_dispatch_failed', readState(statePath)?.task_id, { reason: 'Provider recovery driver failed; the next daemon tick will retry.' }); }
   }
 
+  /**
+   * The loopback API can receive a control request immediately after the
+   * daemon process starts, before its first asynchronous discovery tick has
+   * completed.  Refresh the requested task synchronously so the first GUI
+   * click cannot become a silent no-op.
+   */
+  private ensureTask(taskId: string): DaemonTaskRecord | null {
+    const known = this.manifest.tasks[taskId];
+    if (known) return known.deleted ? null : known;
+    const at = new Date(this.now()).toISOString();
+    for (const workspace of this.workspaceRoots) {
+      for (const statePath of discoverStateFiles(workspace)) {
+        const state = readState(statePath);
+        if (!state || state.task_id !== taskId || !inside(state.task.workspace, workspace)) continue;
+        const record: DaemonTaskRecord = {
+          taskId: state.task_id,
+          statePath: resolve(statePath),
+          workspace: resolve(state.task.workspace),
+          status: state.status,
+          phase: state.phase,
+          updatedAt: state.updated_at ?? null,
+          deleted: false,
+          lastSeenAt: at,
+        };
+        this.manifest.tasks[taskId] = record;
+        this.persist();
+        return record;
+      }
+    }
+    return null;
+  }
+
   /** Apply a user control boundary and leave a durable audit record. */
   control(taskId: string, action: 'pause' | 'resume' | 'delete'): DaemonTaskRecord | null {
-    const record = this.manifest.tasks[taskId];
+    const record = this.ensureTask(taskId);
     if (!record || record.deleted) return null;
     if (action === 'delete') {
       record.deleted = true;
@@ -456,7 +488,9 @@ export function startLoopbackApi(options: LoopbackApiOptions): Promise<RunningLo
       if (parts.length === apiOffset + 3 && parts[apiOffset + 2] === 'control' && request.method === 'POST') {
         const action = (await body(request)).action;
         if (action !== 'pause' && action !== 'resume' && action !== 'delete') { json(response, 400, { error: 'action must be pause, resume, or delete.' }); return; }
-        const task = daemon.control(taskId, action); json(response, 200, { ok: true, task }); return;
+        const task = daemon.control(taskId, action);
+        if (!task && action !== 'delete') { json(response, 404, { error: 'Task not found.' }); return; }
+        json(response, 200, { ok: true, task }); return;
       }
       json(response, 404, { error: 'Not found' });
     } catch (error) { json(response, 400, { error: error instanceof Error ? error.message : 'Request failed.' }); }

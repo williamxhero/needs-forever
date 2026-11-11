@@ -62,6 +62,42 @@ test('NF daemon loopback API requires its token and exposes task control', async
   }
 });
 
+test('loopback resume discovers a task before the daemon first async tick', async () => {
+  const root = mkdtempSync(resolve(tmpdir(), 'nf-daemon-first-click-'));
+  fixture(root);
+  const daemon = new NFDaemon({ workspaces: [root], dataPath: resolve(root, 'daemon.json'), intervalMs: 0 });
+  const api = await startLoopbackApi({ daemon, port: 0 });
+  try {
+    const response = await fetch(`${api.url}/api/tasks/daemon-fixture/control`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${api.token}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ action: 'resume' }),
+    });
+    assert.equal(response.status, 200);
+    const result = await response.json() as { task?: { taskId?: string; status?: string } | null };
+    assert.equal(result.task?.taskId, 'daemon-fixture');
+    assert.equal(result.task?.status, 'ACTIVE');
+  } finally {
+    await api.close();
+  }
+});
+
+test('loopback control rejects an unknown task instead of returning a false success', async () => {
+  const root = mkdtempSync(resolve(tmpdir(), 'nf-daemon-unknown-control-'));
+  const daemon = new NFDaemon({ workspaces: [root], dataPath: resolve(root, 'daemon.json'), intervalMs: 0 });
+  const api = await startLoopbackApi({ daemon, port: 0 });
+  try {
+    const response = await fetch(`${api.url}/api/tasks/missing/control`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${api.token}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ action: 'resume' }),
+    });
+    assert.equal(response.status, 404);
+  } finally {
+    await api.close();
+  }
+});
+
 test('provider-neutral adapter events are authenticated, durable, and deduplicated', async () => {
   const root = mkdtempSync(resolve(tmpdir(), 'nf-daemon-events-'));
   fixture(root);
