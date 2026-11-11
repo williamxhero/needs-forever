@@ -178,3 +178,57 @@ test('global daemon dispatches a due ordinary recovery prompt when its coordinat
   assert.equal(result.waitingNative, 0, 'An ordinary prompt does not need a native waiting plan.');
   assert.deepEqual(dispatched, [path], 'The global watchdog must drive a due prompt even without the B coordinator.');
 });
+
+test('global daemon contains detached tick failures and keeps its watchdog alive', async () => {
+  const root = mkdtempSync(resolve(tmpdir(), 'nf-daemon-tick-failure-'));
+  fixture(root);
+  const daemon = new NFDaemon({ workspaces: [root], dataPath: resolve(root, 'daemon.json'), intervalMs: 5 });
+  const originalTick = daemon.tick.bind(daemon);
+  let calls = 0;
+  (daemon as unknown as { tick: () => Promise<unknown> }).tick = async () => {
+    calls++;
+    throw new Error('transient tick failure');
+  };
+  let unhandled = 0;
+  const onUnhandled = () => { unhandled++; };
+  process.on('unhandledRejection', onUnhandled);
+  daemon.start();
+  try {
+    await new Promise((resolvePromise) => setTimeout(resolvePromise, 30));
+    assert.ok(calls >= 2, 'the interval should continue scheduling ticks after one failure');
+    assert.equal(unhandled, 0, 'detached tick failures must not become unhandled rejections');
+    assert.equal(daemon.auditEvents().some((event) => event.type === 'daemon_tick_failed'), true);
+  } finally {
+    daemon.stop();
+    process.off('unhandledRejection', onUnhandled);
+    (daemon as unknown as { tick: typeof originalTick }).tick = originalTick;
+  }
+});
+
+test('global daemon isolates callback failures and keeps ticking without leaking callback secrets', async () => {
+  const root = mkdtempSync(resolve(tmpdir(), 'nf-daemon-callback-failure-'));
+  fixture(root);
+  const daemon = new NFDaemon({ workspaces: [root], dataPath: resolve(root, 'daemon.json'), intervalMs: 5 });
+  let callbackCalls = 0;
+  const secret = 'sk-callback-secret-1234567890';
+  daemon.onTick(() => {
+    callbackCalls++;
+    throw new Error(`callback failed: ${secret}`);
+  });
+  let unhandled = 0;
+  const onUnhandled = () => { unhandled++; };
+  process.on('unhandledRejection', onUnhandled);
+  daemon.start();
+  try {
+    await new Promise((resolvePromise) => setTimeout(resolvePromise, 30));
+    assert.ok(callbackCalls >= 2, 'the interval should continue scheduling ticks after a callback failure');
+    assert.ok(daemon.status().tickCount >= 2, 'ticks should complete even when an observer throws');
+    assert.equal(unhandled, 0, 'callback failures must not become unhandled rejections');
+    const audit = readFileSync(daemon.auditPath, 'utf8');
+    assert.match(audit, /daemon_tick_callback_failed/);
+    assert.equal(audit.includes(secret), false, 'callback secrets must not be written to audit');
+  } finally {
+    daemon.stop();
+    process.off('unhandledRejection', onUnhandled);
+  }
+});
