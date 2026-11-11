@@ -7,6 +7,7 @@ import type { Decision, Snapshot, State, Task } from '../src/types.js';
 import type { RouteCatalogEntry, RouteEvidence } from '../src/route-contract.js';
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
+import { snapshotRouteEvidence } from '../src/planning-context.js';
 
 const task: Task = { schema_version: 1, task_id: 'planning', workspace: process.cwd(), goal: 'Repair the accepted local dataset.', acceptance: [{ id: 'A1', text: 'Independent coverage check passes.' }], authorization: 'Inspect and repair local files; use only authorized providers.', limits: { max_worker_turns: null, max_minutes: null } };
 function snapshot(): Snapshot { return { snapshot_id: 'snapshot', task_id: task.task_id, task_version: 1, worker_thread_id: 'worker', worker_turn_id: 'stop', task: structuredClone(task), evidence: [], evidence_complete: true, omissions: [] }; }
@@ -133,6 +134,37 @@ test('historical legacy CONTINUE remains readable while live default and explici
 function baseState(): State { return { schema_version: 1, ...scope, task: structuredClone(task), worker_thread_id: 'worker', status: 'ACTIVE', phase: 'JUDGE', active_worker_turn_id: null, reviewing_turn_id: 'stop', handled_turn_ids: [], pending_action: null, retry: { kind: null, attempt: 0, next_at: null }, last_decision: null, worker_turn_count: 1, elapsed_active_seconds: 0, updated_at: '2026-11-10T00:00:00.000Z', codex_version: null, mode: 'live' }; }
 function nativeState(state: State): MainSessionState { return { ...state, control_mode: 'main-session', main_session_id: 'worker', run_generation: 'generation', contract_sha256: 'contract', binding: { status: 'BOUND', tool_use_id: 'bind', bound_at: state.updated_at, challenge: 'challenge', task_path: '/task' }, host: { desktop_version: null, cli_version: null, hook_effective: true, source: 'native-desktop', reason: 'Native hook observed.' } }; }
 const stop: StopRequest = { schema_version: 1, ...scope, contract_sha256: 'contract', run_generation: 'generation', session_id: 'worker', turn_id: 'stop', stop_attempt_id: 'stop-1', stop_hook_active: true, created_at: '2026-11-10T00:00:00.000Z', deadline_at: '2026-11-10T00:02:00.000Z', mode: 'live', last_assistant_message: 'Check the current proof.' };
+
+test('a truncated sibling does not erase a complete native tool observation or permit terminal judgment', () => {
+  const state = nativeState(baseState());
+  const event = (id: string, complete: boolean, output: string) => ({ event_id: id, at: state.updated_at, ...scope, type: 'main_tool_result', session_id: 'worker', run_generation: 'generation', input_epoch: 0, contract_sha256: 'contract', tool_use_id: id, complete, value: { hook_event_name: 'PostToolUse', tool_name: 'exec_command', tool_input: { command: 'inspect-local-result' }, tool_response: output } });
+  const input = buildMainSessionSnapshot(state, stop, [event('truncated', false, 'Partial output'), event('complete', true, 'Actual complete local result')]);
+  assert.equal(input.evidence_complete, false);
+  assert.deepEqual(snapshotRouteEvidence(input).map(item => item.reference), ['complete']);
+  assert.throws(() => validateDecision(JSON.stringify({ action: 'DONE', reason: 'Claimed done.', evidence_ids: ['complete'], next_message: '', external: null }), input), /Incomplete/);
+});
+
+test('large current tool payloads cannot evict every catalog entry and retry attempt from C2', () => {
+  const state = baseState(), catalog = new RouteCatalog(scope), ledger = new RouteLedger(scope);
+  for (let i = 0; i < 8; i++) catalog.upsert(catalogEntry(`local-${i}.json`));
+  for (let i = 0; i < 3; i++) {
+    const route = routeInventoryDecision(snapshot()).route_plan!.candidates[0]!;
+    route.hypothesis_id = `hypothesis-${i}`;
+    ledger.recordAttempt({ route, outcome: 'diagnostic', evidence_ids: [], evidence: [] });
+  }
+  state.route_catalog = catalog.toJSON(); state.route_ledger = ledger.toJSON();
+  state.last_decision = routeInventoryDecision(snapshot(), 'Previous direction', 'Old plan '.repeat(300));
+  const original = JSON.stringify(state);
+  const input = buildMainSessionSnapshot(nativeState(state), stop, [
+    ...[0, 1, 2].map(i => ({ event_id: `payload-${i}`, at: state.updated_at, ...scope, type: 'main_tool_result', session_id: 'worker', run_generation: 'generation', input_epoch: 0, contract_sha256: 'contract', tool_use_id: `tool-${i}`, complete: true, value: { tool_response: String(i) + 'Data '.repeat(1_200) } })),
+    { event_id: 'concise-inventory', at: state.updated_at, ...scope, type: 'main_tool_result', session_id: 'worker', run_generation: 'generation', input_epoch: 0, contract_sha256: 'contract', tool_use_id: 'inventory', complete: true, value: { tool_response: 'Current concise inventory facts.' } },
+  ]);
+  assert.ok(JSON.stringify(input).length <= 24_000);
+  assert.ok(input.c2!.catalog.entries.length > 0, 'C needs actual route facts even when current tool output is large.');
+  assert.ok(input.c2!.ledger.attempts.length > 0, 'C must see retry history instead of being asked to recreate it.');
+  assert.ok(input.c2!.observations.some(item => item.reference === 'concise-inventory'));
+  assert.equal(JSON.stringify(state), original, 'Budget projection cannot rewrite persisted facts.');
+});
 
 test('ordinary and native snapshots share source-linked route context, current plans and the 24k budget', () => {
   const state = baseState(), catalog = new RouteCatalog(scope), ledger = new RouteLedger(scope);

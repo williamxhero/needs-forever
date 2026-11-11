@@ -30,8 +30,10 @@ function substantive(value: unknown): unknown {
   return value;
 }
 export function snapshotRouteEvidence(snapshot: Snapshot): RouteEvidence[] {
-  if (snapshot.evidence_complete === false) return [];
-  return snapshot.evidence.filter((entry) => entry.source?.event_id && entry.source.observed_at && Number.isFinite(Date.parse(entry.source.observed_at)) && ['commandExecution', 'fileChange', 'functionCallOutput', 'verification_result'].includes(entry.type)).map((entry) => ({
+  // A missing/truncated sibling prevents terminal judgment, not observation of
+  // another complete result. Historical snapshots without per-entry metadata
+  // retain the conservative all-or-nothing behavior when globally incomplete.
+  return snapshot.evidence.filter((entry) => entry.complete !== false && (snapshot.evidence_complete !== false || entry.complete === true) && entry.source?.event_id && entry.source.observed_at && Number.isFinite(Date.parse(entry.source.observed_at)) && ['commandExecution', 'fileChange', 'functionCallOutput', 'verification_result'].includes(entry.type)).map((entry) => ({
     id: entry.id, source: entry.type === 'verification_result' ? 'verification' : 'event', reference: entry.source!.event_id,
     observed_at: entry.source!.observed_at!, task_version: snapshot.task_version,
     content_sha256: routeEvidenceDigest({ type: entry.type, value: substantive(entry.value) }),
@@ -59,6 +61,21 @@ export function buildC2Context(snapshot: Snapshot, state: C2ContextState, maxCha
   if (state.route_probe?.omitted_url_sha256?.length) snapshot.omissions.push(`HTTP probe URL budget omitted ${state.route_probe.omitted_url_sha256.length} unresolved URL observations; inventory/diagnostic required before external waiting.`);
   let omittedCatalog = 0, omittedAttempts = 0, omittedObservations = 0;
   const size = () => JSON.stringify(snapshot).length;
+  // Do not sacrifice all route/retry facts to a verbose previous plan or raw
+  // tool payloads. Keep concise current proof and mark omitted raw proof as
+  // incomplete; the original contract and terminal evidence gate stay intact.
+  if (size() > maxChars - 400 && JSON.stringify(snapshot.c2.current_plan).length > 3_000) {
+    snapshot.c2.current_plan = null;
+    snapshot.omissions.push('Prior route plan omitted for budget.');
+  }
+  let omittedCurrentProof = 0;
+  while (size() > maxChars - 400 && snapshot.evidence.length > 1 && JSON.stringify(snapshot.evidence).length > maxChars * 0.3) {
+    const candidates = snapshot.evidence.map((entry, index) => ({ index, incomplete: entry.complete === false, length: JSON.stringify(entry).length }));
+    candidates.sort((a, b) => Number(b.incomplete) - Number(a.incomplete) || b.length - a.length || b.index - a.index);
+    const [omitted] = snapshot.evidence.splice(candidates[0]!.index, 1);
+    snapshot.c2.observations = snapshot.c2.observations.filter(entry => entry.id !== omitted!.id);
+    omittedCurrentProof++;
+  }
   while (size() > maxChars - 400 && (snapshot.c2.ledger.attempts.length > 1 || snapshot.c2.catalog.entries.length > 1)) {
     const ledgerLarger = JSON.stringify(snapshot.c2.ledger.attempts).length > JSON.stringify(snapshot.c2.catalog.entries).length;
     if (snapshot.c2.ledger.attempts.length > 1 && (ledgerLarger || snapshot.c2.catalog.entries.length <= 1)) { snapshot.c2.ledger.attempts.shift(); omittedAttempts++; }
@@ -75,7 +92,6 @@ export function buildC2Context(snapshot: Snapshot, state: C2ContextState, maxCha
   // A pre-C2/near-limit Stop may already consume the ordinary proof budget.
   // Keep the immutable contract, and make omitted current proof explicit rather
   // than failing before C can request a concise discriminating observation.
-  let omittedCurrentProof = 0;
   while (size() > maxChars - 400 && snapshot.evidence.length) {
     const omitted = snapshot.evidence.pop()!;
     snapshot.c2.observations = snapshot.c2.observations.filter((entry) => entry.id !== omitted.id);

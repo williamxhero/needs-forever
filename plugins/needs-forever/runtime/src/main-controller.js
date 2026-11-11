@@ -11,10 +11,10 @@ import { Store } from './store.js';
 import { redact } from './redact.js';
 import { buildMainSessionSnapshot, preflightSupervisor, superviseStop } from './main-supervision.js';
 import { validateDecision } from './judge.js';
-import { captureRouteOutcome, discoverLocalRoutes, plannerFailureFallback, prepareRouteExecution, routeCorrelation } from './route-execution.js';
+import { captureRouteOutcome, discoverLocalRoutes, plannerFailureFallback, prepareRouteExecution, routeCorrelation, PlannerFallbackUnavailableError } from './route-execution.js';
 import { classifyRecoveryError, nextBackoff, recordRecoveryFailure } from './recovery.js';
 import { reachedLimits } from './rules.js';
-import { armRecovery, cancelRecovery, createRecoveryPlan, markRecoveryRunning, acquireRecoveryOwner, waitForNativeReceipt, reconcileStaleOwner } from './recovery-coordinator.js';
+import { armRecovery, cancelRecovery, createRecoveryPlan, markRecoveryRunning, acquireRecoveryOwner, waitForNativeReceipt, reconcileStaleOwner, interruptRecovery } from './recovery-coordinator.js';
 import { scheduleNativeRebindPrompt } from './main-session-recovery.js';
 import { initializeHttpRouteProbe } from './http-route-probe.js';
 function scheduleMainSessionRecoveryPrompt(path, pluginRoot, fixturePath, state, message, sourceTurnId) {
@@ -779,7 +779,7 @@ export async function runController(path, pluginRoot, fixturePath) {
                                     throw error;
                                 if (++outputFailures >= 3) {
                                     const snapshot = buildMainSessionSnapshot(state, request, store.events());
-                                    decision = plannerFailureFallback(snapshot, 'C failed three bounded output attempts; gather source-linked route facts.');
+                                    decision = plannerFailureFallback(snapshot, 'C failed three bounded output attempts; gather source-linked route facts.', state);
                                     correlation = prepareRouteExecution(state, decision, snapshot, delivery, request.stop_attempt_id);
                                     store.event(state, 'judge_inventory_fallback', { failures: outputFailures, stop_attempt_id: request.stop_attempt_id, decision });
                                     break;
@@ -837,7 +837,13 @@ export async function runController(path, pluginRoot, fixturePath) {
                     catch (error) {
                         if (current.valid) {
                             state.stop_transport = { request, outcome: 'failed', error: String(redact(error.message)) };
-                            recover(error.message);
+                            if (error instanceof PlannerFallbackUnavailableError) {
+                                interruptRecovery(state, Date.now(), error.message);
+                                store.event(state, 'recovery_interrupted', { stop_attempt_id: request.stop_attempt_id, cause: 'planner_fallback_unavailable', reason: state.last_error });
+                                socket.once('finish', () => setImmediate(shutdown));
+                            }
+                            else
+                                recover(error.message);
                             store.save(state);
                         }
                         return {};

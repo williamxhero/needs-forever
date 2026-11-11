@@ -94,7 +94,7 @@ export function buildMainSessionSnapshot(state: MainSessionState, request: StopR
   for (const event of [...events].reverse()) {
     if (event.task_version !== state.task_version) continue;
     if (event.type === 'main_tool_result' && currentEvents.has(event) && event.session_id === state.main_session_id && event.run_generation === state.run_generation && event.input_epoch === (state.input_epoch ?? 0) && event.contract_sha256 === state.contract_sha256) {
-      const entry = { id: String(event.event_id), type: 'functionCallOutput', value: event.value, source: { event_id: String(event.event_id), ...(typeof event.at === 'string' ? { observed_at: event.at } : {}), thread_id: state.main_session_id!, ...(typeof event.turn_id === 'string' ? { turn_id: event.turn_id } : {}), item_id: String(event.tool_use_id) } };
+      const entry = { id: String(event.event_id), type: 'functionCallOutput', value: event.value, complete: event.complete !== false, source: { event_id: String(event.event_id), ...(typeof event.at === 'string' ? { observed_at: event.at } : {}), thread_id: state.main_session_id!, ...(typeof event.turn_id === 'string' ? { turn_id: event.turn_id } : {}), item_id: String(event.tool_use_id) } };
       if (!append(entry)) omitted++;
       if (event.complete === false) snapshot.evidence_complete = false;
     } else if (event.type === 'verification_result' && snapshot.recent_verification === undefined) {

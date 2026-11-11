@@ -5,6 +5,7 @@ import { mkdirSync, readFileSync, writeFileSync, symlinkSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { buildC2Context, captureRouteOutcome, confirmRouteExecution, discoverLocalRoutes, ingestRouteObservations, plannerFailureFallback, prepareRouteExecution, routeInventoryDecision, validateDecision } from '../src/index.js';
 import type { Snapshot, State } from '../src/index.js';
+import { RouteLedger, canonicalExecutionRoute } from '../src/route-ledger.js';
 
 function runtimeState(name: string): State {
   const workspace = resolve('runs/ticket52', `${name}-${Date.now()}`, 'workspace');
@@ -14,6 +15,39 @@ function runtimeState(name: string): State {
 function context(state: State, evidence: Snapshot['evidence'] = [], complete = true): Snapshot {
   return buildC2Context({ snapshot_id: 'snapshot', task_id: state.task_id, task_version: state.task_version, worker_thread_id: 'worker', worker_turn_id: 'turn', task: state.task, evidence, evidence_complete: complete, omissions: complete ? [] : ['Current proof truncated.'] }, state);
 }
+
+test('a complete inventory beside truncated output is independently probed and counts as real route progress', () => {
+  const state = runtimeState('mixed-result-inventory');
+  mkdirSync(resolve(state.task.workspace, 'cache'));
+  writeFileSync(resolve(state.task.workspace, 'cache/result.json'), '{"rows":17}');
+  const before = context(state);
+  prepareRouteExecution(state, routeInventoryDecision(before), before, 'delivery', 'stop-one');
+  confirmRouteExecution(state, 'delivery');
+  const inventory = { nf_route_inventory: { schema_version: 1, task_id: state.task_id, task_version: 1, routes: [{ route_id: 'actual-result', resource: { kind: 'artifact', id: 'cache/result.json' }, operation: 'read-local-artifact' }] } };
+  const next = context(state, [
+    Object.assign({ id: 'good', type: 'commandExecution', value: { exitCode: 0, aggregatedOutput: JSON.stringify(inventory) }, source: { event_id: 'real-inventory', observed_at: new Date().toISOString(), thread_id: 'worker', turn_id: 'turn' } }, { complete: true }),
+    Object.assign({ id: 'partial', type: 'commandExecution', value: { exitCode: 1, aggregatedOutput: 'Partial failed unrelated output' }, source: { event_id: 'partial-result', observed_at: new Date().toISOString(), thread_id: 'worker', turn_id: 'turn' } }, { complete: false }),
+  ], false);
+  const outcome = captureRouteOutcome(state, next, 'stop-two');
+  assert.equal(state.route_catalog?.entries.find(e => e.route_id === 'actual-result')?.status, 'observed');
+  assert.equal(outcome?.outcome, 'diagnostic', 'Only complete independent output may establish progress or failure.');
+  assert.equal(next.evidence_complete, false, 'A valid sibling cannot authorize terminal completion.');
+});
+
+test('planner fallback uses the full persisted retry ledger and requires fresh discriminating proof', () => {
+  const state = runtimeState('full-ledger-fallback');
+  const initial = context(state), route = routeInventoryDecision(initial).route_plan!.candidates[0]!;
+  const ledger = new RouteLedger({ task_id: state.task_id, task_version: 1 });
+  for (let i = 0; i < 2; i++) ledger.recordObservedAttempt({ route: canonicalExecutionRoute(route, []), outcome: 'failure', failure_class: 'no_independent_progress', evidence_ids: [], evidence: [] });
+  state.route_ledger = ledger.toJSON();
+  const hidden = context(state); hidden.c2!.ledger.attempts = [];
+  assert.throws(() => plannerFailureFallback(hidden, 'Three C timeouts.', state), /no_progress_limit/);
+  const observed = context(state, [Object.assign({ id: 'new-proof', type: 'commandExecution', value: { exitCode: 0, aggregatedOutput: 'Actual new inventory result.' }, source: { event_id: 'fresh', observed_at: new Date().toISOString(), thread_id: 'worker' } }, { complete: true })], false);
+  observed.c2!.ledger.attempts = [];
+  const fallback = plannerFailureFallback(observed, 'Three C timeouts.', state);
+  assert.doesNotThrow(() => prepareRouteExecution(state, fallback, observed, 'new-delivery', 'stop'));
+  assert.deepEqual(state.route_ledger, ledger.toJSON(), 'Proposal/admission cannot count a new attempt.');
+});
 
 test('inventory fallback passes active validation with two observed alternatives and incomplete proof', () => {
   const state = runtimeState('fallback-catalog');

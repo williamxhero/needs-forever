@@ -517,6 +517,37 @@ test('TaskCatalog assigns repeated main-session work to the next matching Stop/C
   }
 });
 
+test('native rounds correlate delivery confirmations to their source Stop and show a timeout without a fictional prompt', async () => {
+  const data = fixture();
+  const statePath = resolve(data.directory, 'state.json');
+  const state = JSON.parse(readFileSync(statePath, 'utf8')); state.mode = 'live'; writeFileSync(statePath, JSON.stringify(state));
+  const events = [
+    { at: '2026-11-10T16:21:00Z', type: 'main_session_stop_observed', turn_id: 'same-turn', stop_attempt_id: 'stop-one' },
+    { at: '2026-11-10T16:27:00Z', type: 'decision', stop_attempt_id: 'stop-one', decision: routeDecision() },
+    { at: '2026-11-10T16:27:01Z', type: 'send_prepared', source_stop_attempt_id: 'stop-one', source_turn_id: 'same-turn', delivery_id: 'delivery-one', message: 'Actual first direction.' },
+    { at: '2026-11-10T16:27:02Z', type: 'stop_hook_direction_returned', stop_attempt_id: 'stop-one', delivery_id: 'delivery-one' },
+    { at: '2026-11-10T16:28:00Z', type: 'main_session_recovery_prompt_scheduled', turn_id: 'same-turn', delivery_id: 'delivery-one' },
+    { at: '2026-11-10T16:28:31Z', type: 'send_confirmed', source_stop_attempt_id: 'stop-one', turn_id: 'same-turn', delivery_id: 'delivery-one' },
+    { at: '2026-11-10T16:38:00Z', type: 'main_session_stop_observed', turn_id: 'same-turn', stop_attempt_id: 'stop-two', source_stop_attempt_id: 'stop-one' },
+    { at: '2026-11-10T16:38:01Z', type: 'judge_created', stop_attempt_id: 'stop-two' },
+    { at: '2026-11-10T16:45:00Z', type: 'judge_terminated', stop_attempt_id: 'stop-two', reason: 'Judge timeout.' },
+  ];
+  writeFileSync(resolve(data.directory, 'events.jsonl'), events.map(e => JSON.stringify(e)).join('\n') + '\n');
+  const running = await startWebServer({ workspace: data.workspace, port: 0 });
+  try {
+    const record = new TaskCatalog({ workspace: data.workspace }).read('demo-001');
+    assert.equal(record.rounds.length, 2);
+    assert.equal(record.rounds[0]!.result?.eventType, 'send_confirmed');
+    assert.ok(record.rounds[1]!.technicalEvents.every(e => e.at >= '2026-11-10T16:38:00Z'));
+    const client = await openWebClient(`${running.url}tasks/demo-001`);
+    const latest = client.document.querySelector('#timeline')!.innerHTML.split('data-round="stop:stop-two"')[1]!;
+    assert.doesNotMatch(latest, /CONFIRMED|下一轮已确认开始/);
+    assert.match(latest, /超时/);
+    assert.match(latest, /未交付/);
+    assert.doesNotMatch(latest, /prompt-block/);
+  } finally { await running.close(); data.cleanup(); }
+});
+
 test('web server exposes task, record and validated control endpoints', async () => {
   const data = fixture();
   const running = await startWebServer({ workspace: data.workspace, port: 0 });

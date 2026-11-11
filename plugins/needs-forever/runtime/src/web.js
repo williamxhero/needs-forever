@@ -350,6 +350,13 @@ function routeAuditForRound(round) {
 }
 function makeRounds(events) {
     const stopAttemptsByTurn = new Map();
+    const stopsByDelivery = new Map();
+    for (const raw of events) {
+        const delivery = stringValue(raw.delivery_id);
+        const stop = stringValue(raw.stop_attempt_id) ?? stringValue(raw.source_stop_attempt_id);
+        if (delivery && stop && ['send_prepared', 'stop_hook_direction_returned'].includes(String(raw.type)))
+            stopsByDelivery.set(delivery, stop);
+    }
     for (const raw of events) {
         if (stringValue(raw.type) !== 'main_session_stop_observed')
             continue;
@@ -365,13 +372,13 @@ function makeRounds(events) {
         attempts.sort((left, right) => left.at.localeCompare(right.at));
     const rounds = new Map();
     for (const raw of events) {
-        const explicitStopAttempt = stringValue(raw.stop_attempt_id);
+        const explicitStopAttempt = stringValue(raw.stop_attempt_id) ?? stringValue(raw.source_stop_attempt_id) ?? stopsByDelivery.get(String(raw.delivery_id)) ?? null;
         const turnId = stringValue(raw.turn_id) ?? stringValue(raw.worker_turn_id) ?? stringValue(raw.source_turn_id);
         const mappedAttempts = turnId ? stopAttemptsByTurn.get(turnId) ?? [] : [];
         const type = stringValue(raw.type) ?? '';
         const previousAttempt = [...mappedAttempts].reverse().find((attempt) => attempt.at <= eventTime(raw))?.stopAttemptId ?? null;
         const nextAttempt = mappedAttempts.find((attempt) => attempt.at >= eventTime(raw))?.stopAttemptId ?? null;
-        const mappedStopAttempt = type === 'main_session_continuation_confirmed' ? previousAttempt : nextAttempt;
+        const mappedStopAttempt = ['main_session_continuation_confirmed', 'send_confirmed'].includes(type) ? previousAttempt : nextAttempt;
         const id = explicitStopAttempt ? `stop:${explicitStopAttempt}` : mappedStopAttempt ? `stop:${mappedStopAttempt}` : turnId ?? 'run';
         let round = rounds.get(id);
         if (!round) {
@@ -831,24 +838,27 @@ function routeHtml(r,key){
   return collapsibleHtml('decision-block route-block',lines.join('\n'),key+':route:'+audit.planId);
 }
 function roundHtml(r,index){
-  const decisionEvent=r.supervisor.findLast(e=>e.eventType==='decision')||r.result;
+  const decisionEvent=r.supervisor.findLast(e=>e.eventType==='decision'||e.eventType==='judge_inventory_fallback');
+  const lastJudge=r.supervisor.findLast(e=>e.eventType.startsWith('judge_'));
+  const timeouts=r.supervisor.filter(e=>e.eventType==='judge_terminated'&&/timeout|超时/i.test(JSON.stringify(e.details)));
   const decisionValue=decisionEvent?.details.decision;
-  const action=decisionValue?.action||r.result?.result||'UNKNOWN';
-  const decisionText=decisionValue?.reason||r.result?.summary||'未记录 supervisor reason';
+  const action=decisionValue?.action||(timeouts.length?'超时':'未完成');
+  const decisionText=decisionValue?.reason||(timeouts.length?'SUPERVISOR '+timeouts.length+' 次判断超时，未产生有效 decision。':'尚未产生有效 SUPERVISOR 判断。');
   const recoverySent=r.continuation.find(e=>e.eventType==='main_session_recovery_prompt_sent');
   const recoveryAck=r.continuation.find(e=>e.eventType==='main_session_recovery_prompt_acknowledged');
   const observedPrompt=r.continuation.find(e=>e.eventType==='main_session_worker_prompt_observed');
   const recoveryFailure=r.continuation.find(e=>e.eventType==='main_session_recovery_prompt_failed');
-  const prompt=typeof observedPrompt?.details.message==='string'?observedPrompt.details.message:typeof recoverySent?.details.message==='string'?recoverySent.details.message:typeof decisionValue?.next_message==='string'?decisionValue.next_message:r.result?.eventType==='external_wait_required'?String(r.result.details.resume_when||''):'';
+  const direction=r.continuation.find(e=>e.eventType==='stop_hook_direction_returned');
+  const prompt=typeof observedPrompt?.details.message==='string'?observedPrompt.details.message:typeof recoverySent?.details.message==='string'?recoverySent.details.message:direction&&typeof decisionValue?.next_message==='string'?decisionValue.next_message:'';
   const stopAt=r.stop?.at||r.endedAt;
-  const decisionAt=decisionEvent?.at||stopAt;
-  const returnedAt=observedPrompt?.at||r.continuation.find(e=>e.eventType==='stop_hook_direction_returned')?.at||r.continuation.find(e=>e.eventType==='main_session_continuation_confirmed')?.at||recoveryAck?.at||recoverySent?.at||r.endedAt;
+  const decisionAt=decisionEvent?.at||lastJudge?.at||stopAt;
+  const returnedAt=observedPrompt?.at||direction?.at||recoveryAck?.at||recoverySent?.at;
   const stopReason=typeof r.stop?.details.stop_reason==='string'?r.stop.details.stop_reason:'';
   const key=JSON.stringify([app.taskId,r.id]);
   const stepTime=v=>'<span class="step-time">'+esc(shortHourMinute(v))+'</span>';
   const recoveryLine=recoverySent?'<div class="flow-line">'+stepTime(recoverySent.at)+' <strong>NF 推动 A：</strong> <span class="event-result">已发送恢复 prompt</span></div>':recoveryFailure?'<div class="flow-line">'+stepTime(recoveryFailure.at)+' <strong>NF 推动 A：</strong> <span class="event-result result-error">发送失败</span></div>':'';
   const recoveryAckLine=recoveryAck?'<div class="flow-line">'+stepTime(recoveryAck.at)+' <strong>A thread：</strong> <span class="event-result">已接收恢复 prompt</span></div>':'';
-  return '<article class="round" data-round="'+esc(r.id)+'"><div class="round-head"><span class="round-title">第 '+(index+1)+' 轮</span><span class="round-time">'+esc(shortDate(stopAt))+'</span></div><div class="round-body"><div class="flow-line">'+stepTime(stopAt)+' <strong>WORKER 发出：</strong> <span class="event-result">Stop</span></div>'+(stopReason?collapsibleHtml('decision-block stop-reason-block',stopReason,key+':stop'):'')+'<div class="flow-line">'+stepTime(decisionAt)+' <strong>SUPERVISOR 判断：</strong> <span class="event-result">'+esc(action)+'</span></div>'+collapsibleHtml('decision-block',decisionText,key+':decision')+routeHtml(r,key)+'<div class="flow-line">'+stepTime(returnedAt)+' <strong>WORKER 收到：</strong></div>'+collapsibleHtml('prompt-block',prompt,key+':prompt')+recoveryLine+recoveryAckLine+'</div></article>';
+  return '<article class="round" data-round="'+esc(r.id)+'"><div class="round-head"><span class="round-title">第 '+(index+1)+' 轮</span><span class="round-time">'+esc(shortDate(stopAt))+'</span></div><div class="round-body"><div class="flow-line">'+stepTime(stopAt)+' <strong>WORKER 发出：</strong> <span class="event-result">Stop</span></div>'+(stopReason?collapsibleHtml('decision-block stop-reason-block',stopReason,key+':stop'):'')+'<div class="flow-line">'+stepTime(decisionAt)+' <strong>SUPERVISOR 判断：</strong> <span class="event-result">'+esc(action)+'</span></div>'+collapsibleHtml('decision-block',decisionText,key+':decision')+routeHtml(r,key)+'<div class="flow-line">'+(returnedAt?stepTime(returnedAt)+' ':'')+'<strong>WORKER 收到：</strong>'+(prompt?'':' <span class="event-result">未交付</span>')+'</div>'+(prompt?collapsibleHtml('prompt-block',prompt,key+':prompt'):'')+recoveryLine+recoveryAckLine+'</div></article>';
 }
 function setExpanded(node,expanded){node.classList.toggle('expanded',expanded);node.setAttribute('aria-expanded',String(expanded));const marker=node.querySelector('.collapse-marker');if(marker)marker.textContent=expanded?'⌃':'⌄'}
 function wireCollapsibles(){document.querySelectorAll('[data-collapsible]').forEach(node=>{node.onclick=()=>setExpanded(node,!node.classList.contains('expanded'))})}

@@ -96,7 +96,7 @@ export interface Snapshot {
   worker_thread_id: string;
   worker_turn_id: string;
   task: Task;
-  evidence: { id: string; type: string; value: unknown; source?: { event_id: string; observed_at?: string; thread_id?: string; turn_id?: string; item_id?: string } }[];
+  evidence: { id: string; type: string; value: unknown; complete?: boolean; source?: { event_id: string; observed_at?: string; thread_id?: string; turn_id?: string; item_id?: string } }[];
   plan?: unknown;
   recent_verification?: unknown;
   recent_instructions?: unknown[];

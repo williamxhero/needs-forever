@@ -74,10 +74,11 @@ export function buildSnapshot(state: State, workerTurnId: string, events: Record
   let omitted = 0;
   for (const { item, event } of candidates) {
     if (!['commandExecution', 'fileChange', 'functionCallOutput', 'agentMessage', 'plan'].includes(String(item.type))) continue;
-    const entry: Snapshot['evidence'][number] = { id: `E${snapshot.evidence.length + 1}`, type: String(item.type), value: item, source: { event_id: String(event.event_id), ...(typeof event.at === 'string' ? { observed_at: event.at } : {}), thread_id: state.worker_thread_id!, turn_id: workerTurnId, item_id: String(item.id) } };
+    const entry: Snapshot['evidence'][number] = { id: `E${snapshot.evidence.length + 1}`, type: String(item.type), value: item, complete: true, source: { event_id: String(event.event_id), ...(typeof event.at === 'string' ? { observed_at: event.at } : {}), thread_id: state.worker_thread_id!, turn_id: workerTurnId, item_id: String(item.id) } };
     snapshot.evidence.push(entry);
     if (JSON.stringify(snapshot).length > PROOF_BUDGET - 600) {
       snapshot.evidence_complete = false;
+      entry.complete = false;
       snapshot.omissions!.push(`${entry.id}: item payload truncated; full record is at source.event_id.`);
       for (const limit of [1800, 600, 160]) {
         entry.value = clip(item, limit);

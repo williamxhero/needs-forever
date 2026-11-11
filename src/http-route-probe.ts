@@ -109,7 +109,7 @@ function supersedesCatalog(catalog: RouteCatalog, receipt: ProbeReceipt, proof: 
 }
 export function ingestHttpRouteProbes(state: State, snapshot: Snapshot): number {
   const context = state.route_probe;
-  if (!context || context.scope_sha256 !== scopeDigest(state) || JSON.stringify(context.argv_prefix) !== JSON.stringify(argvPrefix(context.state_path)) || snapshot.evidence_complete === false || snapshot.task_id !== state.task_id || snapshot.task_version !== state.task_version || routeEvidenceDigest(snapshot.task) !== routeEvidenceDigest(redact(state.task))) return 0;
+  if (!context || context.scope_sha256 !== scopeDigest(state) || JSON.stringify(context.argv_prefix) !== JSON.stringify(argvPrefix(context.state_path)) || snapshot.task_id !== state.task_id || snapshot.task_version !== state.task_version || routeEvidenceDigest(snapshot.task) !== routeEvidenceDigest(redact(state.task))) return 0;
   const worker = (state as State & { main_session_id?: string }).main_session_id ?? state.worker_thread_id;
   if (snapshot.worker_thread_id !== worker) return 0;
   const catalog = new RouteCatalog({ task_id: state.task_id, task_version: state.task_version }, { data: activeRouteCatalog(state) });
