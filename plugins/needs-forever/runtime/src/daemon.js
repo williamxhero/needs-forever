@@ -7,6 +7,7 @@ import { createRecoveryPlan, reconcileRecoveryTick, cancelRecovery, resetRecover
 import { validateAdapterEnvelope } from './adapter-protocol.js';
 import { Store } from './store.js';
 import { armNativeRebind } from './main-session.js';
+import { redact } from './redact.js';
 function readState(path) {
     try {
         const value = JSON.parse(readFileSync(path, 'utf8'));
@@ -134,13 +135,32 @@ export class NFDaemon {
         this.callbacks.add(callback);
         return () => this.callbacks.delete(callback);
     }
+    /**
+     * Timer callbacks intentionally do not await a tick.  Keep the detached
+     * promise contained here so one transient filesystem/provider error cannot
+     * become an unhandled rejection that terminates the global NF process and
+     * leaves watchdog recovery permanently idle.
+     */
+    queueTick() {
+        void Promise.resolve().then(() => this.tick()).catch((error) => {
+            try {
+                const message = redact(error instanceof Error ? error.message : String(error));
+                this.audit('daemon_tick_failed', undefined, { error: typeof message === 'string' ? message : 'Daemon tick failed; the next tick will retry.' });
+            }
+            catch {
+                // The audit path may itself be unavailable during an interrupted
+                // filesystem operation.  Keep the process alive; the next timer tick
+                // remains the recovery mechanism.
+            }
+        });
+    }
     start() {
         if (this.running)
             return;
         this.running = true;
-        void this.tick();
+        this.queueTick();
         if (this.intervalMs > 0)
-            this.timer = setInterval(() => { void this.tick(); }, this.intervalMs);
+            this.timer = setInterval(() => { this.queueTick(); }, this.intervalMs);
         this.audit('daemon_started');
     }
     stop() {
@@ -223,11 +243,24 @@ export class NFDaemon {
             clearTimeout(this.recoveryTimer);
         const nextWakeAt = [recoveryDeadline, recoveryPromptAt].filter((value) => value !== null).reduce((earliest, value) => Math.min(earliest ?? value, value), null);
         this.recoveryTimer = this.running && nextWakeAt !== null
-            ? setTimeout(() => { void this.tick(); }, Math.max(1, nextWakeAt - this.now()))
+            ? setTimeout(() => { this.queueTick(); }, Math.max(1, nextWakeAt - this.now()))
             : undefined;
         const result = { at, discovered, changed, waitingNative, nextRetryAt };
-        for (const callback of this.callbacks)
-            callback(result);
+        for (const callback of this.callbacks) {
+            try {
+                callback(result);
+            }
+            catch (error) {
+                try {
+                    const message = redact(error instanceof Error ? error.message : String(error));
+                    this.audit('daemon_tick_callback_failed', undefined, { error: typeof message === 'string' ? message : 'Daemon tick callback failed; the next tick will continue.' });
+                }
+                catch {
+                    // Observers are non-authoritative.  A broken observer must not stop
+                    // the daemon's next recovery tick.
+                }
+            }
+        }
         return result;
     }
     status() {
