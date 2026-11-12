@@ -3,6 +3,7 @@
   "files": {
     "src/adapter-protocol.js": "1599bba11e0e48947b9d55973b900f62380101ab40d32fb17cb19e8a3478a740",
     "src/cli.js": "17117af0e7a538042f3b5c2403e79d2a3acc469bab0cd6496b5aacd43c758520",
+    "src/completion-gate.js": "692304b3ca0d67d368fbe0b0fd136aa05fe9ba5db3312122ff578a152136654b",
     "src/control-intent.js": "13c30d85dacd68e50616aad9feeee832ae1bb24a11d846c47ca65588b9fbd3d2",
     "src/daemon-cli.js": "4388cbea334e3747d81e30cf9736c50db27891969d1e457e9f1f160c2b67b69f",
     "src/daemon.js": "dd5347b00b957f39d14219fe32fef2dda7e530aaadc2d7bf4edb7c2644525beb",
@@ -16,7 +17,7 @@
     "src/main-controller.js": "e7664fe5d045a1424cd362c91270cc602970c4be091dcf6c461d53fe851fc100",
     "src/main-session-recovery.js": "a620c38977cd461548cbe5e4bb7197bf4d68d013cc7a45b7855f990a1d08d0d6",
     "src/main-session.js": "191ccd8a0fbd2b215b0e8bfa0f284de14f0953837811f22f31ca8b3a065c5b92",
-    "src/main-supervision.js": "cd59ccc2512ae0538b69322413a46ea4823055b66bfa4b56e7c83db512d160ad",
+    "src/main-supervision.js": "bd78ef14b4c8a2eb7989826415ae6181b9187d50d086277a648f44b0737bb000",
     "src/planning-context.js": "8a45d69e586c8f070e965ace16fccbf377c40ed8236fca03f6bacb2b58016c36",
     "src/planning-contract.js": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
     "src/planning-schema.js": "e6f7ebd6ffae08fabdb5da1917fd10dfce36ff10a590f4677174cefc67b8a868",
