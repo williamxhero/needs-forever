@@ -38,6 +38,6 @@
     "src/tracking-integration.js": "2fab480a768cda638dfeb59bdfa9aee0cedc51c4a3c44ba67bc6c13511560909",
     "src/transport.js": "496ad678943c8ad1f759f1ec1a781ee106e134b02069eed5ec9e2f47b14b2a65",
     "src/types.js": "1d776e8997c21eccad34b1b01358b1a3f8df090b5647a855ba3972d361311f08",
-    "src/web.js": "b96b3190e58f50fa769243bc871a79932de2d2940195592afe44a7bcbc14be62"
+    "src/web.js": "f8384edbf06897f7da71e979f6a8bb03f947a623b66c8923ba527b118f79b990"
   }
 }
