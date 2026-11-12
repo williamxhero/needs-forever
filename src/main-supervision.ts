@@ -1,7 +1,4 @@
-import { randomUUID, createHash } from 'node:crypto';
-import { readdir, readFile, readlink } from 'node:fs/promises';
-import { setImmediate as yieldControl } from 'node:timers/promises';
-import { dirname, isAbsolute, resolve, relative } from 'node:path';
+import { randomUUID } from 'node:crypto';
 import { AppServerJudge, archiveTerminatedJudge, validateDecision } from './judge.js';
 import { codexCommand, connect, type Rpc } from './transport.js';
 import { Store } from './store.js';
@@ -9,50 +6,10 @@ import { redact } from './redact.js';
 import type { Decision, Snapshot } from './types.js';
 import type { MainSessionState, StopRequest } from './main-session.js';
 import { buildC2Context } from './planning-context.js';
-import { routeInventoryDecision } from './planning.js';
+import { completionGate, continueWith } from './completion-gate.js';
 
 const budget = 21_500; // Reserve bounded C2 catalog/ledger metadata after current proof.
 
-async function retryRead<T>(operation: string, path: string, read: () => Promise<T>, signal: AbortSignal): Promise<T> {
-  const deadline = Date.now() + 5_000;
-  while (true) {
-    signal.throwIfAborted();
-    try { return await read(); }
-    catch (error) {
-      const code = (error as NodeJS.ErrnoException).code;
-      if (process.platform !== 'win32' || !['EPERM', 'EACCES', 'EBUSY'].includes(code ?? '') || Date.now() >= deadline) {
-        throw new Error(`${operation} ${path}: ${(error as Error).message}`, { cause: error });
-      }
-      await new Promise<void>((resolve, reject) => {
-        const timer = setTimeout(resolve, 10 + Math.floor(Math.random() * 40));
-        signal.addEventListener('abort', () => { clearTimeout(timer); reject(signal.reason); }, { once: true });
-      });
-    }
-  }
-}
-async function readFileRetry(path: string, signal: AbortSignal): Promise<Buffer> {
-  return retryRead('read', path, () => readFile(path), signal);
-}
-function verificationWorkspace(state: MainSessionState): string {
-  const verify = state.task.verify;
-  if (!verify || verify.argv.length < 2 || !isAbsolute(verify.argv[1]!)) return state.task.workspace;
-  const workspace = resolve(state.task.workspace);
-  const candidates = [dirname(resolve(verify.argv[1]!)), ...verify.protected_files.map((file) => dirname(resolve(file)))];
-  const first = candidates[0]!;
-  const prefix = process.platform === 'win32' ? first.toLowerCase() : first;
-  if (candidates.some((candidate) => {
-    const value = process.platform === 'win32' ? candidate.toLowerCase() : candidate;
-    return value !== prefix;
-  })) return state.task.workspace;
-  const suffix = relative(workspace, first);
-  if (suffix === '' || isAbsolute(suffix) || suffix === '..' || suffix.startsWith('../') || suffix.startsWith('..\\')) return state.task.workspace;
-  return first;
-}
-function continueWith(snapshot: Snapshot, message: string, reason: string): Decision {
-  const concise = message.length <= 3_000 ? message : `${message.slice(0, 2700)}\nRead the persisted verification_result and protected baseline for the complete evidence and original protected contents.`;
-  const decision = snapshot.c2?.mode === 'legacy' ? { action: 'CONTINUE' as const, reason, evidence_ids: [], next_message: concise, external: null } : routeInventoryDecision(snapshot, reason, concise);
-  return validateDecision(JSON.stringify(decision), snapshot);
-}
 function commandFor(state: MainSessionState, fixture: any): string[] {
   if (state.mode === 'simulated') {
     if (!Array.isArray(fixture?.app_server_argv) || !fixture.app_server_argv.length || !fixture.app_server_argv.every((value: unknown) => typeof value === 'string' && value.length)) throw new Error('Simulated supervisor requires an explicit external app-server argv.');
@@ -117,87 +74,6 @@ export function buildMainSessionSnapshot(state: MainSessionState, request: StopR
   if (planEvent && JSON.stringify(planEvent.value).length < 1_500) snapshot.plan = { observed: planEvent.value, source_event_id: planEvent.event_id };
   return buildC2Context(snapshot, state);
 }
-async function workspaceDigest(state: MainSessionState, store: Store, signal: AbortSignal): Promise<string> {
-  const hash = createHash('sha256');
-  const statePath = resolve(store.path);
-  const temporaryState = /^\.[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.tmp$/i;
-  let visited = 0;
-  const walk = async (directory: string): Promise<void> => {
-    signal.throwIfAborted();
-    const entries = await retryRead('readdir', directory, () => readdir(directory, { withFileTypes: true }), signal);
-    for (const item of entries.sort((a, b) => a.name.localeCompare(b.name))) {
-      signal.throwIfAborted();
-      if (++visited % 16 === 0) await yieldControl(undefined, { signal });
-      const path = resolve(directory, item.name);
-      const name = relative(state.task.workspace, path).replaceAll('\\', '/');
-      if (name === '.codex-supervisor' || name === '.git') continue;
-      // Historical Desktop acceptance profiles are generated supervision
-      // fixtures, not task business files. Chromium keeps files such as
-      // Network/Cookies open with a deny-read handle on Windows; traversing
-      // this directory makes an otherwise valid DONE verification fail with
-      // EBUSY. Keep the current task artifacts hashable while excluding only
-      // this known generated fixture root.
-      const lowerPath = name.toLowerCase();
-      if (lowerPath === '.scratch/main-session-supervision' || lowerPath.startsWith('.scratch/main-session-supervision/')) continue;
-      const lowerName = item.name.toLowerCase();
-      const generatedLock = (lowerName === 'lock' || lowerName === 'lock.reclaim' || lowerName.endsWith('.lock') || lowerName.endsWith('.lock.reclaim'))
-        && !new Set(['cargo.lock', 'flake.lock', 'module.bazel.lock']).has(lowerName);
-      // A checkpoint can live beside task files in any configured directory.
-      // Omit only Store-owned writes, not that whole directory or its verifier.
-      const local = relative(store.directory, path).replaceAll('\\', '/');
-      if (relative(statePath, path) === '' || local === 'summary.md' || local === 'events.jsonl'
-        || generatedLock || path === `${statePath}.lock` || path === `${statePath}.lock.reclaim`
-        || (path.startsWith(statePath) && temporaryState.test(path.slice(statePath.length)))) continue;
-      hash.update(name);
-      if (item.isSymbolicLink()) hash.update(`link:${await retryRead('readlink', path, () => readlink(path), signal)}`);
-      else if (item.isDirectory()) await walk(path);
-      else if (item.isFile()) {
-        hash.update(await readFileRetry(path, signal));
-        await yieldControl(undefined, { signal });
-      }
-    }
-  };
-  await walk(state.task.workspace);
-  signal.throwIfAborted();
-  return hash.digest('hex');
-}
-async function verification(state: MainSessionState, store: Store, rpc: Rpc, signal: AbortSignal, snapshot: Snapshot): Promise<Decision | null> {
-  const verify = state.task.verify;
-  if (!verify) return null;
-  signal.throwIfAborted();
-  if (!state.protected_baseline) throw new Error('Missing initial protected baseline; a resumed verifier baseline must never be invented.');
-  state.phase = 'VERIFY'; store.save(state);
-  const before = store.protectedChanges(state);
-  const workspaceBefore = await workspaceDigest(state, store, signal);
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  let result: { exitCode: number | null; stdout: string; stderr: string; timed_out?: boolean };
-  const sandboxWorkspace = verificationWorkspace(state);
-  if (before.length) result = { exitCode: null, stdout: '', stderr: 'Protected files changed before verification.' };
-  else {
-    try {
-      result = await Promise.race([
-        rpc.request<any>('command/exec', { command: verify.argv, cwd: sandboxWorkspace, timeoutMs: verify.timeout_seconds * 1_000, sandboxPolicy: { type: 'workspaceWrite', writableRoots: [sandboxWorkspace], networkAccess: false, excludeTmpdirEnvVar: true, excludeSlashTmp: true } }),
-        new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error('Independent verification timeout.')), verify.timeout_seconds * 1_000 + 1_000); }),
-      ]);
-      if (!result || (result.exitCode !== null && !Number.isInteger(result.exitCode)) || typeof result.stdout !== 'string' || typeof result.stderr !== 'string') throw new Error('Invalid independent verification response; exitCode/stdout/stderr required.');
-    } catch (error) {
-      signal.throwIfAborted();
-      result = { exitCode: null, stdout: '', stderr: (error as Error).message, timed_out: /tim(e|ed)[ -]?out/i.test((error as Error).message) };
-      if (result.timed_out) { await rpc.close(); store.event(state, 'verification_terminated', { via: 'owned_app_server_exit', server_process_id: rpc.processId }); }
-    } finally { clearTimeout(timer); }
-  }
-  signal.throwIfAborted();
-  const after = store.protectedChanges(state);
-  const workspaceChanged = workspaceBefore !== await workspaceDigest(state, store, signal);
-  signal.throwIfAborted();
-  const passed = result.exitCode === 0 && !before.length && !after.length && !workspaceChanged;
-  const evidence = redact({ argv: verify.argv, ...result, protected_before: before, protected_after: after, workspace_changed: workspaceChanged, passed });
-  store.event(state, 'verification_result', evidence as Record<string, unknown>);
-  if (passed) return null;
-  const changed = new Set([...before, ...after].map((file) => file.path));
-  const original = state.protected_baseline.filter((file) => changed.has(file.path));
-  return continueWith(snapshot, `Independent verification failed. Repair the task and restore changed protected files; keep the original fixed argv. Rerun concise acceptance checks, then prepare to stop. Evidence: ${JSON.stringify(evidence)}. Original protected content (base64): ${JSON.stringify(original)}`, 'The fixed independent completion gate did not pass.');
-}
 export async function superviseStop(state: MainSessionState, request: StopRequest, fixture: any, signal: AbortSignal, store: Store, snapshot: Snapshot = buildMainSessionSnapshot(state, request, store.events())): Promise<Decision> {
   store.snapshot(snapshot, null);
   const connection = await connect(commandFor(state, fixture), state.task.workspace, signal);
@@ -224,7 +100,7 @@ export async function superviseStop(state: MainSessionState, request: StopReques
     }
     signal.throwIfAborted();
     store.event(state, 'decision', { role: 'judge', thread_id: state.judge_thread_ids?.at(-1), snapshot_id: snapshot.snapshot_id, stop_attempt_id: request.stop_attempt_id, worker_thread_id: state.main_session_id, decision });
-    if (decision.action === 'DONE') decision = await verification(state, store, connection.rpc, signal, snapshot) ?? decision;
+    decision = await completionGate({ state, snapshot, store, rpc: connection.rpc, signal }, decision);
     signal.throwIfAborted();
     return decision;
   } finally { await connection.rpc.close(); await pump; }
