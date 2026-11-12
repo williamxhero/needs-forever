@@ -6,7 +6,7 @@ import { reachedLimits } from './rules.js';
 import { Store } from './store.js';
 import { record, text } from './types.js';
 import type { State, Task } from './types.js';
-import { createRecoveryPlan, waitForNativeReceipt, resetRecoveryWindow } from './recovery-coordinator.js';
+import { createRecoveryPlan, waitForNativeReceipt, resetRecoveryWindow } from './recovery-episode.js';
 import { assertTrackingContract, createTracking, loadTracking, locatorForSelection, trackingLocator, updateTracking, type TrackingLocator, type TrackingSelection } from './tracking-integration.js';
 import type { TrackingUpdate, TrackingRecord } from './local-tracking.js';
 

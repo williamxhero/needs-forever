@@ -10,7 +10,7 @@ import { validateTask as taskInput } from './main-session.js';
 import { startWebServer } from './web.js';
 import { record, text } from './types.js';
 import type { Decision, State, Task } from './types.js';
-import { createRecoveryPlan, resetRecoveryWindow } from './recovery-coordinator.js';
+import { createRecoveryPlan, resetRecoveryWindow } from './recovery-episode.js';
 import { executeHttpRouteProbe } from './http-route-probe.js';
 
 function readJson(path: string): unknown { return JSON.parse(readFileSync(path, 'utf8')); }

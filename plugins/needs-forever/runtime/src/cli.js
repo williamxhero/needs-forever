@@ -9,7 +9,7 @@ import { reachedLimits } from './rules.js';
 import { validateTask as taskInput } from './main-session.js';
 import { startWebServer } from './web.js';
 import { record, text } from './types.js';
-import { createRecoveryPlan, resetRecoveryWindow } from './recovery-coordinator.js';
+import { createRecoveryPlan, resetRecoveryWindow } from './recovery-episode.js';
 import { executeHttpRouteProbe } from './http-route-probe.js';
 function readJson(path) { return JSON.parse(readFileSync(path, 'utf8')); }
 async function main() {

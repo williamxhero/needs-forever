@@ -6,7 +6,7 @@ import { Store } from './store.js';
 import { record, text } from './types.js';
 import { redact } from './redact.js';
 import { controlIntent } from './control-intent.js';
-import { createRecoveryPlan, reconcileRecoveryTick } from './recovery-coordinator.js';
+import { createRecoveryPlan, reconcileRecoveryTick } from './recovery-episode.js';
 import { confirmRouteExecution, routeCorrelation } from './route-execution.js';
 const hash = (value) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 export function isNativeRebindEvent(name) {

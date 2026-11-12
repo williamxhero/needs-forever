@@ -4,7 +4,7 @@ import { homedir } from 'node:os';
 import { dirname, relative, resolve, sep } from 'node:path';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { createServer, type Server } from 'node:http';
-import { createRecoveryPlan, reconcileRecoveryTick, cancelRecovery, resetRecoveryWindow } from './recovery-coordinator.js';
+import { createRecoveryPlan, reconcileRecoveryTick, cancelRecovery, resetRecoveryWindow } from './recovery-episode.js';
 import { validateAdapterEnvelope, type AdapterEnvelope } from './adapter-protocol.js';
 import { Store } from './store.js';
 import type { State } from './types.js';
