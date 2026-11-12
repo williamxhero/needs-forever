@@ -59,11 +59,11 @@ export function readHistoricalDecision(raw: string): Decision {
   if (typeof value.next_message !== 'string' || !Array.isArray(value.evidence_ids) || value.evidence_ids.some((id) => typeof id !== 'string')) throw new Error('Invalid historical decision.');
   return value as unknown as Decision;
 }
-export function validateDecision(raw: string, snapshot: Snapshot): Decision {
-  try { return validateOutput(raw, snapshot); }
+export function validateDecision(raw: string, snapshot: Snapshot, options: { allowPlannerFallback?: boolean } = {}): Decision {
+  try { return validateOutput(raw, snapshot, options); }
   catch (error) { throw new JudgeOutputError(String(redact(error instanceof Error ? error.message : String(error)))); }
 }
-function validateOutput(raw: string, snapshot: Snapshot): Decision {
+function validateOutput(raw: string, snapshot: Snapshot, options: { allowPlannerFallback?: boolean } = {}): Decision {
   // Normalize the complete contract together so selected actions and their
   // derived message remain equal through admission, persistence and recovery.
   const value = record(readHistoricalDecision(JSON.stringify(redact(JSON.parse(raw)))));
@@ -83,7 +83,7 @@ function validateOutput(raw: string, snapshot: Snapshot): Decision {
   if (value.action !== 'CONTINUE' && !value.evidence_ids.length) throw new Error('DONE/WAIT_EXTERNAL require evidence.');
   if (value.action !== 'CONTINUE' && snapshot.evidence_complete === false) throw new Error('Incomplete or truncated evidence requires CONTINUE to gather concise proof.');
   if (value.action !== 'CONTINUE' && !snapshot.evidence.some((entry) => value.evidence_ids instanceof Array && value.evidence_ids.includes(entry.id) && entry.source && ['commandExecution', 'fileChange', 'functionCallOutput', 'verification_result'].includes(entry.type))) throw new Error('DONE/WAIT_EXTERNAL require independent evidence, not worker claims.');
-  return validateC2Decision(value as unknown as Decision, snapshot);
+  return validateC2Decision(value as unknown as Decision, snapshot, options);
 }
 
 // The cancelled call's signal and RPC are already closed. A separate, bounded

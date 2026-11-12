@@ -52,14 +52,14 @@ export function discoverLocalRoutes(state: State): void {
 export function prepareRouteExecution(state: State, decision: Decision, snapshot: Snapshot, deliveryId: string, sourceStopId: string, options: { plannerFallback?: boolean } = {}): RouteCorrelation {
   if (snapshot.task_id !== state.task_id || snapshot.task_version !== state.task_version || routeEvidenceDigest(snapshot.task) !== routeEvidenceDigest(redact(state.task))) throw new Error('Route admission rejected stale task scope/version or contract.');
   if (snapshot.c2) snapshot = { ...snapshot, c2: { ...snapshot.c2, catalog: activeRouteCatalog(state) } };
-  decision = validateDecision(JSON.stringify(decision), snapshot);
+  const plannerFallback = options.plannerFallback === true;
+  decision = validateDecision(JSON.stringify(decision), snapshot, { allowPlannerFallback: plannerFallback });
   if (!decision.route_plan) return {};
   const route = decision.route_plan.candidates.find((candidate) => candidate.route_id === decision.route_plan!.selected_route_id)!;
   const canonical = canonicalExecutionRoute(route, state.route_catalog?.entries ?? []);
   const evidence = structuredClone(snapshot.c2?.observations.filter((item) => route.evidence_ids.includes(item.id)) ?? []);
   const ledger = new RouteLedger(scope(state), state.route_ledger ? { data: state.route_ledger } : {});
   const permission = ledger.evaluateAttempt(canonical, { evidence_ids: route.evidence_ids, evidence, ...(route.discriminating_check ? { discriminating_check: route.discriminating_check } : {}) });
-  const plannerFallback = options.plannerFallback === true;
   const boundedDiagnostic = route.resource.kind === 'diagnostic' && route.operation === 'inspect-authorized-route-facts';
   if (!permission.allowed && !(plannerFallback && boundedDiagnostic && ['change_hypothesis', 'no_progress_limit', 'retry_condition_required', 'retry_not_ready'].includes(permission.reason))) {
     throw new Error(`C2 repeated route rejected at delivery admission: ${permission.reason}.`);
@@ -106,7 +106,7 @@ export function plannerFailureFallback(snapshot: Snapshot, reason: string, state
     const candidate = routeInventoryDecision(snapshot, reason);
     const selected = candidate.route_plan!.candidates[0]!;
     if (selected.evidence_ids.length) selected.discriminating_check = { description: 'Use the complete current independent results to distinguish changed route facts before another inventory attempt.', evidence_ids: [...selected.evidence_ids] };
-    const decision = validateDecision(JSON.stringify(candidate), snapshot);
+    const decision = validateDecision(JSON.stringify(candidate), snapshot, { allowPlannerFallback: options.allowRecoveryOverride === true });
     // A budget-trimmed ledger is context for C, never permission to dispatch.
     // Validate the fallback against full current state without persisting a
     // proposal, counting an attempt or creating a real delivery.
