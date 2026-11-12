@@ -38,21 +38,21 @@ function installed(name: string, transport: unknown = {}, sessionId = name, boun
   return { directory, workspace, plugin, task, state, fixture, trace, run, hook, setDesktopPid };
 }
 
-test('a forbidden planner fallback interrupts immediately with its cause and never emits an empty worker direction', (t) => {
+test('a repeated invalid planner output receives one bounded diagnostic direction instead of interrupting the worker', (t) => {
   const f = installed('c2-fallback-interruption', { decision: { action: 'CONTINUE', reason: 'Invalid planner output.', evidence_ids: [], next_message: 'Audit.', external: null } }, 'c2-fallback-interruption', 0, {}, undefined, undefined, 'enforce', 'Local files', { recovery_delays_ms: [0, 0, 0] });
   t.after(() => f.run('pause'));
-  assert.equal(JSON.parse(f.hook({ hook_event_name: 'Stop' }).stdout).decision, 'block');
-  const second = f.hook({ hook_event_name: 'Stop' });
-  assert.equal(second.status, 0, second.stderr);
-  assert.deepEqual(JSON.parse(second.stdout), {});
+  const first = f.hook({ hook_event_name: 'Stop' });
+  assert.equal(first.status, 0, first.stderr);
+  assert.equal(JSON.parse(first.stdout).decision, 'block');
   const state = JSON.parse(f.run('status').stdout);
-  assert.equal(state.status, 'INTERRUPTED');
-  assert.equal(state.recovery_condition.kind, 'recovery_unavailable');
-  assert.match(state.last_error, /备用诊断.*未获准/);
-  assert.equal(state.pending_action, null);
+  assert.equal(state.status, 'ACTIVE');
+  assert.equal(state.phase, 'WORKER');
+  assert.equal(state.pending_action.route_id, 'route-inventory');
+  assert.equal(state.route_execution.planner_fallback, true);
   const events = readFileSync(join(f.workspace, '.codex-supervisor', 'c2-fallback-interruption', 'events.jsonl'), 'utf8').trim().split(/\r?\n/).map(line => JSON.parse(line));
   assert.equal(events.filter(e => e.type === 'send_prepared').length, 1);
-  assert.equal(events.at(-1).type, 'recovery_interrupted');
+  assert.equal(events.filter(e => e.type === 'judge_inventory_fallback').length, 1);
+  assert.equal(events.at(-1).type, 'main_session_recovery_prompt_scheduled');
 });
 
 test('native C2 admission redacts the entire selected decision before checkpoint and recovery prompt', (t) => {
