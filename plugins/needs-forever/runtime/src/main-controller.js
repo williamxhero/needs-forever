@@ -17,6 +17,7 @@ import { reachedLimits } from './rules.js';
 import { armRecovery, cancelRecovery, createRecoveryPlan, markRecoveryRunning, acquireRecoveryOwner, waitForNativeReceipt, reconcileStaleOwner, interruptRecovery } from './recovery-coordinator.js';
 import { scheduleNativeRebindPrompt } from './main-session-recovery.js';
 import { initializeHttpRouteProbe } from './http-route-probe.js';
+import { runSupervisionRound } from './supervision-round.js';
 function scheduleMainSessionRecoveryPrompt(path, pluginRoot, fixturePath, state, message, sourceTurnId) {
     if (state.control_mode !== 'main-session' || !state.main_session_id || state.status !== 'ACTIVE')
         return;
@@ -749,48 +750,11 @@ export async function runController(path, pluginRoot, fixturePath) {
                                 super.save(state);
                             }
                         }(path);
-                        let decision;
                         const delivery = randomUUID();
-                        let correlation = {};
-                        let outputFailures = 0;
-                        if (state.mode === 'simulated' && !fixture?.app_server_argv && !fixture?.transport?.decision)
-                            throw new Error('Missing explicit simulated supervisor adapter; configure it before explicit resume.');
-                        while (true) {
-                            try {
-                                // Admission must use the exact bounded proof judged by C. Its
-                                // own decision/history can otherwise evict cited evidence.
-                                const snapshot = buildMainSessionSnapshot(state, request, store.events());
-                                decision = await evaluateStop(structuredClone(state), request, fixture, current.abort.signal, guarded, snapshot);
-                                if (!valid())
-                                    return {};
-                                if (decision.action === 'CONTINUE')
-                                    correlation = prepareRouteExecution(state, decision, snapshot, delivery, request.stop_attempt_id);
-                                break;
-                            }
-                            catch (error) {
-                                if (!valid() || current.abort.signal.aborted)
-                                    return {};
-                                const classification = classifyRecoveryError(error);
-                                state.recovery_failures = redact(recordRecoveryFailure((state.recovery_failures ?? []), error));
-                                const backoff = nextBackoff((state.retry.attempt ?? 0) + 1);
-                                state.retry = { kind: classification.kind, attempt: backoff.attempt, next_at: backoff.next_at };
-                                store.save(state);
-                                store.event(state, 'main_session_retry', { ...classification, ...backoff, stop_attempt_id: request.stop_attempt_id });
-                                if (!classification.recoverable)
-                                    throw error;
-                                if (++outputFailures >= 3) {
-                                    const snapshot = buildMainSessionSnapshot(state, request, store.events());
-                                    decision = plannerFailureFallback(snapshot, 'C failed three bounded output attempts; gather source-linked route facts.', state, { allowRecoveryOverride: true });
-                                    correlation = prepareRouteExecution(state, decision, snapshot, delivery, request.stop_attempt_id, { plannerFallback: true });
-                                    store.event(state, 'judge_inventory_fallback', { failures: outputFailures, stop_attempt_id: request.stop_attempt_id, decision, admission: 'bounded-diagnostic-recovery-override' });
-                                    break;
-                                }
-                                const configuredDelay = state.mode === 'simulated' && Array.isArray(fixture?.recovery_delays_ms) ? Number(fixture.recovery_delays_ms[Math.min(outputFailures - 1, fixture.recovery_delays_ms.length - 1)]) : backoff.delay_seconds * 1000;
-                                await delay(Math.min(Math.max(0, configuredDelay), Math.max(1, Date.parse(request.deadline_at) - Date.now())), undefined, { signal: current.abort.signal });
-                            }
-                        }
-                        if (!valid())
+                        const round = await runSupervisionRound({ state, request, fixture, signal: current.abort.signal, store, guarded, delivery, valid, evaluate: evaluateStop });
+                        if (!round)
                             return {};
+                        const { decision, correlation } = round;
                         accrue();
                         const limits = reachedLimits(state.task.limits, state);
                         if (limits.time || (decision.action === 'CONTINUE' && limits.turns)) {
@@ -822,8 +786,9 @@ export async function runController(path, pluginRoot, fixturePath) {
                             return {};
                         }
                         state.pending_action = { ...correlation, delivery_id: delivery, source_turn_id: request.turn_id, task_version: request.task_version, message: decision.next_message, stage: 'prepared', target_turn_id: null };
+                        const pendingAction = state.pending_action;
                         store.event(state, 'send_prepared', { ...correlation, delivery_id: delivery, source_turn_id: request.turn_id, message: decision.next_message, transport: 'native-stop' });
-                        state.pending_action.stage = 'sent';
+                        pendingAction.stage = 'sent';
                         store.event(state, 'send_attempted', { ...correlation, delivery_id: delivery, transport: 'native-stop' });
                         state.direction_context = { delivery_id: delivery, at: new Date().toISOString(), run_generation: state.run_generation, input_epoch: state.input_epoch ?? 0, contract_sha256: state.contract_sha256 };
                         state.continuation_confirmed = false;
@@ -832,8 +797,8 @@ export async function runController(path, pluginRoot, fixturePath) {
                         state.stop_transport = { request, outcome: 'returned', delivery_id: delivery };
                         store.save(state);
                         store.event(state, 'stop_hook_direction_returned', { ...correlation, stop_attempt_id: request.stop_attempt_id, delivery_id: delivery, session_id: request.session_id, execution_confirmed: false });
-                        scheduleMainSessionRecoveryPrompt(path, pluginRoot, fixturePath, state, state.pending_action.message, request.turn_id);
-                        return { decision: 'block', reason: state.pending_action.message };
+                        scheduleMainSessionRecoveryPrompt(path, pluginRoot, fixturePath, state, pendingAction.message, request.turn_id);
+                        return { decision: 'block', reason: pendingAction.message };
                     }
                     catch (error) {
                         if (current.valid) {
