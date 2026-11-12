@@ -49,6 +49,17 @@ test('planner fallback uses the full persisted retry ledger and requires fresh d
   assert.deepEqual(state.route_ledger, ledger.toJSON(), 'Proposal/admission cannot count a new attempt.');
 });
 
+test('bounded C-output fallback can admit one diagnostic recovery after the route guard rejects a planner proposal', () => {
+  const state = runtimeState('planner-fallback-override');
+  const initial = context(state);
+  const route = routeInventoryDecision(initial).route_plan!.candidates[0]!;
+  const ledger = new RouteLedger({ task_id: state.task_id, task_version: 1 });
+  ledger.recordObservedAttempt({ route: canonicalExecutionRoute(route, []), outcome: 'diagnostic', evidence_ids: [], evidence: [] });
+  state.route_ledger = ledger.toJSON();
+  assert.throws(() => plannerFailureFallback(initial, 'Three C outputs were rejected.', state), /change_hypothesis/);
+  assert.doesNotThrow(() => plannerFailureFallback(initial, 'Three C outputs were rejected.', state, { allowRecoveryOverride: true }));
+});
+
 test('inventory fallback passes active validation with two observed alternatives and incomplete proof', () => {
   const state = runtimeState('fallback-catalog');
   writeFileSync(resolve(state.task.workspace, 'a.json'), '{"source":"a"}');

@@ -780,9 +780,9 @@ export async function runController(path, pluginRoot, fixturePath) {
                                     throw error;
                                 if (++outputFailures >= 3) {
                                     const snapshot = buildMainSessionSnapshot(state, request, store.events());
-                                    decision = plannerFailureFallback(snapshot, 'C failed three bounded output attempts; gather source-linked route facts.', state);
-                                    correlation = prepareRouteExecution(state, decision, snapshot, delivery, request.stop_attempt_id);
-                                    store.event(state, 'judge_inventory_fallback', { failures: outputFailures, stop_attempt_id: request.stop_attempt_id, decision });
+                                    decision = plannerFailureFallback(snapshot, 'C failed three bounded output attempts; gather source-linked route facts.', state, { allowRecoveryOverride: true });
+                                    correlation = prepareRouteExecution(state, decision, snapshot, delivery, request.stop_attempt_id, { plannerFallback: true });
+                                    store.event(state, 'judge_inventory_fallback', { failures: outputFailures, stop_attempt_id: request.stop_attempt_id, decision, admission: 'bounded-diagnostic-recovery-override' });
                                     break;
                                 }
                                 const configuredDelay = state.mode === 'simulated' && Array.isArray(fixture?.recovery_delays_ms) ? Number(fixture.recovery_delays_ms[Math.min(outputFailures - 1, fixture.recovery_delays_ms.length - 1)]) : backoff.delay_seconds * 1000;

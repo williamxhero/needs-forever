@@ -10,6 +10,10 @@ export interface RouteExecution extends RouteCorrelation {
   confirmed: boolean;
   lifecycle_fence: string;
   discriminating_check?: import('./route-contract.js').RouteDiscriminatingCheck;
+  /** A bounded C-output recovery prompt may reuse a diagnostic direction once.
+   * It is still recorded at the next real Stop; this flag only explains why
+   * admission was allowed after the normal no-progress guard. */
+  planner_fallback?: boolean;
   completed_stop_attempt_id?: string;
 }
 export interface Task {

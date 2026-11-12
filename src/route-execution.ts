@@ -49,7 +49,7 @@ export function discoverLocalRoutes(state: State): void {
   state.route_catalog = catalog.toJSON();
   state.route_ledger = new RouteLedger(scope(state), state.route_ledger ? { data: state.route_ledger } : {}).toJSON();
 }
-export function prepareRouteExecution(state: State, decision: Decision, snapshot: Snapshot, deliveryId: string, sourceStopId: string): RouteCorrelation {
+export function prepareRouteExecution(state: State, decision: Decision, snapshot: Snapshot, deliveryId: string, sourceStopId: string, options: { plannerFallback?: boolean } = {}): RouteCorrelation {
   if (snapshot.task_id !== state.task_id || snapshot.task_version !== state.task_version || routeEvidenceDigest(snapshot.task) !== routeEvidenceDigest(redact(state.task))) throw new Error('Route admission rejected stale task scope/version or contract.');
   if (snapshot.c2) snapshot = { ...snapshot, c2: { ...snapshot.c2, catalog: activeRouteCatalog(state) } };
   decision = validateDecision(JSON.stringify(decision), snapshot);
@@ -59,9 +59,13 @@ export function prepareRouteExecution(state: State, decision: Decision, snapshot
   const evidence = structuredClone(snapshot.c2?.observations.filter((item) => route.evidence_ids.includes(item.id)) ?? []);
   const ledger = new RouteLedger(scope(state), state.route_ledger ? { data: state.route_ledger } : {});
   const permission = ledger.evaluateAttempt(canonical, { evidence_ids: route.evidence_ids, evidence, ...(route.discriminating_check ? { discriminating_check: route.discriminating_check } : {}) });
-  if (!permission.allowed) throw new Error(`C2 repeated route rejected at delivery admission: ${permission.reason}.`);
+  const plannerFallback = options.plannerFallback === true;
+  const boundedDiagnostic = route.resource.kind === 'diagnostic' && route.operation === 'inspect-authorized-route-facts';
+  if (!permission.allowed && !(plannerFallback && boundedDiagnostic && ['change_hypothesis', 'no_progress_limit', 'retry_condition_required', 'retry_not_ready'].includes(permission.reason))) {
+    throw new Error(`C2 repeated route rejected at delivery admission: ${permission.reason}.`);
+  }
   const correlation = { plan_id: decision.route_plan.plan_id, route_id: route.route_id, source_stop_attempt_id: sourceStopId };
-  state.route_execution = { ...correlation, delivery_id: deliveryId, task_version: state.task_version, lifecycle_fence: lifecycleFence(state), route: structuredClone(canonical), evidence, confirmed: false, ...(route.discriminating_check ? { discriminating_check: structuredClone(route.discriminating_check) } : {}) };
+  state.route_execution = { ...correlation, delivery_id: deliveryId, task_version: state.task_version, lifecycle_fence: lifecycleFence(state), route: structuredClone(canonical), evidence, confirmed: false, ...(plannerFallback ? { planner_fallback: true } : {}), ...(route.discriminating_check ? { discriminating_check: structuredClone(route.discriminating_check) } : {}) };
   return correlation;
 }
 export function confirmRouteExecution(state: State, deliveryId: string): void {
@@ -97,7 +101,7 @@ export function captureRouteOutcome(state: State, snapshot: Snapshot, stopId: st
   return { ...routeCorrelation(execution), delivery_id: execution.delivery_id, stop_attempt_id: stopId, attempt_id: attempt.attempt_id, outcome: attempt.outcome, new_evidence: attempt.new_evidence_ids, evidence_ids: attempt.evidence_ids };
 }
 export class PlannerFallbackUnavailableError extends Error {}
-export function plannerFailureFallback(snapshot: Snapshot, reason: string, state?: State): Decision {
+export function plannerFailureFallback(snapshot: Snapshot, reason: string, state?: State, options: { allowRecoveryOverride?: boolean } = {}): Decision {
   try {
     const candidate = routeInventoryDecision(snapshot, reason);
     const selected = candidate.route_plan!.candidates[0]!;
@@ -106,7 +110,7 @@ export function plannerFailureFallback(snapshot: Snapshot, reason: string, state
     // A budget-trimmed ledger is context for C, never permission to dispatch.
     // Validate the fallback against full current state without persisting a
     // proposal, counting an attempt or creating a real delivery.
-    if (state) prepareRouteExecution(structuredClone(state), decision, snapshot, 'fallback-admission-check', 'fallback-admission-check');
+    if (state) prepareRouteExecution(structuredClone(state), decision, snapshot, 'fallback-admission-check', 'fallback-admission-check', { plannerFallback: options.allowRecoveryOverride === true });
     return decision;
   } catch (error) {
     if (!state) throw error;
