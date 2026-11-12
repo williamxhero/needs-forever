@@ -52,7 +52,7 @@ function routeCandidate(raw, snapshot) {
         throw new Error('Ungrounded provider availability/authentication claim in route wording.');
     return route;
 }
-export function validateC2Decision(decision, snapshot) {
+export function validateC2Decision(decision, snapshot, options = {}) {
     if (snapshot.c2)
         snapshot = { ...snapshot, c2: { ...snapshot.c2, catalog: activeRouteCatalog({ task_id: snapshot.task_id, task_version: snapshot.task_version, task: snapshot.task, route_catalog: snapshot.c2.catalog }) } };
     const mode = snapshot.c2?.mode ?? 'enforce';
@@ -106,7 +106,8 @@ export function validateC2Decision(decision, snapshot) {
             const ledger = new RouteLedger({ task_id: snapshot.task_id, task_version: snapshot.task_version }, { data: snapshot.c2.ledger });
             const evidence = snapshot.c2.observations.filter((entry) => selected.evidence_ids.includes(entry.id));
             const permission = ledger.evaluateAttempt(canonicalExecutionRoute(selected, snapshot.c2.catalog.entries), { evidence_ids: selected.evidence_ids, evidence, ...(selected.discriminating_check ? { discriminating_check: selected.discriminating_check } : {}) });
-            if (!permission.allowed)
+            const boundedDiagnostic = selected.resource.kind === 'diagnostic' && selected.operation === 'inspect-authorized-route-facts';
+            if (!permission.allowed && !(options.allowPlannerFallback === true && boundedDiagnostic && ['change_hypothesis', 'no_progress_limit', 'retry_condition_required', 'retry_not_ready'].includes(permission.reason)))
                 throw new Error(`C2 repeated route rejected: ${permission.reason}.`);
         }
     }

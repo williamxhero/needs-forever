@@ -40,15 +40,15 @@ export function readHistoricalDecision(raw) {
         throw new Error('Invalid historical decision.');
     return value;
 }
-export function validateDecision(raw, snapshot) {
+export function validateDecision(raw, snapshot, options = {}) {
     try {
-        return validateOutput(raw, snapshot);
+        return validateOutput(raw, snapshot, options);
     }
     catch (error) {
         throw new JudgeOutputError(String(redact(error instanceof Error ? error.message : String(error))));
     }
 }
-function validateOutput(raw, snapshot) {
+function validateOutput(raw, snapshot, options = {}) {
     // Normalize the complete contract together so selected actions and their
     // derived message remain equal through admission, persistence and recovery.
     const value = record(readHistoricalDecision(JSON.stringify(redact(JSON.parse(raw)))));
@@ -80,7 +80,7 @@ function validateOutput(raw, snapshot) {
         throw new Error('Incomplete or truncated evidence requires CONTINUE to gather concise proof.');
     if (value.action !== 'CONTINUE' && !snapshot.evidence.some((entry) => value.evidence_ids instanceof Array && value.evidence_ids.includes(entry.id) && entry.source && ['commandExecution', 'fileChange', 'functionCallOutput', 'verification_result'].includes(entry.type)))
         throw new Error('DONE/WAIT_EXTERNAL require independent evidence, not worker claims.');
-    return validateC2Decision(value, snapshot);
+    return validateC2Decision(value, snapshot, options);
 }
 // The cancelled call's signal and RPC are already closed. A separate, bounded
 // model-free connection can archive an unloaded persistent C directly by ID.
