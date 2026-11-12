@@ -751,7 +751,7 @@ export async function runController(path, pluginRoot, fixturePath) {
                             }
                         }(path);
                         const delivery = randomUUID();
-                        const round = await runSupervisionRound({ state, request, fixture, signal: current.abort.signal, store, guarded, delivery, valid, evaluate: evaluateStop });
+                        const round = await runSupervisionRound({ state, request, fixture, signal: current.abort.signal, store, guarded, delivery, valid, snapshot: () => buildMainSessionSnapshot(state, request, store.events()), evaluate: evaluateStop });
                         if (!round)
                             return {};
                         const { decision, correlation } = round;

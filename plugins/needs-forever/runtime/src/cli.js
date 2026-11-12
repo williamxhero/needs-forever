@@ -47,7 +47,7 @@ async function main() {
     for (let index = 0; index < args.length; index += 2) {
         const key = args[index];
         const value = args[index + 1];
-        if (!key || !['--state', '--task', '--test-fixture'].includes(key) || !value || value.startsWith('--') || flags.has(key))
+        if (!key || !['--state', '--task', '--test-fixture', '--control-mode'].includes(key) || !value || value.startsWith('--') || flags.has(key))
             throw new Error('Expected unique --task/--state/--test-fixture flags with values.');
         flags.set(key, value);
     }
@@ -57,7 +57,7 @@ async function main() {
         return;
     }
     if (command !== 'start' && command !== 'resume')
-        throw new Error('Usage: codex-supervisor web --workspace DIRECTORY [--port PORT] | start --task FILE [--state FILE] [--test-fixture FILE] | resume --state FILE [--task FILE] [--test-fixture FILE] | status --state FILE.');
+        throw new Error('Usage: codex-supervisor web --workspace DIRECTORY [--port PORT] | start --task FILE [--state FILE] [--test-fixture FILE] [--control-mode independent-worker] | resume --state FILE [--task FILE] [--test-fixture FILE] [--control-mode independent-worker] | status --state FILE.');
     // Before exclusivity, a resume checkpoint supplies only the lock identity.
     // Another owner may still update its status, contract or counters.
     const initial = command === 'resume' ? new Store(resolve(text(flags.get('--state'), '--state'))).read() : undefined;
