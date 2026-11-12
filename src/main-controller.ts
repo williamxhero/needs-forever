@@ -18,7 +18,7 @@ import { captureRouteOutcome, discoverLocalRoutes, plannerFailureFallback, prepa
 import type { Decision, Snapshot } from './types.js';
 import { classifyRecoveryError, nextBackoff, recordRecoveryFailure, type RecoveryFailure } from './recovery.js';
 import { reachedLimits } from './rules.js';
-import { armRecovery, cancelRecovery, createRecoveryPlan, markRecoveryRunning, acquireRecoveryOwner, waitForNativeReceipt, reconcileStaleOwner, interruptRecovery, type RecoveryReason } from './recovery-coordinator.js';
+import { armRecovery, cancelRecovery, createRecoveryPlan, markRecoveryRunning, acquireRecoveryOwner, waitForNativeReceipt, reconcileStaleOwner, interruptRecovery, type RecoveryReason } from './recovery-episode.js';
 import { scheduleNativeRebindPrompt } from './main-session-recovery.js';
 import { initializeHttpRouteProbe } from './http-route-probe.js';
 import { runSupervisionRound } from './supervision-round.js';

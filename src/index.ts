@@ -8,7 +8,7 @@ export { RouteLedger, fingerprintRoute, routeFamilyFingerprint, routeEvidenceDig
 export type { RouteStatus, RouteScope, RouteResource, RouteEvidence, RouteCatalogEntry, RouteCatalogData, RoutePersistenceOptions } from './route-contract.js';
 export type { RouteIdentity, RouteOutcome, RouteRetryCondition, RouteDiscriminatingCheck, RouteAttemptContext, RouteAttemptPermission, RouteAttemptInput, RouteAttempt, RouteLedgerData, RouteLedgerOptions } from './route-contract.js';
 export type { RecoveryPlan } from './types.js';
-export { armRecovery, cancelRecovery, createRecoveryPlan, waitForNativeReceipt, reconcileStaleOwner, recoveryCurrent } from './recovery-coordinator.js';
+export { armRecovery, cancelRecovery, createRecoveryPlan, waitForNativeReceipt, reconcileStaleOwner, recoveryCurrent } from './recovery-episode.js';
 export type { HumanEvent, TaskRecord, TaskStateView, TaskSummary, TechnicalEvent, WorkRound } from './web.js';
 export { NFDaemon, startLoopbackApi } from './daemon.js';
 export { discoverStateFiles } from './daemon.js';

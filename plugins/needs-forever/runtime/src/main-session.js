@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { reachedLimits } from './rules.js';
 import { Store } from './store.js';
 import { record, text } from './types.js';
-import { createRecoveryPlan, waitForNativeReceipt, resetRecoveryWindow } from './recovery-coordinator.js';
+import { createRecoveryPlan, waitForNativeReceipt, resetRecoveryWindow } from './recovery-episode.js';
 import { assertTrackingContract, createTracking, loadTracking, locatorForSelection, trackingLocator, updateTracking } from './tracking-integration.js';
 export function readJson(path) {
     // Windows can briefly deny a read while the state checkpoint is being

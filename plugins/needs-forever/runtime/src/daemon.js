@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, appendFileSync, renam
 import { homedir } from 'node:os';
 import { dirname, relative, resolve, sep } from 'node:path';
 import { createServer } from 'node:http';
-import { createRecoveryPlan, reconcileRecoveryTick, cancelRecovery, resetRecoveryWindow } from './recovery-coordinator.js';
+import { createRecoveryPlan, reconcileRecoveryTick, cancelRecovery, resetRecoveryWindow } from './recovery-episode.js';
 import { validateAdapterEnvelope } from './adapter-protocol.js';
 import { Store } from './store.js';
 import { armNativeRebind } from './main-session.js';

@@ -7,7 +7,7 @@ import { codexCommand, connectWorker, type Rpc } from './transport.js';
 import { canonicalPath, readJson, type MainSessionState } from './main-session.js';
 import { Store } from './store.js';
 import { routeCorrelation } from './route-execution.js';
-import { extendRecoveryWindowForActiveWriter, interruptRecovery } from './recovery-coordinator.js';
+import { extendRecoveryWindowForActiveWriter, interruptRecovery } from './recovery-episode.js';
 import { redact } from './redact.js';
 
 type RecoveryPrompt = NonNullable<MainSessionState['recovery_prompt']>;

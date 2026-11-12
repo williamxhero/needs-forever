@@ -14,7 +14,7 @@ import { validateDecision } from './judge.js';
 import { captureRouteOutcome, discoverLocalRoutes, plannerFailureFallback, prepareRouteExecution, routeCorrelation, PlannerFallbackUnavailableError } from './route-execution.js';
 import { classifyRecoveryError, nextBackoff, recordRecoveryFailure } from './recovery.js';
 import { reachedLimits } from './rules.js';
-import { armRecovery, cancelRecovery, createRecoveryPlan, markRecoveryRunning, acquireRecoveryOwner, waitForNativeReceipt, reconcileStaleOwner, interruptRecovery } from './recovery-coordinator.js';
+import { armRecovery, cancelRecovery, createRecoveryPlan, markRecoveryRunning, acquireRecoveryOwner, waitForNativeReceipt, reconcileStaleOwner, interruptRecovery } from './recovery-episode.js';
 import { scheduleNativeRebindPrompt } from './main-session-recovery.js';
 import { initializeHttpRouteProbe } from './http-route-probe.js';
 import { runSupervisionRound } from './supervision-round.js';
