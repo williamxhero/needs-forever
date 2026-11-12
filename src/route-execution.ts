@@ -95,7 +95,11 @@ export function captureRouteOutcome(state: State, snapshot: Snapshot, stopId: st
   const discriminating = check && check.evidence_ids.length > 0 && check.evidence_ids.every(id => checkEvidence.some(item => item.id === id))
     ? { description: check.description, evidence_ids: checkEvidence.map(item => `${item.id}:${item.content_sha256.slice(0, 16)}`) } : null;
   const retry = reset?.at ? { kind: 'not_before' as const, not_before: reset.at, description: 'A current independent tool result supplied a structured retry reset time.', evidence_ids: unique.filter((item) => item.content_sha256 === reset.proof.content_sha256).map((item) => item.id) } : null;
-  const attempt = ledger.recordAttempt({ route: execution.route, outcome, evidence_ids: unique.map((item) => item.id), evidence: unique, ...(discriminating ? { discriminating_check: discriminating } : {}), ...(retry ? { retry_condition: retry } : {}), ...(['failure', 'transient_failure'].includes(outcome) ? { failure_class: failed ? 'observed_execution_failure' : 'no_independent_progress' } : {}) });
+  // This Stop proves that the previously admitted route actually ran.  Do
+  // not apply the *planning* permission a second time here: no_progress_limit
+  // and change_hypothesis must fence future sends, while the observed attempt
+  // itself must always be recorded for audit and for the next C context.
+  const attempt = ledger.recordObservedAttempt({ route: execution.route, outcome, evidence_ids: unique.map((item) => item.id), evidence: unique, ...(discriminating ? { discriminating_check: discriminating } : {}), ...(retry ? { retry_condition: retry } : {}), ...(['failure', 'transient_failure'].includes(outcome) ? { failure_class: failed ? 'observed_execution_failure' : 'no_independent_progress' } : {}) });
   state.route_ledger = ledger.toJSON();
   execution.completed_stop_attempt_id = stopId;
   return { ...routeCorrelation(execution), delivery_id: execution.delivery_id, stop_attempt_id: stopId, attempt_id: attempt.attempt_id, outcome: attempt.outcome, new_evidence: attempt.new_evidence_ids, evidence_ids: attempt.evidence_ids };

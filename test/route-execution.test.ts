@@ -111,6 +111,22 @@ test('confirmed route result survives restart, ignores relabeled identical proof
   assert.throws(() => prepareRouteExecution(restarted, renamed, next, 'renamed-delivery', 'next-stop'), /repeated route/);
 });
 
+test('a repeated observed route outcome is recorded without aborting the next Stop', () => {
+  const state = runtimeState('observed-no-progress');
+  const first = context(state);
+  const decision = routeInventoryDecision(first);
+  prepareRouteExecution(state, decision, first, 'delivery-one', 'source-stop');
+  confirmRouteExecution(state, 'delivery-one');
+  assert.doesNotThrow(() => captureRouteOutcome(state, context(state), 'stop-one', true));
+  assert.equal(state.route_ledger?.attempts.length, 1);
+
+  const second = context(state);
+  prepareRouteExecution(state, decision, second, 'delivery-two', 'stop-one', { plannerFallback: true });
+  confirmRouteExecution(state, 'delivery-two');
+  assert.doesNotThrow(() => captureRouteOutcome(state, context(state), 'stop-two', true));
+  assert.equal(state.route_ledger?.attempts.length, 2);
+});
+
 test('a newer human epoch cannot attribute its admitted native Stop to an older route', () => {
   const state = Object.assign(runtimeState('epoch-fence'), { run_generation: 'generation', input_epoch: 1, contract_sha256: 'immutable-contract' });
   const snapshot = context(state);
