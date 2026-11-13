@@ -36,10 +36,15 @@ passed 13/13. The complete output is retained in
 ## Production boundary
 
 The deployment helper is pinned to the primary checkout, so this worktree did
-not modify the installed global package. The live state was read without
-printing credentials: B0QI remains `PAUSED`/`IDLE` with `pause_reason=user`,
-the original A is `01a1ae7a-9442-79e0-b32b-aa560f976453`, and the contract hash
-is unchanged. No native Stop was fabricated or triggered while the user pause
-was active. Deployment, daemon/B restart verification, and a fresh native
-Stop→C→delivery observation are coordinating-agent gates after this commit is
-merged to integration.
+not modify the installed global package directly. The coordinating checkout
+deployed the reviewed integration candidate after merge. The candidate and the
+installed `needs-forever-local@0.3.4` package now have exact hash parity
+(55 files, zero changed files on the final verification), and the preserved
+Windows global daemon is responding on web port 8788 and API port 8790.
+
+The live state was read without printing credentials: B0QI remains
+`PAUSED`/`IDLE` with `pause_reason=user`, the original A is
+`01a1ae7a-9442-79e0-b32b-aa560f976453`, and the contract hash is unchanged.
+No native Stop was fabricated or triggered while the user pause was active. A
+fresh native Stop→C→delivery observation remains pending until the user
+unpauses B0QI; this document does not claim that live gate.
