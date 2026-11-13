@@ -12,6 +12,13 @@ function validateIdentity(value) {
     text(route.hypothesis, 'hypothesis');
     if (!strings(route.expected_evidence, 'expected_evidence').length)
         throw new Error('A route requires expected evidence.');
+    if (route.diagnostic_class !== undefined)
+        text(route.diagnostic_class, 'diagnostic_class');
+    if (route.target_resource_ids !== undefined) {
+        const targets = strings(route.target_resource_ids, 'target_resource_ids');
+        if (new Set(targets.map(normalize)).size !== targets.length)
+            throw new Error('target_resource_ids must be unique.');
+    }
 }
 function normalize(value) { return value.normalize('NFKC').trim().replace(/\s+/g, ' ').toLowerCase(); }
 function hash(value) { return createHash('sha256').update(JSON.stringify(value)).digest('hex'); }
@@ -27,18 +34,40 @@ export function routeEvidenceDigest(value) {
     }
     return hash(canonical(value));
 }
+function diagnosticIdentity(route) {
+    return [
+        normalize(route.diagnostic_class ?? `operation:${route.operation}`),
+        [...new Set((route.target_resource_ids ?? []).map(normalize))].sort(),
+        normalize(route.operation),
+        normalize(route.hypothesis_id),
+        [...new Set(route.expected_evidence.map(normalize))].sort(),
+    ];
+}
 function familyIdentity(route) {
+    if (route.resource.kind === 'diagnostic')
+        return ['diagnostic', ...diagnosticIdentity(route)];
     return [route.resource.kind, route.resource.kind === 'artifact' ? route.resource.id.trim() : normalize(route.resource.id), normalize(route.operation)];
 }
 export function routeFamilyFingerprint(route) { validateIdentity(route); return hash(familyIdentity(route)); }
 export function fingerprintRoute(route) {
     validateIdentity(route);
+    if (route.resource.kind === 'diagnostic')
+        return hash(familyIdentity(route));
     return hash([...familyIdentity(route), normalize(route.hypothesis_id), [...new Set(route.expected_evidence.map(normalize))].sort()]);
 }
-/** Model-selected diagnostic names are audit labels, never new execution families. */
+/** Preserve diagnostic execution identity; model-selected route labels are not identity. */
 export function canonicalExecutionRoute(route, catalog) {
     const observed = catalog.some((entry) => entry.status === 'observed' && entry.route_id === route.route_id && entry.resource.kind === route.resource.kind && entry.resource.id === route.resource.id && entry.operation === route.operation);
-    return route.resource.kind === 'diagnostic' && !observed ? { ...route, resource: { kind: 'diagnostic', id: 'nf-owned-bounded-diagnostic' }, operation: 'inspect-authorized-route-facts' } : route;
+    if (route.resource.kind !== 'diagnostic' || observed)
+        return route;
+    // Unannotated model diagnostics use the bounded inventory identity. Their
+    // labels, operation wording, and resource label are not evidence of a new
+    // execution family. Explicit diagnostic_class/target_resource_ids remain
+    // available for materially distinct checks.
+    if (route.diagnostic_class === undefined && route.target_resource_ids === undefined) {
+        return { ...route, diagnostic_class: 'nf-owned-bounded-diagnostic', target_resource_ids: [], operation: 'inspect-authorized-route-facts' };
+    }
+    return { ...route, diagnostic_class: route.diagnostic_class ?? `operation:${route.operation}`, target_resource_ids: route.target_resource_ids ?? [] };
 }
 function validateInput(input) {
     validateIdentity(input.route);

@@ -23,6 +23,10 @@ export function validateEvidence(value) {
         throw new Error('Invalid observation task_version.');
     if (typeof evidence.content_sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(evidence.content_sha256))
         throw new Error('Observation requires a substantive content_sha256.');
+    if (evidence.summary !== undefined)
+        text(evidence.summary, 'evidence.summary');
+    if (evidence.omitted !== undefined && typeof evidence.omitted !== 'boolean')
+        throw new Error('evidence.omitted must be boolean.');
 }
 export function scopeOf(value) {
     const scope = record(value);

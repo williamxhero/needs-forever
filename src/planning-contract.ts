@@ -24,6 +24,15 @@ export interface RoutePlan {
   success_condition: string;
   stop_condition: string;
 }
+export interface C2ContextOmission {
+  kind: 'catalog' | 'ledger' | 'observation' | 'current_proof' | 'plan';
+  id: string;
+  route_id?: string;
+  source?: string;
+  summary: string;
+  digest?: string;
+  reason: string;
+}
 export interface C2Context {
   mode: C2Mode;
   context_complete: boolean;
@@ -32,5 +41,15 @@ export interface C2Context {
   observations: RouteEvidence[];
   current_plan: RoutePlan | null;
   instruction: string;
+  /** Structured omission receipts survive bounded projection and restart. */
+  omissions: {
+    catalog: C2ContextOmission[];
+    ledger: C2ContextOmission[];
+    observations: C2ContextOmission[];
+    current_proof: C2ContextOmission[];
+    plan: C2ContextOmission[];
+  };
+  /** Digest of the source-linked C2 projection, excluding snapshot UUIDs. */
+  context_digest?: string;
   http_probe?: { argv_prefix: string[]; instruction: string };
 }

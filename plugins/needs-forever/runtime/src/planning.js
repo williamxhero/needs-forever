@@ -10,13 +10,14 @@ function refs(value, snapshot, field) {
         throw new Error(`${field} references unknown evidence IDs.`);
     return value;
 }
-function fields(value, required) {
-    if (required.some((name) => !Object.hasOwn(value, name)) || Object.keys(value).some((name) => !required.includes(name)))
+function fields(value, required, optional = []) {
+    const allowed = new Set([...required, ...optional]);
+    if (required.some((name) => !Object.hasOwn(value, name)) || Object.keys(value).some((name) => !allowed.has(name)))
         throw new Error('C2 route plan has missing or unknown fields.');
 }
 function routeCandidate(raw, snapshot) {
     const value = record(raw);
-    fields(value, ['route_id', 'resource', 'operation', 'hypothesis_id', 'hypothesis', 'expected_evidence', 'status', 'evidence_ids', 'actions', 'expected_signal', 'risk', 'fallback', 'discriminating_check']);
+    fields(value, ['route_id', 'resource', 'operation', 'hypothesis_id', 'hypothesis', 'expected_evidence', 'status', 'evidence_ids', 'actions', 'expected_signal', 'risk', 'fallback', 'discriminating_check'], ['diagnostic_class', 'target_resource_ids']);
     const route = value;
     fingerprintRoute(route);
     fields(record(route.resource), ['kind', 'id']);
@@ -39,6 +40,18 @@ function routeCandidate(raw, snapshot) {
         text(check.description, 'discriminating_check.description');
         refs(check.evidence_ids, snapshot, 'discriminating_check.evidence_ids');
     }
+    if (route.resource.kind === 'diagnostic') {
+        if (route.diagnostic_class !== undefined)
+            text(route.diagnostic_class, 'diagnostic_class');
+        if (route.target_resource_ids !== undefined) {
+            if (!Array.isArray(route.target_resource_ids) || route.target_resource_ids.some((id) => typeof id !== 'string' || !id.trim()))
+                throw new Error('target_resource_ids must contain nonempty strings.');
+            if (new Set(route.target_resource_ids.map((id) => id.normalize('NFKC').trim().toLowerCase())).size !== route.target_resource_ids.length)
+                throw new Error('target_resource_ids must be unique.');
+        }
+    }
+    else if (route.diagnostic_class !== undefined || route.target_resource_ids !== undefined)
+        throw new Error('Diagnostic identity is only valid for diagnostic routes.');
     const catalog = snapshot.c2?.catalog.entries.find((entry) => entry.route_id === route.route_id);
     if (catalog && (catalog.resource.kind !== route.resource.kind || catalog.resource.id !== route.resource.id || catalog.operation !== route.operation))
         throw new Error('C2 route identity must match its catalog resource and operation.');
