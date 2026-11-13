@@ -172,7 +172,11 @@ export class AppServerJudge implements Judge {
       })();
       return termination;
     };
-    const aborted = () => { this.terminal?.reject(new Error('Judge cancelled.')); void stop(); };
+    const aborted = () => {
+      this.event('judge_cancelled', { thread_id: this.thread ?? null, turn_id: turnId ?? null, phase: this.phase, via: 'owned_app_server_abort' });
+      this.terminal?.reject(new Error('Judge cancelled.'));
+      void stop();
+    };
     signal?.addEventListener('abort', aborted, { once: true });
     const timer = setTimeout(() => {
       timedOut = true;

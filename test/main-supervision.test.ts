@@ -103,18 +103,26 @@ test('installed C2 correlates same-turn Stop executions and persists only confir
   assert.equal(JSON.parse(readFileSync(f.state, 'utf8')).route_execution, undefined);
 });
 
-for (const failure of ['invalid', 'empty', 'timeout']) test(`installed native ${failure} C outputs return a bounded inventory through the active decision gate`, (t) => {
+for (const failure of ['invalid', 'empty', 'timeout']) test(`installed native ${failure} C outputs exhaust Judgment Round escalation and persist interruption`, (t) => {
   const f = setup(`native-fallback-${failure}`, failure === 'timeout' ? { hold_judge_until: 3, judge_stderr: 'fixture judge backend unavailable' } : { judge_outputs: [failure === 'invalid' ? '{broken' : '', failure === 'invalid' ? '{broken' : '', failure === 'invalid' ? '{broken' : ''] }, false, join('.codex-supervisor', `native-fallback-${failure}`), ['verify.mjs'], { recovery_delays_ms: [0], judge_timeout_ms: failure === 'timeout' ? 100 : 1000 });
   t.after(() => f.run('pause'));
   const reply = f.stop();
-  assert.equal(reply.decision, 'block');
+  assert.deepEqual(reply, {}, 'An exhausted C round must not return a generic inventory direction to A.');
   const state = JSON.parse(readFileSync(f.state, 'utf8'));
-  assert.equal(state.last_decision.route_plan.selected_route_id, 'route-inventory');
-  assert.equal(state.route_ledger.attempts.length, 0, 'A returned fallback has not yet executed.');
+  assert.equal(state.status, 'INTERRUPTED');
+  assert.equal(state.phase, 'IDLE');
+  assert.match(state.last_error, /有界判断预算/);
+  assert.equal(state.judgment_round.status, 'interrupted');
+  assert.equal(state.judgment_round.attempts.length, 3);
+  assert.equal(new Set(state.judgment_round.attempts.map((entry: any) => entry.resource_family)).size, 3);
+  assert.equal(state.route_ledger.attempts.length, 0, 'An interrupted C round never delivers a route.');
   const events = readFileSync(join(f.workspace, '.codex-supervisor', `native-fallback-${failure}`, 'events.jsonl'), 'utf8').trim().split('\n').map((line) => JSON.parse(line));
   assert.equal(events.filter((entry) => entry.type === 'main_session_retry').length, 3);
-  assert.equal(events.filter((entry) => entry.type === 'send_prepared').length, 1);
-  assert.equal(events.find((entry) => entry.type === 'judge_inventory_fallback').failures, 3);
+  assert.ok(events.every((entry) => entry.type !== 'judge_inventory_fallback'));
+  assert.equal(events.filter((entry) => entry.type === 'judge_attempt_failed').length, 3);
+  assert.equal(events.filter((entry) => entry.type === 'judge_escalation_required').length, 2);
+  assert.equal(events.filter((entry) => entry.type === 'judge_round_interrupted').length, 1);
+  assert.ok(events.filter((entry) => entry.type === 'main_session_retry').every((entry) => entry.owner === 'judgment-round'));
   if (failure === 'timeout') {
     const timeout = events.find((entry) => entry.type === 'judge_timeout');
     assert.ok(timeout, 'A judge timeout must retain a diagnostic event.');
@@ -310,6 +318,7 @@ test('installed pause returns before bounded C cleanup and cleanup failure canno
   assert.equal(f.status().status, 'PAUSED');
   const events = () => readFileSync(join(dirname(f.state), 'events.jsonl'), 'utf8').trim().split('\n').map((line) => JSON.parse(line));
   for (let i = 0; i < 160 && !events().some((entry) => entry.type === 'judge_archive_failed'); i++) await delay(25);
+  assert.ok(events().some((entry) => entry.type === 'judge_cancelled' && entry.thread_id === judgeStart.message.params.threadId), 'The cancelled C must leave a durable cancellation audit.');
   assert.ok(events().some((entry) => entry.type === 'judge_archive_failed' && entry.thread_id === judgeStart.message.params.threadId));
   const trace = f.protocol();
   const archives = trace.filter((entry) => entry.message?.method === 'thread/archive');
