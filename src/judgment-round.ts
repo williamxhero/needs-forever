@@ -70,8 +70,20 @@ export async function runJudgmentRound(context: JudgmentRoundContext): Promise<D
   try {
     let decision: Decision;
     try {
-      decision = await judge.judge(snapshot, signal);
-      decision = validateDecision(JSON.stringify(decision), snapshot);
+      const rawDecision = await judge.judge(snapshot, signal);
+      const rawNextMessage = rawDecision.action === 'CONTINUE' ? rawDecision.next_message : null;
+      decision = validateDecision(JSON.stringify(rawDecision), snapshot);
+      if (rawNextMessage !== decision.next_message) {
+        store.event(state, 'judge_decision_normalized', {
+          stop_attempt_id: request.stop_attempt_id,
+          snapshot_id: snapshot.snapshot_id,
+          plan_id: decision.route_plan?.plan_id ?? null,
+          selected_route_id: decision.route_plan?.selected_route_id ?? null,
+          raw_next_message: rawNextMessage,
+          canonical_next_message: decision.next_message,
+          reason: 'selected_route_actions_are_authoritative',
+        });
+      }
       store.snapshot(snapshot, judge.rawOutput, 'valid');
     } catch (error) {
       store.snapshot(snapshot, judge.rawOutput, 'invalid');
