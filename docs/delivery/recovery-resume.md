@@ -24,6 +24,7 @@
 - 同一原始 A 的新工具事件或 Stop 可以重绑。保留原 A、工作区、任务版本、generation、合同和回执时间栅栏。用于重绑的首个真实 Stop 只交付新 B 一次；不会构造补发 Stop。
 - B 成功启动后清除过期恢复错误。继续保留每次恢复 120 秒的上限及持久化中断边界。
 - 用于重绑的真实 PreToolUse 同时保留起始记录，后续匹配 PostToolUse 的实际结果进入 C 证据；单独收到 PostToolUse 不构造不存在的起始事件。adapter/core 共享重绑事件枚举，防止两边漂移。
+- 如果原始 A 由可见 Codex Desktop app-server 持有且 NF 没有安全的 Desktop provider adapter，恢复不会重复启动第二个 app-server，也不会继续消耗 120 秒窗口。状态进入 `WAIT_EXTERNAL / RECOVERING / PENDING_NATIVE_HOOK`，保留原始 A 与 generation fence，等待同一 A 的真实 native lifecycle receipt；收到后自动重绑并启动 B。该状态不会被误标为 `INTERRUPTED`。
 
 ## 本机验证
 

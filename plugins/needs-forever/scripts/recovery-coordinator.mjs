@@ -39,7 +39,7 @@ process.once('SIGINT', stop);
 try { while (!stopping && existsSync(statePath)) {
   let snapshot;
   try { snapshot = JSON.parse(readFileSync(statePath, 'utf8')); } catch { await new Promise((resolve) => setTimeout(resolve, interval)); continue; }
-  if (snapshot.status === 'DONE' || snapshot.status === 'INTERRUPTED' || (snapshot.status === 'PAUSED' && (snapshot.phase !== 'RECOVERING' || snapshot.pause_reason || !snapshot.main_session_id)) || snapshot.recovery_plan?.status === 'cancelled') break;
+  if (snapshot.status === 'DONE' || snapshot.status === 'INTERRUPTED' || (snapshot.status === 'PAUSED' && (snapshot.phase !== 'RECOVERING' || snapshot.pause_reason || !snapshot.main_session_id)) || snapshot.recovery_plan?.status === 'cancelled' || (snapshot.status === 'WAIT_EXTERNAL' && snapshot.recovery_condition?.kind === 'recovery_desktop_provider_unavailable')) break;
   try {
     const result = reconcileRecoveryTick(statePath);
     const promptDue = snapshot.recovery_prompt && Date.parse(snapshot.recovery_prompt.due_at ?? '') <= Date.now();

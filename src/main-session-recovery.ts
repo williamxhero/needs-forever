@@ -7,7 +7,7 @@ import { codexCommand, connectWorker, type Rpc } from './transport.js';
 import { canonicalPath, readJson, type MainSessionState } from './main-session.js';
 import { Store } from './store.js';
 import { routeCorrelation } from './route-execution.js';
-import { extendRecoveryWindowForActiveWriter, interruptRecovery } from './recovery-episode.js';
+import { extendRecoveryWindowForActiveWriter, interruptRecovery, waitForNativeReceipt } from './recovery-episode.js';
 import { redact } from './redact.js';
 
 type RecoveryPrompt = NonNullable<MainSessionState['recovery_prompt']>;
@@ -435,6 +435,55 @@ function deferRecoveryPrompt(statePath: string, deliveryId: string, reason: stri
     const store = new Store(statePath);
     const latest = currentPrompt(statePath);
     if (!latest?.prompt || latest.prompt.delivery_id !== deliveryId) return;
+
+    // A live Codex Desktop thread is already owned by the visible Desktop
+    // app-server.  There is no safe second transport that NF can create to
+    // send a recovery turn, so retrying this branch only produced repeated
+    // "provider unavailable" events and eventually a misleading timeout.
+    // Convert it into a durable native-receipt wait instead.  The next real
+    // lifecycle callback from the original A is still the only binding proof;
+    // no prompt, Stop, or receipt is synthesized here.
+    if (conditionKind === 'recovery_desktop_provider_unavailable') {
+      latest.state.status = 'WAIT_EXTERNAL';
+      latest.state.phase = 'RECOVERING';
+      latest.state.host.hook_effective = false;
+      latest.state.last_error = reason;
+      latest.state.recovery_condition = {
+        kind: conditionKind,
+        message: reason,
+        resume_when: '原始 A 产生新的受信任 native lifecycle receipt 后，NF 自动重绑并重新启动 B。',
+      };
+      waitForNativeReceipt(latest.state, latest.state.recovery_condition);
+      delete latest.state.recovery_prompt;
+      delete latest.state.recovery_window;
+      latest.state.recovery_plan = {
+        ...latest.state.recovery_plan!,
+        owner: null,
+        next_retry_at: null,
+        status: 'waiting_native',
+        reason: latest.state.recovery_condition,
+      };
+      store.save(latest.state);
+      store.event(latest.state, 'main_session_recovery_waiting_native', {
+        delivery_id: deliveryId,
+        main_session_id: latest.state.main_session_id,
+        reason,
+        retryable: false,
+        diagnosis: conditionKind,
+      });
+      store.event(latest.state, 'main_session_recovery_prompt_deferred', {
+        delivery_id: deliveryId,
+        main_session_id: latest.state.main_session_id,
+        reason,
+        retryable: false,
+        retry_attempt: Number.isInteger(latest.prompt.retry_attempt) ? latest.prompt.retry_attempt : 0,
+        preflight: writerPreflight,
+        diagnosis: conditionKind,
+        ...(error ? { error: String(redact(error instanceof Error ? error.message : String(error))) } : {}),
+      });
+      return;
+    }
+
     const previousAttempt = Number.isInteger(latest.prompt.retry_attempt) ? latest.prompt.retry_attempt! : 0;
     const retryAttempt = previousAttempt + 1;
     const delayMs = RECOVERY_PROMPT_RETRY_DELAYS_MS[Math.min(retryAttempt - 1, RECOVERY_PROMPT_RETRY_DELAYS_MS.length - 1)] ?? RECOVERY_PROMPT_RETRY_DELAYS_MS.at(-1)!;

@@ -362,6 +362,26 @@ function reconcileRecoveryTickUnlocked(statePath, now) {
     const manuallyPaused = parsed.status === 'PAUSED' && (parsed.phase !== 'RECOVERING' || !!parsed.pause_reason || !parsed.main_session_id);
     if (!parsed.recovery_plan || parsed.status === 'DONE' || manuallyPaused || parsed.status === 'INTERRUPTED' || parsed.recovery_plan.status === 'cancelled')
         return { changed: false, waitingNative: false, nextRetryAt: parsed.recovery_plan?.next_retry_at ?? null };
+    // A visible Codex Desktop owns the original thread's app-server.  When NF
+    // cannot safely create a provider transport, the task is deliberately held
+    // in WAIT_EXTERNAL until the original A emits a real native lifecycle
+    // receipt.  Do not recreate the ordinary two-minute recovery window here:
+    // doing so turns an honest host-capability wait into a false INTERRUPTED
+    // state while no retry can make progress.
+    const waitingForDesktopReceipt = parsed.status === 'WAIT_EXTERNAL'
+        && parsed.phase === 'RECOVERING'
+        && parsed.binding?.status === 'PENDING_NATIVE_HOOK'
+        && parsed.recovery_condition?.kind === 'recovery_desktop_provider_unavailable';
+    if (waitingForDesktopReceipt) {
+        const changed = !!parsed.recovery_window || parsed.recovery_plan.status !== 'waiting_native' || parsed.recovery_plan.next_retry_at !== null;
+        delete parsed.recovery_window;
+        parsed.recovery_plan.status = 'waiting_native';
+        parsed.recovery_plan.owner = null;
+        parsed.recovery_plan.next_retry_at = null;
+        if (changed)
+            new Store(statePath).save(parsed);
+        return { changed, waitingNative: true, nextRetryAt: null };
+    }
     if (parsed.phase === 'RECOVERING' || parsed.recovery_plan.status === 'waiting_native' || parsed.recovery_window) {
         const hadWindow = !!parsed.recovery_window;
         ensureRecoveryWindow(parsed, now);
