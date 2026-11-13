@@ -42,6 +42,8 @@ export function buildMainSessionSnapshot(state, request, events) {
     };
     if ((request.last_assistant_message?.length ?? 0) > 2_000)
         snapshot.omissions.push('Last assistant wording truncated to 2000 characters; it is an untrusted claim, never independent completion evidence.');
+    if (state.judgment_round?.stop_attempt_id === request.stop_attempt_id)
+        snapshot.judgment_round = structuredClone(state.judgment_round);
     if (state.latest_human_input)
         snapshot.recent_instructions.push({ source: 'native-human-input', ...state.latest_human_input, scope: 'Context only. Original acceptance and authorization remain binding.' });
     // Keep the original contract and Stop identity intact, even when logs are large.
