@@ -101,7 +101,7 @@ export async function runJudgmentRound(context) {
 }
 /** C owns bounded retry, timeout recovery and deterministic fallback for one Stop. */
 export async function runJudgmentPolicy(context) {
-    const { state, request, fixture, signal, store, guarded, valid, snapshot, evaluate } = context;
+    const { state, request, fixture, signal, store, guarded, valid, snapshot, evaluate, admit } = context;
     const limit = maxAttempts(fixture);
     let round = roundState(state, request, limit);
     round = { ...round, max_attempts: limit, status: 'running' };
@@ -129,12 +129,27 @@ export async function runJudgmentPolicy(context) {
             const decision = await evaluate(structuredClone(state), request, fixture, signal, guarded, currentSnapshot);
             if (!valid())
                 return null;
+            let admission;
+            if (decision.action === 'CONTINUE' && admit) {
+                try {
+                    admission = admit(decision, currentSnapshot);
+                }
+                catch (error) {
+                    store.event(state, 'judge_admission_failed', {
+                        stop_attempt_id: request.stop_attempt_id,
+                        attempt,
+                        error: String(redact(error instanceof Error ? error.message : error)),
+                        owner: 'judgment-round',
+                    });
+                    throw error;
+                }
+            }
             round = { ...round, status: 'succeeded' };
             state.judgment_round = round;
             state.retry = { kind: null, attempt: 0, next_at: null };
             store.save(state);
             store.event(state, 'judge_round_completed', { stop_attempt_id: request.stop_attempt_id, attempt, action: decision.action, owner: 'judgment-round' });
-            return { decision, snapshot: currentSnapshot };
+            return { decision, snapshot: currentSnapshot, admission };
         }
         catch (error) {
             if (!valid() || signal.aborted) {

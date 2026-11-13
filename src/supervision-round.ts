@@ -26,9 +26,20 @@ export interface SupervisionRoundResult {
 export async function runSupervisionRound(context: SupervisionRoundContext): Promise<SupervisionRoundResult | null> {
   const { state, request, fixture, signal, store, guarded, delivery, valid, snapshot, evaluate } = context;
   if (state.mode === 'simulated' && !fixture?.app_server_argv && !fixture?.transport?.decision) throw new Error('Missing explicit simulated supervisor adapter; configure it before explicit resume.');
-  const judged = await runJudgmentPolicy({ state, request, fixture, signal, store, guarded, valid, snapshot, evaluate });
+  const judged = await runJudgmentPolicy({
+    state,
+    request,
+    fixture,
+    signal,
+    store,
+    guarded,
+    valid,
+    snapshot,
+    evaluate,
+    admit: (decision, judgedSnapshot) => prepareRouteExecution(state, decision, judgedSnapshot, delivery, request.stop_attempt_id),
+  });
   if (!judged || !valid()) return null;
-  const { decision, snapshot: judgedSnapshot } = judged;
-  const correlation = decision.action === 'CONTINUE' ? prepareRouteExecution(state, decision, judgedSnapshot, delivery, request.stop_attempt_id, judged.plannerFallback ? { plannerFallback: true } : undefined) : {};
+  const { decision } = judged;
+  const correlation = decision.action === 'CONTINUE' ? (judged.admission as ReturnType<typeof prepareRouteExecution>) : {};
   return { decision, correlation };
 }
