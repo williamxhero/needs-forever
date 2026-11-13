@@ -298,7 +298,20 @@ export async function evaluateStop(state: MainSessionState, request: StopRequest
   const decision = fixture.transport.decision;
   if (decision.action !== 'CONTINUE' || typeof decision.next_message !== 'string' || !decision.next_message.trim()) throw new Error('Transport fixtures may only request concrete CONTINUE; DONE requires the completion gate.');
   const raw = { reason: 'Simulated external transport direction.', evidence_ids: [], external: null, ...decision };
+  const rawNextMessage = raw.next_message;
   const validated = validateDecision(JSON.stringify(raw), snapshot);
+  if (rawNextMessage !== validated.next_message) {
+    store.event(state, 'judge_decision_normalized', {
+      stop_attempt_id: request.stop_attempt_id,
+      snapshot_id: snapshot.snapshot_id,
+      plan_id: validated.route_plan?.plan_id ?? null,
+      selected_route_id: validated.route_plan?.selected_route_id ?? null,
+      raw_next_message: rawNextMessage,
+      canonical_next_message: validated.next_message,
+      reason: 'selected_route_actions_are_authoritative',
+      source: 'simulated-transport',
+    });
+  }
   store.event(state, 'decision', { role: 'judge', source: 'simulated-transport', stop_attempt_id: request.stop_attempt_id, decision: validated });
   return validated;
 }
