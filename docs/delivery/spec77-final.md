@@ -41,4 +41,7 @@ B0QI 的安全状态回读仍是 `PAUSED`/`IDLE`、`pause_reason=user`、`BOUND`
 
 ## 交付状态
 
-代码、测试、审查和本机部署已经完成；待现场门禁后再关闭 #82 与 #77。main 合并、push、分支清理和 Issue 关闭属于最后交付操作，必须在上述门禁结论真实存在后完成。
+代码、测试、审查、本机部署、main 合并、push 和临时资源清理已经完成。最终 main 为
+`3e671b470cc73cd3d8d169ce2aef60865d70f945`，本地与 `origin/main` 一致；5 个 SPEC #77 managed worktree 已归档，6 个本次创建的分支已安全删除。
+
+目前只剩现场门禁：解除 B0QI 人工暂停后，观察一次真实 native Stop→C→唯一交付→原始 A 活动，并据此更新和关闭 #82 与 #77。两个 Issue 当前保持 OPEN，避免把未执行的现场验收写成完成。
