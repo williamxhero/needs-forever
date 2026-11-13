@@ -570,6 +570,19 @@ export async function runController(path, pluginRoot, fixturePath) {
                     const lifecycleCommand = message.command === 'lifecycle';
                     if (message.token !== controller.token || message.controller_id !== id || message.run_generation !== state.run_generation || latest.run_generation !== message.run_generation || latest.controller?.id !== id || latest.status === 'DONE' || latest.status === 'INTERRUPTED' || (lifecycleCommand && (latest.status === 'PAUSED' || latest.recovery_plan?.cancellation_boundary)))
                         throw new Error('Owned controller handle identity mismatch.');
+                    // Do not replace the in-memory checkpoint while a Stop is judging.
+                    // A concurrent duplicate occurrence is rejected below, but assigning
+                    // its older disk snapshot to `state` first would erase the admitted
+                    // supervision round from the active request's delivery fence.
+                    const incomingEvent = message.payload?.event;
+                    if (lifecycleCommand && incomingEvent?.hook_event_name === 'Stop' && active) {
+                        const occurrence = message.payload?.adapter_occurrence_id;
+                        if (typeof occurrence !== 'string' || !/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(occurrence))
+                            throw new Error('Stop adapter occurrence identity is invalid.');
+                        if (state.accepted_stop_occurrences?.includes(occurrence))
+                            throw new Error('Stop adapter occurrence was already accepted; replay is invalid and must not replace its original hook.');
+                        throw new Error('Another Stop occurrence is pending; this request is invalid and cannot allow its hook to stop.');
+                    }
                     state = latest;
                     if (message.command === 'ping')
                         return { live: true, controller_id: id };
