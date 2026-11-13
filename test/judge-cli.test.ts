@@ -4,10 +4,25 @@ import { spawn, spawnSync } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { judgeInstructions } from '../src/judge.js';
+import { decisionSchema, judgeInstructions } from '../src/judge.js';
 
 function json(path: string): any { return JSON.parse(readFileSync(path, 'utf8')); }
 function jsonl(path: string): any[] { return existsSync(path) ? readFileSync(path, 'utf8').trim().split('\n').filter(Boolean).map((line) => JSON.parse(line)) : []; }
+
+function assertCodexSchemaRequiredFields(value: unknown): void {
+  if (!value || typeof value !== 'object') return;
+  if (Array.isArray(value)) { value.forEach(assertCodexSchemaRequiredFields); return; }
+  const object = value as Record<string, unknown>;
+  if (object.type === 'object' && object.additionalProperties === false) {
+    const properties = object.properties && typeof object.properties === 'object' ? Object.keys(object.properties as object) : [];
+    assert.deepEqual([...(object.required as string[])].sort(), properties.sort(), 'Every closed Codex schema object must require every declared property.');
+  }
+  Object.values(object).forEach(assertCodexSchemaRequiredFields);
+}
+
+test('C2 decision schema is accepted by Codex structured-output validation', () => {
+  assertCodexSchemaRequiredFields(decisionSchema);
+});
 function scenario(name: string, options: Record<string, unknown> = {}) {
   const directory = resolve('runs/ticket26', `${name}-${Date.now()}`);
   const workspace = resolve(directory, 'workspace');

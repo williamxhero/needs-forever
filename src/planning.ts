@@ -18,6 +18,11 @@ function fields(value: Record<string, unknown>, required: string[], optional: st
 }
 function routeCandidate(raw: unknown, snapshot: Snapshot): RouteCandidate {
   const value = record(raw);
+  // The native structured-output contract requires optional route identity
+  // fields to be present as null. Keep the domain model's optional semantics
+  // after decoding the host response.
+  if (value.diagnostic_class === null) delete value.diagnostic_class;
+  if (value.target_resource_ids === null) delete value.target_resource_ids;
   fields(value, ['route_id', 'resource', 'operation', 'hypothesis_id', 'hypothesis', 'expected_evidence', 'status', 'evidence_ids', 'actions', 'expected_signal', 'risk', 'fallback', 'discriminating_check'], ['diagnostic_class', 'target_resource_ids']);
   const route = value as unknown as RouteCandidate;
   fingerprintRoute(route);

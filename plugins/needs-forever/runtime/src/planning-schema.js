@@ -2,7 +2,15 @@ const string = { type: 'string' };
 const strings = { type: 'array', items: string };
 const nullable = (value) => ({ anyOf: [{ type: 'null' }, value] });
 const object = (properties) => ({ type: 'object', additionalProperties: false, required: Object.keys(properties), properties });
-const optionalObject = (required, optional) => ({ type: 'object', additionalProperties: false, required: Object.keys(required), properties: { ...required, ...optional } });
+// Codex structured-output schemas require every property to be listed in
+// `required`. Optional domain fields are represented as required nullable
+// fields, then normalized back to `undefined` before C2 validation.
+const optionalObject = (required, optional) => ({
+    type: 'object',
+    additionalProperties: false,
+    required: [...Object.keys(required), ...Object.keys(optional)],
+    properties: { ...required, ...Object.fromEntries(Object.entries(optional).map(([key, value]) => [key, nullable(value)])) },
+});
 export const diagnosisSchema = nullable(object({ class: { type: 'string', enum: ['provider_limit', 'authentication', 'implementation', 'evidence_gap', 'external_dependency', 'unknown'] }, statement: string, evidence_ids: strings }));
 export const routePlanSchema = nullable(object({
     plan_id: string,
