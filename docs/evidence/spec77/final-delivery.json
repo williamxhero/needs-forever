@@ -1,0 +1,40 @@
+{
+  "spec": 77,
+  "baseline": "282fdc43242766c684de57b65bc49596d859cb61",
+  "integration_branch": "codex/spec77-dpel-integration",
+  "commits": [
+    "9dc3918",
+    "ac7070d",
+    "ea60ef7",
+    "212be39",
+    "b428c92",
+    "6cfc51c",
+    "3a498a5"
+  ],
+  "tests": {
+    "npm_test": {"passed": 267, "failed": 0, "cancelled": 0, "skipped": 0},
+    "targeted": {"passed": 13, "failed": 0},
+    "build": "passed",
+    "build_plugin": "passed",
+    "runtime_modules": 42,
+    "git_diff_check": "passed"
+  },
+  "installed_parity": {
+    "candidate_files": 55,
+    "installed_files": 55,
+    "changed_files": 0,
+    "hash_equal": true
+  },
+  "daemon": {"web_port": 8788, "api_port": 8790, "http_status": 200},
+  "live_b0qi": {
+    "status": "PAUSED",
+    "phase": "IDLE",
+    "pause_reason": "user",
+    "binding": "BOUND",
+    "original_a": "01a1ae7a-9442-79e0-b32b-aa560f976453",
+    "contract_sha256": "db7ccc65dc3524ae4dcc40767bfd7bd11bd7e4a107a51c5e90d1bb5f3c576e54",
+    "fresh_native_stop": "pending_user_unpause",
+    "fabricated_receipt": false
+  },
+  "status": "code_test_review_deploy_complete_live_gate_pending"
+}
