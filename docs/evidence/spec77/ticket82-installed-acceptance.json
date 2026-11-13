@@ -1,0 +1,48 @@
+{
+  "ticket": 82,
+  "commit": "6cfc51c",
+  "scope": "installed runtime, source/runtime parity, release regression, and B0QI field gate",
+  "build": {
+    "npm_run_build": "passed",
+    "build_plugin": "passed",
+    "runtime_modules": 42,
+    "git_diff_check": "passed"
+  },
+  "isolated_install": {
+    "command": "node scripts/verify-plugin-install.mjs --candidate . --directory runs/spec77-ticket82-install",
+    "result": "discovery_pass",
+    "package_matches_candidate": true,
+    "native_effectiveness": "not_run",
+    "human_trust_required": true
+  },
+  "tests": {
+    "command": "npm test",
+    "result": "267 passed, 0 failed, 0 cancelled, 0 skipped",
+    "captured_output": ".scratch/spec77-ticket82-full-test.txt",
+    "targeted_result": "13 passed, 0 failed"
+  },
+  "regression": {
+    "issue": "A concurrent duplicate Stop could replace B's in-memory checkpoint with an older disk snapshot while C was judging, causing the single admitted delivery fence to be lost.",
+    "fix": "Reject a concurrent Stop occurrence before assigning its stale disk snapshot to the active controller state.",
+    "behavior": "The original active Stop retains its supervision admission and delivery; duplicate/replay occurrences remain rejected."
+  },
+  "live_b0qi_read_only": {
+    "task_id": "quantresearch-793-supervise",
+    "main_session_id": "01a1ae7a-9442-79e0-b32b-aa560f976453",
+    "contract_sha256": "db7ccc65dc3524ae4dcc40767bfd7bd11bd7e4a107a51c5e90d1bb5f3c576e54",
+    "status": "PAUSED",
+    "phase": "IDLE",
+    "pause_reason": "user",
+    "binding_status": "BOUND",
+    "controller_lifecycle": "exited",
+    "fresh_native_stop": "not attempted; user pause is respected",
+    "acceptance": "live B0QI Stop/C/delivery gate remains pending and is not claimed here"
+  },
+  "deployment": {
+    "performed_from_this_worktree": false,
+    "reason": "The deployment script is intentionally pinned to the primary checkout. The candidate must be merged to integration before deployment.",
+    "global_nf_nfg_preserved": true,
+    "single_trusted_hook_preserved": true,
+    "other_user_paused_tasks_respected": true
+  }
+}
