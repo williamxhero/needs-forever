@@ -39,15 +39,18 @@ function installed(name: string, transport: unknown = {}, sessionId = name, boun
   return { directory, workspace, plugin, task, state, fixture, trace, run, hook, setDesktopPid };
 }
 
-test('a repeated invalid planner output exhausts C-owned escalation and interrupts durably', (t) => {
+test('a repeated invalid planner output exhausts C-owned escalation without terminating the native supervision', (t) => {
   const f = installed('c2-fallback-interruption', { decision: { action: 'CONTINUE', reason: 'Invalid planner output.', evidence_ids: [], next_message: 'Audit.', external: null } }, 'c2-fallback-interruption', 0, {}, undefined, undefined, 'enforce', 'Local files', { recovery_delays_ms: [0, 0, 0] });
   t.after(() => f.run('pause'));
   const first = f.hook({ hook_event_name: 'Stop' });
   assert.equal(first.status, 0, first.stderr);
   assert.deepEqual(JSON.parse(first.stdout), {});
   const state = JSON.parse(f.run('status').stdout);
-  assert.equal(state.status, 'INTERRUPTED');
-  assert.equal(state.phase, 'IDLE');
+  assert.equal(state.status, 'WAIT_EXTERNAL');
+  assert.equal(state.phase, 'RECOVERING');
+  assert.equal(state.binding.status, 'BOUND');
+  assert.equal(state.recovery_condition.kind, 'judge_unavailable');
+  assert.equal(state.recovery_plan.status, 'waiting_native');
   assert.equal(state.judgment_round.status, 'interrupted');
   assert.equal(state.judgment_round.attempts.length, 3);
   assert.equal(new Set(state.judgment_round.attempts.map((entry: any) => entry.resource_family)).size, 3);
@@ -55,7 +58,8 @@ test('a repeated invalid planner output exhausts C-owned escalation and interrup
   assert.equal(events.filter(e => e.type === 'send_prepared').length, 0);
   assert.equal(events.filter(e => e.type === 'judge_inventory_fallback').length, 0);
   assert.equal(events.filter(e => e.type === 'judge_round_interrupted').length, 1);
-  assert.ok(events.some(e => e.type === 'recovery_interrupted'));
+  assert.equal(events.filter(e => e.type === 'recovery_interrupted').length, 0);
+  assert.equal(events.filter(e => e.type === 'recovery_waiting_native').length, 1);
 });
 
 test('native C2 admission redacts the entire selected decision before checkpoint and recovery prompt', (t) => {

@@ -204,6 +204,30 @@ export function waitForNativeReceipt(state: State & { run_generation?: string },
   return plan;
 }
 
+/** Park a failed C judgment without terminating the original A supervision.
+ * The native Stop has already ended, so B cannot invent a continuation. Keep
+ * the original binding and wait for the next genuine A lifecycle receipt;
+ * that receipt can restart B under the existing generation fence.
+ */
+export function waitForJudgmentRecovery(state: MainSessionState, reason: RecoveryReason): RecoveryPlan {
+  if (state.status === 'DONE' || state.status === 'PAUSED' || state.status === 'INTERRUPTED') throw new Error('Cannot park judgment recovery for a terminal or paused task.');
+  state.status = 'WAIT_EXTERNAL';
+  state.phase = 'RECOVERING';
+  state.last_error = reason.message;
+  state.recovery_condition = reason;
+  state.pending_action = null;
+  delete state.direction_context;
+  delete state.route_execution;
+  state.continuation_confirmed = false;
+  state.host.hook_effective = false;
+  const plan = waitForNativeReceipt(state, reason);
+  delete state.recovery_window;
+  plan.owner = null;
+  plan.status = 'waiting_native';
+  plan.next_retry_at = null;
+  return plan;
+}
+
 export function markRecoveryRunning(state: State & { run_generation?: string }, owner: RecoveryPlan['owner']): RecoveryPlan {
   const current = state.recovery_plan;
   if (!current || current.cancellation_boundary || current.task_version !== state.task_version || (state.run_generation && current.generation !== state.run_generation)) throw new Error('Stale recovery generation cannot become running.');
@@ -356,6 +380,25 @@ function reconcileRecoveryTickUnlocked(statePath: string, now: number): { change
     parsed.recovery_plan.next_retry_at = null;
     if (changed) new Store(statePath).save(parsed);
     return { changed, waitingNative: true, nextRetryAt: null };
+  }
+
+  // A bounded C failure cannot yield a safe continuation for the just-ended
+  // Stop. Keep the original A binding parked in WAIT_EXTERNAL and wait for a
+  // genuine next lifecycle receipt; recreating the normal deadline here would
+  // turn a recoverable judgment outage into a false INTERRUPTED state.
+  const waitingForJudgeActivity = parsed.status === 'WAIT_EXTERNAL'
+    && parsed.phase === 'RECOVERING'
+    && parsed.binding?.status === 'BOUND'
+    && parsed.recovery_condition?.kind === 'judge_unavailable'
+    && parsed.recovery_plan.status === 'waiting_native';
+  if (waitingForJudgeActivity) {
+    const changed = !!parsed.recovery_window || parsed.recovery_plan.owner !== null || parsed.recovery_plan.next_retry_at !== null;
+    delete parsed.recovery_window;
+    parsed.recovery_plan.status = 'waiting_native';
+    parsed.recovery_plan.owner = null;
+    parsed.recovery_plan.next_retry_at = null;
+    if (changed) new Store(statePath).save(parsed);
+    return { changed, waitingNative: false, nextRetryAt: null };
   }
 
   if (parsed.phase === 'RECOVERING' || parsed.recovery_plan.status === 'waiting_native' || parsed.recovery_window) {

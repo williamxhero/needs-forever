@@ -26,6 +26,8 @@
 - 用于重绑的真实 PreToolUse 同时保留起始记录，后续匹配 PostToolUse 的实际结果进入 C 证据；单独收到 PostToolUse 不构造不存在的起始事件。adapter/core 共享重绑事件枚举，防止两边漂移。
 - 如果原始 A 由可见 Codex Desktop app-server 持有且 NF 没有安全的 Desktop provider adapter，恢复不会重复启动第二个 app-server，也不会继续消耗 120 秒窗口。状态进入 `WAIT_EXTERNAL / RECOVERING / PENDING_NATIVE_HOOK`，保留原始 A 与 generation fence，等待同一 A 的真实 native lifecycle receipt；收到后自动重绑并启动 B。该状态不会被误标为 `INTERRUPTED`。
 
+- 如果同一个 native Stop 内 C 的有界判断预算耗尽，NF 不会把 C 的 transport/turn 失败升级为 `INTERRUPTED`。B 保留原始 A 的绑定并进入 `WAIT_EXTERNAL / RECOVERING`，记录 `judge_unavailable` 与 `recovery_waiting_native`；下一次原始 A 的真实 `UserPromptSubmit` 或 `SessionStart` 会自动重启 B。没有新的真实 native receipt 之前，NF 不伪造 `CONTINUE`，也不创建第二个 task worker。
+
 ## 本机验证
 
 本机检查另发现仅剩插件缓存、Codex 未注册 Needs Forever。重新注册同一个 0.3.4 包后，由用户在 Codex 设置中信任六项 hook；宿主回读六项均为 trusted。未代替用户写入信任，也没有使用绕过信任参数。

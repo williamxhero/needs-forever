@@ -14,7 +14,7 @@ import { validateDecision } from './judge.js';
 import { captureRouteOutcome, discoverLocalRoutes, plannerFailureFallback, prepareRouteExecution, routeCorrelation, PlannerFallbackUnavailableError } from './route-execution.js';
 import { classifyRecoveryError, nextBackoff, recordRecoveryFailure } from './recovery.js';
 import { reachedLimits } from './rules.js';
-import { armRecovery, cancelRecovery, createRecoveryPlan, markRecoveryRunning, acquireRecoveryOwner, waitForNativeReceipt, reconcileStaleOwner, interruptRecovery } from './recovery-episode.js';
+import { armRecovery, cancelRecovery, createRecoveryPlan, markRecoveryRunning, acquireRecoveryOwner, waitForNativeReceipt, waitForJudgmentRecovery, reconcileStaleOwner } from './recovery-episode.js';
 import { scheduleNativeRebindPrompt } from './main-session-recovery.js';
 import { initializeHttpRouteProbe } from './http-route-probe.js';
 import { cancelSupervisionRound, recordSupervisionDelivery, runSupervisionRound } from './supervision-round.js';
@@ -367,7 +367,11 @@ export function boundStateForEvent(input, pluginRoot, simulated) {
         const controllerRunning = state.controller?.lifecycle === 'running';
         const ownerPluginMatches = canonicalPath(state.controller?.plugin_root ?? pluginRoot) === callbackPluginRoot;
         const exitedControllerRebind = !controllerRunning && ['SessionStart', 'UserPromptSubmit'].includes(input.hook_event_name) && state.status === 'ACTIVE';
-        if (state.control_mode === 'main-session' && state.status !== 'DONE' && state.status !== 'INTERRUPTED' && state.binding.status === 'BOUND' && state.main_session_id === input.session_id && (state.mode === 'simulated') === simulated && ((controllerRunning && ownerPluginMatches) || exitedControllerRebind))
+        const parkedJudgeRebind = !controllerRunning
+            && ['SessionStart', 'UserPromptSubmit'].includes(input.hook_event_name)
+            && state.status === 'WAIT_EXTERNAL'
+            && state.recovery_condition?.kind === 'judge_unavailable';
+        if (state.control_mode === 'main-session' && state.status !== 'DONE' && state.status !== 'INTERRUPTED' && state.binding.status === 'BOUND' && state.main_session_id === input.session_id && (state.mode === 'simulated') === simulated && ((controllerRunning && ownerPluginMatches) || exitedControllerRebind || parkedJudgeRebind))
             return path;
     }
     return null;
@@ -375,7 +379,8 @@ export function boundStateForEvent(input, pluginRoot, simulated) {
 export async function dispatchBoundLifecycle(path, input, pluginRoot, bundleHash, desktopPid, nativeReceipt, fixturePath) {
     const state = readJson(path);
     if (!state.controller || state.controller.lifecycle !== 'running') {
-        if (!pluginRoot || !bundleHash || !nativeReceipt || !['SessionStart', 'UserPromptSubmit'].includes(input?.hook_event_name) || state.status !== 'ACTIVE' || state.binding.status !== 'BOUND' || state.main_session_id !== input?.session_id || canonicalPath(input?.cwd) !== canonicalPath(state.task.workspace))
+        const parkedJudgeRecovery = state.status === 'WAIT_EXTERNAL' && state.recovery_condition?.kind === 'judge_unavailable';
+        if (!pluginRoot || !bundleHash || !nativeReceipt || !['SessionStart', 'UserPromptSubmit'].includes(input?.hook_event_name) || (state.status !== 'ACTIVE' && !parkedJudgeRecovery) || state.binding.status !== 'BOUND' || state.main_session_id !== input?.session_id || canonicalPath(input?.cwd) !== canonicalPath(state.task.workspace))
             return {};
         const issuedAt = Date.parse(nativeReceipt.issued_at);
         const previousAt = state.binding.accepted_receipt ? Date.parse(state.binding.accepted_receipt.issued_at) : NaN;
@@ -391,6 +396,7 @@ export async function dispatchBoundLifecycle(path, input, pluginRoot, bundleHash
         delete state.last_stop;
         state.tool_starts = {};
         state.continuation_confirmed = false;
+        state.status = 'ACTIVE';
         state.phase = 'WORKER';
         delete state.last_error;
         delete state.recovery_condition;
@@ -840,9 +846,14 @@ export async function runController(path, pluginRoot, fixturePath) {
                         if (current.valid) {
                             state.stop_transport = { request, outcome: 'failed', error: String(redact(error.message)) };
                             if (error instanceof PlannerFallbackUnavailableError) {
-                                interruptRecovery(state, Date.now(), error.message);
+                                const reason = String(redact(error.message));
+                                waitForJudgmentRecovery(state, {
+                                    kind: 'judge_unavailable',
+                                    message: reason,
+                                    resume_when: '原始 A 产生新的真实 native lifecycle receipt 后，NF 自动重启 B；在此之前不伪造 CONTINUE。',
+                                });
                                 cancelSupervisionRound(state, store, error.message);
-                                store.event(state, 'recovery_interrupted', { stop_attempt_id: request.stop_attempt_id, cause: 'planner_fallback_unavailable', reason: state.last_error });
+                                store.event(state, 'recovery_waiting_native', { stop_attempt_id: request.stop_attempt_id, cause: 'planner_fallback_unavailable', reason, owner: 'judgment-round' });
                                 socket.once('finish', () => setImmediate(shutdown));
                             }
                             else

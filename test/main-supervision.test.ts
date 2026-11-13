@@ -103,14 +103,17 @@ test('installed C2 correlates same-turn Stop executions and persists only confir
   assert.equal(JSON.parse(readFileSync(f.state, 'utf8')).route_execution, undefined);
 });
 
-for (const failure of ['invalid', 'empty', 'timeout']) test(`installed native ${failure} C outputs exhaust Judgment Round escalation and persist interruption`, (t) => {
+for (const failure of ['invalid', 'empty', 'timeout']) test(`installed native ${failure} C outputs exhaust Judgment Round escalation without terminating supervision`, async (t) => {
   const f = setup(`native-fallback-${failure}`, failure === 'timeout' ? { hold_judge_until: 3, judge_stderr: 'fixture judge backend unavailable' } : { judge_outputs: [failure === 'invalid' ? '{broken' : '', failure === 'invalid' ? '{broken' : '', failure === 'invalid' ? '{broken' : ''] }, false, join('.codex-supervisor', `native-fallback-${failure}`), ['verify.mjs'], { recovery_delays_ms: [0], judge_timeout_ms: failure === 'timeout' ? 100 : 1000 });
   t.after(() => f.run('pause'));
   const reply = f.stop();
   assert.deepEqual(reply, {}, 'An exhausted C round must not return a generic inventory direction to A.');
   const state = JSON.parse(readFileSync(f.state, 'utf8'));
-  assert.equal(state.status, 'INTERRUPTED');
-  assert.equal(state.phase, 'IDLE');
+  assert.equal(state.status, 'WAIT_EXTERNAL');
+  assert.equal(state.phase, 'RECOVERING');
+  assert.equal(state.binding.status, 'BOUND');
+  assert.equal(state.recovery_condition.kind, 'judge_unavailable');
+  assert.equal(state.recovery_plan.status, 'waiting_native');
   assert.match(state.last_error, /有界判断预算/);
   assert.equal(state.judgment_round.status, 'interrupted');
   assert.equal(state.judgment_round.attempts.length, 3);
@@ -122,6 +125,8 @@ for (const failure of ['invalid', 'empty', 'timeout']) test(`installed native ${
   assert.equal(events.filter((entry) => entry.type === 'judge_attempt_failed').length, 3);
   assert.equal(events.filter((entry) => entry.type === 'judge_escalation_required').length, 2);
   assert.equal(events.filter((entry) => entry.type === 'judge_round_interrupted').length, 1);
+  assert.equal(events.filter((entry) => entry.type === 'recovery_interrupted').length, 0);
+  assert.equal(events.filter((entry) => entry.type === 'recovery_waiting_native').length, 1);
   assert.ok(events.filter((entry) => entry.type === 'main_session_retry').every((entry) => entry.owner === 'judgment-round'));
   if (failure === 'timeout') {
     const timeout = events.find((entry) => entry.type === 'judge_timeout');
@@ -134,6 +139,18 @@ for (const failure of ['invalid', 'empty', 'timeout']) test(`installed native ${
     assert.equal(timeout.last_event_method, null);
     assert.match(timeout.stderr_tail, /fixture judge backend unavailable/);
   }
+  const receipt = f.hook({ hook_event_name: 'UserPromptSubmit', prompt: '继续原任务。' });
+  assert.equal(receipt.status, 0, receipt.stderr);
+  const reboundUntil = Date.now() + 5_000;
+  let rebound = JSON.parse(readFileSync(f.state, 'utf8'));
+  while ((rebound.status !== 'ACTIVE' || rebound.phase !== 'WORKER' || rebound.binding.status !== 'BOUND') && Date.now() < reboundUntil) {
+    await delay(25);
+    rebound = JSON.parse(readFileSync(f.state, 'utf8'));
+  }
+  assert.equal(rebound.status, 'ACTIVE');
+  assert.equal(rebound.phase, 'WORKER');
+  assert.equal(rebound.binding.status, 'BOUND');
+  assert.equal(rebound.recovery_condition, undefined);
 });
 
 test('assistant completion or blocked wording alone cannot support DONE or WAIT_EXTERNAL', (t) => {
