@@ -72,10 +72,14 @@ function eventSummary(event) {
         case 'main_session_continuation_confirmed': return 'A 已确认续接';
         case 'main_session_recovery_prompt_scheduled': return 'NF 已安排恢复 prompt';
         case 'main_session_recovery_prompt_attempted': return 'NF 开始推动 A 继续';
+        case 'main_session_recovery_prompt_blocked': return 'NF 未启动第二个 Desktop app-server，等待原始 A 的 native 回执';
         case 'main_session_recovery_prompt_sent': return 'NF 已向 A 发送恢复 prompt';
         case 'main_session_recovery_prompt_acknowledged': return 'A thread 已接收 NF 恢复 prompt';
         case 'main_session_worker_prompt_observed': return 'A thread 已收到监督恢复 prompt';
-        case 'main_session_recovery_prompt_deferred': return 'A 已有进行中的回合，NF 暂缓发送';
+        case 'main_session_recovery_waiting_native': return '等待原始 A 的受信任 native 回执';
+        case 'main_session_recovery_prompt_deferred': return event.diagnosis === 'recovery_desktop_provider_unavailable'
+            ? 'NF 不重复启动第二个 Desktop app-server，等待原始 A 的 native 回执'
+            : 'A 已有进行中的回合，NF 暂缓发送';
         case 'recovery_active_writer_window_extended': return '确认 A 仍在执行，NF 延长恢复等待窗口';
         case 'recovery_active_writer_window_capped': return 'A 的 active writer 等待已达到恢复上限';
         case 'main_session_recovery_prompt_failed': return error ? `NF 推动 A 失败：${error}` : 'NF 推动 A 失败';

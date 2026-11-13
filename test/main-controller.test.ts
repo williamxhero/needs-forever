@@ -9,6 +9,7 @@ import { NFDaemon } from '../src/daemon.js';
 import type { MainSessionState } from '../src/main-session.js';
 import { routeInventoryDecision } from '../src/planning.js';
 import type { Snapshot } from '../src/types.js';
+import { reconcileRecoveryTick } from '../src/recovery-episode.js';
 import { createServer } from 'node:http';
 
 function installed(name: string, transport: unknown = {}, sessionId = name, boundStatus = 0, limits: Record<string, number> = {}, appServer?: Record<string, unknown>, desktopPid?: number, c2Mode = 'legacy', authorization = 'Local files', fixtureOptions: Record<string, unknown> = {}) {
@@ -470,7 +471,7 @@ test('native rebind recovery automatically prompts the original A instead of wai
   assert.equal(acknowledged.turn_id, 'turn-parent-001');
 });
 
-test('live Desktop recovery refuses to create a second app-server owner for A', async (t) => {
+test('live Desktop recovery refuses to create a second app-server owner for A and waits for a native receipt', async (t) => {
   const f = installed('native-desktop-recovery-owner-guard', {}, 'native-desktop-recovery-owner-guard');
   t.after(() => f.run('pause'));
   const before = JSON.parse(f.run('status').stdout) as MainSessionState;
@@ -493,14 +494,29 @@ test('live Desktop recovery refuses to create a second app-server owner for A', 
   writeFileSync(f.state, `${JSON.stringify(pending)}\n`);
   await deliverMainSessionRecoveryPrompt(f.state);
   const status = JSON.parse(f.run('status').stdout);
-  assert.equal(status.status, 'ACTIVE');
+  assert.equal(status.status, 'WAIT_EXTERNAL');
   assert.equal(status.phase, 'RECOVERING');
+  assert.equal(status.binding.status, 'PENDING_NATIVE_HOOK');
+  assert.equal(status.recovery_plan.status, 'waiting_native');
+  assert.equal(status.recovery_prompt, undefined, 'A provider-less Desktop recovery must stop retrying an impossible second owner.');
+  assert.equal(status.recovery_window, undefined, 'Native receipt waiting must not consume the ordinary recovery deadline.');
   assert.equal(status.recovery_condition.kind, 'recovery_desktop_provider_unavailable');
   assert.match(status.recovery_condition.message, /拒绝通过独立 app-server/);
   const events = readFileSync(join(f.workspace, '.codex-supervisor', 'native-desktop-recovery-owner-guard', 'events.jsonl'), 'utf8').split(/\r?\n/).filter(Boolean).map((line) => JSON.parse(line));
   assert.ok(events.some((event) => event.type === 'main_session_recovery_prompt_blocked'));
   assert.ok(events.some((event) => event.type === 'main_session_recovery_prompt_deferred'));
+  assert.ok(events.some((event) => event.type === 'main_session_recovery_waiting_native'));
   assert.equal(events.some((event) => event.type === 'main_session_recovery_prompt_attempted'), false);
+
+  // The provider gap is not a retryable transport failure.  A later watchdog
+  // tick must preserve the native-receipt wait instead of converting it into
+  // a timeout/INTERRUPTED state.
+  const afterDeadline = reconcileRecoveryTick(f.state, Date.now() + 24 * 60 * 60_000);
+  assert.equal(afterDeadline.waitingNative, true);
+  const stillWaiting = JSON.parse(f.run('status').stdout);
+  assert.equal(stillWaiting.status, 'WAIT_EXTERNAL');
+  assert.equal(stillWaiting.recovery_condition.kind, 'recovery_desktop_provider_unavailable');
+  assert.equal(stillWaiting.binding.status, 'PENDING_NATIVE_HOOK');
 });
 
 test('active-writer recovery defers the same prompt with bounded backoff and retries automatically', async (t) => {

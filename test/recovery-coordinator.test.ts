@@ -7,7 +7,7 @@ import type { MainSessionState } from '../src/main-session.js';
 import { Store } from '../src/store.js';
 import { spawnSync } from 'node:child_process';
 import { handleLifecycle } from '../src/lifecycle.js';
-import { armNativeRebind } from '../src/main-session.js';
+import { armNativeRebind, contractHash } from '../src/main-session.js';
 
 function state(name: string): MainSessionState {
   const workspace = resolve('runs/recovery-coordinator', `${name}-${Date.now()}`);
@@ -245,6 +245,50 @@ test('late native lifecycle events cannot resume interrupted supervision', () =>
     armNativeRebind(value, 'late automatic attempt');
     assert.equal(value.status, 'INTERRUPTED');
     assert.equal(value.binding.status, 'RELEASED');
+  } finally { process.chdir(cwd); }
+});
+
+test('a provider-less Desktop wait accepts the next genuine same-A native receipt', () => {
+  const value = state('desktop-provider-wait');
+  value.contract_sha256 = contractHash(value.task);
+  value.status = 'WAIT_EXTERNAL';
+  value.phase = 'RECOVERING';
+  value.binding = {
+    ...value.binding,
+    status: 'PENDING_NATIVE_HOOK',
+    operation: 'rebind',
+    expected_main_session_id: value.main_session_id,
+    expected_workspace: resolve(value.task.workspace),
+    expected_task_version: value.task_version,
+    expected_run_generation: value.run_generation,
+    armed_at: new Date(1_000).toISOString(),
+  };
+  value.recovery_condition = {
+    kind: 'recovery_desktop_provider_unavailable',
+    message: 'Desktop provider unavailable.',
+    resume_when: 'A native receipt.',
+  };
+  value.recovery_plan = createRecoveryPlan(value, value.recovery_condition, true);
+  const path = resolve(value.task.workspace, 'state.json');
+  const index = resolve(value.task.workspace, '.codex-supervisor');
+  mkdirSync(index, { recursive: true });
+  writeFileSync(resolve(index, 'main-session-index.json'), JSON.stringify({ states: [path] }));
+  writeFileSync(path, JSON.stringify(value));
+  const cwd = process.cwd();
+  try {
+    process.chdir(value.task.workspace);
+    const result = handleLifecycle(
+      { hook_event_name: 'UserPromptSubmit', cwd: value.task.workspace, session_id: value.main_session_id, prompt: '继续' },
+      value.host,
+      cwd,
+      undefined,
+      { occurrence_id: 'receipt-desktop-provider-wait', issued_at: new Date(2_000).toISOString() },
+    );
+    assert.equal(result.bound, true);
+    const rebound = JSON.parse(readFileSync(path, 'utf8')) as MainSessionState;
+    assert.equal(rebound.status, 'WAIT_EXTERNAL');
+    assert.equal(rebound.binding.status, 'BOUND');
+    assert.equal(rebound.binding.accepted_receipt?.occurrence_id, 'receipt-desktop-provider-wait');
   } finally { process.chdir(cwd); }
 });
 
