@@ -36,5 +36,19 @@
     "fresh_native_stop": "pending_user_unpause",
     "fabricated_receipt": false
   },
-  "status": "code_test_review_deploy_complete_live_gate_pending"
+  "main": {
+    "local_commit": "e564de54491f0c912b836fa6cd109586e12d7a1d",
+    "origin_commit": "e564de54491f0c912b836fa6cd109586e12d7a1d",
+    "equal": true
+  },
+  "cleanup": {
+    "spec77_worktrees_archived": 5,
+    "created_branches_removed": 6,
+    "unrelated_worktrees_preserved": true
+  },
+  "issues": {
+    "77": "OPEN_live_gate_pending",
+    "82": "OPEN_live_gate_pending"
+  },
+  "status": "code_test_review_deploy_main_push_cleanup_complete_live_gate_pending"
 }
