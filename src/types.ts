@@ -76,6 +76,31 @@ export interface JudgmentRoundState {
   attempts: JudgmentAttempt[];
   interruption_reason?: string;
 }
+/** Durable projection of one native Stop supervision round.
+ *
+ * This record is deliberately separate from the C attempt state.  It is the
+ * B-owned admission/delivery fence that lets a restarted process reconstruct
+ * whether a Stop already produced a decision, a single native continuation,
+ * or a confirmed A activity without replaying either side.
+ */
+export interface SupervisionRoundState {
+  stop_attempt_id: string;
+  run_generation: string;
+  task_version: number;
+  input_epoch: number;
+  status: 'admitted' | 'judging' | 'admission_rejected' | 'delivered' | 'confirmed' | 'terminal' | 'cancelled' | 'interrupted';
+  admission_count: number;
+  delivery_count: number;
+  confirmation_count: number;
+  delivery_id?: string;
+  decision_action?: Decision['action'];
+  plan_id?: string;
+  route_id?: string;
+  planner_fallback?: boolean;
+  interruption_reason?: string;
+  started_at: string;
+  updated_at: string;
+}
 export interface State {
   schema_version: 1;
   task_id: string;
@@ -114,6 +139,7 @@ export interface State {
   };
   recovery_interruption?: { at: string; reason: string };
   judgment_round?: JudgmentRoundState;
+  supervision_round?: SupervisionRoundState;
   route_catalog?: RouteCatalogData;
   route_probe?: { state_path: string; nonce: string; scope_sha256: string; argv_prefix: string[]; seen_receipts?: string[]; omitted_url_sha256?: string[] };
   route_ledger?: RouteLedgerData;

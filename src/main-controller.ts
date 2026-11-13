@@ -21,7 +21,7 @@ import { reachedLimits } from './rules.js';
 import { armRecovery, cancelRecovery, createRecoveryPlan, markRecoveryRunning, acquireRecoveryOwner, waitForNativeReceipt, reconcileStaleOwner, interruptRecovery, type RecoveryReason } from './recovery-episode.js';
 import { scheduleNativeRebindPrompt } from './main-session-recovery.js';
 import { initializeHttpRouteProbe } from './http-route-probe.js';
-import { runSupervisionRound } from './supervision-round.js';
+import { cancelSupervisionRound, recordSupervisionDelivery, runSupervisionRound } from './supervision-round.js';
 
 type Controller = NonNullable<MainSessionState['controller']>;
 type HookReply = { decision?: 'block'; reason?: string };
@@ -337,12 +337,14 @@ export async function runController(path: string, pluginRoot: string, fixturePat
   const pause = (reason: 'user' | 'user_limit') => {
     accrue(); state.status = 'PAUSED'; state.pause_reason = reason; state.phase = 'IDLE';
     state.input_epoch = (state.input_epoch ?? 0) + 1; state.pending_action = null; delete state.route_execution; delete state.direction_context; state.continuation_confirmed = false;
+    cancelSupervisionRound(state, store, `supervision paused: ${reason}`);
     cancelRecovery(state, 'pause'); store.save(state); cancelActive('Paused before cancellation.');
   };
   const recover = (message: string) => {
     if (state.status === 'PAUSED' || state.status === 'DONE' || state.status === 'INTERRUPTED') return;
     state.input_epoch = (state.input_epoch ?? 0) + 1; delete state.route_execution; delete state.direction_context; state.tool_starts = {}; state.continuation_confirmed = false;
     state.phase = 'RECOVERING'; state.last_error = String(redact(message)); state.host.hook_effective = false;
+    cancelSupervisionRound(state, store, 'supervision recovery invalidated the current Stop round');
     state.recovery_condition = { kind: 'stop_transport', message: state.last_error, resume_when: 'Inspect the preserved Stop outcome and explicitly resume the same main session.' };
     armRecovery(state, state.recovery_condition);
   };
@@ -350,6 +352,7 @@ export async function runController(path: string, pluginRoot: string, fixturePat
     if (state.status === 'PAUSED' || state.status === 'DONE' || state.status === 'INTERRUPTED' || state.binding.status !== 'BOUND' || !state.main_session_id) return;
     if (desktopPid) state.host.desktop_pid = desktopPid;
     const reason = String(redact(message));
+    cancelSupervisionRound(state, store, 'native binding re-arm invalidated the current Stop round');
     armNativeRebind(state, reason);
     waitForNativeReceipt(state, {
       kind: 'native_rebind',
@@ -437,6 +440,7 @@ export async function runController(path: string, pluginRoot: string, fixturePat
               // strand the task waiting for a second callback that Codex may
               // never emit after a host/plugin restart.
               cancelActive('Native host or plugin changed; the new lifecycle receipt re-bound the original A.');
+              cancelSupervisionRound(state, store, 'native host/plugin change advanced the binding generation');
               const generation = randomUUID();
               state.input_epoch = (state.input_epoch ?? 0) + 1;
               state.run_generation = generation;
@@ -473,6 +477,7 @@ export async function runController(path: string, pluginRoot: string, fixturePat
             accrue(); state.input_epoch = (state.input_epoch ?? 0) + 1;
             state.latest_human_input = { prompt: String(redact(typeof event.prompt === 'string' ? event.prompt : '')).slice(0, 8_000), at: new Date().toISOString(), input_epoch: state.input_epoch };
             state.pending_action = null; delete state.route_execution; delete state.direction_context; delete state.recovery_prompt; state.continuation_confirmed = false; state.tool_starts = {};
+            cancelSupervisionRound(state, store, 'new native user input invalidated the current Stop round');
             if (state.status === 'ACTIVE' && state.phase !== 'RECOVERING') state.phase = 'WORKER';
             store.save(state); cancelActive('A newer human input invalidated the pending judgment.'); return {};
           }
@@ -542,6 +547,10 @@ export async function runController(path: string, pluginRoot: string, fixturePat
               // misclassified as an unknown recovery.
               clearInterval(checkpointTimer);
               state.status = decision.action; state.phase = 'IDLE'; state.pending_action = null;
+              if (state.supervision_round?.stop_attempt_id === request.stop_attempt_id) {
+                state.supervision_round.status = 'terminal';
+                state.supervision_round.updated_at = new Date().toISOString();
+              }
               if (decision.action === 'DONE') cancelRecovery(state, 'done');
               state.stop_transport = { request, outcome: 'returned' };
               if (decision.action === 'DONE') state.binding.status = 'RELEASED';
@@ -553,6 +562,7 @@ export async function runController(path: string, pluginRoot: string, fixturePat
             }
             state.pending_action = { ...correlation, delivery_id: delivery, source_turn_id: request.turn_id, task_version: request.task_version, message: decision.next_message, stage: 'prepared', target_turn_id: null };
             const pendingAction = state.pending_action;
+            recordSupervisionDelivery(state, request, delivery, store);
             store.event(state, 'send_prepared', { ...correlation, delivery_id: delivery, source_turn_id: request.turn_id, message: decision.next_message, transport: 'native-stop' });
             pendingAction.stage = 'sent';
             store.event(state, 'send_attempted', { ...correlation, delivery_id: delivery, transport: 'native-stop' });
@@ -567,6 +577,7 @@ export async function runController(path: string, pluginRoot: string, fixturePat
               state.stop_transport = { request, outcome: 'failed', error: String(redact((error as Error).message)) };
               if (error instanceof PlannerFallbackUnavailableError) {
                 interruptRecovery(state, Date.now(), error.message);
+                cancelSupervisionRound(state, store, error.message);
                 store.event(state, 'recovery_interrupted', { stop_attempt_id: request.stop_attempt_id, cause: 'planner_fallback_unavailable', reason: state.last_error });
                 socket.once('finish', () => setImmediate(shutdown));
               } else recover((error as Error).message);
