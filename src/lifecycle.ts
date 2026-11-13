@@ -10,6 +10,7 @@ import { redact } from './redact.js';
 import { controlIntent } from './control-intent.js';
 import { createRecoveryPlan, reconcileRecoveryTick } from './recovery-episode.js';
 import { confirmRouteExecution, routeCorrelation } from './route-execution.js';
+import { recordSupervisionConfirmation } from './supervision-round.js';
 
 const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 export function isNativeRebindEvent(name: unknown): boolean {
@@ -146,6 +147,7 @@ export function handleLifecycle(input: unknown, host: HookHost, pluginRoot: stri
           const correlation = routeCorrelation(state.pending_action);
           store.event(state, 'main_session_continuation_confirmed', { ...correlation, session_id: session, turn_id: event.turn_id ?? null, delivery_id: context.delivery_id, tool_use_id: toolId, original_event: name });
           store.event(state, 'send_confirmed', { ...correlation, delivery_id: context.delivery_id, turn_id: event.turn_id ?? null, via: 'native-tool-activity' });
+          if (state.last_stop) recordSupervisionConfirmation(state, state.last_stop, context.delivery_id, store);
         }
         delete state.tool_starts[toolId];
         state.processed_tool_ids = [...(state.processed_tool_ids ?? []), toolId];

@@ -176,6 +176,15 @@ test('installed bound main session automatically owns an independent B and synch
   assert.equal(status.stop_transport.outcome, 'returned');
   assert.equal(status.stop_transport.request.session_id, 'automatic-B');
   assert.equal(status.mode, 'simulated');
+  assert.equal(status.supervision_round.admission_count, 1);
+  assert.equal(status.supervision_round.delivery_count, 1);
+  assert.equal(status.supervision_round.confirmation_count, 0);
+  const continuationTool = { tool_use_id: 'continuation-tool', tool_name: 'exec_command', tool_input: { command: status.pending_action.message } };
+  assert.equal(f.hook({ ...continuationTool, hook_event_name: 'PreToolUse' }).status, 0);
+  assert.equal(f.hook({ ...continuationTool, hook_event_name: 'PostToolUse', tool_response: { stdout: 'continued', exitCode: 0 } }).status, 0);
+  const confirmed = JSON.parse(f.run('status').stdout);
+  assert.equal(confirmed.supervision_round.confirmation_count, 1);
+  assert.equal(confirmed.supervision_round.status, 'confirmed');
 });
 
 test('NF automatically delivers a returned CONTINUE prompt when original A stays idle', async (t) => {
@@ -199,6 +208,9 @@ test('a manual pause cancels the pending NF recovery prompt before delivery', as
   t.after(() => f.run('pause'));
   assert.deepEqual(JSON.parse(f.hook({ hook_event_name: 'Stop' }).stdout), { decision: 'block', reason: 'This must not be delivered after pause.' });
   assert.equal(f.run('pause').status, 0);
+  const paused = JSON.parse(f.run('status').stdout);
+  assert.equal(paused.supervision_round.status, 'cancelled');
+  assert.match(paused.supervision_round.interruption_reason, /paused/);
   await delay(3_500);
   const events = readFileSync(join(f.workspace, '.codex-supervisor', 'recovery-prompt-pause', 'events.jsonl'), 'utf8').split(/\r?\n/).filter(Boolean).map((line) => JSON.parse(line));
   assert.equal(events.some((event) => event.type === 'main_session_recovery_prompt_attempted'), false);

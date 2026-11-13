@@ -35,6 +35,7 @@ export interface TaskStateView {
   nextRetryAt: string | null;
   nativeReceipt: RecoveryView['nativeReceipt'];
   cancellationBoundary: RecoveryView['cancellationBoundary'];
+  supervisionRound: State['supervision_round'] | null;
 }
 
 export interface RecoveryView {
@@ -149,7 +150,7 @@ function eventRole(event: Record<string, unknown>): HumanEvent['role'] {
   const type = stringValue(event.type) ?? '';
   if (type === 'main_tool_result') return 'worker';
   if (type.startsWith('worker_') || type === 'send_prepared' || type === 'send_attempted' || type === 'send_confirmed') return 'worker';
-  if (type.startsWith('judge_') || type === 'decision' || type.startsWith('verification_') || type.startsWith('recovery_') || type.startsWith('stale_') || type.startsWith('external_')) return 'supervisor';
+  if (type.startsWith('judge_') || type.startsWith('supervision_') || type === 'decision' || type.startsWith('verification_') || type.startsWith('recovery_') || type.startsWith('stale_') || type.startsWith('external_')) return 'supervisor';
   return 'system';
 }
 
@@ -171,6 +172,9 @@ function eventResult(event: Record<string, unknown>): string | null {
   if (type === 'send_confirmed') return 'CONFIRMED';
   if (type === 'external_wait_required') return 'WAIT_EXTERNAL';
   if (type === 'paused') return 'PAUSED';
+  if (type === 'judge_round_interrupted' || type === 'recovery_interrupted') return 'INTERRUPTED';
+  if (type === 'supervision_round_cancelled') return 'CANCELLED';
+  if (type === 'supervision_round_confirmation_recorded') return 'CONFIRMED';
   return null;
 }
 
@@ -180,6 +184,7 @@ function eventSummary(event: Record<string, unknown>): string {
   const action = stringValue(rawDecision?.action);
   const reason = stringValue(rawDecision?.reason);
   const error = stringValue(event.error) ?? stringValue(event.message);
+  const eventReason = stringValue(event.reason) ?? error;
   const status = stringValue(event.status);
   switch (type) {
     case 'main_tool_result': return 'A 工具结果（不是 Stop 信号）';
@@ -217,6 +222,13 @@ function eventSummary(event: Record<string, unknown>): string {
     case 'connection_verified': return '已确认 app-server 连接';
     case 'stale_judge_result_ignored': return '迟到的判断结果已忽略';
     case 'stale_verification_result_ignored': return '迟到的验收结果已忽略';
+    case 'judge_round_interrupted': return `C 判断明确中断${eventReason ? `：${eventReason}` : ''}`;
+    case 'supervision_round_started': return 'B 已接纳一个 native Stop 监督轮次';
+    case 'supervision_round_admitted': return 'B 已完成单次 admission';
+    case 'supervision_round_delivery_recorded': return 'B 已记录单次 native 交付';
+    case 'supervision_round_confirmation_recorded': return 'A 活动已确认';
+    case 'supervision_round_cancelled': return `当前监督轮次已失效${eventReason ? `：${eventReason}` : ''}`;
+    case 'recovery_interrupted': return `自动恢复明确中断${eventReason ? `：${eventReason}` : ''}`;
     case 'paused': return '任务已暂停';
     case 'owned_calls_cancelled': return '已取消监督器持有的调用';
     case 'server_request': return `收到请求${stringValue(event.method) ? `：${event.method}` : ''}`;
@@ -407,12 +419,13 @@ function stateView(state: State, title: string, sessionId: string): TaskStateVie
     nextRetryAt: recovery.nextRetryAt,
     nativeReceipt: recovery.nativeReceipt,
     cancellationBoundary: recovery.cancellationBoundary,
+    supervisionRound: state.supervision_round ?? null,
   };
 }
 
 function resultForRound(round: WorkRound): HumanEvent | null {
   const candidates = round.technicalEvents.filter((event) => {
-    return event.eventType === 'decision' || event.eventType === 'verification_result' || event.eventType === 'send_confirmed' || event.eventType === 'external_wait_required' || event.eventType === 'recovery_required' || event.eventType === 'paused';
+    return event.eventType === 'decision' || event.eventType === 'verification_result' || event.eventType === 'send_confirmed' || event.eventType === 'external_wait_required' || event.eventType === 'recovery_required' || event.eventType === 'paused' || event.eventType === 'judge_round_interrupted' || event.eventType === 'recovery_interrupted';
   });
   const result = candidates.at(-1) ?? round.technicalEvents.at(-1) ?? null;
   if (!result || result.eventType !== 'decision') return result;
@@ -423,7 +436,7 @@ function resultForRound(round: WorkRound): HumanEvent | null {
 }
 
 function routeAuditForRound(round: WorkRound): RouteAuditView | null {
-  const event = round.supervisor.findLast((item) => item.eventType === 'decision');
+  const event = round.supervisor.findLast((item) => item.eventType === 'decision' || item.eventType === 'judge_inventory_fallback');
   const value = asRecord(event?.details.decision);
   if (value?.action !== 'CONTINUE') return null;
   const plan = asRecord(value.route_plan);
@@ -950,11 +963,13 @@ function routeHtml(r,key){
 }
 function roundHtml(r,index){
   const decisionEvent=r.supervisor.findLast(e=>e.eventType==='decision'||e.eventType==='judge_inventory_fallback');
+  const interruption=r.supervisor.findLast(e=>e.eventType==='judge_round_interrupted'||e.eventType==='recovery_interrupted'||e.eventType==='supervision_round_cancelled');
+  const admissionFailure=r.supervisor.findLast(e=>e.eventType==='judge_admission_failed');
   const lastJudge=r.supervisor.findLast(e=>e.eventType.startsWith('judge_'));
   const timeouts=r.supervisor.filter(e=>e.eventType==='judge_terminated'&&/timeout|超时/i.test(JSON.stringify(e.details)));
   const decisionValue=decisionEvent?.details.decision;
-  const action=decisionValue?.action||(timeouts.length?'超时':'未完成');
-  const decisionText=decisionValue?.reason||(timeouts.length?'SUPERVISOR '+timeouts.length+' 次判断超时，未产生有效 decision。':'尚未产生有效 SUPERVISOR 判断。');
+  const action=decisionValue?.action||(interruption?'INTERRUPTED':timeouts.length?'超时':'未完成');
+  const decisionText=decisionValue?.reason||(interruption?.details.reason?String(interruption.details.reason):admissionFailure?.details.error?'admission 被拒绝：'+String(admissionFailure.details.error):timeouts.length?'SUPERVISOR '+timeouts.length+' 次判断超时，未产生有效 decision。':'尚未产生有效 SUPERVISOR 判断。');
   const recoverySent=r.continuation.find(e=>e.eventType==='main_session_recovery_prompt_sent');
   const recoveryAck=r.continuation.find(e=>e.eventType==='main_session_recovery_prompt_acknowledged');
   const observedPrompt=r.continuation.findLast(e=>e.eventType==='main_session_worker_prompt_observed'&&typeof e.details.message==='string'&&e.details.message.length>0);
