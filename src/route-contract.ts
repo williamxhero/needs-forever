@@ -10,6 +10,10 @@ export interface RouteEvidence {
   task_version: number;
   /** Hash the substantive observation, excluding event UUIDs/timestamps. */
   content_sha256: string;
+  /** A bounded source-linked summary retained when raw history is omitted. */
+  summary?: string;
+  /** Set on a context projection when this source was omitted from the bounded view. */
+  omitted?: boolean;
 }
 export interface RouteCatalogEntry {
   /** B completed a generic local inspection; no relevance to unmet acceptance is asserted. */
@@ -42,6 +46,10 @@ export interface RouteIdentity {
   hypothesis_id: string;
   hypothesis: string;
   expected_evidence: string[];
+  /** Stable execution identity for diagnostic checks. Route labels are not identity. */
+  diagnostic_class?: string;
+  /** Canonical resource IDs the diagnostic inspects; order is insignificant. */
+  target_resource_ids?: string[];
 }
 export type RouteOutcome = 'success' | 'transient_failure' | 'failure' | 'blocked' | 'exhausted' | 'diagnostic';
 export type RouteRetryCondition =

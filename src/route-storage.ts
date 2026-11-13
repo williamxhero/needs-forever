@@ -19,6 +19,8 @@ export function validateEvidence(value: unknown): void {
   timestamp(evidence.observed_at, 'evidence.observed_at');
   if (!Number.isInteger(evidence.task_version) || Number(evidence.task_version) < 1) throw new Error('Invalid observation task_version.');
   if (typeof evidence.content_sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(evidence.content_sha256)) throw new Error('Observation requires a substantive content_sha256.');
+  if (evidence.summary !== undefined) text(evidence.summary, 'evidence.summary');
+  if (evidence.omitted !== undefined && typeof evidence.omitted !== 'boolean') throw new Error('evidence.omitted must be boolean.');
 }
 export function scopeOf(value: unknown): RouteScope {
   const scope = record(value);

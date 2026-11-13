@@ -2,10 +2,10 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { AppServerJudge, archiveTerminatedJudge, validateDecision } from './judge.js';
 import { connect, type Rpc } from './transport.js';
 import { Store } from './store.js';
-import { classifyRecoveryError, nextBackoff, recordRecoveryFailure, type RecoveryFailure } from './recovery.js';
-import { plannerFailureFallback } from './route-execution.js';
+import { classifyRecoveryError, nextBackoff, recordRecoveryFailure, recoverySignature, type RecoveryFailure } from './recovery.js';
+import { PlannerFallbackUnavailableError } from './route-execution.js';
 import { redact } from './redact.js';
-import type { Decision, Snapshot } from './types.js';
+import type { Decision, JudgmentAttempt, JudgmentRoundState, Snapshot } from './types.js';
 import type { MainSessionState, StopRequest } from './main-session.js';
 import { completionGate, continueWith } from './completion-gate.js';
 
@@ -29,12 +29,43 @@ export interface JudgmentPolicyContext {
   valid: () => boolean;
   snapshot: () => Snapshot;
   evaluate: (state: MainSessionState, request: StopRequest, fixture: any, signal: AbortSignal, store: Store, snapshot: Snapshot) => Promise<Decision>;
+  /** B supplies the single admission seam; C owns retries when it rejects a route. */
+  admit?: (decision: Decision, snapshot: Snapshot) => unknown;
 }
 
 export interface JudgmentPolicyResult {
   decision: Decision;
   snapshot: Snapshot;
+  admission?: unknown;
   plannerFallback?: boolean;
+}
+
+const DEFAULT_MAX_ATTEMPTS = 3;
+const ESCALATION_STRATEGIES = [
+  { hypothesis_id: 'preserve-current-proof', resource_family: 'current-evidence', diagnostic_class: 'evidence_gap' },
+  { hypothesis_id: 'discriminate-authorized-route', resource_family: 'authorized-route', diagnostic_class: 'route_discrimination' },
+  { hypothesis_id: 'exclude-external-or-interrupt', resource_family: 'external-exclusion', diagnostic_class: 'external_dependency' },
+] as const;
+
+function maxAttempts(fixture: any): number {
+  const configured = Number(fixture?.judgment_max_attempts);
+  return Number.isInteger(configured) ? Math.min(DEFAULT_MAX_ATTEMPTS, Math.max(1, configured)) : DEFAULT_MAX_ATTEMPTS;
+}
+
+function strategyFor(attempt: number): (typeof ESCALATION_STRATEGIES)[number] {
+  return ESCALATION_STRATEGIES[Math.min(attempt - 1, ESCALATION_STRATEGIES.length - 1)]!;
+}
+
+function roundState(state: MainSessionState, request: StopRequest, limit: number): JudgmentRoundState {
+  return state.judgment_round?.stop_attempt_id === request.stop_attempt_id
+    ? state.judgment_round
+    : { stop_attempt_id: request.stop_attempt_id, attempt: 0, max_attempts: limit, status: 'running', attempts: [] };
+}
+
+function interruptionReason(round: JudgmentRoundState, lastError: unknown): string {
+  const failures = round.attempts.filter((entry) => entry.failure_kind).map((entry) => `${entry.failure_kind}:${entry.hypothesis_id}`).join(', ');
+  const message = lastError instanceof Error ? lastError.message : String(lastError);
+  return `C 在同一个 native Stop 内达到 ${round.max_attempts} 次有界判断预算，未产生可验证方向；已尝试 ${failures || '无可用假设'}。最后失败：${message}。需要新的 native Stop 或明确人工恢复。`;
 }
 
 /**
@@ -70,8 +101,20 @@ export async function runJudgmentRound(context: JudgmentRoundContext): Promise<D
   try {
     let decision: Decision;
     try {
-      decision = await judge.judge(snapshot, signal);
-      decision = validateDecision(JSON.stringify(decision), snapshot);
+      const rawDecision = await judge.judge(snapshot, signal);
+      const rawNextMessage = rawDecision.action === 'CONTINUE' ? rawDecision.next_message : null;
+      decision = validateDecision(JSON.stringify(rawDecision), snapshot);
+      if (rawNextMessage !== decision.next_message) {
+        store.event(state, 'judge_decision_normalized', {
+          stop_attempt_id: request.stop_attempt_id,
+          snapshot_id: snapshot.snapshot_id,
+          plan_id: decision.route_plan?.plan_id ?? null,
+          selected_route_id: decision.route_plan?.selected_route_id ?? null,
+          raw_next_message: rawNextMessage,
+          canonical_next_message: decision.next_message,
+          reason: 'selected_route_actions_are_authoritative',
+        });
+      }
       store.snapshot(snapshot, judge.rawOutput, 'valid');
     } catch (error) {
       store.snapshot(snapshot, judge.rawOutput, 'invalid');
@@ -92,32 +135,92 @@ export async function runJudgmentRound(context: JudgmentRoundContext): Promise<D
 
 /** C owns bounded retry, timeout recovery and deterministic fallback for one Stop. */
 export async function runJudgmentPolicy(context: JudgmentPolicyContext): Promise<JudgmentPolicyResult | null> {
-  const { state, request, fixture, signal, store, guarded, valid, snapshot, evaluate } = context;
-  let outputFailures = 0;
-  while (true) {
+  const { state, request, fixture, signal, store, guarded, valid, snapshot, evaluate, admit } = context;
+  const limit = maxAttempts(fixture);
+  let round = roundState(state, request, limit);
+  round = { ...round, max_attempts: limit, status: 'running' };
+  state.judgment_round = round;
+  store.save(state);
+  store.event(state, 'judge_round_started', { stop_attempt_id: request.stop_attempt_id, max_attempts: limit, owner: 'judgment-round' });
+  for (let outputFailures = 0; outputFailures < limit; outputFailures++) {
+    const attempt = outputFailures + 1;
+    const strategy = strategyFor(attempt);
+    const entry: JudgmentAttempt = { attempt, ...strategy };
+    round = { ...round, attempt, attempts: [...round.attempts, entry], status: 'running' };
+    state.judgment_round = round;
+    store.save(state);
+    store.event(state, 'judge_attempt_started', {
+      stop_attempt_id: request.stop_attempt_id,
+      attempt,
+      max_attempts: limit,
+      hypothesis_id: strategy.hypothesis_id,
+      resource_family: strategy.resource_family,
+      diagnostic_class: strategy.diagnostic_class,
+      owner: 'judgment-round',
+    });
     try {
       const currentSnapshot = snapshot();
       const decision = await evaluate(structuredClone(state), request, fixture, signal, guarded, currentSnapshot);
       if (!valid()) return null;
-      return { decision, snapshot: currentSnapshot };
+      let admission: unknown;
+      if (decision.action === 'CONTINUE' && admit) {
+        try {
+          admission = admit(decision, currentSnapshot);
+        } catch (error) {
+          store.event(state, 'judge_admission_failed', {
+            stop_attempt_id: request.stop_attempt_id,
+            attempt,
+            error: String(redact(error instanceof Error ? error.message : error)),
+            owner: 'judgment-round',
+          });
+          throw error;
+        }
+      }
+      round = { ...round, status: 'succeeded' };
+      state.judgment_round = round;
+      state.retry = { kind: null, attempt: 0, next_at: null };
+      store.save(state);
+      store.event(state, 'judge_round_completed', { stop_attempt_id: request.stop_attempt_id, attempt, action: decision.action, owner: 'judgment-round' });
+      return { decision, snapshot: currentSnapshot, admission };
     } catch (error) {
-      if (!valid() || signal.aborted) return null;
+      if (!valid() || signal.aborted) {
+        store.event(state, 'judge_round_cancelled', { stop_attempt_id: request.stop_attempt_id, attempt, reason: signal.aborted ? 'abort_signal' : 'lifecycle_fence', owner: 'judgment-round' });
+        return null;
+      }
       const classification = classifyRecoveryError(error);
+      const failedEntry: JudgmentAttempt = { ...entry, failure_kind: classification.kind, failure_signature: recoverySignature(error) };
+      round = { ...round, attempts: [...round.attempts.slice(0, -1), failedEntry] };
+      state.judgment_round = round;
       state.recovery_failures = redact(recordRecoveryFailure((state.recovery_failures ?? []) as RecoveryFailure[], error)) as RecoveryFailure[];
-      const backoff = nextBackoff((state.retry.attempt ?? 0) + 1);
+      const backoff = nextBackoff(attempt);
       state.retry = { kind: classification.kind, attempt: backoff.attempt, next_at: backoff.next_at };
       store.save(state);
-      store.event(state, 'main_session_retry', { ...classification, ...backoff, stop_attempt_id: request.stop_attempt_id });
-      if (!classification.recoverable) throw error;
-      outputFailures++;
-      if (outputFailures >= 3) {
-        const fallbackSnapshot = snapshot();
-        const decision = plannerFailureFallback(fallbackSnapshot, 'C failed three bounded output attempts; gather source-linked route facts.', state, { allowRecoveryOverride: true });
-        store.event(state, 'judge_inventory_fallback', { failures: outputFailures, stop_attempt_id: request.stop_attempt_id, decision, admission: 'bounded-diagnostic-recovery-override' });
-        return { decision, snapshot: fallbackSnapshot, plannerFallback: true };
+      store.event(state, 'judge_attempt_failed', {
+        ...classification,
+        ...backoff,
+        stop_attempt_id: request.stop_attempt_id,
+        attempt,
+        max_attempts: limit,
+        hypothesis_id: strategy.hypothesis_id,
+        resource_family: strategy.resource_family,
+        diagnostic_class: strategy.diagnostic_class,
+        owner: 'judgment-round',
+      });
+      store.event(state, 'main_session_retry', { ...classification, ...backoff, stop_attempt_id: request.stop_attempt_id, owner: 'judgment-round', attempt, max_attempts: limit, hypothesis_id: strategy.hypothesis_id, resource_family: strategy.resource_family });
+      if (attempt >= limit || !classification.recoverable) {
+        const reason = interruptionReason(round, error);
+        round = { ...round, status: 'interrupted', interruption_reason: reason };
+        state.judgment_round = round;
+        state.last_error = reason;
+        store.save(state);
+        store.event(state, 'judge_round_interrupted', { stop_attempt_id: request.stop_attempt_id, attempt, max_attempts: limit, reason, failures: round.attempts, owner: 'judgment-round' });
+        throw new PlannerFallbackUnavailableError(reason);
       }
-      const configuredDelay = state.mode === 'simulated' && Array.isArray(fixture?.recovery_delays_ms) ? Number(fixture.recovery_delays_ms[Math.min(outputFailures - 1, fixture.recovery_delays_ms.length - 1)]) : backoff.delay_seconds * 1000;
+      const nextStrategy = strategyFor(attempt + 1);
+      store.event(state, 'judge_escalation_required', { stop_attempt_id: request.stop_attempt_id, attempt, next_attempt: attempt + 1, previous_hypothesis_id: strategy.hypothesis_id, next_hypothesis_id: nextStrategy.hypothesis_id, previous_resource_family: strategy.resource_family, next_resource_family: nextStrategy.resource_family, reason: 'same-class failure requires a materially different hypothesis or discriminating check', owner: 'judgment-round' });
+      const configuredDelay = state.mode === 'simulated' && Array.isArray(fixture?.recovery_delays_ms) ? Number(fixture.recovery_delays_ms[Math.min(outputFailures, fixture.recovery_delays_ms.length - 1)]) : backoff.delay_seconds * 1000;
       await delay(Math.min(Math.max(0, configuredDelay), Math.max(1, Date.parse(request.deadline_at) - Date.now())), undefined, { signal });
     }
   }
+  return null;
 }

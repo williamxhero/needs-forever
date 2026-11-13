@@ -38,21 +38,23 @@ function installed(name: string, transport: unknown = {}, sessionId = name, boun
   return { directory, workspace, plugin, task, state, fixture, trace, run, hook, setDesktopPid };
 }
 
-test('a repeated invalid planner output receives one bounded diagnostic direction instead of interrupting the worker', (t) => {
+test('a repeated invalid planner output exhausts C-owned escalation and interrupts durably', (t) => {
   const f = installed('c2-fallback-interruption', { decision: { action: 'CONTINUE', reason: 'Invalid planner output.', evidence_ids: [], next_message: 'Audit.', external: null } }, 'c2-fallback-interruption', 0, {}, undefined, undefined, 'enforce', 'Local files', { recovery_delays_ms: [0, 0, 0] });
   t.after(() => f.run('pause'));
   const first = f.hook({ hook_event_name: 'Stop' });
   assert.equal(first.status, 0, first.stderr);
-  assert.equal(JSON.parse(first.stdout).decision, 'block');
+  assert.deepEqual(JSON.parse(first.stdout), {});
   const state = JSON.parse(f.run('status').stdout);
-  assert.equal(state.status, 'ACTIVE');
-  assert.equal(state.phase, 'WORKER');
-  assert.equal(state.pending_action.route_id, 'route-inventory');
-  assert.equal(state.route_execution.planner_fallback, true);
+  assert.equal(state.status, 'INTERRUPTED');
+  assert.equal(state.phase, 'IDLE');
+  assert.equal(state.judgment_round.status, 'interrupted');
+  assert.equal(state.judgment_round.attempts.length, 3);
+  assert.equal(new Set(state.judgment_round.attempts.map((entry: any) => entry.resource_family)).size, 3);
   const events = readFileSync(join(f.workspace, '.codex-supervisor', 'c2-fallback-interruption', 'events.jsonl'), 'utf8').trim().split(/\r?\n/).map(line => JSON.parse(line));
-  assert.equal(events.filter(e => e.type === 'send_prepared').length, 1);
-  assert.equal(events.filter(e => e.type === 'judge_inventory_fallback').length, 1);
-  assert.equal(events.at(-1).type, 'main_session_recovery_prompt_scheduled');
+  assert.equal(events.filter(e => e.type === 'send_prepared').length, 0);
+  assert.equal(events.filter(e => e.type === 'judge_inventory_fallback').length, 0);
+  assert.equal(events.filter(e => e.type === 'judge_round_interrupted').length, 1);
+  assert.ok(events.some(e => e.type === 'recovery_interrupted'));
 });
 
 test('native C2 admission redacts the entire selected decision before checkpoint and recovery prompt', (t) => {
@@ -174,6 +176,15 @@ test('installed bound main session automatically owns an independent B and synch
   assert.equal(status.stop_transport.outcome, 'returned');
   assert.equal(status.stop_transport.request.session_id, 'automatic-B');
   assert.equal(status.mode, 'simulated');
+  assert.equal(status.supervision_round.admission_count, 1);
+  assert.equal(status.supervision_round.delivery_count, 1);
+  assert.equal(status.supervision_round.confirmation_count, 0);
+  const continuationTool = { tool_use_id: 'continuation-tool', tool_name: 'exec_command', tool_input: { command: status.pending_action.message } };
+  assert.equal(f.hook({ ...continuationTool, hook_event_name: 'PreToolUse' }).status, 0);
+  assert.equal(f.hook({ ...continuationTool, hook_event_name: 'PostToolUse', tool_response: { stdout: 'continued', exitCode: 0 } }).status, 0);
+  const confirmed = JSON.parse(f.run('status').stdout);
+  assert.equal(confirmed.supervision_round.confirmation_count, 1);
+  assert.equal(confirmed.supervision_round.status, 'confirmed');
 });
 
 test('NF automatically delivers a returned CONTINUE prompt when original A stays idle', async (t) => {
@@ -197,6 +208,9 @@ test('a manual pause cancels the pending NF recovery prompt before delivery', as
   t.after(() => f.run('pause'));
   assert.deepEqual(JSON.parse(f.hook({ hook_event_name: 'Stop' }).stdout), { decision: 'block', reason: 'This must not be delivered after pause.' });
   assert.equal(f.run('pause').status, 0);
+  const paused = JSON.parse(f.run('status').stdout);
+  assert.equal(paused.supervision_round.status, 'cancelled');
+  assert.match(paused.supervision_round.interruption_reason, /paused/);
   await delay(3_500);
   const events = readFileSync(join(f.workspace, '.codex-supervisor', 'recovery-prompt-pause', 'events.jsonl'), 'utf8').split(/\r?\n/).filter(Boolean).map((line) => JSON.parse(line));
   assert.equal(events.some((event) => event.type === 'main_session_recovery_prompt_attempted'), false);

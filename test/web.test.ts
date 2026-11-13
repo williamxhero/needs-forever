@@ -151,6 +151,25 @@ test('NFG renders interrupted supervision with its reason and a manual resume co
   } finally { await web.close(); data.cleanup(); }
 });
 
+test('NFG projects C interruption and the durable single-round supervision fence', async () => {
+  const data = fixture();
+  const eventsPath = resolve(data.directory, 'events.jsonl');
+  writeFileSync(eventsPath, [
+    { at: '2026-11-01T08:00:00.000Z', type: 'main_session_stop_observed', stop_attempt_id: 'stop-interrupted', stop_reason: '当前证据不足' },
+    { at: '2026-11-01T08:00:01.000Z', type: 'judge_round_interrupted', stop_attempt_id: 'stop-interrupted', reason: 'C 在同一个 native Stop 内达到 3 次有界判断预算，未产生可验证方向。' },
+    { at: '2026-11-01T08:00:01.100Z', type: 'supervision_round_cancelled', stop_attempt_id: 'stop-interrupted', reason: 'C 在同一个 native Stop 内达到 3 次有界判断预算。' },
+  ].map((event) => JSON.stringify(event)).join('\n') + '\n');
+  const web = await startWebServer({ workspace: data.workspace, port: 0 });
+  try {
+    const record = await (await fetch(`${web.url}api/tasks/demo-001`)).json();
+    assert.ok(record.rounds.at(-1).supervisor.some((event: any) => event.eventType === 'supervision_round_cancelled'));
+    assert.equal(record.rounds.at(-1).result.result, 'INTERRUPTED');
+    const client = await openWebClient(new URL('tasks/demo-001', web.url).href);
+    assert.match(client.document.querySelector('#timeline')!.innerHTML, /INTERRUPTED/);
+    assert.match(client.document.querySelector('#timeline')!.innerHTML, /3 次有界判断预算/);
+  } finally { await web.close(); data.cleanup(); }
+});
+
 test('NFG API projects the complete selected route audit without rewriting historical decisions', async () => {
   const data = fixture();
   writeRouteRound(data.directory);

@@ -10,13 +10,14 @@ function refs(value, snapshot, field) {
         throw new Error(`${field} references unknown evidence IDs.`);
     return value;
 }
-function fields(value, required) {
-    if (required.some((name) => !Object.hasOwn(value, name)) || Object.keys(value).some((name) => !required.includes(name)))
+function fields(value, required, optional = []) {
+    const allowed = new Set([...required, ...optional]);
+    if (required.some((name) => !Object.hasOwn(value, name)) || Object.keys(value).some((name) => !allowed.has(name)))
         throw new Error('C2 route plan has missing or unknown fields.');
 }
 function routeCandidate(raw, snapshot) {
     const value = record(raw);
-    fields(value, ['route_id', 'resource', 'operation', 'hypothesis_id', 'hypothesis', 'expected_evidence', 'status', 'evidence_ids', 'actions', 'expected_signal', 'risk', 'fallback', 'discriminating_check']);
+    fields(value, ['route_id', 'resource', 'operation', 'hypothesis_id', 'hypothesis', 'expected_evidence', 'status', 'evidence_ids', 'actions', 'expected_signal', 'risk', 'fallback', 'discriminating_check'], ['diagnostic_class', 'target_resource_ids']);
     const route = value;
     fingerprintRoute(route);
     fields(record(route.resource), ['kind', 'id']);
@@ -39,6 +40,18 @@ function routeCandidate(raw, snapshot) {
         text(check.description, 'discriminating_check.description');
         refs(check.evidence_ids, snapshot, 'discriminating_check.evidence_ids');
     }
+    if (route.resource.kind === 'diagnostic') {
+        if (route.diagnostic_class !== undefined)
+            text(route.diagnostic_class, 'diagnostic_class');
+        if (route.target_resource_ids !== undefined) {
+            if (!Array.isArray(route.target_resource_ids) || route.target_resource_ids.some((id) => typeof id !== 'string' || !id.trim()))
+                throw new Error('target_resource_ids must contain nonempty strings.');
+            if (new Set(route.target_resource_ids.map((id) => id.normalize('NFKC').trim().toLowerCase())).size !== route.target_resource_ids.length)
+                throw new Error('target_resource_ids must be unique.');
+        }
+    }
+    else if (route.diagnostic_class !== undefined || route.target_resource_ids !== undefined)
+        throw new Error('Diagnostic identity is only valid for diagnostic routes.');
     const catalog = snapshot.c2?.catalog.entries.find((entry) => entry.route_id === route.route_id);
     if (catalog && (catalog.resource.kind !== route.resource.kind || catalog.resource.id !== route.resource.id || catalog.operation !== route.operation))
         throw new Error('C2 route identity must match its catalog resource and operation.');
@@ -100,8 +113,16 @@ export function validateC2Decision(decision, snapshot, options = {}) {
         const catalog = snapshot.c2?.catalog.entries.find((entry) => entry.route_id === selected.route_id);
         if (selected.resource.kind !== 'diagnostic' && (!snapshot.c2?.context_complete || !catalog || catalog.status !== 'observed' || selected.status !== 'observed'))
             throw new Error('Missing route context requires route-inventory or discriminating diagnostic CONTINUE.');
-        if (decision.next_message !== selected.actions.join('\n') || decision.next_message.length > 3_000)
+        const canonicalMessage = selected.actions.join('\n');
+        if (!decision.next_message.trim() || /\b(?:is available|is authenticated|credentials? (?:are|is) present|rate.limit (?:is )?clear|verified available)\b|已验证可用|凭据已就绪|已认证可用/i.test(decision.next_message)) {
             throw new Error('C2 next_message must be a short instruction derived from selected route actions.');
+        }
+        if (canonicalMessage.length > 3_000)
+            throw new Error('C2 next_message must be a short instruction derived from selected route actions.');
+        // The selected route is the authority. Preserve the raw model wording in
+        // the snapshot/audit stream, but derive the delivered prompt from the
+        // validated actions so harmless formatting drift cannot lose a valid plan.
+        decision.next_message = canonicalMessage;
         if (snapshot.c2) {
             const ledger = new RouteLedger({ task_id: snapshot.task_id, task_version: snapshot.task_version }, { data: snapshot.c2.ledger });
             const evidence = snapshot.c2.observations.filter((entry) => selected.evidence_ids.includes(entry.id));

@@ -17,7 +17,7 @@ import { reachedLimits } from './rules.js';
 import { armRecovery, cancelRecovery, createRecoveryPlan, markRecoveryRunning, acquireRecoveryOwner, waitForNativeReceipt, reconcileStaleOwner, interruptRecovery } from './recovery-episode.js';
 import { scheduleNativeRebindPrompt } from './main-session-recovery.js';
 import { initializeHttpRouteProbe } from './http-route-probe.js';
-import { runSupervisionRound } from './supervision-round.js';
+import { cancelSupervisionRound, recordSupervisionDelivery, runSupervisionRound } from './supervision-round.js';
 function scheduleMainSessionRecoveryPrompt(path, pluginRoot, fixturePath, state, message, sourceTurnId) {
     if (state.control_mode !== 'main-session' || !state.main_session_id || state.status !== 'ACTIVE')
         return;
@@ -424,7 +424,20 @@ export async function evaluateStop(state, request, fixture, signal, store, snaps
     if (decision.action !== 'CONTINUE' || typeof decision.next_message !== 'string' || !decision.next_message.trim())
         throw new Error('Transport fixtures may only request concrete CONTINUE; DONE requires the completion gate.');
     const raw = { reason: 'Simulated external transport direction.', evidence_ids: [], external: null, ...decision };
+    const rawNextMessage = raw.next_message;
     const validated = validateDecision(JSON.stringify(raw), snapshot);
+    if (rawNextMessage !== validated.next_message) {
+        store.event(state, 'judge_decision_normalized', {
+            stop_attempt_id: request.stop_attempt_id,
+            snapshot_id: snapshot.snapshot_id,
+            plan_id: validated.route_plan?.plan_id ?? null,
+            selected_route_id: validated.route_plan?.selected_route_id ?? null,
+            raw_next_message: rawNextMessage,
+            canonical_next_message: validated.next_message,
+            reason: 'selected_route_actions_are_authoritative',
+            source: 'simulated-transport',
+        });
+    }
     store.event(state, 'decision', { role: 'judge', source: 'simulated-transport', stop_attempt_id: request.stop_attempt_id, decision: validated });
     return validated;
 }
@@ -476,6 +489,7 @@ export async function runController(path, pluginRoot, fixturePath) {
         delete state.route_execution;
         delete state.direction_context;
         state.continuation_confirmed = false;
+        cancelSupervisionRound(state, store, `supervision paused: ${reason}`);
         cancelRecovery(state, 'pause');
         store.save(state);
         cancelActive('Paused before cancellation.');
@@ -491,6 +505,7 @@ export async function runController(path, pluginRoot, fixturePath) {
         state.phase = 'RECOVERING';
         state.last_error = String(redact(message));
         state.host.hook_effective = false;
+        cancelSupervisionRound(state, store, 'supervision recovery invalidated the current Stop round');
         state.recovery_condition = { kind: 'stop_transport', message: state.last_error, resume_when: 'Inspect the preserved Stop outcome and explicitly resume the same main session.' };
         armRecovery(state, state.recovery_condition);
     };
@@ -500,6 +515,7 @@ export async function runController(path, pluginRoot, fixturePath) {
         if (desktopPid)
             state.host.desktop_pid = desktopPid;
         const reason = String(redact(message));
+        cancelSupervisionRound(state, store, 'native binding re-arm invalidated the current Stop round');
         armNativeRebind(state, reason);
         waitForNativeReceipt(state, {
             kind: 'native_rebind',
@@ -567,6 +583,19 @@ export async function runController(path, pluginRoot, fixturePath) {
                     const lifecycleCommand = message.command === 'lifecycle';
                     if (message.token !== controller.token || message.controller_id !== id || message.run_generation !== state.run_generation || latest.run_generation !== message.run_generation || latest.controller?.id !== id || latest.status === 'DONE' || latest.status === 'INTERRUPTED' || (lifecycleCommand && (latest.status === 'PAUSED' || latest.recovery_plan?.cancellation_boundary)))
                         throw new Error('Owned controller handle identity mismatch.');
+                    // Do not replace the in-memory checkpoint while a Stop is judging.
+                    // A concurrent duplicate occurrence is rejected below, but assigning
+                    // its older disk snapshot to `state` first would erase the admitted
+                    // supervision round from the active request's delivery fence.
+                    const incomingEvent = message.payload?.event;
+                    if (lifecycleCommand && incomingEvent?.hook_event_name === 'Stop' && active) {
+                        const occurrence = message.payload?.adapter_occurrence_id;
+                        if (typeof occurrence !== 'string' || !/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(occurrence))
+                            throw new Error('Stop adapter occurrence identity is invalid.');
+                        if (state.accepted_stop_occurrences?.includes(occurrence))
+                            throw new Error('Stop adapter occurrence was already accepted; replay is invalid and must not replace its original hook.');
+                        throw new Error('Another Stop occurrence is pending; this request is invalid and cannot allow its hook to stop.');
+                    }
                     state = latest;
                     if (message.command === 'ping')
                         return { live: true, controller_id: id };
@@ -613,6 +642,7 @@ export async function runController(path, pluginRoot, fixturePath) {
                             // strand the task waiting for a second callback that Codex may
                             // never emit after a host/plugin restart.
                             cancelActive('Native host or plugin changed; the new lifecycle receipt re-bound the original A.');
+                            cancelSupervisionRound(state, store, 'native host/plugin change advanced the binding generation');
                             const generation = randomUUID();
                             state.input_epoch = (state.input_epoch ?? 0) + 1;
                             state.run_generation = generation;
@@ -679,6 +709,7 @@ export async function runController(path, pluginRoot, fixturePath) {
                         delete state.recovery_prompt;
                         state.continuation_confirmed = false;
                         state.tool_starts = {};
+                        cancelSupervisionRound(state, store, 'new native user input invalidated the current Stop round');
                         if (state.status === 'ACTIVE' && state.phase !== 'RECOVERING')
                             state.phase = 'WORKER';
                         store.save(state);
@@ -774,6 +805,10 @@ export async function runController(path, pluginRoot, fixturePath) {
                             state.status = decision.action;
                             state.phase = 'IDLE';
                             state.pending_action = null;
+                            if (state.supervision_round?.stop_attempt_id === request.stop_attempt_id) {
+                                state.supervision_round.status = 'terminal';
+                                state.supervision_round.updated_at = new Date().toISOString();
+                            }
                             if (decision.action === 'DONE')
                                 cancelRecovery(state, 'done');
                             state.stop_transport = { request, outcome: 'returned' };
@@ -787,6 +822,7 @@ export async function runController(path, pluginRoot, fixturePath) {
                         }
                         state.pending_action = { ...correlation, delivery_id: delivery, source_turn_id: request.turn_id, task_version: request.task_version, message: decision.next_message, stage: 'prepared', target_turn_id: null };
                         const pendingAction = state.pending_action;
+                        recordSupervisionDelivery(state, request, delivery, store);
                         store.event(state, 'send_prepared', { ...correlation, delivery_id: delivery, source_turn_id: request.turn_id, message: decision.next_message, transport: 'native-stop' });
                         pendingAction.stage = 'sent';
                         store.event(state, 'send_attempted', { ...correlation, delivery_id: delivery, transport: 'native-stop' });
@@ -805,6 +841,7 @@ export async function runController(path, pluginRoot, fixturePath) {
                             state.stop_transport = { request, outcome: 'failed', error: String(redact(error.message)) };
                             if (error instanceof PlannerFallbackUnavailableError) {
                                 interruptRecovery(state, Date.now(), error.message);
+                                cancelSupervisionRound(state, store, error.message);
                                 store.event(state, 'recovery_interrupted', { stop_attempt_id: request.stop_attempt_id, cause: 'planner_fallback_unavailable', reason: state.last_error });
                                 socket.once('finish', () => setImmediate(shutdown));
                             }

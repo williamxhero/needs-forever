@@ -7,6 +7,7 @@ import { Store } from './store.js';
 import { record, text } from './types.js';
 import type { State, Task } from './types.js';
 import { createRecoveryPlan, waitForNativeReceipt, resetRecoveryWindow } from './recovery-episode.js';
+import { cancelSupervisionRound } from './supervision-round.js';
 import { assertTrackingContract, createTracking, loadTracking, locatorForSelection, trackingLocator, updateTracking, type TrackingLocator, type TrackingSelection } from './tracking-integration.js';
 import type { TrackingUpdate, TrackingRecord } from './local-tracking.js';
 
@@ -275,6 +276,7 @@ export function resumeMainSession(statePath: string, taskPath?: string, simulate
       } finally { closeSync(fd); unlinkSync(guard); }
     }
     state.recovery_history = [...(state.recovery_history ?? []), { at: new Date().toISOString(), run_generation: state.run_generation, controller: state.controller, stop_transport: state.stop_transport, pending_action: state.pending_action }];
+    cancelSupervisionRound(state, store, 'explicit resume advanced the task version and invalidated the previous Stop round');
     state.task = task; state.task_version++; state.contract_sha256 = contractHash(task); state.run_generation = randomUUID();
     delete state.controller; delete state.last_stop; delete state.stop_transport; delete state.direction_context; delete state.active_checkpoint_at;
     state.pending_action = null; delete state.route_execution; state.tool_starts = {}; state.continuation_confirmed = false; state.input_epoch = (state.input_epoch ?? 0) + 1;

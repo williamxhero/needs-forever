@@ -6,6 +6,7 @@ import { reachedLimits } from './rules.js';
 import { Store } from './store.js';
 import { record, text } from './types.js';
 import { createRecoveryPlan, waitForNativeReceipt, resetRecoveryWindow } from './recovery-episode.js';
+import { cancelSupervisionRound } from './supervision-round.js';
 import { assertTrackingContract, createTracking, loadTracking, locatorForSelection, trackingLocator, updateTracking } from './tracking-integration.js';
 export function readJson(path) {
     // Windows can briefly deny a read while the state checkpoint is being
@@ -240,6 +241,7 @@ export function resumeMainSession(statePath, taskPath, simulated = false, tracki
             }
         }
         state.recovery_history = [...(state.recovery_history ?? []), { at: new Date().toISOString(), run_generation: state.run_generation, controller: state.controller, stop_transport: state.stop_transport, pending_action: state.pending_action }];
+        cancelSupervisionRound(state, store, 'explicit resume advanced the task version and invalidated the previous Stop round');
         state.task = task;
         state.task_version++;
         state.contract_sha256 = contractHash(task);
