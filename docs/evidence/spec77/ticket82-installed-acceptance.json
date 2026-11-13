@@ -8,6 +8,13 @@
     "runtime_modules": 42,
     "git_diff_check": "passed"
   },
+  "isolated_install": {
+    "command": "node scripts/verify-plugin-install.mjs --candidate . --directory runs/spec77-ticket82-install",
+    "result": "discovery_pass",
+    "package_matches_candidate": true,
+    "native_effectiveness": "not_run",
+    "human_trust_required": true
+  },
   "tests": {
     "command": "npm test",
     "result": "267 passed, 0 failed, 0 cancelled, 0 skipped",
