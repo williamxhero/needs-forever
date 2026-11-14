@@ -573,4 +573,3 @@ export class SimulatedMainSessionProvider implements MainSessionProvider {
 
 export function createSimulatedMainSessionProvider(scenario: SimulatedProviderScenario = {}): SimulatedMainSessionProvider { return new SimulatedMainSessionProvider(scenario); }
 export const createSimulatedProvider = createSimulatedMainSessionProvider;
-
