@@ -122,7 +122,7 @@ test('provider state and events survive JSON persistence with explicit identity 
 test('desktop shared transport probes and preserves the original thread identity on every request', async () => {
   const calls: { method: string; params: any }[] = [];
   const transport: DesktopRpcTransport = {
-    metadata: { provider_kind: 'shared-server', evidence_level: 'live', identity, protocol_version: 'codex-cli 0.167.0', endpoint_fingerprint: 'endpoint-1' },
+    metadata: { provider_kind: 'shared-server', evidence_level: 'live', identity, protocol_version: 'codex-cli 0.167.0', provider_version: 'desktop-provider 1.0.0', endpoint_fingerprint: 'endpoint-1' },
     async request<T>(method: string, params: unknown): Promise<T> {
       calls.push({ method, params });
       if (method === 'provider/probe') return { available: true, same_thread_verified: true, identity, capabilities: ALL_PROVIDER_CAPABILITIES } as T;
@@ -144,13 +144,13 @@ test('desktop shared transport probes and preserves the original thread identity
 test('desktop provider maps active writer, fences unknown delivery, and never sends a duplicate', async () => {
   let sendCalls = 0;
   const transport: DesktopRpcTransport = {
-    metadata: { provider_kind: 'daemon', evidence_level: 'live', identity },
+    metadata: { provider_kind: 'daemon', evidence_level: 'live', identity, protocol_version: 'codex-cli 0.167.0', provider_version: 'desktop-provider 1.0.0', endpoint_fingerprint: 'endpoint-2' },
     async request<T>(method: string, _params: unknown): Promise<T> {
       if (method === 'provider/probe') return { available: true, same_thread_verified: true, identity, capabilities: ALL_PROVIDER_CAPABILITIES } as T;
       if (method === 'thread/resume') throw new Error('active writer is in progress');
       if (method === 'thread/writer') return { identity, status: 'active-writer', owner_session_id: identity.target_session_id, turn_id: 'turn-A' } as T;
       if (method === 'thread/send') { sendCalls += 1; return { identity, outcome: 'unknown' } as T; }
-      if (method === 'thread/reconcile') return { identity, outcome: 'unknown', matched_by: 'none', reason: 'history is inconclusive' } as T;
+      if (method === 'thread/reconcile') return { identity, outcome: sendCalls === 0 ? 'not_found' : 'unknown', matched_by: 'none', reason: 'history is inconclusive' } as T;
       return { identity, thread: { id: identity.target_thread_id, session_id: identity.target_session_id, status: 'inProgress', turns: [] } } as T;
     },
   };

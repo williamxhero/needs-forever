@@ -146,6 +146,9 @@ export async function recoverMainSessionWithProvider(state: MainSessionState, pr
 export function invalidateProviderRecovery(state: MainSessionState, reason: string, kind: 'pause' | 'input' | 'contract' | 'done' = 'input'): void {
   state.input_epoch = (state.input_epoch ?? 0) + 1;
   state.run_generation = randomUUID();
+  state.pending_action = null;
+  delete state.recovery_prompt;
+  delete state.direction_context;
   state.continuation_confirmed = false;
   if (state.provider) state.provider = { ...state.provider, status: 'disconnected', limitation_reason: reason, next_action: 'A new recovery generation must be probed before delivery.', updated_at: new Date().toISOString() };
   if (kind === 'pause') { state.status = 'PAUSED'; state.phase = 'IDLE'; state.pause_reason = 'user'; }

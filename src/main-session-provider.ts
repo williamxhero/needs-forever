@@ -576,9 +576,18 @@ export class DesktopMainSessionProvider implements MainSessionProvider {
       this.verifyReturnedIdentity(response, identity);
       const raw = asObject(response) ?? {};
       const caps = asObject(raw.capabilities) ?? this.transport.metadata?.capabilities ?? ALL_PROVIDER_CAPABILITIES;
-      const identityVerified = !!identityFrom(response) || !!identityFrom(this.transport.metadata);
+      const observedIdentity = { ...(identityFrom(this.transport.metadata) ?? {}), ...(identityFrom(response) ?? {}) };
+      const requiredIdentityFields = ['target_thread_id', 'target_session_id', 'workspace', 'host_instance_id', 'host_fingerprint', 'task_version', 'run_generation'] as const;
+      const identityVerified = requiredIdentityFields.every((key) => observedIdentity[key] !== undefined)
+        && identityMatches(identity, { ...identity, ...observedIdentity } as ProviderIdentity);
+      const protocolVersion = typeof raw.protocol_version === 'string' ? raw.protocol_version : this.transport.metadata?.protocol_version ?? null;
+      const providerVersion = typeof raw.provider_version === 'string' ? raw.provider_version : this.transport.metadata?.provider_version ?? null;
+      const endpointFingerprint = typeof raw.endpoint_fingerprint === 'string' ? raw.endpoint_fingerprint : this.transport.metadata?.endpoint_fingerprint ?? null;
+      const metadataComplete = nonEmpty(protocolVersion) && nonEmpty(providerVersion) && nonEmpty(endpointFingerprint);
       if (!identityVerified) throw new ProviderIdentityError('Desktop transport did not return verifiable original-thread identity.');
-      this._receipt = createCapabilityReceipt({ ...this._receipt, provider_kind: this.kind, evidence_level: this.transport.metadata?.evidence_level ?? 'live', available: raw.available !== false, attached: raw.available !== false, same_thread_verified: raw.same_thread_verified !== false, capabilities: { ...ALL_PROVIDER_CAPABILITIES, ...caps } as ProviderCapabilitySet, limitation_reason: raw.available === false ? String(raw.limitation_reason ?? 'Desktop provider reported unavailable.') : null });
+      const available = raw.available !== false && raw.same_thread_verified !== false && identityVerified && metadataComplete;
+      const limitation = available ? null : String(raw.limitation_reason ?? (metadataComplete ? 'Desktop provider did not verify same-thread identity.' : 'Desktop provider handshake did not prove protocol, provider and endpoint identity.'));
+      this._receipt = createCapabilityReceipt({ ...this._receipt, provider_kind: this.kind, evidence_level: this.transport.metadata?.evidence_level ?? 'live', available, attached: available, same_thread_verified: available, capabilities: { ...ALL_PROVIDER_CAPABILITIES, ...caps } as ProviderCapabilitySet, protocol_version: protocolVersion, provider_version: providerVersion, endpoint_fingerprint: endpointFingerprint, limitation_reason: limitation });
       this.event('capability_probe', { available: this._receipt.available, same_thread_verified: this._receipt.same_thread_verified });
     } catch (error) {
       this._receipt = unavailableReceipt(identity, error instanceof Error ? error.message : 'Desktop provider capability probe failed.');
@@ -628,6 +637,12 @@ export class DesktopMainSessionProvider implements MainSessionProvider {
     this.ensureOpen(); const identity = this.target(request); this.available(identity);
     const existing = this.deliveries.get(request.delivery_id);
     if (existing) return { delivery_id: request.delivery_id, outcome: existing.status === 'confirmed' ? 'confirmed' : 'already-present', target_thread_id: identity.target_thread_id, target_session_id: identity.target_session_id, target_turn_id: existing.target_turn_id, created_worker: false, reason: 'Delivery is already recorded; provider will not send a duplicate.', observed_at: now() };
+    const remote = await this.reconcileDelivery({ target: identity, delivery_id: request.delivery_id, message: request.message, client_message_id: request.delivery_id, target_turn_id: null });
+    if (remote.outcome !== 'not_found') {
+      const mapped = remote.outcome === 'confirmed' ? 'confirmed' : remote.outcome === 'active_writer' ? 'active-writer' : remote.outcome === 'unavailable' ? 'unavailable' : remote.outcome === 'sent' ? 'already-present' : 'unknown';
+      this.deliveries.set(request.delivery_id, { delivery_id: request.delivery_id, message: request.message, status: mapped, target_turn_id: remote.target_turn_id, client_message_id: request.delivery_id, observed_at: now() });
+      return { delivery_id: request.delivery_id, outcome: mapped, target_thread_id: identity.target_thread_id, target_session_id: identity.target_session_id, target_turn_id: remote.target_turn_id, created_worker: false, reason: remote.reason ?? 'Remote history did not prove that this delivery is absent; send is fenced.', observed_at: now() };
+    }
     this.deliveries.set(request.delivery_id, { delivery_id: request.delivery_id, message: request.message, status: 'prepared', target_turn_id: null, client_message_id: request.delivery_id, observed_at: now() });
     this.event('send_prepared', { message_length: request.message.length }, request.delivery_id);
     try {
@@ -639,6 +654,7 @@ export class DesktopMainSessionProvider implements MainSessionProvider {
       this.event('send_sent', { outcome }, request.delivery_id, turnId);
       return { delivery_id: request.delivery_id, outcome, target_thread_id: identity.target_thread_id, target_session_id: identity.target_session_id, target_turn_id: turnId, created_worker: false, reason: typeof raw.reason === 'string' ? raw.reason : outcome === 'unknown' ? 'Send outcome is unknown; reconcile original-thread history before retrying.' : null, observed_at: now() };
     } catch (error) {
+      if (error instanceof ProviderIdentityError) throw error;
       const reason = error instanceof Error ? error.message : String(error);
       const outcome: ProviderDeliveryStatus = activeWriterError(error) ? 'active-writer' : 'unknown';
       this.deliveries.set(request.delivery_id, { delivery_id: request.delivery_id, message: request.message, status: outcome, target_turn_id: null, client_message_id: request.delivery_id, observed_at: now() });
@@ -661,7 +677,10 @@ export class DesktopMainSessionProvider implements MainSessionProvider {
     try {
       const raw = asObject(await this.call(this.methods.read_history, identity, { threadId: identity.target_thread_id, cursor: request.cursor ?? null })) ?? {};
       this.verifyReturnedIdentity(raw, identity); const turns = Array.isArray(raw.turns) ? raw.turns.map(turnOf) : []; return { thread_id: identity.target_thread_id, session_id: identity.target_session_id, turns, has_more: raw.has_more === true, cursor: typeof raw.cursor === 'string' ? raw.cursor : null, readable: raw.readable !== false, limitation_reason: typeof raw.limitation_reason === 'string' ? raw.limitation_reason : null, observed_at: now() };
-    } catch (error) { return { thread_id: identity.target_thread_id, session_id: identity.target_session_id, turns: [], has_more: false, cursor: null, readable: false, limitation_reason: error instanceof Error ? error.message : String(error), observed_at: now() }; }
+    } catch (error) {
+      if (error instanceof ProviderIdentityError) throw error;
+      return { thread_id: identity.target_thread_id, session_id: identity.target_session_id, turns: [], has_more: false, cursor: null, readable: false, limitation_reason: error instanceof Error ? error.message : String(error), observed_at: now() };
+    }
   }
 
   async reconcileDelivery(request: ProviderReconciliationRequest): Promise<DeliveryReconciliation> {
@@ -673,7 +692,12 @@ export class DesktopMainSessionProvider implements MainSessionProvider {
     try {
       const raw = asObject(await this.call(this.methods.reconcile_delivery, identity, { threadId: identity.target_thread_id, delivery_id: request.delivery_id, client_message_id: request.client_message_id ?? request.delivery_id, target_turn_id: request.target_turn_id ?? null, message: request.message ?? null })) ?? {};
       this.verifyReturnedIdentity(raw, identity); const outcome = ['confirmed', 'sent', 'unknown', 'not_found', 'active_writer', 'unavailable'].includes(String(raw.outcome)) ? String(raw.outcome) as DeliveryReconciliation['outcome'] : 'unknown'; const matched = ['delivery_id', 'client_message_id', 'target_turn_id', 'activity', 'none'].includes(String(raw.matched_by)) ? String(raw.matched_by) as DeliveryMatch : 'none'; const targetTurn = typeof raw.target_turn_id === 'string' ? raw.target_turn_id : null; if (local) this.deliveries.set(request.delivery_id, { ...local, status: outcome === 'confirmed' ? 'confirmed' : outcome === 'sent' ? 'sent' : outcome === 'active_writer' ? 'active-writer' : outcome === 'unavailable' ? 'unavailable' : outcome === 'unknown' ? 'unknown' : local.status, target_turn_id: targetTurn, observed_at: at }); const result = { delivery_id: request.delivery_id, outcome, matched_by: matched, target_turn_id: targetTurn, reason: typeof raw.reason === 'string' ? raw.reason : null, observed_at: at }; this.event('delivery_reconciled', { outcome, matched_by: matched, reason: result.reason }, request.delivery_id, targetTurn); return result;
-    } catch (error) { const result = { delivery_id: request.delivery_id, outcome: 'unknown' as const, matched_by: 'none' as const, target_turn_id: null, reason: error instanceof Error ? error.message : String(error), observed_at: at }; this.event('delivery_reconciled', { outcome: result.outcome, reason: result.reason }, request.delivery_id); return result; }
+    } catch (error) {
+      if (error instanceof ProviderIdentityError) throw error;
+      const result = { delivery_id: request.delivery_id, outcome: 'unknown' as const, matched_by: 'none' as const, target_turn_id: null, reason: error instanceof Error ? error.message : String(error), observed_at: at };
+      this.event('delivery_reconciled', { outcome: result.outcome, reason: result.reason }, request.delivery_id);
+      return result;
+    }
   }
 
   async close(): Promise<void> { if (this.closed) return; this.closed = true; this.listeners.clear(); this._receipt = { ...this._receipt, attached: false }; this.event('closed', {}); await this.transport?.close?.(); }

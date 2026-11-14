@@ -39,7 +39,6 @@ function scheduleMainSessionRecoveryPrompt(path: string, pluginRoot: string, fix
     kind: 'continuation',
     delivery_id: deliveryId,
     source_turn_id: sourceTurnId,
-    ...routeCorrelation(state.pending_action),
     task_version: state.task_version,
     run_generation: state.run_generation,
     message,
