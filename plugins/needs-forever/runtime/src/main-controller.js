@@ -111,12 +111,13 @@ export async function controllerStatus(path) {
  * cannot silently restore an older generation. */
 export async function recoverBoundMainSession(path, provider, identity, reason) {
     const state = readJson(path);
-    const result = await recoverMainSessionWithProvider(state, provider, {
+    const options = {
         identity,
-        reason,
         statePath: path,
         currentState: () => readJson(path),
-    });
+        ...(reason === undefined ? {} : { reason }),
+    };
+    const result = await recoverMainSessionWithProvider(state, provider, options);
     return result;
 }
 export function invalidateBoundProviderRecovery(path, reason, kind = 'input') {
