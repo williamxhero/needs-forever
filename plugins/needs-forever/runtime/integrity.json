@@ -10,12 +10,12 @@
     "src/github-tracking.js": "2ccf8c74c3ac06f007dc6f03beb3e75ec258c83cd8300ad7520133773efe6ade",
     "src/hook-host.js": "b01a45383ab017f55cc3a1445b40effa21434fa29b8bacd935571e68c12115e1",
     "src/http-route-probe.js": "bbe63bed4abf141621579aec5e04be7bcda57935331ba9ece96e3d39d3129062",
-    "src/index.js": "cab68729acb013bd9f1520dc43580f1f9c85bf4b379be6f3886feb938653ac4a",
+    "src/index.js": "06333d548283942fe96ba976db69a1feeb794b2971d39457efcff1894e4f41e4",
     "src/judge.js": "a2c18d866b70ba5d970765b44031bda702db471aaadca1bea80d6a6518a9db7b",
     "src/judgment-round.js": "afd0842c98537d0930af84e7db25c2304094d2561cce7e3ad2c2208d23c28d3e",
     "src/lifecycle.js": "944963ed89c13d5d33b3e842c3b4f0d231426c9e3ec3d877cba5d8c29218d64b",
     "src/local-tracking.js": "e6d9ad3b9194736c3632138532f9f895843a86b0292089abd9cba94ee93ab220",
-    "src/main-controller.js": "e633bb12b1cbdc2ffb3afca082dcb0ac90435acc6430f79e3bc2b81c5ba885cd",
+    "src/main-controller.js": "6a8cf4222406d0e45ff766f98b1b7d468486d135d077776b920ad688b93f4d5b",
     "src/main-session-provider.js": "a1a1925c272574712e290d0ae0dea532644c3ef080f8ed3f4bdf83998f1a8366",
     "src/main-session-recovery.js": "932adbf9d0577d2c4f3d1d2781d6b5a003d03d3ddd4b3cef3cebbf57d37b2f2d",
     "src/main-session.js": "3f4642d1b7cfdedd1a73b7c236476e6a3c68ba2e9336ccab049b549535ac1c76",
@@ -24,6 +24,7 @@
     "src/planning-contract.js": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
     "src/planning-schema.js": "2dc4e2141bc536260b22561f8b3c61a6dc2b3ed05347ee0aad4afcceb1f21f46",
     "src/planning.js": "886b0be855031a214a0dea212edc3223e8becd5a6e71caa105033d12fc655472",
+    "src/provider-recovery.js": "4a42afc23fc707b5f6a20e42460b3d3c8f66fbf3bc941a5a20da3b2ef042ed1b",
     "src/recovery-coordinator.js": "1874bdc420ecc9b99d42ec0966e540d786a7bdc246b658fab3bd9d2c2a1650c8",
     "src/recovery-episode.js": "cd3a8d61d5f0f0c89061f93adafde61ce40be44c62589efda86eb5be521a490b",
     "src/recovery.js": "86c8e657d5627058fc4d28818fde6af23b885dd98a4b9476c8d04874bf847022",
@@ -43,6 +44,6 @@
     "src/tracking-integration.js": "2fab480a768cda638dfeb59bdfa9aee0cedc51c4a3c44ba67bc6c13511560909",
     "src/transport.js": "496ad678943c8ad1f759f1ec1a781ee106e134b02069eed5ec9e2f47b14b2a65",
     "src/types.js": "1d776e8997c21eccad34b1b01358b1a3f8df090b5647a855ba3972d361311f08",
-    "src/web.js": "da0c419fbd638b9e4f2eed78def609041c468ddc59862fa496ad043aa42978cb"
+    "src/web.js": "fb2cbb18cd6b4db6812ab248accc221e7be850ce09ad379cd77a4f20c6c84337"
   }
 }

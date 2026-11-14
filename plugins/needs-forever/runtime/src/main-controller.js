@@ -18,6 +18,7 @@ import { armRecovery, cancelRecovery, createRecoveryPlan, markRecoveryRunning, a
 import { scheduleNativeRebindPrompt } from './main-session-recovery.js';
 import { initializeHttpRouteProbe } from './http-route-probe.js';
 import { cancelSupervisionRound, recordSupervisionDelivery, runSupervisionRound } from './supervision-round.js';
+import { recoverMainSessionWithProvider, invalidateProviderRecovery } from './provider-recovery.js';
 function scheduleMainSessionRecoveryPrompt(path, pluginRoot, fixturePath, state, message, sourceTurnId) {
     if (state.control_mode !== 'main-session' || !state.main_session_id || state.status !== 'ACTIVE')
         return;
@@ -104,6 +105,24 @@ export async function controllerStatus(path) {
     }
     const elapsed = state.elapsed_active_seconds + (state.status === 'ACTIVE' && live && state.active_checkpoint_at ? Math.max(0, Date.now() - Date.parse(state.active_checkpoint_at)) / 1000 : 0);
     return { ...state, host: { ...state.host, hook_effective: state.host.hook_effective && hostAlive !== false }, elapsed_active_seconds: elapsed, control_mode: state.control_mode ?? 'independent-worker', live, controller_reachable: live, host_process_alive: hostAlive, hook_effective: state.host.hook_effective && hostAlive !== false, continuation_confirmed: state.continuation_confirmed ?? false, recovery_required: (state.status === 'ACTIVE' && (!live || hostAlive === false)) || state.phase === 'RECOVERING' };
+}
+/** Provider recovery entry point used by B/watchdog integrations. It reloads
+ * the checkpoint before invoking the fenced recovery seam, so a late result
+ * cannot silently restore an older generation. */
+export async function recoverBoundMainSession(path, provider, identity, reason) {
+    const state = readJson(path);
+    const result = await recoverMainSessionWithProvider(state, provider, {
+        identity,
+        reason,
+        statePath: path,
+        currentState: () => readJson(path),
+    });
+    return result;
+}
+export function invalidateBoundProviderRecovery(path, reason, kind = 'input') {
+    const state = readJson(path);
+    invalidateProviderRecovery(state, reason, kind);
+    new Store(path).save(state);
 }
 function processAbsent(pid) {
     if (!Number.isInteger(pid) || pid <= 0)

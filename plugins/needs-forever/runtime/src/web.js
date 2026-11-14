@@ -22,7 +22,7 @@ function eventRole(event) {
         return 'worker';
     if (type.startsWith('worker_') || type === 'send_prepared' || type === 'send_attempted' || type === 'send_confirmed')
         return 'worker';
-    if (type.startsWith('judge_') || type.startsWith('supervision_') || type === 'decision' || type.startsWith('verification_') || type.startsWith('recovery_') || type.startsWith('stale_') || type.startsWith('external_'))
+    if (type.startsWith('judge_') || type.startsWith('supervision_') || type.startsWith('provider_') || type === 'decision' || type.startsWith('verification_') || type.startsWith('recovery_') || type.startsWith('stale_') || type.startsWith('external_'))
         return 'supervisor';
     return 'system';
 }
@@ -111,6 +111,14 @@ function eventSummary(event) {
         case 'supervision_round_delivery_recorded': return 'B 已记录单次 native 交付';
         case 'supervision_round_confirmation_recorded': return 'A 活动已确认';
         case 'supervision_round_cancelled': return `当前监督轮次已失效${eventReason ? `：${eventReason}` : ''}`;
+        case 'provider_capability_probe': return event.available === true ? 'Desktop provider 已确认同线程能力' : 'Desktop provider 不可用，保持恢复等待';
+        case 'provider_delivery_reconciled': return `Desktop delivery 已核对：${String(event.outcome ?? 'unknown')}`;
+        case 'provider_delivery_sent': return `Desktop provider 已尝试同线程发送：${String(event.outcome ?? 'unknown')}`;
+        case 'provider_recovery_active_writer': return '原始 A 有 active writer，provider 等待且不竞争写入';
+        case 'provider_recovery_history_unreadable': return '原始 thread 历史不可读，provider 保持恢复等待';
+        case 'provider_recovery_waiting': return 'delivery 尚未获得 A 活动确认，provider 保持恢复等待';
+        case 'provider_recovery_unavailable': return 'Desktop provider 身份或 transport 不可用';
+        case 'provider_recovery_attached': return 'Desktop provider 已附着原始 thread';
         case 'recovery_interrupted': return `自动恢复明确中断${eventReason ? `：${eventReason}` : ''}`;
         case 'paused': return '任务已暂停';
         case 'owned_calls_cancelled': return '已取消监督器持有的调用';
@@ -302,6 +310,7 @@ function stateView(state, title, sessionId) {
         nativeReceipt: recovery.nativeReceipt,
         cancellationBoundary: recovery.cancellationBoundary,
         supervisionRound: state.supervision_round ?? null,
+        provider: state.provider ?? null,
     };
 }
 function resultForRound(round) {

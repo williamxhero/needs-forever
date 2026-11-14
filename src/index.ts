@@ -33,6 +33,9 @@ export { createTracking, loadTracking, updateTracking, locatorForSelection, stor
 export type { TrackingSelection, TrackingLocator } from './tracking-integration.js';
 export { loadMainSessionTracking, updateMainSessionTracking } from './main-session.js';
 export { initializeHttpRouteProbe, executeHttpRouteProbe, ingestHttpRouteProbes } from './http-route-probe.js';
+export { recoverMainSessionWithProvider, invalidateProviderRecovery } from './provider-recovery.js';
+export type { ProviderRecoveryOutcome, ProviderRecoveryResult, ProviderRecoveryOptions } from './provider-recovery.js';
+export { recoverBoundMainSession, invalidateBoundProviderRecovery } from './main-controller.js';
 export {
   ALL_PROVIDER_CAPABILITIES,
   ProviderIdentityError,

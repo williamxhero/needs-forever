@@ -19,4 +19,6 @@ export { GhCliAdapter, GitHubTrackingStore, GITHUB_TRACKING_END, GITHUB_TRACKING
 export { createTracking, loadTracking, updateTracking, locatorForSelection, storeForLocator, trackingLocator, assertTrackingContract } from './tracking-integration.js';
 export { loadMainSessionTracking, updateMainSessionTracking } from './main-session.js';
 export { initializeHttpRouteProbe, executeHttpRouteProbe, ingestHttpRouteProbes } from './http-route-probe.js';
+export { recoverMainSessionWithProvider, invalidateProviderRecovery } from './provider-recovery.js';
+export { recoverBoundMainSession, invalidateBoundProviderRecovery } from './main-controller.js';
 export { ALL_PROVIDER_CAPABILITIES, ProviderIdentityError, SimulatedMainSessionProvider, DesktopMainSessionProvider, createCapabilityReceipt, createProviderEvent, createProviderState, createSimulatedMainSessionProvider, createSimulatedProvider, validateCapabilityReceipt, validateProviderEvent, validateProviderState, } from './main-session-provider.js';
