@@ -37,6 +37,7 @@ export {
   ALL_PROVIDER_CAPABILITIES,
   ProviderIdentityError,
   SimulatedMainSessionProvider,
+  DesktopMainSessionProvider,
   createCapabilityReceipt,
   createProviderEvent,
   createProviderState,
@@ -78,4 +79,8 @@ export type {
   ProviderWriterState,
   ProviderWriterStatus,
   SimulatedProviderScenario,
+  DesktopRpcTransport,
+  DesktopRpcTransportMetadata,
+  DesktopProviderRpcMethods,
+  DesktopMainSessionProviderOptions,
 } from './main-session-provider.js';

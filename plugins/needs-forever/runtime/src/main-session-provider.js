@@ -8,6 +8,15 @@ export const ALL_PROVIDER_CAPABILITIES = {
     read_history: true,
     reconcile_delivery: true,
 };
+export const DEFAULT_DESKTOP_PROVIDER_RPC_METHODS = {
+    probe: 'provider/probe',
+    read_thread: 'thread/read',
+    read_writer: 'thread/writer',
+    resume: 'thread/resume',
+    send: 'thread/send',
+    read_history: 'thread/history',
+    reconcile_delivery: 'thread/reconcile',
+};
 export class ProviderIdentityError extends Error {
     code = 'provider_identity_unavailable';
     constructor(message) { super(message); this.name = 'ProviderIdentityError'; }
@@ -186,6 +195,267 @@ export function validateProviderState(value) {
 }
 function providerEventFrom(receipt, type, payload, deliveryId = null, turnId = null) {
     return createProviderEvent({ type, provider_kind: receipt.provider_kind, evidence_level: receipt.evidence_level, target_thread_id: receipt.target_thread_id, target_session_id: receipt.target_session_id, workspace: receipt.workspace, host_fingerprint: receipt.host_fingerprint, task_version: receipt.task_version, run_generation: receipt.run_generation, delivery_id: deliveryId, turn_id: turnId, payload });
+}
+function asObject(value) {
+    return value && typeof value === 'object' && !Array.isArray(value) ? value : null;
+}
+function statusOf(value) {
+    const text = typeof value === 'string' ? value.toLowerCase() : '';
+    if (text === 'inprogress' || text === 'in-progress' || text === 'active' || text === 'running')
+        return 'in-progress';
+    if (text === 'idle' || text === 'notloaded' || text === 'not-loaded' || text === 'completed')
+        return 'idle';
+    if (text === 'unavailable' || text === 'closed')
+        return 'unavailable';
+    return 'unknown';
+}
+function writerOf(value) {
+    const raw = asObject(value) ?? {};
+    const status = typeof raw.status === 'string' ? raw.status : typeof raw.type === 'string' ? raw.type : '';
+    const normalized = statusOf(status);
+    const writerStatus = normalized === 'in-progress' ? 'in-progress' : status.toLowerCase().includes('writer') ? 'active-writer' : normalized === 'idle' ? 'idle' : normalized === 'unavailable' ? 'unavailable' : 'unknown';
+    return { status: writerStatus, owner_session_id: typeof raw.owner_session_id === 'string' ? raw.owner_session_id : typeof raw.ownerSessionId === 'string' ? raw.ownerSessionId : null, turn_id: typeof raw.turn_id === 'string' ? raw.turn_id : typeof raw.turnId === 'string' ? raw.turnId : null, reason: typeof raw.reason === 'string' ? raw.reason : null, observed_at: now() };
+}
+function turnOf(value) {
+    const raw = asObject(value) ?? {};
+    const items = Array.isArray(raw.items) ? raw.items.map((item) => {
+        const entry = asObject(item) ?? {};
+        const type = typeof entry.type === 'string' && ['user_message', 'assistant_message', 'tool_activity', 'other'].includes(entry.type) ? entry.type : 'other';
+        return { type, client_message_id: typeof entry.client_message_id === 'string' ? entry.client_message_id : typeof entry.clientMessageId === 'string' ? entry.clientMessageId : null, delivery_id: typeof entry.delivery_id === 'string' ? entry.delivery_id : typeof entry.deliveryId === 'string' ? entry.deliveryId : null, value: entry.value };
+    }) : [];
+    const turnId = typeof raw.turn_id === 'string' ? raw.turn_id : typeof raw.id === 'string' ? raw.id : '';
+    if (!turnId)
+        throw new ProviderIdentityError('Desktop provider returned a turn without an identity.');
+    const status = typeof raw.status === 'string' && raw.status.toLowerCase().includes('progress') ? 'in-progress' : raw.status === 'completed' || raw.status === 'complete' ? 'completed' : 'unknown';
+    return { turn_id: turnId, status, items, started_at: typeof raw.started_at === 'string' ? raw.started_at : null, completed_at: typeof raw.completed_at === 'string' ? raw.completed_at : null };
+}
+function identityFrom(value) {
+    const raw = asObject(value);
+    if (!raw)
+        return null;
+    const nested = asObject(raw.identity) ?? raw;
+    return { target_thread_id: typeof nested.target_thread_id === 'string' ? nested.target_thread_id : typeof nested.thread_id === 'string' ? nested.thread_id : typeof nested.threadId === 'string' ? nested.threadId : undefined, target_session_id: typeof nested.target_session_id === 'string' ? nested.target_session_id : typeof nested.session_id === 'string' ? nested.session_id : typeof nested.sessionId === 'string' ? nested.sessionId : undefined, main_session_id: typeof nested.main_session_id === 'string' ? nested.main_session_id : undefined, workspace: typeof nested.workspace === 'string' ? nested.workspace : typeof nested.cwd === 'string' ? nested.cwd : undefined, host_instance_id: typeof nested.host_instance_id === 'string' ? nested.host_instance_id : undefined, host_fingerprint: typeof nested.host_fingerprint === 'string' ? nested.host_fingerprint : undefined, task_version: typeof nested.task_version === 'number' ? nested.task_version : undefined, run_generation: typeof nested.run_generation === 'string' ? nested.run_generation : undefined, contract_sha256: typeof nested.contract_sha256 === 'string' ? nested.contract_sha256 : null };
+}
+function fenceFor(identity) {
+    return { target_thread_id: identity.target_thread_id, main_session_id: identity.main_session_id ?? identity.target_thread_id, target_session_id: identity.target_session_id, workspace: identity.workspace, host_instance_id: identity.host_instance_id, host_fingerprint: identity.host_fingerprint, task_version: identity.task_version, run_generation: identity.run_generation, contract_sha256: identity.contract_sha256 ?? null };
+}
+function activeWriterError(error) {
+    return /active writer|writer.*active|in.?progress|already.*writing|已有.*写入|进行中/i.test(error instanceof Error ? error.message : String(error));
+}
+/** Adapter for an already-owned Desktop/shared app-server connection. It never
+ * starts a process or creates a thread; all identity and generation fields are
+ * sent on every operation and mismatches fail closed. */
+export class DesktopMainSessionProvider {
+    kind;
+    identity;
+    transport;
+    methods;
+    listeners = new Set();
+    deliveries = new Map();
+    _receipt;
+    closed = false;
+    constructor(options = {}) {
+        this.transport = options.transport ?? null;
+        this.identity = completeIdentity(options.identity) ? { ...options.identity, main_session_id: options.identity.main_session_id ?? options.identity.target_thread_id } : null;
+        this.methods = { ...DEFAULT_DESKTOP_PROVIDER_RPC_METHODS, ...options.methods };
+        this.kind = options.provider_kind ?? (this.transport ? 'shared-server' : 'unavailable');
+        const meta = this.transport?.metadata ?? {};
+        this._receipt = this.identity && this.transport ? createCapabilityReceipt({ provider_kind: this.kind, evidence_level: options.transport?.metadata?.evidence_level ?? 'live', available: false, attached: false, same_thread_verified: false, capabilities: { ...ALL_PROVIDER_CAPABILITIES, ...(meta.capabilities ?? {}) }, target_thread_id: this.identity.target_thread_id, target_session_id: this.identity.target_session_id, main_session_id: this.identity.main_session_id ?? this.identity.target_thread_id, workspace: this.identity.workspace, host_instance_id: this.identity.host_instance_id, host_fingerprint: this.identity.host_fingerprint, task_version: this.identity.task_version, run_generation: this.identity.run_generation, contract_sha256: this.identity.contract_sha256 ?? null, protocol_version: options.protocol_version ?? meta.protocol_version ?? null, provider_version: options.provider_version ?? meta.provider_version ?? null, endpoint_fingerprint: options.endpoint_fingerprint ?? meta.endpoint_fingerprint ?? null }) : unavailableReceipt(options.identity, 'Desktop shared transport or trusted original-thread identity is unavailable.');
+    }
+    get receipt() { return clone(this._receipt); }
+    ensureOpen() { if (this.closed)
+        throw new Error('Provider is closed.'); }
+    target(request) {
+        if (!completeIdentity(request.target) || !this.identity || !identityMatches(this.identity, { ...request.target, main_session_id: request.target.main_session_id ?? request.target.target_thread_id }))
+            throw new ProviderIdentityError('Desktop provider target identity is unavailable or does not match the registered original thread, session, workspace, host or generation.');
+        return this.identity;
+    }
+    event(type, payload, deliveryId = null, turnId = null) {
+        const event = providerEventFrom(this._receipt, type, payload, deliveryId, turnId);
+        for (const listener of [...this.listeners]) {
+            try {
+                listener(clone(event));
+            }
+            catch { /* observers cannot break provider state */ }
+        }
+    }
+    async call(method, identity, params = {}) {
+        if (!this.transport)
+            throw new ProviderIdentityError('Desktop shared transport is unavailable.');
+        return this.transport.request(method, { ...fenceFor(identity), ...params });
+    }
+    verifyReturnedIdentity(value, identity) {
+        const observed = identityFrom(value);
+        if (observed && !identityMatches(identity, { ...identity, ...observed, target_thread_id: observed.target_thread_id ?? identity.target_thread_id, target_session_id: observed.target_session_id ?? identity.target_session_id, workspace: observed.workspace ?? identity.workspace, host_instance_id: observed.host_instance_id ?? identity.host_instance_id, host_fingerprint: observed.host_fingerprint ?? identity.host_fingerprint, task_version: observed.task_version ?? identity.task_version, run_generation: observed.run_generation ?? identity.run_generation }))
+            throw new ProviderIdentityError('Desktop provider returned a different thread, session, workspace, host or generation.');
+    }
+    async probe(request = {}) {
+        this.ensureOpen();
+        if (!this.transport || !completeIdentity(request.target) || !this.identity) {
+            this._receipt = unavailableReceipt(request.target, 'Desktop shared transport or trusted original-thread identity is unavailable.');
+            return this.receipt;
+        }
+        const identity = this.target(request);
+        try {
+            const response = await this.call(this.methods.probe, identity, { identity: fenceFor(identity) });
+            this.verifyReturnedIdentity(response, identity);
+            const raw = asObject(response) ?? {};
+            const caps = asObject(raw.capabilities) ?? this.transport.metadata?.capabilities ?? ALL_PROVIDER_CAPABILITIES;
+            const identityVerified = !!identityFrom(response) || !!identityFrom(this.transport.metadata);
+            if (!identityVerified)
+                throw new ProviderIdentityError('Desktop transport did not return verifiable original-thread identity.');
+            this._receipt = createCapabilityReceipt({ ...this._receipt, provider_kind: this.kind, evidence_level: this.transport.metadata?.evidence_level ?? 'live', available: raw.available !== false, attached: raw.available !== false, same_thread_verified: raw.same_thread_verified !== false, capabilities: { ...ALL_PROVIDER_CAPABILITIES, ...caps }, limitation_reason: raw.available === false ? String(raw.limitation_reason ?? 'Desktop provider reported unavailable.') : null });
+            this.event('capability_probe', { available: this._receipt.available, same_thread_verified: this._receipt.same_thread_verified });
+        }
+        catch (error) {
+            this._receipt = unavailableReceipt(identity, error instanceof Error ? error.message : 'Desktop provider capability probe failed.');
+            this.event('capability_probe', { available: false, limitation_reason: this._receipt.limitation_reason });
+        }
+        return this.receipt;
+    }
+    available(identity) { if (!this._receipt.available || !this._receipt.same_thread_verified)
+        throw new ProviderIdentityError(this._receipt.limitation_reason ?? 'Desktop provider is unavailable or same-thread identity is unverified.'); }
+    snapshot(value, identity) {
+        this.verifyReturnedIdentity(value, identity);
+        const raw = asObject(value) ?? {};
+        const thread = asObject(raw.thread) ?? raw;
+        const threadId = typeof thread.thread_id === 'string' ? thread.thread_id : typeof thread.id === 'string' ? thread.id : identity.target_thread_id;
+        const sessionId = typeof thread.session_id === 'string' ? thread.session_id : identity.target_session_id;
+        if (threadId !== identity.target_thread_id || sessionId !== identity.target_session_id)
+            throw new ProviderIdentityError('Desktop provider returned a different thread or session.');
+        const turns = Array.isArray(thread.turns) ? thread.turns.map(turnOf) : [];
+        const writer = writerOf(thread.writer ?? raw.writer ?? thread.status);
+        return { thread_id: threadId, session_id: sessionId, workspace: typeof thread.workspace === 'string' ? thread.workspace : identity.workspace, status: statusOf(thread.status?.type ?? thread.status), writer, turns, latest_activity_at: typeof thread.latest_activity_at === 'string' ? thread.latest_activity_at : turns.at(-1)?.completed_at ?? turns.at(-1)?.started_at ?? null, observed_at: now() };
+    }
+    async readThread(request) {
+        this.ensureOpen();
+        const identity = this.target(request);
+        this.available(identity);
+        const result = this.snapshot(await this.call(this.methods.read_thread, identity, { threadId: identity.target_thread_id, includeTurns: true }), identity);
+        this.event('thread_read', { status: result.status, writer: result.writer.status, turn_count: result.turns.length });
+        return result;
+    }
+    async readWriter(request) {
+        this.ensureOpen();
+        const identity = this.target(request);
+        this.available(identity);
+        try {
+            const result = writerOf(await this.call(this.methods.read_writer, identity, { threadId: identity.target_thread_id }));
+            this.event('writer_state', { status: result.status, reason: result.reason }, null, result.turn_id);
+            return result;
+        }
+        catch {
+            const snapshot = await this.readThread(request);
+            this.event('writer_state', { status: snapshot.writer.status, reason: snapshot.writer.reason }, null, snapshot.writer.turn_id);
+            return snapshot.writer;
+        }
+    }
+    async resume(request) {
+        this.ensureOpen();
+        const identity = this.target(request);
+        this.available(identity);
+        try {
+            const result = this.snapshot(await this.call(this.methods.resume, identity, { threadId: identity.target_thread_id }), identity);
+            const status = result.writer.status === 'in-progress' || result.writer.status === 'active-writer' ? 'active_writer' : 'attached';
+            this.event('resume', { status, created_worker: false }, null, result.writer.turn_id);
+            return { ...result, status, created_worker: false };
+        }
+        catch (error) {
+            if (activeWriterError(error)) {
+                const writer = await this.readWriter(request).catch(() => ({ status: 'active-writer', owner_session_id: identity.target_session_id, turn_id: null, reason: String(error), observed_at: now() }));
+                const snapshot = { thread_id: identity.target_thread_id, session_id: identity.target_session_id, workspace: identity.workspace, status: 'in-progress', writer: { ...writer, status: 'active-writer' }, turns: [], latest_activity_at: null, observed_at: now() };
+                this.event('resume', { status: 'active_writer', created_worker: false }, null, snapshot.writer.turn_id);
+                return { ...snapshot, status: 'active_writer', created_worker: false };
+            }
+            throw error;
+        }
+    }
+    async send(request) {
+        this.ensureOpen();
+        const identity = this.target(request);
+        this.available(identity);
+        const existing = this.deliveries.get(request.delivery_id);
+        if (existing)
+            return { delivery_id: request.delivery_id, outcome: existing.status === 'confirmed' ? 'confirmed' : 'already-present', target_thread_id: identity.target_thread_id, target_session_id: identity.target_session_id, target_turn_id: existing.target_turn_id, created_worker: false, reason: 'Delivery is already recorded; provider will not send a duplicate.', observed_at: now() };
+        this.deliveries.set(request.delivery_id, { delivery_id: request.delivery_id, message: request.message, status: 'prepared', target_turn_id: null, client_message_id: request.delivery_id, observed_at: now() });
+        this.event('send_prepared', { message_length: request.message.length }, request.delivery_id);
+        try {
+            const raw = asObject(await this.call(this.methods.send, identity, { threadId: identity.target_thread_id, delivery_id: request.delivery_id, client_message_id: request.delivery_id, message: request.message })) ?? {};
+            this.verifyReturnedIdentity(raw, identity);
+            const outcome = ['sent', 'confirmed', 'already-present', 'unknown', 'active-writer', 'unavailable'].includes(String(raw.outcome)) ? String(raw.outcome) : 'unknown';
+            const turnId = typeof raw.target_turn_id === 'string' ? raw.target_turn_id : typeof raw.turn_id === 'string' ? raw.turn_id : null;
+            this.deliveries.set(request.delivery_id, { delivery_id: request.delivery_id, message: request.message, status: outcome, target_turn_id: turnId, client_message_id: request.delivery_id, observed_at: now() });
+            this.event('send_sent', { outcome }, request.delivery_id, turnId);
+            return { delivery_id: request.delivery_id, outcome, target_thread_id: identity.target_thread_id, target_session_id: identity.target_session_id, target_turn_id: turnId, created_worker: false, reason: typeof raw.reason === 'string' ? raw.reason : outcome === 'unknown' ? 'Send outcome is unknown; reconcile original-thread history before retrying.' : null, observed_at: now() };
+        }
+        catch (error) {
+            const reason = error instanceof Error ? error.message : String(error);
+            const outcome = activeWriterError(error) ? 'active-writer' : 'unknown';
+            this.deliveries.set(request.delivery_id, { delivery_id: request.delivery_id, message: request.message, status: outcome, target_turn_id: null, client_message_id: request.delivery_id, observed_at: now() });
+            this.event('send_sent', { outcome, reason }, request.delivery_id);
+            return { delivery_id: request.delivery_id, outcome, target_thread_id: identity.target_thread_id, target_session_id: identity.target_session_id, target_turn_id: null, created_worker: false, reason, observed_at: now() };
+        }
+    }
+    async subscribe(request, listener) {
+        this.ensureOpen();
+        const identity = this.target(request);
+        this.available(identity);
+        this.listeners.add(listener);
+        const upstream = this.transport?.subscribe ? await this.transport.subscribe((raw) => {
+            const observed = identityFrom(raw);
+            if (observed && !identityMatches(identity, { ...identity, ...observed, target_thread_id: observed.target_thread_id ?? identity.target_thread_id, target_session_id: observed.target_session_id ?? identity.target_session_id, workspace: observed.workspace ?? identity.workspace, host_instance_id: observed.host_instance_id ?? identity.host_instance_id, host_fingerprint: observed.host_fingerprint ?? identity.host_fingerprint, task_version: observed.task_version ?? identity.task_version, run_generation: observed.run_generation ?? identity.run_generation }))
+                return;
+            const event = asObject(raw);
+            if (event && typeof event.type === 'string')
+                listener(createProviderEvent({ type: event.type, provider_kind: this._receipt.provider_kind, evidence_level: this._receipt.evidence_level, target_thread_id: identity.target_thread_id, target_session_id: identity.target_session_id, workspace: identity.workspace, host_fingerprint: identity.host_fingerprint, task_version: identity.task_version, run_generation: identity.run_generation, delivery_id: typeof event.delivery_id === 'string' ? event.delivery_id : null, turn_id: typeof event.turn_id === 'string' ? event.turn_id : null, payload: event.payload && typeof event.payload === 'object' ? event.payload : {} }));
+        }) : null;
+        return { unsubscribe: () => { this.listeners.delete(listener); upstream?.unsubscribe(); } };
+    }
+    async readHistory(request) {
+        this.ensureOpen();
+        const identity = this.target(request);
+        this.available(identity);
+        try {
+            const raw = asObject(await this.call(this.methods.read_history, identity, { threadId: identity.target_thread_id, cursor: request.cursor ?? null })) ?? {};
+            this.verifyReturnedIdentity(raw, identity);
+            const turns = Array.isArray(raw.turns) ? raw.turns.map(turnOf) : [];
+            return { thread_id: identity.target_thread_id, session_id: identity.target_session_id, turns, has_more: raw.has_more === true, cursor: typeof raw.cursor === 'string' ? raw.cursor : null, readable: raw.readable !== false, limitation_reason: typeof raw.limitation_reason === 'string' ? raw.limitation_reason : null, observed_at: now() };
+        }
+        catch (error) {
+            return { thread_id: identity.target_thread_id, session_id: identity.target_session_id, turns: [], has_more: false, cursor: null, readable: false, limitation_reason: error instanceof Error ? error.message : String(error), observed_at: now() };
+        }
+    }
+    async reconcileDelivery(request) {
+        this.ensureOpen();
+        const identity = this.target(request);
+        this.available(identity);
+        const at = now();
+        const local = this.deliveries.get(request.delivery_id);
+        if (local?.status === 'confirmed')
+            return { delivery_id: request.delivery_id, outcome: 'confirmed', matched_by: 'delivery_id', target_turn_id: local.target_turn_id, reason: null, observed_at: at };
+        if (local?.status === 'unknown') {
+            // Unknown is a hard no-resend fence. Reconciliation may still ask the host.
+        }
+        try {
+            const raw = asObject(await this.call(this.methods.reconcile_delivery, identity, { threadId: identity.target_thread_id, delivery_id: request.delivery_id, client_message_id: request.client_message_id ?? request.delivery_id, target_turn_id: request.target_turn_id ?? null, message: request.message ?? null })) ?? {};
+            this.verifyReturnedIdentity(raw, identity);
+            const outcome = ['confirmed', 'sent', 'unknown', 'not_found', 'active_writer', 'unavailable'].includes(String(raw.outcome)) ? String(raw.outcome) : 'unknown';
+            const matched = ['delivery_id', 'client_message_id', 'target_turn_id', 'activity', 'none'].includes(String(raw.matched_by)) ? String(raw.matched_by) : 'none';
+            const targetTurn = typeof raw.target_turn_id === 'string' ? raw.target_turn_id : null;
+            if (local)
+                this.deliveries.set(request.delivery_id, { ...local, status: outcome === 'confirmed' ? 'confirmed' : outcome === 'sent' ? 'sent' : outcome === 'active_writer' ? 'active-writer' : outcome === 'unavailable' ? 'unavailable' : outcome === 'unknown' ? 'unknown' : local.status, target_turn_id: targetTurn, observed_at: at });
+            const result = { delivery_id: request.delivery_id, outcome, matched_by: matched, target_turn_id: targetTurn, reason: typeof raw.reason === 'string' ? raw.reason : null, observed_at: at };
+            this.event('delivery_reconciled', { outcome, matched_by: matched, reason: result.reason }, request.delivery_id, targetTurn);
+            return result;
+        }
+        catch (error) {
+            const result = { delivery_id: request.delivery_id, outcome: 'unknown', matched_by: 'none', target_turn_id: null, reason: error instanceof Error ? error.message : String(error), observed_at: at };
+            this.event('delivery_reconciled', { outcome: result.outcome, reason: result.reason }, request.delivery_id);
+            return result;
+        }
+    }
+    async close() { if (this.closed)
+        return; this.closed = true; this.listeners.clear(); this._receipt = { ...this._receipt, attached: false }; this.event('closed', {}); await this.transport?.close?.(); }
 }
 export class SimulatedMainSessionProvider {
     kind = 'simulated';
