@@ -1,7 +1,8 @@
 # Desktop Provider 验收记录
 
-日期：2026-11-15（Asia/Singapore）  
-集成提交：`6d54277`  
+日期：2026-11-15（Asia/Singapore）
+
+集成提交：`6d54277`
 项目版本：`0.3.4`
 
 ## 已通过
