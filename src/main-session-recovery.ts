@@ -4,7 +4,7 @@ import { spawn } from 'node:child_process';
 import { resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { codexCommand, connectWorker, type Rpc } from './transport.js';
-import { canonicalPath, readJson, type MainSessionState } from './main-session.js';
+import { armNativeRebind, canonicalPath, readJson, type MainSessionState } from './main-session.js';
 import { Store } from './store.js';
 import { routeCorrelation } from './route-execution.js';
 import { extendRecoveryWindowForActiveWriter, interruptRecovery, waitForNativeReceipt } from './recovery-episode.js';
@@ -448,14 +448,21 @@ function deferRecoveryPrompt(statePath: string, deliveryId: string, reason: stri
       latest.state.phase = 'RECOVERING';
       latest.state.host.hook_effective = false;
       latest.state.last_error = reason;
+      // The old Desktop binding cannot be used as proof of a future
+      // lifecycle callback. Rotate the generation and arm the same fenced
+      // native-rebind protocol used by controller/host loss. Without this
+      // transition the binding remains BOUND while the ordinary recovery
+      // deadline is still present, so the watchdog eventually converts an
+      // honest provider-capability wait into a false INTERRUPTED state.
+      armNativeRebind(latest.state, reason);
       latest.state.recovery_condition = {
         kind: conditionKind,
         message: reason,
         resume_when: '原始 A 产生新的受信任 native lifecycle receipt 后，NF 自动重绑并重新启动 B。',
       };
       waitForNativeReceipt(latest.state, latest.state.recovery_condition);
-      delete latest.state.recovery_prompt;
       delete latest.state.recovery_window;
+      delete latest.state.recovery_prompt;
       latest.state.recovery_plan = {
         ...latest.state.recovery_plan!,
         owner: null,

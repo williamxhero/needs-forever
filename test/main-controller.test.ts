@@ -489,11 +489,16 @@ test('live Desktop recovery refuses to create a second app-server owner for A an
     controller: undefined,
     run_generation: 'desktop-owner-guard-generation',
     host: { ...before.host, source: 'native-desktop', desktop_binary: 'C:\\Users\\will\\AppData\\Local\\OpenAI\\Codex\\bin\\codex.exe' },
-    binding: { ...before.binding, status: 'PENDING_NATIVE_HOOK', operation: 'rebind', expected_run_generation: 'desktop-owner-guard-generation', armed_at: new Date(now).toISOString() },
+    // Reproduce the production path: the Desktop provider refusal happens
+    // while the old A binding is still BOUND.  The refusal must migrate that
+    // binding into the fenced native-receipt wait; starting already parked
+    // would miss the regression.
+    binding: { ...before.binding, status: 'BOUND', operation: undefined, expected_run_generation: undefined, armed_at: undefined },
     recovery_condition: { kind: 'native_rebind', message: 'Binding expired.', resume_when: 'A native receipt.' },
     recovery_parent: { stop_attempt_id: 'stop-desktop-owner-guard', turn_id: 'turn-desktop-owner-guard' },
+    pending_action: { plan_id: null, route_id: null, source_stop_attempt_id: 'stop-desktop-owner-guard', source_turn_id: 'turn-desktop-owner-guard', delivery_id: 'delivery-desktop-owner-guard', task_version: before.task_version, message: 'Rebind the original Desktop A.', stage: 'sent', target_turn_id: null },
     recovery_window: { started_at: new Date(now).toISOString(), deadline_at: new Date(now + 30_000).toISOString() },
-    recovery_prompt: { plugin_root: f.plugin, kind: 'native_rebind', delivery_id: 'delivery-desktop-owner-guard', source_turn_id: 'turn-desktop-owner-guard', task_version: before.task_version, run_generation: 'desktop-owner-guard-generation', message: 'Rebind the original Desktop A.', due_at: new Date(now).toISOString() },
+    recovery_prompt: { plugin_root: f.plugin, kind: undefined, plan_id: null, route_id: null, source_stop_attempt_id: 'stop-desktop-owner-guard', source_turn_id: 'turn-desktop-owner-guard', delivery_id: 'delivery-desktop-owner-guard', task_version: before.task_version, run_generation: 'desktop-owner-guard-generation', message: 'Rebind the original Desktop A.', due_at: new Date(now).toISOString() },
   } as unknown as MainSessionState;
   writeFileSync(f.state, `${JSON.stringify(pending)}\n`);
   await deliverMainSessionRecoveryPrompt(f.state);
