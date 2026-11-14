@@ -123,11 +123,11 @@ test('desktop shared transport probes and preserves the original thread identity
   const calls: { method: string; params: any }[] = [];
   const transport: DesktopRpcTransport = {
     metadata: { provider_kind: 'shared-server', evidence_level: 'live', identity, protocol_version: 'codex-cli 0.167.0', endpoint_fingerprint: 'endpoint-1' },
-    async request(method, params) {
+    async request<T>(method: string, params: unknown): Promise<T> {
       calls.push({ method, params });
-      if (method === 'provider/probe') return { available: true, same_thread_verified: true, identity, capabilities: ALL_PROVIDER_CAPABILITIES };
-      if (method === 'thread/read') return { identity, thread: { id: identity.target_thread_id, session_id: identity.target_session_id, status: { type: 'idle' }, turns: [] } };
-      return { identity, outcome: 'not_found', readable: true, turns: [] };
+      if (method === 'provider/probe') return { available: true, same_thread_verified: true, identity, capabilities: ALL_PROVIDER_CAPABILITIES } as T;
+      if (method === 'thread/read') return { identity, thread: { id: identity.target_thread_id, session_id: identity.target_session_id, status: { type: 'idle' }, turns: [] } } as T;
+      return { identity, outcome: 'not_found', readable: true, turns: [] } as T;
     },
   };
   const provider = new DesktopMainSessionProvider({ identity, transport });
@@ -145,13 +145,13 @@ test('desktop provider maps active writer, fences unknown delivery, and never se
   let sendCalls = 0;
   const transport: DesktopRpcTransport = {
     metadata: { provider_kind: 'daemon', evidence_level: 'live', identity },
-    async request(method) {
-      if (method === 'provider/probe') return { available: true, same_thread_verified: true, identity, capabilities: ALL_PROVIDER_CAPABILITIES };
+    async request<T>(method: string, _params: unknown): Promise<T> {
+      if (method === 'provider/probe') return { available: true, same_thread_verified: true, identity, capabilities: ALL_PROVIDER_CAPABILITIES } as T;
       if (method === 'thread/resume') throw new Error('active writer is in progress');
-      if (method === 'thread/writer') return { identity, status: 'active-writer', owner_session_id: identity.target_session_id, turn_id: 'turn-A' };
-      if (method === 'thread/send') { sendCalls += 1; return { identity, outcome: 'unknown' }; }
-      if (method === 'thread/reconcile') return { identity, outcome: 'unknown', matched_by: 'none', reason: 'history is inconclusive' };
-      return { identity, thread: { id: identity.target_thread_id, session_id: identity.target_session_id, status: 'inProgress', turns: [] } };
+      if (method === 'thread/writer') return { identity, status: 'active-writer', owner_session_id: identity.target_session_id, turn_id: 'turn-A' } as T;
+      if (method === 'thread/send') { sendCalls += 1; return { identity, outcome: 'unknown' } as T; }
+      if (method === 'thread/reconcile') return { identity, outcome: 'unknown', matched_by: 'none', reason: 'history is inconclusive' } as T;
+      return { identity, thread: { id: identity.target_thread_id, session_id: identity.target_session_id, status: 'inProgress', turns: [] } } as T;
     },
   };
   const provider = new DesktopMainSessionProvider({ identity, transport });

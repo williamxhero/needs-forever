@@ -502,7 +502,20 @@ function identityFrom(value: unknown): Partial<ProviderIdentity> | null {
   const raw = asObject(value);
   if (!raw) return null;
   const nested = asObject(raw.identity) ?? raw;
-  return { target_thread_id: typeof nested.target_thread_id === 'string' ? nested.target_thread_id : typeof nested.thread_id === 'string' ? nested.thread_id : typeof nested.threadId === 'string' ? nested.threadId : undefined, target_session_id: typeof nested.target_session_id === 'string' ? nested.target_session_id : typeof nested.session_id === 'string' ? nested.session_id : typeof nested.sessionId === 'string' ? nested.sessionId : undefined, main_session_id: typeof nested.main_session_id === 'string' ? nested.main_session_id : undefined, workspace: typeof nested.workspace === 'string' ? nested.workspace : typeof nested.cwd === 'string' ? nested.cwd : undefined, host_instance_id: typeof nested.host_instance_id === 'string' ? nested.host_instance_id : undefined, host_fingerprint: typeof nested.host_fingerprint === 'string' ? nested.host_fingerprint : undefined, task_version: typeof nested.task_version === 'number' ? nested.task_version : undefined, run_generation: typeof nested.run_generation === 'string' ? nested.run_generation : undefined, contract_sha256: typeof nested.contract_sha256 === 'string' ? nested.contract_sha256 : null };
+  const result: Partial<ProviderIdentity> = {};
+  const thread = typeof nested.target_thread_id === 'string' ? nested.target_thread_id : typeof nested.thread_id === 'string' ? nested.thread_id : typeof nested.threadId === 'string' ? nested.threadId : null;
+  const session = typeof nested.target_session_id === 'string' ? nested.target_session_id : typeof nested.session_id === 'string' ? nested.session_id : typeof nested.sessionId === 'string' ? nested.sessionId : null;
+  const workspace = typeof nested.workspace === 'string' ? nested.workspace : typeof nested.cwd === 'string' ? nested.cwd : null;
+  if (thread) result.target_thread_id = thread;
+  if (session) result.target_session_id = session;
+  if (typeof nested.main_session_id === 'string') result.main_session_id = nested.main_session_id;
+  if (workspace) result.workspace = workspace;
+  if (typeof nested.host_instance_id === 'string') result.host_instance_id = nested.host_instance_id;
+  if (typeof nested.host_fingerprint === 'string') result.host_fingerprint = nested.host_fingerprint;
+  if (typeof nested.task_version === 'number') result.task_version = nested.task_version;
+  if (typeof nested.run_generation === 'string') result.run_generation = nested.run_generation;
+  if (typeof nested.contract_sha256 === 'string') result.contract_sha256 = nested.contract_sha256;
+  return result;
 }
 
 function fenceFor(identity: ProviderIdentity): Record<string, unknown> {
@@ -576,7 +589,7 @@ export class DesktopMainSessionProvider implements MainSessionProvider {
 
   private available(identity: ProviderIdentity): void { if (!this._receipt.available || !this._receipt.same_thread_verified) throw new ProviderIdentityError(this._receipt.limitation_reason ?? 'Desktop provider is unavailable or same-thread identity is unverified.'); }
   private snapshot(value: unknown, identity: ProviderIdentity): ProviderThreadSnapshot {
-    this.verifyReturnedIdentity(value, identity); const raw = asObject(value) ?? {}; const thread = asObject(raw.thread) ?? raw; const threadId = typeof thread.thread_id === 'string' ? thread.thread_id : typeof thread.id === 'string' ? thread.id : identity.target_thread_id; const sessionId = typeof thread.session_id === 'string' ? thread.session_id : identity.target_session_id; if (threadId !== identity.target_thread_id || sessionId !== identity.target_session_id) throw new ProviderIdentityError('Desktop provider returned a different thread or session.'); const turns = Array.isArray(thread.turns) ? thread.turns.map(turnOf) : []; const writer = writerOf(thread.writer ?? raw.writer ?? thread.status); return { thread_id: threadId, session_id: sessionId, workspace: typeof thread.workspace === 'string' ? thread.workspace : identity.workspace, status: statusOf(thread.status?.type ?? thread.status), writer, turns, latest_activity_at: typeof thread.latest_activity_at === 'string' ? thread.latest_activity_at : turns.at(-1)?.completed_at ?? turns.at(-1)?.started_at ?? null, observed_at: now() };
+    this.verifyReturnedIdentity(value, identity); const raw = asObject(value) ?? {}; const thread = asObject(raw.thread) ?? raw; const threadId = typeof thread.thread_id === 'string' ? thread.thread_id : typeof thread.id === 'string' ? thread.id : identity.target_thread_id; const sessionId = typeof thread.session_id === 'string' ? thread.session_id : identity.target_session_id; if (threadId !== identity.target_thread_id || sessionId !== identity.target_session_id) throw new ProviderIdentityError('Desktop provider returned a different thread or session.'); const turns = Array.isArray(thread.turns) ? thread.turns.map(turnOf) : []; const writer = writerOf(thread.writer ?? raw.writer ?? thread.status); const threadStatus = asObject(thread.status)?.type ?? thread.status; return { thread_id: threadId, session_id: sessionId, workspace: typeof thread.workspace === 'string' ? thread.workspace : identity.workspace, status: statusOf(threadStatus), writer, turns, latest_activity_at: typeof thread.latest_activity_at === 'string' ? thread.latest_activity_at : turns.at(-1)?.completed_at ?? turns.at(-1)?.started_at ?? null, observed_at: now() };
   }
 
   async readThread(request: ProviderRequest): Promise<ProviderThreadSnapshot> {

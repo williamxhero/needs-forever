@@ -94,12 +94,13 @@ export async function controllerStatus(path: string): Promise<Record<string, unk
  * cannot silently restore an older generation. */
 export async function recoverBoundMainSession(path: string, provider: MainSessionProvider, identity: ProviderIdentity, reason?: string): Promise<unknown> {
   const state = readJson(path) as MainSessionState;
-  const result = await recoverMainSessionWithProvider(state, provider, {
+  const options = {
     identity,
-    reason,
     statePath: path,
     currentState: () => readJson(path) as MainSessionState,
-  });
+    ...(reason === undefined ? {} : { reason }),
+  };
+  const result = await recoverMainSessionWithProvider(state, provider, options);
   return result;
 }
 
