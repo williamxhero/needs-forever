@@ -31,6 +31,7 @@ function completeIdentity(value) {
 function identityMatches(expected, actual) {
     return expected.target_thread_id === actual.target_thread_id
         && expected.target_session_id === actual.target_session_id
+        && (expected.main_session_id ?? expected.target_thread_id) === (actual.main_session_id ?? actual.target_thread_id)
         && expected.workspace === actual.workspace
         && expected.host_instance_id === actual.host_instance_id
         && expected.host_fingerprint === actual.host_fingerprint
@@ -56,6 +57,9 @@ function unavailableReceipt(target, reason) {
         protocol_version: null,
         provider_version: null,
         endpoint_fingerprint: null,
+        task_version: typeof target?.task_version === 'number' && Number.isInteger(target.task_version) ? target.task_version : null,
+        run_generation: nonEmpty(target?.run_generation) ? target.run_generation : null,
+        contract_sha256: nonEmpty(target?.contract_sha256) ? target.contract_sha256 : null,
         limitation_reason: reason,
         observed_at: now(),
     };
@@ -79,6 +83,9 @@ export function createCapabilityReceipt(input) {
         protocol_version: input.protocol_version ?? null,
         provider_version: input.provider_version ?? null,
         endpoint_fingerprint: input.endpoint_fingerprint ?? null,
+        task_version: input.task_version ?? null,
+        run_generation: input.run_generation ?? null,
+        contract_sha256: input.contract_sha256 ?? null,
         limitation_reason: input.limitation_reason ?? null,
         observed_at: input.observed_at ?? now(),
     };
@@ -100,9 +107,11 @@ export function validateCapabilityReceipt(value) {
     for (const key of Object.keys(ALL_PROVIDER_CAPABILITIES))
         if (typeof receipt.capabilities[key] !== 'boolean')
             throw new Error(`Capability receipt capability ${key} is invalid.`);
-    for (const key of ['target_thread_id', 'target_session_id', 'main_session_id', 'workspace', 'host_instance_id', 'host_fingerprint', 'protocol_version', 'provider_version', 'endpoint_fingerprint', 'limitation_reason'])
+    for (const key of ['target_thread_id', 'target_session_id', 'main_session_id', 'workspace', 'host_instance_id', 'host_fingerprint', 'protocol_version', 'provider_version', 'endpoint_fingerprint', 'run_generation', 'contract_sha256', 'limitation_reason'])
         if (receipt[key] !== null && receipt[key] !== undefined && typeof receipt[key] !== 'string')
             throw new Error(`Capability receipt ${key} must be a string or null.`);
+    if (receipt.task_version !== null && receipt.task_version !== undefined && (typeof receipt.task_version !== 'number' || !Number.isInteger(receipt.task_version) || receipt.task_version <= 0))
+        throw new Error('Capability receipt task_version is invalid.');
     if (!nonEmpty(receipt.observed_at) || !Number.isFinite(Date.parse(receipt.observed_at)))
         throw new Error('Capability receipt observed_at must be an ISO timestamp.');
     return clone(receipt);
@@ -176,7 +185,7 @@ export function validateProviderState(value) {
     return clone(state);
 }
 function providerEventFrom(receipt, type, payload, deliveryId = null, turnId = null) {
-    return createProviderEvent({ type, provider_kind: receipt.provider_kind, evidence_level: receipt.evidence_level, target_thread_id: receipt.target_thread_id, target_session_id: receipt.target_session_id, workspace: receipt.workspace, host_fingerprint: receipt.host_fingerprint, task_version: null, run_generation: null, delivery_id: deliveryId, turn_id: turnId, payload });
+    return createProviderEvent({ type, provider_kind: receipt.provider_kind, evidence_level: receipt.evidence_level, target_thread_id: receipt.target_thread_id, target_session_id: receipt.target_session_id, workspace: receipt.workspace, host_fingerprint: receipt.host_fingerprint, task_version: receipt.task_version, run_generation: receipt.run_generation, delivery_id: deliveryId, turn_id: turnId, payload });
 }
 export class SimulatedMainSessionProvider {
     kind = 'simulated';
@@ -200,7 +209,7 @@ export class SimulatedMainSessionProvider {
             this.deliveries.set(delivery.delivery_id, clone(delivery));
         this.sendOutcomes = [...(scenario.send_outcomes ?? [])];
         this._receipt = this.identity
-            ? createCapabilityReceipt({ provider_kind: 'simulated', evidence_level: 'simulated', available: true, attached: true, same_thread_verified: true, capabilities: ALL_PROVIDER_CAPABILITIES, target_thread_id: this.identity.target_thread_id, target_session_id: this.identity.target_session_id, main_session_id: this.identity.main_session_id ?? this.identity.target_thread_id, workspace: this.identity.workspace, host_instance_id: this.identity.host_instance_id, host_fingerprint: this.identity.host_fingerprint, protocol_version: scenario.protocol_version ?? 'simulated-provider/1', provider_version: scenario.provider_version ?? 'simulated', endpoint_fingerprint: scenario.endpoint_fingerprint ?? 'simulated-endpoint' })
+            ? createCapabilityReceipt({ provider_kind: 'simulated', evidence_level: 'simulated', available: true, attached: true, same_thread_verified: true, capabilities: ALL_PROVIDER_CAPABILITIES, target_thread_id: this.identity.target_thread_id, target_session_id: this.identity.target_session_id, main_session_id: this.identity.main_session_id ?? this.identity.target_thread_id, workspace: this.identity.workspace, host_instance_id: this.identity.host_instance_id, host_fingerprint: this.identity.host_fingerprint, task_version: this.identity.task_version, run_generation: this.identity.run_generation, contract_sha256: this.identity.contract_sha256 ?? null, protocol_version: scenario.protocol_version ?? 'simulated-provider/1', provider_version: scenario.provider_version ?? 'simulated', endpoint_fingerprint: scenario.endpoint_fingerprint ?? 'simulated-endpoint' })
             : unavailableReceipt(scenario.identity, 'Trusted provider identity is unavailable; target thread/session and host fingerprint are required.');
     }
     get receipt() { return clone(this._receipt); }
@@ -300,6 +309,8 @@ export class SimulatedMainSessionProvider {
     async readHistory(request) {
         this.ensureOpen();
         const identity = this.target(request);
+        if (!this._receipt.available)
+            return { thread_id: identity.target_thread_id, session_id: identity.target_session_id, turns: [], has_more: false, cursor: null, readable: false, limitation_reason: this._receipt.limitation_reason ?? 'Provider unavailable.', observed_at: now() };
         if (this.scenario.history_readable === false)
             return { thread_id: identity.target_thread_id, session_id: identity.target_session_id, turns: [], has_more: false, cursor: null, readable: false, limitation_reason: 'Original thread history is unreadable.', observed_at: now() };
         return { thread_id: identity.target_thread_id, session_id: identity.target_session_id, turns: clone(this.turns), has_more: false, cursor: null, readable: true, limitation_reason: null, observed_at: now() };
@@ -318,6 +329,8 @@ export class SimulatedMainSessionProvider {
             result = { delivery_id: request.delivery_id, outcome: 'sent', matched_by: 'delivery_id', target_turn_id: delivery.target_turn_id, reason: 'A matching user message exists, but A activity is not confirmed.', observed_at: at };
         else if (delivery?.status === 'active-writer')
             result = { delivery_id: request.delivery_id, outcome: 'active_writer', matched_by: 'none', target_turn_id: delivery.target_turn_id, reason: 'The original A owns an active writer.', observed_at: at };
+        else if (delivery?.status === 'unavailable')
+            result = { delivery_id: request.delivery_id, outcome: 'unavailable', matched_by: 'none', target_turn_id: delivery.target_turn_id, reason: 'The provider could not confirm delivery.', observed_at: at };
         else if (delivery?.status === 'unknown')
             result = { delivery_id: request.delivery_id, outcome: 'unknown', matched_by: 'none', target_turn_id: null, reason: 'No matching history or A activity confirmation exists yet.', observed_at: at };
         else {
