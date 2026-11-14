@@ -10,6 +10,7 @@ import { createRecoveryPlan, waitForNativeReceipt, resetRecoveryWindow } from '.
 import { cancelSupervisionRound } from './supervision-round.js';
 import { assertTrackingContract, createTracking, loadTracking, locatorForSelection, trackingLocator, updateTracking, type TrackingLocator, type TrackingSelection } from './tracking-integration.js';
 import type { TrackingUpdate, TrackingRecord } from './local-tracking.js';
+import type { MainSessionProviderState } from './main-session-provider.js';
 
 export interface MainSessionState extends State {
   control_mode: 'main-session';
@@ -77,6 +78,9 @@ export interface MainSessionState extends State {
   recovery_history?: unknown[];
   controller_startup_deadline?: string;
   tracking?: TrackingLocator;
+  /** Persisted provider projection. It is optional for old checkpoints and
+   * remains absent until a provider capability receipt is accepted. */
+  provider?: MainSessionProviderState;
 }
 export interface StopRequest {
   schema_version: 1;
