@@ -2,18 +2,18 @@
   "schema_version": 1,
   "package_name": "needs-forever",
   "package_version": "0.3.4",
-  "source_revision": "content-f433b14d6127545db0eb7c4a6788eb037cf84c495eff97280642bb8d318b1bd6",
+  "source_revision": "content-3fbb361c42c7bd7489d966e2f64fcd7631883ef87d774d28e28a195730c79e68",
   "generator_version": "runtime-packaging-pipeline@1",
-  "manifest_sha256": "098e6586754338a30c48c92489235ff22f0647daaca0560e5f3380bffcbd9a23",
-  "integrity_sha256": "33749099ae565e8d10862baba37ddfbcfc02bc2da149c489ad179fdd94272318",
+  "manifest_sha256": "5ec711987c74c246008f24d6657b0b9af4c4f8bc8449929f9b3d0b491faa7ca6",
+  "integrity_sha256": "33e33e2f2d40c6a72ac282d007d0b56b79a58e56fe0d3bd32920d5215bab8a4d",
   "source": {
     "status": "built",
-    "manifest_sha256": "098e6586754338a30c48c92489235ff22f0647daaca0560e5f3380bffcbd9a23"
+    "manifest_sha256": "5ec711987c74c246008f24d6657b0b9af4c4f8bc8449929f9b3d0b491faa7ca6"
   },
   "bundled": {
     "status": "verified",
-    "manifest_sha256": "098e6586754338a30c48c92489235ff22f0647daaca0560e5f3380bffcbd9a23",
-    "integrity_sha256": "33749099ae565e8d10862baba37ddfbcfc02bc2da149c489ad179fdd94272318"
+    "manifest_sha256": "5ec711987c74c246008f24d6657b0b9af4c4f8bc8449929f9b3d0b491faa7ca6",
+    "integrity_sha256": "33e33e2f2d40c6a72ac282d007d0b56b79a58e56fe0d3bd32920d5215bab8a4d"
   },
   "installed": {
     "status": "not_run"

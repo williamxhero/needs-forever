@@ -328,6 +328,14 @@ test('installed runtime verification rejects metadata drift, path escape, and en
 
   withFixture((root) => {
     const fixture = installedFixture(root);
+    writeFileSync(join(fixture.installedPluginRoot, '.codex-plugin', 'plugin.json'), JSON.stringify({ name: 'needs-forever', version: '0.3.4', description: 'drift' }) + '\n');
+    const metadata = verifyInstalledRuntime(fixture);
+    assert.equal(metadata.ok, false);
+    assert.ok(issueCodes(metadata).includes('PARITY_FAILED'));
+  });
+
+  withFixture((root) => {
+    const fixture = installedFixture(root);
     const manifestPath = join(fixture.bundledPluginRoot, 'runtime', 'manifest.json');
     const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as { artifacts: Array<{ path: string }> };
     manifest.artifacts[0]!.path = '../outside.js';

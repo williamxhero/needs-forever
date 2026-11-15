@@ -669,13 +669,28 @@ function readPackagingMetadata(input: RuntimeInstalledVerificationInput, bundled
   for (const field of ['package_name', 'package_version', 'source_revision', 'generator_version'] as const) assertVerificationString(manifest[field], `manifest.${field}`, manifestPath);
   if (manifest.artifacts.some((entry) => !entry || typeof entry !== 'object')) throw new RuntimePackagingError('INTEGRITY_FAILED', 'Runtime manifest contains an invalid artifact entry.', manifestPath);
   const artifactFiles = new Map<string, RuntimeArtifactManifestEntry>();
+  const artifactIdentities = new Map<string, string>();
   for (const rawEntry of manifest.artifacts) {
     const entry = rawEntry as Partial<RuntimeArtifactManifestEntry>;
     const artifactPath = validateVerificationRelativePath(entry.path, 'manifest.artifacts[].path', manifestPath);
     if (!Number.isInteger(entry.byte_length) || (entry.byte_length as number) < 0) throw new RuntimePackagingError('INTEGRITY_FAILED', `Invalid byte length for ${artifactPath}.`, manifestPath);
     assertVerificationHash(entry.content_sha256, `manifest.artifacts[${artifactPath}].content_sha256`, manifestPath);
     if (artifactFiles.has(artifactPath)) throw new RuntimePackagingError('INTEGRITY_FAILED', `Duplicate manifest artifact: ${artifactPath}.`, manifestPath);
+    const identityKey = artifactPath.normalize('NFKC').toLowerCase();
+    if (artifactIdentities.has(identityKey)) throw new RuntimePackagingError('INTEGRITY_FAILED', `Manifest artifacts collide on Windows path identity: ${artifactIdentities.get(identityKey)} and ${artifactPath}.`, manifestPath);
+    artifactIdentities.set(identityKey, artifactPath);
     artifactFiles.set(artifactPath, { path: artifactPath, byte_length: entry.byte_length as number, content_sha256: entry.content_sha256 });
+  }
+  const excludedIdentities = new Set<string>();
+  for (const rawExcluded of manifest.excluded) {
+    if (!rawExcluded || typeof rawExcluded !== 'object') throw new RuntimePackagingError('INTEGRITY_FAILED', 'Runtime manifest contains an invalid exclusion entry.', manifestPath);
+    const excluded = rawExcluded as Partial<RuntimeArtifactExclusion>;
+    const excludedPath = validateVerificationRelativePath(excluded.path, 'manifest.excluded[].path', manifestPath);
+    if (excluded.reason !== 'type-only' && excluded.reason !== 'source-map' && excluded.reason !== 'symlink') throw new RuntimePackagingError('INTEGRITY_FAILED', `Invalid exclusion reason for ${excludedPath}.`, manifestPath);
+    const identityKey = excludedPath.normalize('NFKC').toLowerCase();
+    if (excludedIdentities.has(identityKey)) throw new RuntimePackagingError('INTEGRITY_FAILED', `Duplicate manifest exclusion: ${excludedPath}.`, manifestPath);
+    if (artifactIdentities.has(identityKey)) throw new RuntimePackagingError('INTEGRITY_FAILED', `Manifest path is both included and excluded: ${excludedPath}.`, manifestPath);
+    excludedIdentities.add(identityKey);
   }
   if (integrity.schema_version !== 1 || !integrity.files || typeof integrity.files !== 'object' || Array.isArray(integrity.files)) throw new RuntimePackagingError('INTEGRITY_FAILED', 'Runtime integrity has an invalid shape.', integrityPath);
   for (const field of ['generated_by', 'package_name', 'package_version', 'source_revision', 'manifest_sha256'] as const) assertVerificationString(integrity[field], `integrity.${field}`, integrityPath);
@@ -802,7 +817,7 @@ function verifyRuntimeTree(root: string, metadata: ParsedPackagingMetadata, labe
   return { artifactCount: metadata.artifactFiles.size, errors };
 }
 
-function verifyPluginMetadata(root: string, metadata: ParsedPackagingMetadata, label: string): { status: 'verified' | 'failed'; name: string | null; version: string | null; errors: RuntimeVerificationIssue[] } {
+function verifyPluginMetadata(root: string, metadata: ParsedPackagingMetadata, label: string): { status: 'verified' | 'failed'; name: string | null; version: string | null; pluginBytes?: Buffer; packageBytes?: Buffer; errors: RuntimeVerificationIssue[] } {
   const errors: RuntimeVerificationIssue[] = [];
   let name: string | null = null;
   let version: string | null = null;
@@ -813,10 +828,11 @@ function verifyPluginMetadata(root: string, metadata: ParsedPackagingMetadata, l
     version = typeof plugin.value.version === 'string' ? plugin.value.version : null;
     if (plugin.value.name !== metadata.receipt.package_name) errors.push(verificationIssue('VERSION_MISMATCH', `${label} plugin name does not match the packaging receipt.`, join(root, '.codex-plugin', 'plugin.json')));
     if (plugin.value.version !== metadata.receipt.package_version || packageJson.value.version !== metadata.receipt.package_version) errors.push(verificationIssue('VERSION_MISMATCH', `${label} plugin version does not match the packaging receipt.`, join(root, '.codex-plugin', 'plugin.json')));
+    return { status: errors.length === 0 ? 'verified' : 'failed', name, version, pluginBytes: plugin.bytes, packageBytes: packageJson.bytes, errors };
   } catch (error) {
     errors.push(asVerificationError(error));
   }
-  return { status: errors.length === 0 ? 'verified' : 'failed', name, version, errors };
+  return { status: 'failed', name, version, errors };
 }
 
 /** Verify an installed plugin against the exact runtime packaging receipt that produced it. */
@@ -862,6 +878,8 @@ export function verifyInstalledRuntime(input: RuntimeInstalledVerificationInput)
     const bundledMetadata = verifyPluginMetadata(bundledPluginRoot, metadata, 'bundled');
     const installedMetadata = verifyPluginMetadata(installedPluginRoot, metadata, 'installed');
     errors.push(...bundledMetadata.errors, ...installedMetadata.errors);
+    if (bundledMetadata.pluginBytes && installedMetadata.pluginBytes && !bundledMetadata.pluginBytes.equals(installedMetadata.pluginBytes)) errors.push(verificationIssue('PARITY_FAILED', 'Installed plugin metadata differs from the bundled plugin metadata.', join(installedPluginRoot, '.codex-plugin', 'plugin.json')));
+    if (bundledMetadata.packageBytes && installedMetadata.packageBytes && !bundledMetadata.packageBytes.equals(installedMetadata.packageBytes)) errors.push(verificationIssue('PARITY_FAILED', 'Installed package metadata differs from the bundled package metadata.', join(installedPluginRoot, 'package.json')));
     pluginMetadataStatus = bundledMetadata.errors.length === 0 && installedMetadata.errors.length === 0 ? 'verified' : 'failed';
     pluginName = installedMetadata.name ?? bundledMetadata.name;
     pluginVersion = installedMetadata.version ?? bundledMetadata.version;
