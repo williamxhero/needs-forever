@@ -1,13 +1,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdtempSync, mkdirSync, readFileSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import {
   createPackagingReceiptInput,
   inspectRuntimeArtifacts,
   runRuntimePackaging,
+  verifyInstalledRuntime,
   verifyRuntimeParity,
   RuntimePackagingError,
 } from '../src/runtime-packaging.js';
@@ -33,6 +34,30 @@ function identity() {
 function errorCode(error: unknown): string {
   assert.ok(error instanceof RuntimePackagingError);
   return error.code;
+}
+
+function installedFixture(root: string) {
+  const source = join(root, 'source');
+  const bundledPluginRoot = join(root, 'bundled-plugin');
+  const installedPluginRoot = join(root, 'installed-plugin');
+  const runtimeRoot = join(bundledPluginRoot, 'runtime');
+  mkdirSync(source, { recursive: true });
+  mkdirSync(join(bundledPluginRoot, '.codex-plugin'), { recursive: true });
+  writeFileSync(join(source, 'entry.js'), 'export default "ok";\n');
+  writeFileSync(join(bundledPluginRoot, '.codex-plugin', 'plugin.json'), JSON.stringify({ name: 'needs-forever', version: '0.3.4' }) + '\n');
+  writeFileSync(join(bundledPluginRoot, 'package.json'), JSON.stringify({ name: 'needs-forever-plugin', version: '0.3.4' }) + '\n');
+  runRuntimePackaging({
+    sourceRoot: source,
+    runtimeRoot,
+    runtimeTarget: join(runtimeRoot, 'src'),
+    identity: { packageName: 'needs-forever', packageVersion: '0.3.4', sourceRevision: 'revision-96', generatorVersion: 'runtime-packaging-pipeline@1' },
+  });
+  cpSync(bundledPluginRoot, installedPluginRoot, { recursive: true });
+  return { bundledPluginRoot, installedPluginRoot, runtimeRoot };
+}
+
+function issueCodes(receipt: ReturnType<typeof verifyInstalledRuntime>): string[] {
+  return receipt.errors.map((issue) => issue.code);
 }
 
 test('runtime packaging contract produces deterministic normalized manifest and receipt input', () => {
@@ -241,3 +266,117 @@ test('runtime packaging parity interface rejects an extra bundled module', () =>
     assert.throws(() => verifyRuntimeParity(sourcePlan, bundled), (error: unknown) => errorCode(error) === 'PARITY_FAILED');
   });
 });
+
+test('installed runtime verification consumes one packaging receipt and emits a readback receipt', () => {
+  withFixture((root) => {
+    const fixture = installedFixture(root);
+    const receipt = verifyInstalledRuntime({
+      bundledPluginRoot: fixture.bundledPluginRoot,
+      installedPluginRoot: fixture.installedPluginRoot,
+      now: () => new Date('2026-11-15T08:00:00.000Z'),
+    });
+    assert.equal(receipt.ok, true);
+    assert.equal(receipt.verification_status, 'passed');
+    assert.equal(receipt.source.status, 'built');
+    assert.equal(receipt.bundled.status, 'verified');
+    assert.equal(receipt.installed.status, 'verified');
+    assert.equal(receipt.plugin_metadata.status, 'verified');
+    assert.equal(receipt.installed.file_count, 1);
+    assert.equal(receipt.native_effectiveness, 'not_run');
+    assert.equal(receipt.verified_at, '2026-11-15T08:00:00.000Z');
+    const readback = JSON.parse(JSON.stringify(receipt));
+    assert.deepEqual(readback, receipt);
+  });
+});
+
+test('installed runtime verification fails closed for missing, extra, and hash-drifted files', () => {
+  withFixture((root) => {
+    const fixture = installedFixture(root);
+    unlinkFile(join(fixture.installedPluginRoot, 'runtime', 'src', 'entry.js'));
+    const missing = verifyInstalledRuntime(fixture);
+    assert.equal(missing.ok, false);
+    assert.ok(issueCodes(missing).includes('MISSING_FILE'));
+  });
+
+  withFixture((root) => {
+    const fixture = installedFixture(root);
+    writeFileSync(join(fixture.installedPluginRoot, 'runtime', 'src', 'extra.js'), 'export default "extra";\n');
+    const extra = verifyInstalledRuntime(fixture);
+    assert.equal(extra.ok, false);
+    assert.ok(issueCodes(extra).includes('EXTRA_FILE'));
+  });
+
+  withFixture((root) => {
+    const fixture = installedFixture(root);
+    writeFileSync(join(fixture.installedPluginRoot, 'runtime', 'src', 'entry.js'), 'export default "drift";\n');
+    const drift = verifyInstalledRuntime(fixture);
+    assert.equal(drift.ok, false);
+    assert.ok(issueCodes(drift).includes('HASH_MISMATCH'));
+  });
+});
+
+test('installed runtime verification rejects metadata drift, path escape, and encoding drift', () => {
+  withFixture((root) => {
+    const fixture = installedFixture(root);
+    const plugin = JSON.parse(readFileSync(join(fixture.installedPluginRoot, '.codex-plugin', 'plugin.json'), 'utf8')) as { version: string };
+    plugin.version = '9.9.9';
+    writeFileSync(join(fixture.installedPluginRoot, '.codex-plugin', 'plugin.json'), JSON.stringify(plugin) + '\n');
+    const version = verifyInstalledRuntime(fixture);
+    assert.equal(version.ok, false);
+    assert.ok(issueCodes(version).includes('VERSION_MISMATCH'));
+  });
+
+  withFixture((root) => {
+    const fixture = installedFixture(root);
+    writeFileSync(join(fixture.installedPluginRoot, '.codex-plugin', 'plugin.json'), JSON.stringify({ name: 'needs-forever', version: '0.3.4', description: 'drift' }) + '\n');
+    const metadata = verifyInstalledRuntime(fixture);
+    assert.equal(metadata.ok, false);
+    assert.ok(issueCodes(metadata).includes('PARITY_FAILED'));
+  });
+
+  withFixture((root) => {
+    const fixture = installedFixture(root);
+    const manifestPath = join(fixture.bundledPluginRoot, 'runtime', 'manifest.json');
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as { artifacts: Array<{ path: string }> };
+    manifest.artifacts[0]!.path = '../outside.js';
+    writeFileSync(manifestPath, JSON.stringify(manifest));
+    const pathDrift = verifyInstalledRuntime(fixture);
+    assert.equal(pathDrift.ok, false);
+    assert.ok(issueCodes(pathDrift).includes('INTEGRITY_FAILED'));
+  });
+
+  withFixture((root) => {
+    const fixture = installedFixture(root);
+    writeFileSync(join(fixture.installedPluginRoot, 'runtime', 'src', 'entry.js'), '\uFEFFexport default "ok";\r\n');
+    const encoding = verifyInstalledRuntime(fixture);
+    assert.equal(encoding.ok, false);
+    assert.ok(issueCodes(encoding).some((code) => code === 'INTEGRITY_FAILED' || code === 'HASH_MISMATCH'));
+  });
+});
+
+test('installed runtime verification rejects unreadable or symbolic-link runtime input', (t) => {
+  withFixture((root) => {
+    const fixture = installedFixture(root);
+    unlinkFile(join(fixture.bundledPluginRoot, 'runtime', 'packaging-receipt.json'));
+    const unreadable = verifyInstalledRuntime(fixture);
+    assert.equal(unreadable.ok, false);
+    assert.ok(issueCodes(unreadable).includes('READ_FAILED'));
+  });
+
+  withFixture((root) => {
+    const fixture = installedFixture(root);
+    try {
+      symlinkSync(join(fixture.installedPluginRoot, 'runtime', 'src', 'entry.js'), join(fixture.installedPluginRoot, 'runtime', 'src', 'linked.js'), 'file');
+    } catch (error) {
+      t.skip(`symlinks unavailable: ${error instanceof Error ? error.message : String(error)}`);
+      return;
+    }
+    const symlink = verifyInstalledRuntime(fixture);
+    assert.equal(symlink.ok, false);
+    assert.ok(issueCodes(symlink).includes('SYMLINK'));
+  });
+});
+
+function unlinkFile(path: string): void {
+  unlinkSync(path);
+}
