@@ -54,7 +54,7 @@ export interface ProviderIdentity {
   run_generation: string;
   /** Input epoch belongs to the same fence as task and run generation. Older
    * callers may omit it; when present it must match exactly. */
-  input_epoch?: number;
+  input_epoch?: number | null;
   contract_sha256?: string | null;
 }
 
@@ -338,7 +338,7 @@ function completeIdentity(value: Partial<ProviderIdentity> | null | undefined): 
     && Number.isInteger(value.task_version)
     && value.task_version > 0
     && nonEmpty(value.run_generation)
-    && (value.input_epoch === undefined || (typeof value.input_epoch === 'number' && Number.isInteger(value.input_epoch) && value.input_epoch >= 0));
+    && (value.input_epoch === undefined || value.input_epoch === null || (typeof value.input_epoch === 'number' && Number.isInteger(value.input_epoch) && value.input_epoch >= 0));
 }
 
 function identityMatches(expected: ProviderIdentity, actual: ProviderIdentity): boolean {
@@ -352,6 +352,41 @@ function identityMatches(expected: ProviderIdentity, actual: ProviderIdentity): 
     && expected.run_generation === actual.run_generation
     && (expected.input_epoch ?? null) === (actual.input_epoch ?? null)
     && (expected.contract_sha256 ?? null) === (actual.contract_sha256 ?? null);
+}
+
+function receiptIdentity(receipt: CapabilityReceipt): ProviderIdentity | null {
+  if (!nonEmpty(receipt.target_thread_id)
+    || !nonEmpty(receipt.target_session_id)
+    || !nonEmpty(receipt.workspace)
+    || !isAbsolute(receipt.workspace)
+    || !nonEmpty(receipt.host_instance_id)
+    || !nonEmpty(receipt.host_fingerprint)
+    || typeof receipt.task_version !== 'number'
+    || !Number.isInteger(receipt.task_version)
+    || receipt.task_version <= 0
+    || !nonEmpty(receipt.run_generation)) return null;
+  return {
+    target_thread_id: receipt.target_thread_id,
+    target_session_id: receipt.target_session_id,
+    main_session_id: receipt.main_session_id ?? receipt.target_thread_id,
+    workspace: receipt.workspace,
+    host_instance_id: receipt.host_instance_id,
+    host_fingerprint: receipt.host_fingerprint,
+    task_version: receipt.task_version,
+    run_generation: receipt.run_generation,
+    ...(receipt.input_epoch === null || receipt.input_epoch === undefined ? {} : { input_epoch: receipt.input_epoch }),
+    contract_sha256: receipt.contract_sha256 ?? null,
+  };
+}
+
+function attachedReceiptProblem(receipt: CapabilityReceipt, expected: ProviderIdentity | null): string | null {
+  if (!nonEmpty(receipt.protocol_version)) return 'Provider protocol identity is missing.';
+  if (!nonEmpty(receipt.provider_version) || receipt.provider_kind === 'unavailable') return 'Provider identity is missing.';
+  if (!nonEmpty(receipt.endpoint_fingerprint)) return 'Provider endpoint identity is missing.';
+  const observed = receiptIdentity(receipt);
+  if (!observed) return 'Provider thread, session, workspace, host or generation identity is incomplete.';
+  if (!expected || !identityMatches(expected, observed)) return 'Provider receipt identity does not match the registered original thread or generation.';
+  return null;
 }
 
 function unavailableReceipt(target: Partial<ProviderIdentity> | null | undefined, reason: string): CapabilityReceipt {
@@ -575,6 +610,14 @@ export interface ProviderSemanticsHistoryInput {
 export interface ProviderSemanticsActivityInput {
   target_thread_id: string;
   target_session_id: string;
+  main_session_id: string;
+  workspace: string;
+  host_instance_id: string;
+  host_fingerprint: string;
+  task_version: number;
+  run_generation: string;
+  input_epoch: number | null;
+  contract_sha256: string | null;
   turn_id?: string | null;
   delivery_id?: string | null;
   observed_at?: string;
@@ -648,20 +691,10 @@ export class ProviderSemanticsCore {
   /** Accept a new capability receipt while retaining the durable ledger. */
   acceptReceipt(receipt: CapabilityReceipt): CapabilityReceipt {
     const validated = validateCapabilityReceipt(receipt);
-    const next = { ...validated, input_epoch: validated.input_epoch ?? this._identity?.input_epoch ?? null };
-    if (this._identity && next.target_thread_id && next.target_session_id && next.workspace && next.host_instance_id && next.host_fingerprint && next.task_version && next.run_generation) {
-      this.assertTarget({
-        target_thread_id: next.target_thread_id,
-        target_session_id: next.target_session_id,
-        main_session_id: next.main_session_id ?? next.target_thread_id,
-        workspace: next.workspace,
-        host_instance_id: next.host_instance_id,
-        host_fingerprint: next.host_fingerprint,
-        task_version: next.task_version,
-        run_generation: next.run_generation,
-        ...(next.input_epoch === null || next.input_epoch === undefined ? {} : { input_epoch: next.input_epoch }),
-        contract_sha256: next.contract_sha256,
-      });
+    let next = { ...validated };
+    if (next.available || next.attached || next.same_thread_verified) {
+      const problem = attachedReceiptProblem(next, this._identity);
+      if (problem) next = { ...next, available: false, attached: false, same_thread_verified: false, limitation_reason: next.limitation_reason ?? problem };
     }
     this._receipt = next;
     this._state = {
@@ -734,6 +767,11 @@ export class ProviderSemanticsCore {
     this.requireAvailable(target);
     const at = now();
     const local = this.ledger.get(input.delivery_id);
+    if (input.history.thread_id !== target.target_thread_id || input.history.session_id !== target.target_session_id || !this._identity || input.history.thread_id !== this._identity.target_thread_id || input.history.session_id !== this._identity.target_session_id) {
+      const result = { delivery_id: input.delivery_id, outcome: 'unknown' as const, matched_by: 'none' as const, target_turn_id: null, reason: 'Original thread history identity does not match the registered provider identity.', observed_at: at };
+      this.recordReconciliation(result);
+      return result;
+    }
     if (!input.history.readable) {
       const result = { delivery_id: input.delivery_id, outcome: 'unknown' as const, matched_by: 'none' as const, target_turn_id: null, reason: input.history.limitation_reason ?? 'Original thread history is unreadable.', observed_at: at };
       this.recordReconciliation(result);
@@ -774,7 +812,33 @@ export class ProviderSemanticsCore {
   }
 
   recordActivity(input: ProviderSemanticsActivityInput): ProviderActivity | null {
-    if (this.closed || !this._identity || input.target_thread_id !== this._identity.target_thread_id || input.target_session_id !== this._identity.target_session_id) return null;
+    if (this.closed || !this._identity) return null;
+    if (!nonEmpty(input.target_thread_id)
+      || !nonEmpty(input.target_session_id)
+      || !nonEmpty(input.main_session_id)
+      || !nonEmpty(input.workspace)
+      || !isAbsolute(input.workspace)
+      || !nonEmpty(input.host_instance_id)
+      || !nonEmpty(input.host_fingerprint)
+      || typeof input.task_version !== 'number'
+      || !Number.isInteger(input.task_version)
+      || input.task_version <= 0
+      || !nonEmpty(input.run_generation)
+      || (input.input_epoch !== null && (!Number.isInteger(input.input_epoch) || input.input_epoch < 0))
+      || (input.contract_sha256 !== null && !nonEmpty(input.contract_sha256))) return null;
+    const observedIdentity: ProviderIdentity = {
+      target_thread_id: input.target_thread_id,
+      target_session_id: input.target_session_id,
+      main_session_id: input.main_session_id,
+      workspace: input.workspace,
+      host_instance_id: input.host_instance_id,
+      host_fingerprint: input.host_fingerprint,
+      task_version: input.task_version,
+      run_generation: input.run_generation,
+      ...(input.input_epoch === null ? {} : { input_epoch: input.input_epoch }),
+      contract_sha256: input.contract_sha256,
+    };
+    if (!identityMatches(this._identity, observedIdentity)) return null;
     const activity: ProviderActivity = { event_id: randomUUID(), type: 'activity', target_thread_id: input.target_thread_id, target_session_id: input.target_session_id, turn_id: input.turn_id ?? null, delivery_id: input.delivery_id ?? null, observed_at: input.observed_at ?? now(), details: clone(input.details ?? {}) };
     this._state = { ...this._state, a_activity: activity, continuation_confirmation: input.delivery_id && this.ledger.has(input.delivery_id) ? activity : this._state.continuation_confirmation, updated_at: activity.observed_at };
     if (input.delivery_id) {
@@ -826,7 +890,7 @@ export class DesktopMainSessionProvider implements MainSessionProvider {
   private readonly transport: DesktopRpcTransport | null;
   private readonly methods: DesktopProviderRpcMethods;
   private readonly listeners = new Set<ProviderEventListener>();
-  private readonly deliveries = new Map<string, ProviderDelivery>();
+  private readonly upstreamSubscriptions = new Set<ProviderSubscription>();
   private _receipt: CapabilityReceipt;
   private closed = false;
 
@@ -836,7 +900,7 @@ export class DesktopMainSessionProvider implements MainSessionProvider {
     this.methods = { ...DEFAULT_DESKTOP_PROVIDER_RPC_METHODS, ...options.methods };
     this.kind = options.provider_kind ?? this.transport?.metadata?.provider_kind ?? (this.transport ? 'shared-server' : 'unavailable');
     const meta = this.transport?.metadata ?? {};
-    this._receipt = this.identity && this.transport ? createCapabilityReceipt({ provider_kind: this.kind, evidence_level: options.transport?.metadata?.evidence_level ?? 'live', available: false, attached: false, same_thread_verified: false, capabilities: { ...ALL_PROVIDER_CAPABILITIES, ...(meta.capabilities ?? {}) }, target_thread_id: this.identity.target_thread_id, target_session_id: this.identity.target_session_id, main_session_id: this.identity.main_session_id ?? this.identity.target_thread_id, workspace: this.identity.workspace, host_instance_id: this.identity.host_instance_id, host_fingerprint: this.identity.host_fingerprint, task_version: this.identity.task_version, run_generation: this.identity.run_generation, contract_sha256: this.identity.contract_sha256 ?? null, protocol_version: options.protocol_version ?? meta.protocol_version ?? null, provider_version: options.provider_version ?? meta.provider_version ?? null, endpoint_fingerprint: options.endpoint_fingerprint ?? meta.endpoint_fingerprint ?? null }) : unavailableReceipt(options.identity, 'Desktop shared transport or trusted original-thread identity is unavailable.');
+    this._receipt = this.identity && this.transport ? createCapabilityReceipt({ provider_kind: this.kind, evidence_level: options.transport?.metadata?.evidence_level ?? 'live', available: false, attached: false, same_thread_verified: false, capabilities: { ...ALL_PROVIDER_CAPABILITIES, ...(meta.capabilities ?? {}) }, target_thread_id: this.identity.target_thread_id, target_session_id: this.identity.target_session_id, main_session_id: this.identity.main_session_id ?? this.identity.target_thread_id, workspace: this.identity.workspace, host_instance_id: this.identity.host_instance_id, host_fingerprint: this.identity.host_fingerprint, task_version: this.identity.task_version, run_generation: this.identity.run_generation, input_epoch: this.identity.input_epoch ?? null, contract_sha256: this.identity.contract_sha256 ?? null, protocol_version: options.protocol_version ?? meta.protocol_version ?? null, provider_version: options.provider_version ?? meta.provider_version ?? null, endpoint_fingerprint: options.endpoint_fingerprint ?? meta.endpoint_fingerprint ?? null }) : unavailableReceipt(options.identity, 'Desktop shared transport or trusted original-thread identity is unavailable.');
     this.semantics = new ProviderSemanticsCore({ identity: this.identity, receipt: this._receipt });
   }
 
@@ -928,49 +992,54 @@ export class DesktopMainSessionProvider implements MainSessionProvider {
 
   async send(request: ProviderSendRequest): Promise<ProviderSendResult> {
     this.ensureOpen(); const identity = this.target(request); this.available(identity);
-    const existing = this.deliveries.get(request.delivery_id);
+    const existing = this.semantics.ledgerEntry(request.delivery_id);
     if (existing) return { delivery_id: request.delivery_id, outcome: existing.status === 'confirmed' ? 'confirmed' : 'already-present', target_thread_id: identity.target_thread_id, target_session_id: identity.target_session_id, target_turn_id: existing.target_turn_id, created_worker: false, reason: 'Delivery is already recorded; provider will not send a duplicate.', observed_at: now() };
     const remote = await this.reconcileDelivery({ target: identity, delivery_id: request.delivery_id, message: request.message, client_message_id: request.delivery_id, target_turn_id: null });
     if (remote.outcome !== 'not_found') {
       const mapped = remote.outcome === 'confirmed' ? 'confirmed' : remote.outcome === 'active_writer' ? 'active-writer' : remote.outcome === 'unavailable' ? 'unavailable' : remote.outcome === 'sent' ? 'already-present' : 'unknown';
-      this.deliveries.set(request.delivery_id, { delivery_id: request.delivery_id, message: request.message, status: mapped, target_turn_id: remote.target_turn_id, client_message_id: request.delivery_id, observed_at: now() });
+      this.semantics.seedDelivery({ delivery_id: request.delivery_id, message: request.message, status: mapped, target_turn_id: remote.target_turn_id, client_message_id: request.delivery_id, observed_at: now() });
       return { delivery_id: request.delivery_id, outcome: mapped, target_thread_id: identity.target_thread_id, target_session_id: identity.target_session_id, target_turn_id: remote.target_turn_id, created_worker: false, reason: remote.reason ?? 'Remote history did not prove that this delivery is absent; send is fenced.', observed_at: now() };
     }
-    this.deliveries.set(request.delivery_id, { delivery_id: request.delivery_id, message: request.message, status: 'prepared', target_turn_id: null, client_message_id: request.delivery_id, observed_at: now() });
-    this.semantics.seedDelivery(this.deliveries.get(request.delivery_id)!);
+    this.semantics.prepareDelivery(identity, request);
     this.event('send_prepared', { message_length: request.message.length }, request.delivery_id);
     try {
       const raw = asObject(await this.call(this.methods.send, identity, { threadId: identity.target_thread_id, delivery_id: request.delivery_id, client_message_id: request.delivery_id, message: request.message })) ?? {};
       this.verifyReturnedIdentity(raw, identity);
       const outcome = ['sent', 'confirmed', 'already-present', 'unknown', 'active-writer', 'unavailable'].includes(String(raw.outcome)) ? String(raw.outcome) as ProviderDeliveryStatus : 'unknown';
       const turnId = typeof raw.target_turn_id === 'string' ? raw.target_turn_id : typeof raw.turn_id === 'string' ? raw.turn_id : null;
-      this.deliveries.set(request.delivery_id, { delivery_id: request.delivery_id, message: request.message, status: outcome, target_turn_id: turnId, client_message_id: request.delivery_id, observed_at: now() });
-      this.semantics.seedDelivery(this.deliveries.get(request.delivery_id)!);
+      const result: ProviderSendResult = { delivery_id: request.delivery_id, outcome, target_thread_id: identity.target_thread_id, target_session_id: identity.target_session_id, target_turn_id: turnId, created_worker: false, reason: typeof raw.reason === 'string' ? raw.reason : outcome === 'unknown' ? 'Send outcome is unknown; reconcile original-thread history before retrying.' : null, observed_at: now() };
+      this.semantics.recordSend(identity, request, result);
       this.event('send_sent', { outcome }, request.delivery_id, turnId);
-      return { delivery_id: request.delivery_id, outcome, target_thread_id: identity.target_thread_id, target_session_id: identity.target_session_id, target_turn_id: turnId, created_worker: false, reason: typeof raw.reason === 'string' ? raw.reason : outcome === 'unknown' ? 'Send outcome is unknown; reconcile original-thread history before retrying.' : null, observed_at: now() };
+      return result;
     } catch (error) {
       if (error instanceof ProviderIdentityError) throw error;
       const reason = error instanceof Error ? error.message : String(error);
       const outcome: ProviderDeliveryStatus = activeWriterError(error) ? 'active-writer' : 'unknown';
-      this.deliveries.set(request.delivery_id, { delivery_id: request.delivery_id, message: request.message, status: outcome, target_turn_id: null, client_message_id: request.delivery_id, observed_at: now() });
-      this.semantics.seedDelivery(this.deliveries.get(request.delivery_id)!);
+      const result: ProviderSendResult = { delivery_id: request.delivery_id, outcome, target_thread_id: identity.target_thread_id, target_session_id: identity.target_session_id, target_turn_id: null, created_worker: false, reason, observed_at: now() };
+      this.semantics.recordSend(identity, request, result);
       this.event('send_sent', { outcome, reason }, request.delivery_id);
-      return { delivery_id: request.delivery_id, outcome, target_thread_id: identity.target_thread_id, target_session_id: identity.target_session_id, target_turn_id: null, created_worker: false, reason, observed_at: now() };
+      return result;
     }
   }
 
   async subscribe(request: ProviderRequest, listener: ProviderEventListener): Promise<ProviderSubscription> {
     this.ensureOpen(); const identity = this.target(request); this.available(identity); this.listeners.add(listener);
     const upstream = this.transport?.subscribe ? await this.transport.subscribe((raw) => {
-      const observed = identityFrom(raw); if (observed && !identityMatches(identity, { ...identity, ...observed, target_thread_id: observed.target_thread_id ?? identity.target_thread_id, target_session_id: observed.target_session_id ?? identity.target_session_id, workspace: observed.workspace ?? identity.workspace, host_instance_id: observed.host_instance_id ?? identity.host_instance_id, host_fingerprint: observed.host_fingerprint ?? identity.host_fingerprint, task_version: observed.task_version ?? identity.task_version, run_generation: observed.run_generation ?? identity.run_generation } as ProviderIdentity)) return;
-      const event = asObject(raw); if (event && typeof event.type === 'string') {
+      const observed = identityFrom(raw);
+      const event = asObject(raw);
+      if (!observed || !completeIdentity(observed) || !Object.prototype.hasOwnProperty.call(observed, 'input_epoch') || !Object.prototype.hasOwnProperty.call(observed, 'contract_sha256')) return;
+      const observedIdentity = { ...observed, main_session_id: observed.main_session_id ?? observed.target_thread_id, contract_sha256: observed.contract_sha256 ?? null } as ProviderIdentity;
+      if (!identityMatches(identity, observedIdentity)) return;
+      if (event && typeof event.type === 'string') {
         const deliveryId = typeof event.delivery_id === 'string' ? event.delivery_id : null;
         const turnId = typeof event.turn_id === 'string' ? event.turn_id : null;
-        if (event.type === 'activity') this.semantics.recordActivity({ target_thread_id: identity.target_thread_id, target_session_id: identity.target_session_id, delivery_id: deliveryId, turn_id: turnId, details: event.payload && typeof event.payload === 'object' ? event.payload as Record<string, unknown> : {} });
-        listener(createProviderEvent({ type: event.type as ProviderEventType, provider_kind: this._receipt.provider_kind, evidence_level: this._receipt.evidence_level, target_thread_id: identity.target_thread_id, target_session_id: identity.target_session_id, workspace: identity.workspace, host_fingerprint: identity.host_fingerprint, task_version: identity.task_version, run_generation: identity.run_generation, delivery_id: deliveryId, turn_id: turnId, payload: event.payload && typeof event.payload === 'object' ? event.payload as Record<string, unknown> : {} }));
+        if (event.type === 'activity') this.semantics.recordActivity({ ...observedIdentity, main_session_id: observedIdentity.main_session_id ?? observedIdentity.target_thread_id, input_epoch: observed.input_epoch ?? null, contract_sha256: observed.contract_sha256 ?? null, delivery_id: deliveryId, turn_id: turnId, details: event.payload && typeof event.payload === 'object' ? event.payload as Record<string, unknown> : {} });
+        listener(createProviderEvent({ type: event.type as ProviderEventType, provider_kind: this._receipt.provider_kind, evidence_level: this._receipt.evidence_level, target_thread_id: observedIdentity.target_thread_id, target_session_id: observedIdentity.target_session_id, workspace: observedIdentity.workspace, host_fingerprint: observedIdentity.host_fingerprint, task_version: observedIdentity.task_version, run_generation: observedIdentity.run_generation, input_epoch: observed.input_epoch ?? null, delivery_id: deliveryId, turn_id: turnId, payload: event.payload && typeof event.payload === 'object' ? event.payload as Record<string, unknown> : {} }));
       }
     }) : null;
-    return { unsubscribe: () => { this.listeners.delete(listener); upstream?.unsubscribe(); } };
+    if (upstream) this.upstreamSubscriptions.add(upstream);
+    let active = true;
+    return { unsubscribe: () => { if (!active) return; active = false; this.listeners.delete(listener); if (upstream) { this.upstreamSubscriptions.delete(upstream); upstream.unsubscribe(); } } };
   }
 
   async readHistory(request: ProviderHistoryRequest): Promise<ProviderHistoryPage> {
@@ -985,25 +1054,27 @@ export class DesktopMainSessionProvider implements MainSessionProvider {
   }
 
   async reconcileDelivery(request: ProviderReconciliationRequest): Promise<DeliveryReconciliation> {
-    this.ensureOpen(); const identity = this.target(request); this.available(identity); const at = now(); const local = this.deliveries.get(request.delivery_id);
+    this.ensureOpen(); const identity = this.target(request); this.available(identity); const at = now(); const local = this.semantics.ledgerEntry(request.delivery_id);
     const activity = this.semantics.state.continuation_confirmation;
-    if (activity?.delivery_id === request.delivery_id) return { delivery_id: request.delivery_id, outcome: 'confirmed', matched_by: 'activity', target_turn_id: activity.turn_id, reason: null, observed_at: at };
-    if (local?.status === 'confirmed') return { delivery_id: request.delivery_id, outcome: 'confirmed', matched_by: 'delivery_id', target_turn_id: local.target_turn_id, reason: null, observed_at: at };
+    if (activity?.delivery_id === request.delivery_id) return this.semantics.recordReconciliation({ delivery_id: request.delivery_id, outcome: 'confirmed', matched_by: 'activity', target_turn_id: activity.turn_id, reason: null, observed_at: at });
+    if (local?.status === 'confirmed') return this.semantics.recordReconciliation({ delivery_id: request.delivery_id, outcome: 'confirmed', matched_by: 'delivery_id', target_turn_id: local.target_turn_id, reason: null, observed_at: at });
     if (local?.status === 'unknown') {
       // Unknown is a hard no-resend fence. Reconciliation may still ask the host.
     }
     try {
       const raw = asObject(await this.call(this.methods.reconcile_delivery, identity, { threadId: identity.target_thread_id, delivery_id: request.delivery_id, client_message_id: request.client_message_id ?? request.delivery_id, target_turn_id: request.target_turn_id ?? null, message: request.message ?? null })) ?? {};
-      this.verifyReturnedIdentity(raw, identity); const outcome = ['confirmed', 'sent', 'unknown', 'not_found', 'active_writer', 'unavailable'].includes(String(raw.outcome)) ? String(raw.outcome) as DeliveryReconciliation['outcome'] : 'unknown'; const matched = ['delivery_id', 'client_message_id', 'target_turn_id', 'activity', 'none'].includes(String(raw.matched_by)) ? String(raw.matched_by) as DeliveryMatch : 'none'; const targetTurn = typeof raw.target_turn_id === 'string' ? raw.target_turn_id : null; if (local) this.deliveries.set(request.delivery_id, { ...local, status: outcome === 'confirmed' ? 'confirmed' : outcome === 'sent' ? 'sent' : outcome === 'active_writer' ? 'active-writer' : outcome === 'unavailable' ? 'unavailable' : outcome === 'unknown' ? 'unknown' : local.status, target_turn_id: targetTurn, observed_at: at }); const result = { delivery_id: request.delivery_id, outcome, matched_by: matched, target_turn_id: targetTurn, reason: typeof raw.reason === 'string' ? raw.reason : null, observed_at: at }; this.event('delivery_reconciled', { outcome, matched_by: matched, reason: result.reason }, request.delivery_id, targetTurn); return result;
+      this.verifyReturnedIdentity(raw, identity); const outcome = ['confirmed', 'sent', 'unknown', 'not_found', 'active_writer', 'unavailable'].includes(String(raw.outcome)) ? String(raw.outcome) as DeliveryReconciliation['outcome'] : 'unknown'; const matched = ['delivery_id', 'client_message_id', 'target_turn_id', 'activity', 'none'].includes(String(raw.matched_by)) ? String(raw.matched_by) as DeliveryMatch : 'none'; const targetTurn = typeof raw.target_turn_id === 'string' ? raw.target_turn_id : null; const result = this.semantics.recordReconciliation({ delivery_id: request.delivery_id, outcome, matched_by: matched, target_turn_id: targetTurn, reason: typeof raw.reason === 'string' ? raw.reason : null, observed_at: at }); this.event('delivery_reconciled', { outcome: result.outcome, matched_by: result.matched_by, reason: result.reason }, request.delivery_id, targetTurn); return result;
     } catch (error) {
       if (error instanceof ProviderIdentityError) throw error;
-      const result = { delivery_id: request.delivery_id, outcome: 'unknown' as const, matched_by: 'none' as const, target_turn_id: null, reason: error instanceof Error ? error.message : String(error), observed_at: at };
+      const result = this.semantics.recordReconciliation({ delivery_id: request.delivery_id, outcome: 'unknown' as const, matched_by: 'none' as const, target_turn_id: null, reason: error instanceof Error ? error.message : String(error), observed_at: at });
       this.event('delivery_reconciled', { outcome: result.outcome, reason: result.reason }, request.delivery_id);
       return result;
     }
   }
 
-  async close(): Promise<void> { if (this.closed) return; this.closed = true; this.listeners.clear(); this._receipt = { ...this._receipt, attached: false }; this.event('closed', {}); await this.transport?.close?.(); }
+  async disconnect(reason = 'Provider disconnected.'): Promise<void> { if (this.closed || this.semantics.isDisconnected) return; this.event('disconnected', { reason }); this.semantics.disconnect(reason); for (const subscription of [...this.upstreamSubscriptions]) subscription.unsubscribe(); this.upstreamSubscriptions.clear(); this.listeners.clear(); }
+
+  async close(): Promise<void> { if (this.closed) return; this.event('closed', {}); for (const subscription of [...this.upstreamSubscriptions]) subscription.unsubscribe(); this.upstreamSubscriptions.clear(); this.listeners.clear(); this.closed = true; await this.semantics.close(); await this.transport?.close?.(); }
 }
 
 export interface SimulatedProviderScenario {
@@ -1028,7 +1099,6 @@ export class SimulatedMainSessionProvider implements MainSessionProvider {
   private writer: ProviderWriterState;
   private threadStatus: ProviderThreadStatus;
   private turns: ProviderTurn[];
-  private readonly deliveries = new Map<string, ProviderDelivery>();
   private readonly listeners = new Set<ProviderEventListener>();
   private sendOutcomes: ('sent' | 'unknown' | 'active-writer' | 'unavailable')[];
   private closed = false;
@@ -1040,10 +1110,9 @@ export class SimulatedMainSessionProvider implements MainSessionProvider {
     this.writer = clone(scenario.writer_state ?? { status: 'idle', owner_session_id: null, turn_id: null, reason: null, observed_at: now() });
     this.threadStatus = scenario.thread_status ?? (this.writer.status === 'in-progress' || this.writer.status === 'active-writer' ? 'in-progress' : 'idle');
     this.turns = clone(scenario.turns ?? []);
-    for (const delivery of scenario.deliveries ?? []) this.deliveries.set(delivery.delivery_id, clone(delivery));
     this.sendOutcomes = [...(scenario.send_outcomes ?? [])];
     this._receipt = this.identity
-      ? createCapabilityReceipt({ provider_kind: 'simulated', evidence_level: 'simulated', available: true, attached: true, same_thread_verified: true, capabilities: ALL_PROVIDER_CAPABILITIES, target_thread_id: this.identity.target_thread_id, target_session_id: this.identity.target_session_id, main_session_id: this.identity.main_session_id ?? this.identity.target_thread_id, workspace: this.identity.workspace, host_instance_id: this.identity.host_instance_id, host_fingerprint: this.identity.host_fingerprint, task_version: this.identity.task_version, run_generation: this.identity.run_generation, contract_sha256: this.identity.contract_sha256 ?? null, protocol_version: scenario.protocol_version ?? 'simulated-provider/1', provider_version: scenario.provider_version ?? 'simulated', endpoint_fingerprint: scenario.endpoint_fingerprint ?? 'simulated-endpoint' })
+      ? createCapabilityReceipt({ provider_kind: 'simulated', evidence_level: 'simulated', available: true, attached: true, same_thread_verified: true, capabilities: ALL_PROVIDER_CAPABILITIES, target_thread_id: this.identity.target_thread_id, target_session_id: this.identity.target_session_id, main_session_id: this.identity.main_session_id ?? this.identity.target_thread_id, workspace: this.identity.workspace, host_instance_id: this.identity.host_instance_id, host_fingerprint: this.identity.host_fingerprint, task_version: this.identity.task_version, run_generation: this.identity.run_generation, input_epoch: this.identity.input_epoch ?? null, contract_sha256: this.identity.contract_sha256 ?? null, protocol_version: scenario.protocol_version ?? 'simulated-provider/1', provider_version: scenario.provider_version ?? 'simulated', endpoint_fingerprint: scenario.endpoint_fingerprint ?? 'simulated-endpoint' })
       : unavailableReceipt(scenario.identity, 'Trusted provider identity is unavailable; target thread/session and host fingerprint are required.');
     this.semantics = new ProviderSemanticsCore({ identity: this.identity, receipt: this._receipt, ...(scenario.deliveries ? { deliveries: scenario.deliveries } : {}) });
   }
@@ -1098,18 +1167,19 @@ export class SimulatedMainSessionProvider implements MainSessionProvider {
   async send(request: ProviderSendRequest): Promise<ProviderSendResult> {
     this.ensureOpen(); const identity = this.target(request);
     if (!this._receipt.available) return { delivery_id: request.delivery_id, outcome: 'unavailable', target_thread_id: identity.target_thread_id, target_session_id: identity.target_session_id, target_turn_id: null, created_worker: false, reason: this._receipt.limitation_reason ?? 'Provider unavailable.', observed_at: now() };
+    const existing = this.semantics.ledgerEntry(request.delivery_id);
+    if (existing) return { delivery_id: request.delivery_id, outcome: existing.status === 'confirmed' ? 'confirmed' : 'already-present', target_thread_id: identity.target_thread_id, target_session_id: identity.target_session_id, target_turn_id: existing.target_turn_id, created_worker: false, reason: 'Delivery already exists in the original thread history.', observed_at: now() };
+    this.semantics.prepareDelivery(identity, request);
     this.event('send_prepared', { message_length: request.message.length }, request.delivery_id);
-    const existing = this.deliveries.get(request.delivery_id);
-    if (existing) return { delivery_id: request.delivery_id, outcome: 'already-present', target_thread_id: identity.target_thread_id, target_session_id: identity.target_session_id, target_turn_id: existing.target_turn_id, created_worker: false, reason: 'Delivery already exists in the original thread history.', observed_at: now() };
     if (this.writer.status === 'in-progress' || this.writer.status === 'active-writer') {
       this.event('writer_state', { status: this.writer.status, reason: 'active writer; send deferred' }, request.delivery_id, this.writer.turn_id);
-      return { delivery_id: request.delivery_id, outcome: 'active-writer', target_thread_id: identity.target_thread_id, target_session_id: identity.target_session_id, target_turn_id: null, created_worker: false, reason: 'The original A currently owns an active writer.', observed_at: now() };
+      const result: ProviderSendResult = { delivery_id: request.delivery_id, outcome: 'active-writer', target_thread_id: identity.target_thread_id, target_session_id: identity.target_session_id, target_turn_id: null, created_worker: false, reason: 'The original A currently owns an active writer.', observed_at: now() };
+      this.semantics.recordSend(identity, request, result); return result;
     }
     const outcome = this.sendOutcomes.shift() ?? 'sent';
     const turnId = outcome === 'sent' ? `turn-${this.turns.length + 1}` : null;
     const delivery: ProviderDelivery = { delivery_id: request.delivery_id, message: request.message, status: outcome, target_turn_id: turnId, client_message_id: request.delivery_id, observed_at: now() };
-    this.deliveries.set(request.delivery_id, delivery);
-    this.semantics.seedDelivery(delivery);
+    this.semantics.recordSend(identity, request, { delivery_id: request.delivery_id, outcome, target_thread_id: identity.target_thread_id, target_session_id: identity.target_session_id, target_turn_id: turnId, created_worker: false, reason: outcome === 'unknown' ? 'The send outcome is unknown; reconcile against the original thread history before retrying.' : null, observed_at: delivery.observed_at! });
     if (turnId) this.turns.push({ turn_id: turnId, status: 'in-progress', started_at: now(), completed_at: null, items: [{ type: 'user_message', client_message_id: request.delivery_id, delivery_id: request.delivery_id, value: request.message }] });
     this.event('send_sent', { outcome }, request.delivery_id, turnId);
     return { delivery_id: request.delivery_id, outcome, target_thread_id: identity.target_thread_id, target_session_id: identity.target_session_id, target_turn_id: turnId, created_worker: false, reason: outcome === 'unknown' ? 'The send outcome is unknown; reconcile against the original thread history before retrying.' : null, observed_at: now() };
@@ -1130,7 +1200,7 @@ export class SimulatedMainSessionProvider implements MainSessionProvider {
 
   async reconcileDelivery(request: ProviderReconciliationRequest): Promise<DeliveryReconciliation> {
     this.ensureOpen(); this.target(request);
-    const at = now(); const delivery = this.deliveries.get(request.delivery_id);
+    const identity = this.target(request); const at = now(); const delivery = this.semantics.ledgerEntry(request.delivery_id);
     let result: DeliveryReconciliation;
     if (!this._receipt.available) result = { delivery_id: request.delivery_id, outcome: 'unavailable', matched_by: 'none', target_turn_id: null, reason: this._receipt.limitation_reason ?? 'Provider unavailable.', observed_at: at };
     else if (delivery?.status === 'confirmed') {
@@ -1147,17 +1217,17 @@ export class SimulatedMainSessionProvider implements MainSessionProvider {
       const match = this.turns.find(turn => turn.items.some(item => item.client_message_id === (request.client_message_id ?? request.delivery_id) || item.delivery_id === request.delivery_id || (request.target_turn_id !== null && request.target_turn_id !== undefined && turn.turn_id === request.target_turn_id)));
       result = match ? { delivery_id: request.delivery_id, outcome: 'sent', matched_by: match.turn_id === request.target_turn_id ? 'target_turn_id' : 'client_message_id', target_turn_id: match.turn_id, reason: 'A matching message exists in the original thread history.', observed_at: at } : { delivery_id: request.delivery_id, outcome: 'not_found', matched_by: 'none', target_turn_id: null, reason: 'No matching delivery, client message or target turn exists in the original thread history.', observed_at: at };
     }
-    this.event('delivery_reconciled', { outcome: result.outcome, matched_by: result.matched_by, reason: result.reason }, request.delivery_id, result.target_turn_id);
-    return result;
+    const reconciled = this.semantics.recordReconciliation(result);
+    this.event('delivery_reconciled', { outcome: reconciled.outcome, matched_by: reconciled.matched_by, reason: reconciled.reason }, request.delivery_id, reconciled.target_turn_id);
+    return reconciled;
   }
 
   /** Simulated host control used by tests to represent native A activity. */
   confirmActivity(deliveryId: string, turnId?: string): ProviderActivity {
-    const delivery = this.deliveries.get(deliveryId);
+    const delivery = this.semantics.ledgerEntry(deliveryId);
     const targetTurn = turnId ?? delivery?.target_turn_id ?? `turn-${this.turns.length + 1}`;
-    if (delivery) { delivery.status = 'confirmed'; delivery.target_turn_id = targetTurn; delivery.observed_at = now(); }
-    else this.deliveries.set(deliveryId, { delivery_id: deliveryId, message: '', status: 'confirmed', target_turn_id: targetTurn, client_message_id: deliveryId, observed_at: now() });
-    this.semantics.recordActivity({ target_thread_id: this._receipt.target_thread_id!, target_session_id: this._receipt.target_session_id!, turn_id: targetTurn, delivery_id: deliveryId, details: { confirmed: true } });
+    if (!delivery) this.semantics.seedDelivery({ delivery_id: deliveryId, message: '', status: 'prepared', target_turn_id: null, client_message_id: deliveryId, observed_at: now() });
+    this.semantics.recordActivity({ target_thread_id: this._receipt.target_thread_id!, target_session_id: this._receipt.target_session_id!, main_session_id: this._receipt.main_session_id ?? this._receipt.target_thread_id!, workspace: this._receipt.workspace!, host_instance_id: this._receipt.host_instance_id!, host_fingerprint: this._receipt.host_fingerprint!, task_version: this._receipt.task_version!, run_generation: this._receipt.run_generation!, input_epoch: this._receipt.input_epoch ?? null, contract_sha256: this._receipt.contract_sha256 ?? null, turn_id: targetTurn, delivery_id: deliveryId, details: { confirmed: true } });
     const turn = this.turns.find(value => value.turn_id === targetTurn);
     if (turn) { turn.status = 'completed'; turn.completed_at = now(); }
     else this.turns.push({ turn_id: targetTurn, status: 'completed', started_at: now(), completed_at: now(), items: [{ type: 'user_message', client_message_id: deliveryId, delivery_id: deliveryId }] });

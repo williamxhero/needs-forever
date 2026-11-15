@@ -62,6 +62,53 @@ test('provider semantics core applies one identity and input fence to every fact
   assert.equal(core.classifyWriter({ status: 'active-writer', owner_session_id: 'session-A', turn_id: 'turn-1' }).status, 'active-writer');
 });
 
+test('provider activity fence requires the complete original-session identity', () => {
+  const core = new ProviderSemanticsCore({ identity, provider_kind: 'simulated', evidence_level: 'simulated' });
+  core.acceptReceipt(availableReceipt(identity));
+  const base = {
+    target_thread_id: identity.target_thread_id,
+    target_session_id: identity.target_session_id,
+    main_session_id: identity.main_session_id ?? identity.target_thread_id,
+    workspace: identity.workspace,
+    host_instance_id: identity.host_instance_id,
+    host_fingerprint: identity.host_fingerprint,
+    task_version: identity.task_version,
+    run_generation: identity.run_generation,
+    input_epoch: identity.input_epoch ?? null,
+    contract_sha256: identity.contract_sha256 ?? null,
+    delivery_id: 'delivery-activity',
+    turn_id: 'turn-activity',
+  };
+  assert.equal(core.recordActivity({ ...base, host_fingerprint: undefined as unknown as string }), null);
+  assert.equal(core.recordActivity({ ...base, run_generation: 'stale-generation' }), null);
+  assert.equal(core.recordActivity({ ...base, input_epoch: 3 }), null);
+  assert.equal(core.recordActivity(base)?.delivery_id, 'delivery-activity');
+});
+
+test('provider history reconciliation fails closed for a foreign thread or session', () => {
+  const core = new ProviderSemanticsCore({ identity, provider_kind: 'simulated', evidence_level: 'simulated' });
+  core.acceptReceipt(availableReceipt(identity));
+  core.seedDelivery({ delivery_id: 'delivery-history-fence', message: 'continue', status: 'unknown', target_turn_id: null, client_message_id: 'delivery-history-fence' });
+  const history = { thread_id: 'foreign-thread', session_id: identity.target_session_id, turns: [{ turn_id: 'turn-foreign', status: 'completed' as const, items: [{ type: 'user_message' as const, delivery_id: 'delivery-history-fence' }] }], has_more: false, cursor: null, readable: true, limitation_reason: null, observed_at: new Date().toISOString() };
+  const result = core.reconcileHistory(identity, { delivery_id: 'delivery-history-fence', history });
+  assert.equal(result.outcome, 'unknown');
+  assert.equal(result.matched_by, 'none');
+  assert.match(result.reason ?? '', /thread|session|identity/i);
+});
+
+test('provider semantics accepts only complete receipts for an attached provider', () => {
+  const core = new ProviderSemanticsCore({ identity, provider_kind: 'simulated', evidence_level: 'simulated' });
+  const incomplete = availableReceipt(identity);
+  incomplete.protocol_version = null;
+  incomplete.provider_version = null;
+  incomplete.endpoint_fingerprint = null;
+  const accepted = core.acceptReceipt(incomplete);
+  assert.equal(accepted.available, false);
+  assert.equal(accepted.attached, false);
+  assert.equal(accepted.same_thread_verified, false);
+  assert.match(accepted.limitation_reason ?? '', /protocol|provider|endpoint|identity/i);
+});
+
 test('provider semantics core reconciles history in stable order and confirms only same-thread activity', () => {
   const core = new ProviderSemanticsCore({ identity, provider_kind: 'simulated', evidence_level: 'simulated' });
   core.acceptReceipt(availableReceipt(identity));
@@ -70,9 +117,10 @@ test('provider semantics core reconciles history in stable order and confirms on
   const matched = core.reconcileHistory(identity, { delivery_id: 'delivery-1', client_message_id: 'client-1', history });
   assert.equal(matched.outcome, 'sent');
   assert.equal(matched.matched_by, 'delivery_id');
-  const foreign = core.recordActivity({ target_thread_id: 'thread-foreign', target_session_id: identity.target_session_id, delivery_id: 'delivery-1' });
+  const activityIdentity = { target_thread_id: identity.target_thread_id, target_session_id: identity.target_session_id, main_session_id: identity.main_session_id ?? identity.target_thread_id, workspace: identity.workspace, host_instance_id: identity.host_instance_id, host_fingerprint: identity.host_fingerprint, task_version: identity.task_version, run_generation: identity.run_generation, input_epoch: identity.input_epoch ?? null, contract_sha256: identity.contract_sha256 ?? null };
+  const foreign = core.recordActivity({ ...activityIdentity, target_thread_id: 'thread-foreign', delivery_id: 'delivery-1' });
   assert.equal(foreign, null);
-  const activity = core.recordActivity({ target_thread_id: identity.target_thread_id, target_session_id: identity.target_session_id, turn_id: 'turn-1', delivery_id: 'delivery-1', details: { source: 'same-thread' } });
+  const activity = core.recordActivity({ ...activityIdentity, turn_id: 'turn-1', delivery_id: 'delivery-1', details: { source: 'same-thread' } });
   assert.equal(activity?.delivery_id, 'delivery-1');
   const confirmed = core.reconcileHistory(identity, { delivery_id: 'delivery-1', client_message_id: 'client-1', history });
   assert.equal(confirmed.outcome, 'confirmed');
@@ -268,6 +316,9 @@ test('desktop and simulated adapters share same-thread activity confirmation sem
   await desktop.send({ target: identity, delivery_id: 'delivery-activity', message: 'continue' });
   await desktop.subscribe({ target: identity }, () => {});
   simulated.confirmActivity('delivery-activity', 'turn-activity');
+  desktopActivity?.({ type: 'activity', delivery_id: 'delivery-activity', turn_id: 'turn-activity', payload: { confirmed: true } });
+  const missingIdentity = await desktop.reconcileDelivery({ target: identity, delivery_id: 'delivery-activity', message: 'continue' });
+  assert.notEqual(missingIdentity.outcome, 'confirmed');
   desktopActivity?.({ identity, type: 'activity', delivery_id: 'delivery-activity', turn_id: 'turn-activity', payload: { confirmed: true } });
 
   const simulatedResult = await simulated.reconcileDelivery({ target: identity, delivery_id: 'delivery-activity', message: 'continue' });
@@ -280,4 +331,26 @@ test('desktop and simulated adapters share same-thread activity confirmation sem
     { outcome: desktopResult.outcome, matched_by: desktopResult.matched_by, target_turn_id: desktopResult.target_turn_id },
     { outcome: 'confirmed', matched_by: 'activity', target_turn_id: 'turn-activity' },
   );
+});
+
+test('desktop disconnect and close delegate lifecycle to semantics and clean upstream subscriptions', async () => {
+  let unsubscribeCount = 0;
+  let closeCount = 0;
+  const transport: DesktopRpcTransport = {
+    metadata: { provider_kind: 'daemon', evidence_level: 'live', identity, protocol_version: 'protocol-1', provider_version: 'provider-1', endpoint_fingerprint: 'endpoint-lifecycle' },
+    async request<T>(method: string): Promise<T> {
+      if (method === 'provider/probe') return { available: true, same_thread_verified: true, identity, capabilities: ALL_PROVIDER_CAPABILITIES } as T;
+      return { identity, thread: { id: identity.target_thread_id, session_id: identity.target_session_id, status: 'idle', turns: [] } } as T;
+    },
+    subscribe() { return { unsubscribe() { unsubscribeCount += 1; } }; },
+    close() { closeCount += 1; },
+  };
+  const provider = new DesktopMainSessionProvider({ identity, transport });
+  await provider.probe({ target: identity });
+  await provider.subscribe({ target: identity }, () => {});
+  await provider.disconnect('transport closed');
+  assert.equal(unsubscribeCount, 1);
+  assert.equal(provider.receipt.available, false);
+  await provider.close();
+  assert.equal(closeCount, 1);
 });
