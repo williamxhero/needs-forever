@@ -94,5 +94,5 @@ export type {
 } from './main-session-provider.js';
 export { CodexAppControlTransport, discoverCodexAppControlPipe } from './codex-app-control-transport.js';
 export type { CodexAppControlTransportOptions } from './codex-app-control-transport.js';
-export { createPackagingReceiptInput, inspectRuntimeArtifacts, runRuntimePackaging, verifyRuntimeParity, RuntimePackagingError } from './runtime-packaging.js';
-export type { RuntimeArtifact, RuntimeArtifactExclusion, RuntimeArtifactExclusionReason, RuntimeArtifactManifest, RuntimeArtifactManifestEntry, RuntimePackagingIdentity, RuntimePackagingInput, RuntimePackagingPipelineInput, RuntimePackagingPlan, RuntimePackagingReceiptInput, RuntimePackagingIntegrity, RuntimePackagingPipelineReceipt, RuntimePackagingPipelineResult, RuntimePackagingErrorCode } from './runtime-packaging.js';
+export { createPackagingReceiptInput, inspectRuntimeArtifacts, runRuntimePackaging, verifyRuntimeParity, verifyInstalledRuntime, verifyInstalledArtifact, RuntimePackagingError } from './runtime-packaging.js';
+export type { RuntimeArtifact, RuntimeArtifactExclusion, RuntimeArtifactExclusionReason, RuntimeArtifactManifest, RuntimeArtifactManifestEntry, RuntimePackagingIdentity, RuntimePackagingInput, RuntimePackagingPipelineInput, RuntimePackagingPlan, RuntimePackagingReceiptInput, RuntimePackagingIntegrity, RuntimePackagingPipelineReceipt, RuntimePackagingPipelineResult, RuntimeInstalledVerificationInput, RuntimeVerificationIssue, RuntimeInstalledVerificationReceipt, RuntimePackagingErrorCode } from './runtime-packaging.js';
