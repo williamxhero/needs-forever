@@ -148,6 +148,27 @@ test('provider semantics core emits disconnect and close exactly once while clea
   assert.deepEqual(closed, ['closed']);
 });
 
+test('provider semantics rejects late activity after disconnect', () => {
+  const core = new ProviderSemanticsCore({ identity, provider_kind: 'simulated', evidence_level: 'simulated' });
+  core.acceptReceipt(availableReceipt(identity));
+  core.seedDelivery({ delivery_id: 'delivery-disconnect', message: 'continue', status: 'sent', target_turn_id: null, client_message_id: 'delivery-disconnect' });
+  core.disconnect('transport closed');
+  assert.equal(core.recordActivity({
+    target_thread_id: identity.target_thread_id,
+    target_session_id: identity.target_session_id,
+    main_session_id: identity.main_session_id ?? identity.target_thread_id,
+    workspace: identity.workspace,
+    host_instance_id: identity.host_instance_id,
+    host_fingerprint: identity.host_fingerprint,
+    task_version: identity.task_version,
+    run_generation: identity.run_generation,
+    input_epoch: identity.input_epoch ?? null,
+    contract_sha256: identity.contract_sha256 ?? null,
+    delivery_id: 'delivery-disconnect',
+  }), null);
+  assert.equal(core.state.continuation_confirmation, null);
+});
+
 test('simulated provider capability receipt is durable and fail-closed for identity', async () => {
   const provider = new SimulatedMainSessionProvider({ identity });
   const receipt = await provider.probe({ target: identity });
@@ -331,6 +352,14 @@ test('desktop and simulated adapters share same-thread activity confirmation sem
     { outcome: desktopResult.outcome, matched_by: desktopResult.matched_by, target_turn_id: desktopResult.target_turn_id },
     { outcome: 'confirmed', matched_by: 'activity', target_turn_id: 'turn-activity' },
   );
+});
+
+test('simulated adapter fails closed when history is unreadable', async () => {
+  const provider = new SimulatedMainSessionProvider({ identity, history_readable: false });
+  await provider.probe({ target: identity });
+  const result = await provider.reconcileDelivery({ target: identity, delivery_id: 'delivery-unreadable', message: 'continue' });
+  assert.equal(result.outcome, 'unknown');
+  assert.equal(result.matched_by, 'none');
 });
 
 test('desktop disconnect and close delegate lifecycle to semantics and clean upstream subscriptions', async () => {

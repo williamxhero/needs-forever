@@ -812,7 +812,7 @@ export class ProviderSemanticsCore {
   }
 
   recordActivity(input: ProviderSemanticsActivityInput): ProviderActivity | null {
-    if (this.closed || !this._identity) return null;
+    if (this.closed || this.disconnected || !this._identity || !this._receipt.available || !this._receipt.same_thread_verified) return null;
     if (!nonEmpty(input.target_thread_id)
       || !nonEmpty(input.target_session_id)
       || !nonEmpty(input.main_session_id)
@@ -1063,7 +1063,18 @@ export class DesktopMainSessionProvider implements MainSessionProvider {
     }
     try {
       const raw = asObject(await this.call(this.methods.reconcile_delivery, identity, { threadId: identity.target_thread_id, delivery_id: request.delivery_id, client_message_id: request.client_message_id ?? request.delivery_id, target_turn_id: request.target_turn_id ?? null, message: request.message ?? null })) ?? {};
-      this.verifyReturnedIdentity(raw, identity); const outcome = ['confirmed', 'sent', 'unknown', 'not_found', 'active_writer', 'unavailable'].includes(String(raw.outcome)) ? String(raw.outcome) as DeliveryReconciliation['outcome'] : 'unknown'; const matched = ['delivery_id', 'client_message_id', 'target_turn_id', 'activity', 'none'].includes(String(raw.matched_by)) ? String(raw.matched_by) as DeliveryMatch : 'none'; const targetTurn = typeof raw.target_turn_id === 'string' ? raw.target_turn_id : null; const result = this.semantics.recordReconciliation({ delivery_id: request.delivery_id, outcome, matched_by: matched, target_turn_id: targetTurn, reason: typeof raw.reason === 'string' ? raw.reason : null, observed_at: at }); this.event('delivery_reconciled', { outcome: result.outcome, matched_by: result.matched_by, reason: result.reason }, request.delivery_id, targetTurn); return result;
+      this.verifyReturnedIdentity(raw, identity);
+      let result: DeliveryReconciliation;
+      if (Array.isArray(raw.turns) || raw.readable !== undefined) {
+        const history: ProviderHistoryPage = { thread_id: identity.target_thread_id, session_id: identity.target_session_id, turns: Array.isArray(raw.turns) ? raw.turns.map(turnOf) : [], has_more: raw.has_more === true, cursor: typeof raw.cursor === 'string' ? raw.cursor : null, readable: raw.readable !== false, limitation_reason: typeof raw.limitation_reason === 'string' ? raw.limitation_reason : null, observed_at: at };
+        result = this.semantics.reconcileHistory(identity, { delivery_id: request.delivery_id, ...(request.message === undefined ? {} : { message: request.message }), client_message_id: request.client_message_id ?? request.delivery_id, ...(request.target_turn_id === undefined ? {} : { target_turn_id: request.target_turn_id }), history });
+      } else {
+        const outcome = ['confirmed', 'sent', 'unknown', 'not_found', 'active_writer', 'unavailable'].includes(String(raw.outcome)) ? String(raw.outcome) as DeliveryReconciliation['outcome'] : 'unknown';
+        const matched = ['delivery_id', 'client_message_id', 'target_turn_id', 'activity', 'none'].includes(String(raw.matched_by)) ? String(raw.matched_by) as DeliveryMatch : 'none';
+        const targetTurn = typeof raw.target_turn_id === 'string' ? raw.target_turn_id : null;
+        result = this.semantics.recordReconciliation({ delivery_id: request.delivery_id, outcome, matched_by: matched, target_turn_id: targetTurn, reason: typeof raw.reason === 'string' ? raw.reason : null, observed_at: at });
+      }
+      this.event('delivery_reconciled', { outcome: result.outcome, matched_by: result.matched_by, reason: result.reason }, request.delivery_id, result.target_turn_id); return result;
     } catch (error) {
       if (error instanceof ProviderIdentityError) throw error;
       const result = this.semantics.recordReconciliation({ delivery_id: request.delivery_id, outcome: 'unknown' as const, matched_by: 'none' as const, target_turn_id: null, reason: error instanceof Error ? error.message : String(error), observed_at: at });
@@ -1214,8 +1225,8 @@ export class SimulatedMainSessionProvider implements MainSessionProvider {
     else if (delivery?.status === 'unavailable') result = { delivery_id: request.delivery_id, outcome: 'unavailable', matched_by: 'none', target_turn_id: delivery.target_turn_id, reason: 'The provider could not confirm delivery.', observed_at: at };
     else if (delivery?.status === 'unknown') result = { delivery_id: request.delivery_id, outcome: 'unknown', matched_by: 'none', target_turn_id: null, reason: 'No matching history or A activity confirmation exists yet.', observed_at: at };
     else {
-      const match = this.turns.find(turn => turn.items.some(item => item.client_message_id === (request.client_message_id ?? request.delivery_id) || item.delivery_id === request.delivery_id || (request.target_turn_id !== null && request.target_turn_id !== undefined && turn.turn_id === request.target_turn_id)));
-      result = match ? { delivery_id: request.delivery_id, outcome: 'sent', matched_by: match.turn_id === request.target_turn_id ? 'target_turn_id' : 'client_message_id', target_turn_id: match.turn_id, reason: 'A matching message exists in the original thread history.', observed_at: at } : { delivery_id: request.delivery_id, outcome: 'not_found', matched_by: 'none', target_turn_id: null, reason: 'No matching delivery, client message or target turn exists in the original thread history.', observed_at: at };
+      const history: ProviderHistoryPage = { thread_id: identity.target_thread_id, session_id: identity.target_session_id, turns: clone(this.turns), has_more: false, cursor: null, readable: this.scenario.history_readable !== false, limitation_reason: this.scenario.history_readable === false ? 'Original thread history is unreadable.' : null, observed_at: at };
+      result = this.semantics.reconcileHistory(identity, { delivery_id: request.delivery_id, ...(request.message === undefined ? {} : { message: request.message }), client_message_id: request.client_message_id ?? request.delivery_id, ...(request.target_turn_id === undefined ? {} : { target_turn_id: request.target_turn_id }), history });
     }
     const reconciled = this.semantics.recordReconciliation(result);
     this.event('delivery_reconciled', { outcome: reconciled.outcome, matched_by: reconciled.matched_by, reason: reconciled.reason }, request.delivery_id, reconciled.target_turn_id);
