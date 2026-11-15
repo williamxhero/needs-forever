@@ -1,10 +1,10 @@
 import { spawnSync, spawn } from 'node:child_process';
-import { mkdirSync, writeFileSync, readFileSync, readdirSync } from 'node:fs';
+import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import { createInterface } from 'node:readline';
 import { resolve, relative, isAbsolute } from 'node:path';
-import { createHash } from 'node:crypto';
 import { platform, release } from 'node:os';
 import { codexCommand } from '../plugins/needs-forever/runtime/src/transport.js';
+import { verifyInstalledRuntime } from '../plugins/needs-forever/runtime/src/runtime-packaging.js';
 
 const flags = {};
 for (let i = 2; i < process.argv.length; i += 2) {
@@ -23,18 +23,10 @@ const [executable, ...prefix] = argv;
 const env = { ...process.env, CODEX_HOME: codexHome };
 const evidence = { mode: 'isolated-install-discovery-no-model', directory, candidate, codex_home: codexHome, workspace, os: { platform: platform(), release: release() }, node: process.version, commands: [], native_effectiveness: 'not_run', discovery_pass: false };
 const save = () => writeFileSync(resolve(directory, 'install.json'), JSON.stringify(evidence, null, 2) + '\n');
-function hashes(root, prefix = '') {
-  return Object.fromEntries(readdirSync(resolve(root, prefix), { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name)).flatMap((entry) => {
-    const name = prefix ? `${prefix}/${entry.name}` : entry.name;
-    if (entry.isSymbolicLink()) throw new Error(`Package symlinks are not supported: ${name}`);
-    return entry.isDirectory() ? Object.entries(hashes(root, name)) : [[name, createHash('sha256').update(readFileSync(resolve(root, name))).digest('hex')]];
-  }));
-}
 function inside(root, path) { const suffix = relative(root, resolve(path)); return suffix !== '' && !suffix.startsWith('..') && !isAbsolute(suffix); }
 let server, lines;
 const pending = new Map();
 try {
-  evidence.candidate_hashes = hashes(resolve(candidate, 'plugins/needs-forever'));
   evidence.plugin_version = JSON.parse(readFileSync(resolve(candidate, 'plugins/needs-forever/.codex-plugin/plugin.json'), 'utf8')).version;
   let installedPath;
   for (const args of [['--version'], ['plugin', 'marketplace', 'add', candidate, '--json'], ['plugin', 'add', 'needs-forever@needs-forever-local', '--json'], ['plugin', 'list', '--marketplace', 'needs-forever-local', '--json']]) {
@@ -46,9 +38,10 @@ try {
   }
   if (!installedPath || !inside(codexHome, installedPath)) throw new Error('Host did not return an installedPath inside the isolated home.');
   evidence.installed_path = installedPath;
-  evidence.installed_hashes = hashes(installedPath);
-  evidence.package_matches_candidate = JSON.stringify(evidence.candidate_hashes) === JSON.stringify(evidence.installed_hashes);
-  if (!evidence.package_matches_candidate) throw new Error('Installed package differs from candidate.');
+  const installedRuntime = verifyInstalledRuntime({ bundledPluginRoot: resolve(candidate, 'plugins/needs-forever'), installedPluginRoot: installedPath });
+  evidence.installed_runtime_receipt = installedRuntime;
+  evidence.package_matches_candidate = installedRuntime.ok;
+  if (!installedRuntime.ok) throw new Error(`Installed package failed packaging receipt verification: ${installedRuntime.errors.map((issue) => issue.message).join(' ')}`);
   evidence.app_server_argv = [executable, ...prefix, 'app-server'];
   server = spawn(executable, [...prefix, 'app-server'], { cwd: workspace, env, windowsHide: true, stdio: 'pipe' });
   let stderr = '';
