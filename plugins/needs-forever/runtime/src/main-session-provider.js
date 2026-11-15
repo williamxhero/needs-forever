@@ -301,9 +301,9 @@ function identityFrom(value) {
         result.task_version = nested.task_version;
     if (typeof nested.run_generation === 'string')
         result.run_generation = nested.run_generation;
-    if (typeof nested.input_epoch === 'number')
+    if (Object.prototype.hasOwnProperty.call(nested, 'input_epoch') && (typeof nested.input_epoch === 'number' || nested.input_epoch === null))
         result.input_epoch = nested.input_epoch;
-    if (typeof nested.contract_sha256 === 'string')
+    if (Object.prototype.hasOwnProperty.call(nested, 'contract_sha256') && (typeof nested.contract_sha256 === 'string' || nested.contract_sha256 === null))
         result.contract_sha256 = nested.contract_sha256;
     return result;
 }
@@ -618,7 +618,16 @@ export class DesktopMainSessionProvider {
     }
     verifyReturnedIdentity(value, identity) {
         const observed = identityFrom(value);
-        if (observed && !identityMatches(identity, { ...identity, ...observed, target_thread_id: observed.target_thread_id ?? identity.target_thread_id, target_session_id: observed.target_session_id ?? identity.target_session_id, workspace: observed.workspace ?? identity.workspace, host_instance_id: observed.host_instance_id ?? identity.host_instance_id, host_fingerprint: observed.host_fingerprint ?? identity.host_fingerprint, task_version: observed.task_version ?? identity.task_version, run_generation: observed.run_generation ?? identity.run_generation }))
+        if (!observed)
+            throw new ProviderIdentityError('Desktop provider response omitted its original-thread identity.');
+        const required = ['target_thread_id', 'target_session_id', 'workspace', 'host_instance_id', 'host_fingerprint', 'task_version', 'run_generation'];
+        if (required.some((key) => !Object.prototype.hasOwnProperty.call(observed, key)))
+            throw new ProviderIdentityError('Desktop provider response omitted a required original-thread identity field.');
+        if (identity.input_epoch !== undefined && !Object.prototype.hasOwnProperty.call(observed, 'input_epoch'))
+            throw new ProviderIdentityError('Desktop provider response omitted input_epoch from the identity fence.');
+        if (identity.contract_sha256 !== undefined && !Object.prototype.hasOwnProperty.call(observed, 'contract_sha256'))
+            throw new ProviderIdentityError('Desktop provider response omitted contract_sha256 from the identity fence.');
+        if (!identityMatches(identity, observed))
             throw new ProviderIdentityError('Desktop provider returned a different thread, session, workspace, host or generation.');
     }
     async probe(request = {}) {
@@ -635,7 +644,7 @@ export class DesktopMainSessionProvider {
             const raw = asObject(response) ?? {};
             const caps = asObject(raw.capabilities) ?? this.transport.metadata?.capabilities ?? ALL_PROVIDER_CAPABILITIES;
             const observedIdentity = { ...(identityFrom(this.transport.metadata) ?? {}), ...(identityFrom(response) ?? {}) };
-            const requiredIdentityFields = ['target_thread_id', 'target_session_id', 'workspace', 'host_instance_id', 'host_fingerprint', 'task_version', 'run_generation'];
+            const requiredIdentityFields = ['target_thread_id', 'target_session_id', 'workspace', 'host_instance_id', 'host_fingerprint', 'task_version', 'run_generation', 'input_epoch', 'contract_sha256'];
             const identityVerified = requiredIdentityFields.every((key) => observedIdentity[key] !== undefined)
                 && identityMatches(identity, { ...identity, ...observedIdentity });
             const protocolVersion = typeof raw.protocol_version === 'string' ? raw.protocol_version : this.transport.metadata?.protocol_version ?? null;
@@ -684,11 +693,15 @@ export class DesktopMainSessionProvider {
         const identity = this.target(request);
         this.available(identity);
         try {
-            const result = writerOf(await this.call(this.methods.read_writer, identity, { threadId: identity.target_thread_id }));
+            const raw = await this.call(this.methods.read_writer, identity, { threadId: identity.target_thread_id });
+            this.verifyReturnedIdentity(raw, identity);
+            const result = writerOf(raw);
             this.event('writer_state', { status: result.status, reason: result.reason }, null, result.turn_id);
             return result;
         }
-        catch {
+        catch (error) {
+            if (error instanceof ProviderIdentityError)
+                throw error;
             const snapshot = await this.readThread(request);
             this.event('writer_state', { status: snapshot.writer.status, reason: snapshot.writer.reason }, null, snapshot.writer.turn_id);
             return snapshot.writer;

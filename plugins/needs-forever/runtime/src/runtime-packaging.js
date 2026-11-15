@@ -478,6 +478,11 @@ function readPackagingMetadata(input, bundledRuntimeRoot) {
     const parsedReceipt = parseVerificationJson(receiptPath, 'packaging receipt');
     const parsedManifest = parseVerificationJson(manifestPath, 'runtime manifest');
     const parsedIntegrity = parseVerificationJson(integrityPath, 'runtime integrity');
+    const metadataPaths = {
+        manifest: validateVerificationRelativePath(relative(bundledRuntimeRoot, manifestPath).replaceAll('\\', '/'), 'manifest path', manifestPath),
+        integrity: validateVerificationRelativePath(relative(bundledRuntimeRoot, integrityPath).replaceAll('\\', '/'), 'integrity path', integrityPath),
+        receipt: validateVerificationRelativePath(relative(bundledRuntimeRoot, receiptPath).replaceAll('\\', '/'), 'receipt path', receiptPath),
+    };
     const receipt = parsedReceipt.value;
     const manifest = parsedManifest.value;
     const integrity = parsedIntegrity.value;
@@ -569,7 +574,7 @@ function readPackagingMetadata(input, bundledRuntimeRoot) {
         if (integrity.files[key] !== entry.content_sha256)
             throw new RuntimePackagingError('INTEGRITY_FAILED', `Manifest and integrity hash differ for ${entry.path}.`, integrityPath);
     }
-    return { receipt: receipt, manifest: manifest, integrity: integrity, manifestBytes: parsedManifest.bytes, integrityBytes: parsedIntegrity.bytes, receiptBytes: parsedReceipt.bytes, runtimePrefix, artifactFiles };
+    return { receipt: receipt, manifest: manifest, integrity: integrity, manifestBytes: parsedManifest.bytes, integrityBytes: parsedIntegrity.bytes, receiptBytes: parsedReceipt.bytes, runtimePrefix, artifactFiles, metadataPaths };
 }
 function listVerificationTree(root) {
     const files = [];
@@ -625,7 +630,7 @@ function verifyRuntimeTree(root, metadata, label) {
     const tree = listVerificationTree(canonicalRootPath);
     errors.push(...tree.errors);
     const expectedArtifacts = [...metadata.artifactFiles.values()].map((entry) => metadata.runtimePrefix ? `${metadata.runtimePrefix}/${entry.path}` : entry.path);
-    const expectedFiles = [...expectedArtifacts, 'manifest.json', 'integrity.json', 'packaging-receipt.json'].sort(compareStable);
+    const expectedFiles = [...expectedArtifacts, metadata.metadataPaths.manifest, metadata.metadataPaths.integrity, metadata.metadataPaths.receipt].sort(compareStable);
     const expectedSet = new Set(expectedFiles);
     const actualSet = new Set(tree.files);
     for (const expected of expectedFiles)
@@ -644,9 +649,9 @@ function verifyRuntimeTree(root, metadata, label) {
         if (!expectedDirectories.has(actual))
             errors.push(verificationIssue('EXTRA_PATH', `${label} runtime contains unexpected directory ${actual}.`, join(canonicalRootPath, ...actual.split('/'))));
     const expectedMetadata = new Map([
-        ['manifest.json', metadata.manifestBytes],
-        ['integrity.json', metadata.integrityBytes],
-        ['packaging-receipt.json', metadata.receiptBytes],
+        [metadata.metadataPaths.manifest, metadata.manifestBytes],
+        [metadata.metadataPaths.integrity, metadata.integrityBytes],
+        [metadata.metadataPaths.receipt, metadata.receiptBytes],
     ]);
     for (const [relativePath, expectedBytes] of expectedMetadata) {
         if (!actualSet.has(relativePath))
@@ -682,21 +687,25 @@ function verifyPluginMetadata(root, metadata, label) {
     const errors = [];
     let name = null;
     let version = null;
+    let packageName = null;
     try {
         const plugin = parseVerificationJson(join(root, '.codex-plugin', 'plugin.json'), `${label} plugin metadata`);
         const packageJson = parseVerificationJson(join(root, 'package.json'), `${label} package metadata`);
         name = typeof plugin.value.name === 'string' ? plugin.value.name : null;
         version = typeof plugin.value.version === 'string' ? plugin.value.version : null;
+        packageName = typeof packageJson.value.name === 'string' ? packageJson.value.name : null;
         if (plugin.value.name !== metadata.receipt.package_name)
             errors.push(verificationIssue('VERSION_MISMATCH', `${label} plugin name does not match the packaging receipt.`, join(root, '.codex-plugin', 'plugin.json')));
+        if (!packageName)
+            errors.push(verificationIssue('PARITY_FAILED', `${label} package metadata is missing a package name.`, join(root, 'package.json')));
         if (plugin.value.version !== metadata.receipt.package_version || packageJson.value.version !== metadata.receipt.package_version)
             errors.push(verificationIssue('VERSION_MISMATCH', `${label} plugin version does not match the packaging receipt.`, join(root, '.codex-plugin', 'plugin.json')));
-        return { status: errors.length === 0 ? 'verified' : 'failed', name, version, pluginBytes: plugin.bytes, packageBytes: packageJson.bytes, errors };
+        return { status: errors.length === 0 ? 'verified' : 'failed', name, version, packageName, pluginBytes: plugin.bytes, packageBytes: packageJson.bytes, errors };
     }
     catch (error) {
         errors.push(asVerificationError(error));
     }
-    return { status: 'failed', name, version, errors };
+    return { status: 'failed', name, version, packageName, errors };
 }
 /** Verify an installed plugin against the exact runtime packaging receipt that produced it. */
 export function verifyInstalledRuntime(input) {
@@ -729,6 +738,8 @@ export function verifyInstalledRuntime(input) {
     try {
         bundledPluginRoot = canonicalVerificationRoot(input.bundledPluginRoot, 'bundledPluginRoot');
         installedPluginRoot = canonicalVerificationRoot(input.installedPluginRoot, 'installedPluginRoot');
+        if (bundledPluginRoot === installedPluginRoot)
+            throw new RuntimePackagingError('PATH_CONFLICT', 'Bundled and installed plugin roots must be distinct directories.');
         const bundledRuntimeRoot = join(bundledPluginRoot, 'runtime');
         metadata = readPackagingMetadata(input, canonicalVerificationRoot(bundledRuntimeRoot, 'bundledRuntimeRoot'));
         ({ package_name: packageName, package_version: packageVersion, source_revision: sourceRevision, generator_version: generatorVersion, manifest_sha256: manifestSha256, integrity_sha256: integritySha256 } = metadata.receipt);
@@ -746,6 +757,8 @@ export function verifyInstalledRuntime(input) {
             errors.push(verificationIssue('PARITY_FAILED', 'Installed plugin metadata differs from the bundled plugin metadata.', join(installedPluginRoot, '.codex-plugin', 'plugin.json')));
         if (bundledMetadata.packageBytes && installedMetadata.packageBytes && !bundledMetadata.packageBytes.equals(installedMetadata.packageBytes))
             errors.push(verificationIssue('PARITY_FAILED', 'Installed package metadata differs from the bundled package metadata.', join(installedPluginRoot, 'package.json')));
+        if (bundledMetadata.packageName !== installedMetadata.packageName)
+            errors.push(verificationIssue('PARITY_FAILED', 'Installed package name differs from the bundled package metadata.', join(installedPluginRoot, 'package.json')));
         pluginMetadataStatus = bundledMetadata.errors.length === 0 && installedMetadata.errors.length === 0 ? 'verified' : 'failed';
         pluginName = installedMetadata.name ?? bundledMetadata.name;
         pluginVersion = installedMetadata.version ?? bundledMetadata.version;

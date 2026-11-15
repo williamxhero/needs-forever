@@ -1,8 +1,9 @@
 import { spawnSync, spawn } from 'node:child_process';
-import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync, readFileSync, readdirSync } from 'node:fs';
 import { createInterface } from 'node:readline';
 import { resolve, relative, isAbsolute } from 'node:path';
 import { platform, release } from 'node:os';
+import { createHash } from 'node:crypto';
 import { codexCommand } from '../plugins/needs-forever/runtime/src/transport.js';
 import { verifyInstalledRuntime } from '../plugins/needs-forever/runtime/src/runtime-packaging.js';
 
@@ -24,6 +25,13 @@ const env = { ...process.env, CODEX_HOME: codexHome };
 const evidence = { mode: 'isolated-install-discovery-no-model', directory, candidate, codex_home: codexHome, workspace, os: { platform: platform(), release: release() }, node: process.version, commands: [], native_effectiveness: 'not_run', discovery_pass: false };
 const save = () => writeFileSync(resolve(directory, 'install.json'), JSON.stringify(evidence, null, 2) + '\n');
 function inside(root, path) { const suffix = relative(root, resolve(path)); return suffix !== '' && !suffix.startsWith('..') && !isAbsolute(suffix); }
+function hashes(root, prefix = '') {
+  return Object.fromEntries(readdirSync(resolve(root, prefix), { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name)).flatMap((entry) => {
+    const name = prefix ? `${prefix}/${entry.name}` : entry.name;
+    if (entry.isSymbolicLink()) throw new Error(`Package symlinks are not supported: ${name}`);
+    return entry.isDirectory() ? Object.entries(hashes(root, name)) : [[name, createHash('sha256').update(readFileSync(resolve(root, name))).digest('hex')]];
+  }));
+}
 let server, lines;
 const pending = new Map();
 try {
@@ -38,10 +46,13 @@ try {
   }
   if (!installedPath || !inside(codexHome, installedPath)) throw new Error('Host did not return an installedPath inside the isolated home.');
   evidence.installed_path = installedPath;
+  evidence.candidate_hashes = hashes(resolve(candidate, 'plugins/needs-forever'));
+  evidence.installed_hashes = hashes(installedPath);
   const installedRuntime = verifyInstalledRuntime({ bundledPluginRoot: resolve(candidate, 'plugins/needs-forever'), installedPluginRoot: installedPath });
   evidence.installed_runtime_receipt = installedRuntime;
-  evidence.package_matches_candidate = installedRuntime.ok;
-  if (!installedRuntime.ok) throw new Error(`Installed package failed packaging receipt verification: ${installedRuntime.errors.map((issue) => issue.message).join(' ')}`);
+  evidence.runtime_matches_candidate = installedRuntime.ok;
+  evidence.package_matches_candidate = installedRuntime.ok && JSON.stringify(evidence.candidate_hashes) === JSON.stringify(evidence.installed_hashes);
+  if (!evidence.package_matches_candidate) throw new Error(`Installed package differs from the candidate: runtime=${installedRuntime.errors.map((issue) => issue.message).join(' ') || 'ok'}; full-package=${evidence.package_matches_candidate}.`);
   evidence.app_server_argv = [executable, ...prefix, 'app-server'];
   server = spawn(executable, [...prefix, 'app-server'], { cwd: workspace, env, windowsHide: true, stdio: 'pipe' });
   let stderr = '';

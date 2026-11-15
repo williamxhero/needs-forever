@@ -336,6 +336,14 @@ test('installed runtime verification rejects metadata drift, path escape, and en
 
   withFixture((root) => {
     const fixture = installedFixture(root);
+    writeFileSync(join(fixture.installedPluginRoot, 'package.json'), JSON.stringify({ name: 'foreign-package', version: '0.3.4' }) + '\n');
+    const packageName = verifyInstalledRuntime(fixture);
+    assert.equal(packageName.ok, false);
+    assert.ok(issueCodes(packageName).includes('PARITY_FAILED'));
+  });
+
+  withFixture((root) => {
+    const fixture = installedFixture(root);
     const manifestPath = join(fixture.bundledPluginRoot, 'runtime', 'manifest.json');
     const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as { artifacts: Array<{ path: string }> };
     manifest.artifacts[0]!.path = '../outside.js';
@@ -351,6 +359,33 @@ test('installed runtime verification rejects metadata drift, path escape, and en
     const encoding = verifyInstalledRuntime(fixture);
     assert.equal(encoding.ok, false);
     assert.ok(issueCodes(encoding).some((code) => code === 'INTEGRITY_FAILED' || code === 'HASH_MISMATCH'));
+  });
+});
+
+test('installed runtime verification rejects using the bundled directory as the installed copy', () => {
+  withFixture((root) => {
+    const fixture = installedFixture(root);
+    const sameRoot = verifyInstalledRuntime({ ...fixture, installedPluginRoot: fixture.bundledPluginRoot });
+    assert.equal(sameRoot.ok, false);
+    assert.ok(issueCodes(sameRoot).includes('PATH_CONFLICT'));
+  });
+});
+
+test('installed runtime verification consumes custom metadata paths from the packaging output', () => {
+  withFixture((root) => {
+    const source = join(root, 'source');
+    const bundledPluginRoot = join(root, 'bundled-plugin');
+    const installedPluginRoot = join(root, 'installed-plugin');
+    const runtimeRoot = join(bundledPluginRoot, 'runtime');
+    mkdirSync(source, { recursive: true });
+    mkdirSync(join(bundledPluginRoot, '.codex-plugin'), { recursive: true });
+    writeFileSync(join(source, 'entry.js'), 'export default "ok";\n');
+    writeFileSync(join(bundledPluginRoot, '.codex-plugin', 'plugin.json'), JSON.stringify({ name: 'needs-forever', version: '0.3.4' }) + '\n');
+    writeFileSync(join(bundledPluginRoot, 'package.json'), JSON.stringify({ name: 'needs-forever-plugin', version: '0.3.4' }) + '\n');
+    runRuntimePackaging({ sourceRoot: source, runtimeRoot, runtimeTarget: join(runtimeRoot, 'src'), integrityTarget: join(runtimeRoot, 'metadata', 'integrity.json'), receiptTarget: join(runtimeRoot, 'metadata', 'receipt.json'), identity: { packageName: 'needs-forever', packageVersion: '0.3.4', sourceRevision: 'revision-custom-metadata', generatorVersion: 'runtime-packaging-pipeline@1' } });
+    cpSync(bundledPluginRoot, installedPluginRoot, { recursive: true });
+    const receipt = verifyInstalledRuntime({ bundledPluginRoot, installedPluginRoot, integrityPath: join(runtimeRoot, 'metadata', 'integrity.json'), receiptPath: join(runtimeRoot, 'metadata', 'receipt.json') });
+    assert.equal(receipt.ok, true);
   });
 });
 

@@ -312,6 +312,37 @@ test('desktop provider maps active writer, fences unknown delivery, and never se
   assert.equal(reconciliation.outcome, 'unknown');
 });
 
+test('desktop readWriter rejects a foreign identity instead of projecting its writer', async () => {
+  const transport: DesktopRpcTransport = {
+    metadata: { provider_kind: 'daemon', evidence_level: 'live', identity, protocol_version: 'codex-cli 0.167.0', provider_version: 'desktop-provider 1.0.0', endpoint_fingerprint: 'endpoint-foreign-writer' },
+    async request<T>(method: string): Promise<T> {
+      if (method === 'provider/probe') return { available: true, same_thread_verified: true, identity, capabilities: ALL_PROVIDER_CAPABILITIES } as T;
+      if (method === 'thread/writer') return { identity: { ...identity, target_thread_id: 'foreign-thread' }, status: 'active-writer', owner_session_id: 'foreign-session', turn_id: 'foreign-turn' } as T;
+      return { identity, thread: { id: identity.target_thread_id, session_id: identity.target_session_id, status: 'idle', turns: [] } } as T;
+    },
+  };
+  const provider = new DesktopMainSessionProvider({ identity, transport });
+  await provider.probe({ target: identity });
+  await assert.rejects(() => provider.readWriter({ target: identity }), ProviderIdentityError);
+});
+
+test('desktop probe fails closed when the response omits epoch and contract fence fields', async () => {
+  const transport: DesktopRpcTransport = {
+    metadata: { provider_kind: 'daemon', evidence_level: 'live', protocol_version: 'codex-cli 0.167.0', provider_version: 'desktop-provider 1.0.0', endpoint_fingerprint: 'endpoint-missing-fence' },
+    async request<T>(method: string): Promise<T> {
+      if (method === 'provider/probe') {
+        const { input_epoch: _inputEpoch, contract_sha256: _contract, ...coreIdentity } = identity;
+        return { available: true, same_thread_verified: true, identity: coreIdentity, capabilities: ALL_PROVIDER_CAPABILITIES } as T;
+      }
+      return { identity, thread: { id: identity.target_thread_id, session_id: identity.target_session_id, status: 'idle', turns: [] } } as T;
+    },
+  };
+  const provider = new DesktopMainSessionProvider({ identity, transport });
+  const receipt = await provider.probe({ target: identity });
+  assert.equal(receipt.available, false);
+  assert.match(receipt.limitation_reason ?? '', /identity|epoch|contract/i);
+});
+
 test('desktop and simulated adapters share same-thread activity confirmation semantics', async () => {
   let desktopActivity: ((event: unknown) => void) | undefined;
   const transport: DesktopRpcTransport = {
