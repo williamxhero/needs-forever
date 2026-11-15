@@ -3,7 +3,10 @@ import assert from 'node:assert/strict';
 import {
   ALL_PROVIDER_CAPABILITIES,
   DesktopMainSessionProvider,
+  ProviderIdentityError,
+  ProviderSemanticsCore,
   SimulatedMainSessionProvider,
+  createCapabilityReceipt,
   createProviderEvent,
   createProviderState,
   validateCapabilityReceipt,
@@ -22,7 +25,80 @@ const identity: ProviderIdentity = {
   task_version: 3,
   run_generation: 'generation-1',
   contract_sha256: 'contract-1',
+  input_epoch: 4,
 };
+
+function availableReceipt(target: ProviderIdentity) {
+  return createCapabilityReceipt({
+    provider_kind: 'simulated',
+    evidence_level: 'simulated',
+    available: true,
+    attached: true,
+    same_thread_verified: true,
+    capabilities: ALL_PROVIDER_CAPABILITIES,
+    target_thread_id: target.target_thread_id,
+    target_session_id: target.target_session_id,
+    main_session_id: target.main_session_id ?? target.target_thread_id,
+    workspace: target.workspace,
+    host_instance_id: target.host_instance_id,
+    host_fingerprint: target.host_fingerprint,
+    task_version: target.task_version,
+    run_generation: target.run_generation,
+    input_epoch: target.input_epoch ?? null,
+    contract_sha256: target.contract_sha256 ?? null,
+    protocol_version: 'semantics-test/1',
+    provider_version: 'semantics-test',
+    endpoint_fingerprint: 'semantics-endpoint',
+  });
+}
+
+test('provider semantics core applies one identity and input fence to every fact', () => {
+  const core = new ProviderSemanticsCore({ identity, provider_kind: 'simulated', evidence_level: 'simulated' });
+  core.acceptReceipt(availableReceipt(identity));
+  assert.equal(core.receipt.input_epoch, 4);
+  assert.equal(core.fence(identity).input_epoch, 4);
+  assert.throws(() => core.assertTarget({ ...identity, input_epoch: 3 }), ProviderIdentityError);
+  assert.throws(() => core.requireAvailable({ ...identity, run_generation: 'stale-generation' }), ProviderIdentityError);
+  assert.equal(core.classifyWriter({ status: 'active-writer', owner_session_id: 'session-A', turn_id: 'turn-1' }).status, 'active-writer');
+});
+
+test('provider semantics core reconciles history in stable order and confirms only same-thread activity', () => {
+  const core = new ProviderSemanticsCore({ identity, provider_kind: 'simulated', evidence_level: 'simulated' });
+  core.acceptReceipt(availableReceipt(identity));
+  core.seedDelivery({ delivery_id: 'delivery-1', message: 'continue', status: 'unknown', target_turn_id: null, client_message_id: 'client-1' });
+  const history = { thread_id: identity.target_thread_id, session_id: identity.target_session_id, turns: [{ turn_id: 'turn-1', status: 'in-progress' as const, items: [{ type: 'user_message' as const, delivery_id: 'delivery-1', client_message_id: 'client-1' }] }], has_more: false, cursor: null, readable: true, limitation_reason: null, observed_at: new Date().toISOString() };
+  const matched = core.reconcileHistory(identity, { delivery_id: 'delivery-1', client_message_id: 'client-1', history });
+  assert.equal(matched.outcome, 'sent');
+  assert.equal(matched.matched_by, 'delivery_id');
+  const foreign = core.recordActivity({ target_thread_id: 'thread-foreign', target_session_id: identity.target_session_id, delivery_id: 'delivery-1' });
+  assert.equal(foreign, null);
+  const activity = core.recordActivity({ target_thread_id: identity.target_thread_id, target_session_id: identity.target_session_id, turn_id: 'turn-1', delivery_id: 'delivery-1', details: { source: 'same-thread' } });
+  assert.equal(activity?.delivery_id, 'delivery-1');
+  const confirmed = core.reconcileHistory(identity, { delivery_id: 'delivery-1', client_message_id: 'client-1', history });
+  assert.equal(confirmed.outcome, 'confirmed');
+  assert.equal(confirmed.matched_by, 'activity');
+  core.seedDelivery({ delivery_id: 'delivery-unknown', message: 'again', status: 'unknown', target_turn_id: null, client_message_id: 'client-unknown' });
+  const unknown = core.reconcileHistory(identity, { delivery_id: 'delivery-unknown', history: { ...history, turns: [], limitation_reason: null } });
+  assert.equal(unknown.outcome, 'unknown');
+});
+
+test('provider semantics core emits disconnect and close exactly once while cleaning listeners', async () => {
+  const core = new ProviderSemanticsCore({ identity, provider_kind: 'simulated', evidence_level: 'simulated' });
+  core.acceptReceipt(availableReceipt(identity));
+  const events: string[] = [];
+  core.subscribe(event => events.push(event.type));
+  core.disconnect('transport closed');
+  assert.deepEqual(events, ['disconnected']);
+  await core.close();
+  assert.deepEqual(events, ['disconnected']);
+  const second = new ProviderSemanticsCore({ identity, provider_kind: 'simulated', evidence_level: 'simulated' });
+  second.acceptReceipt(availableReceipt(identity));
+  const closed: string[] = [];
+  second.subscribe(event => closed.push(event.type));
+  await second.close();
+  await second.close();
+  assert.deepEqual(closed, ['closed']);
+});
 
 test('simulated provider capability receipt is durable and fail-closed for identity', async () => {
   const provider = new SimulatedMainSessionProvider({ identity });
