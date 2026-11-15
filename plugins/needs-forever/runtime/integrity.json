@@ -17,7 +17,7 @@
     "src/lifecycle.js": "944963ed89c13d5d33b3e842c3b4f0d231426c9e3ec3d877cba5d8c29218d64b",
     "src/local-tracking.js": "e6d9ad3b9194736c3632138532f9f895843a86b0292089abd9cba94ee93ab220",
     "src/main-controller.js": "28226b1a04bd2f7f41119ad5f4cf5b99f665681d55451e96941d985f1c18f1e6",
-    "src/main-session-provider.js": "b0d3b206d4a87d650b3851e29218b6c27c5a984cd7415f70eba1831f1722ec11",
+    "src/main-session-provider.js": "ead1b224e606b2c75155f77de35c0e89708c88060eee2332df6182ec3876fc7c",
     "src/main-session-recovery.js": "91f58733a6303c6f9c44df15022c71528929f8caba385034d5fb449d2e18f864",
     "src/main-session.js": "3f4642d1b7cfdedd1a73b7c236476e6a3c68ba2e9336ccab049b549535ac1c76",
     "src/main-supervision.js": "606833277d4966f1812f3f5cdb6ac4953cb979907de5d4b7733bc519c1c19aaf",
