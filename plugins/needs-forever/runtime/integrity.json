@@ -15,7 +15,7 @@
     "src/judgment-round.js": "afd0842c98537d0930af84e7db25c2304094d2561cce7e3ad2c2208d23c28d3e",
     "src/lifecycle.js": "944963ed89c13d5d33b3e842c3b4f0d231426c9e3ec3d877cba5d8c29218d64b",
     "src/local-tracking.js": "e6d9ad3b9194736c3632138532f9f895843a86b0292089abd9cba94ee93ab220",
-    "src/main-controller.js": "1716fb500a75da4d4ed2ac71bb67a3d0334c06bd15e5d768d133ed8cc4d58b76",
+    "src/main-controller.js": "28226b1a04bd2f7f41119ad5f4cf5b99f665681d55451e96941d985f1c18f1e6",
     "src/main-session-provider.js": "d152106519870cda659694d7377fcf8da12f253eafd0a96ddaacd7607b631915",
     "src/main-session-recovery.js": "932adbf9d0577d2c4f3d1d2781d6b5a003d03d3ddd4b3cef3cebbf57d37b2f2d",
     "src/main-session.js": "3f4642d1b7cfdedd1a73b7c236476e6a3c68ba2e9336ccab049b549535ac1c76",

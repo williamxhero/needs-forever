@@ -282,17 +282,39 @@ export async function launchController(path, pluginRoot, fixture) {
             return;
         }
     }
-    const state = readJson(path);
+    let state = readJson(path);
     if (state.status === 'INTERRUPTED') {
         releaseLaunchLock();
         throw new Error('Supervision interrupted; explicit resume is required.');
     }
     if (state.controller?.lifecycle === 'running') {
         if (!processAbsent(state.controller.pid)) {
-            releaseLaunchLock();
-            throw new Error('A controller receipt already exists; use explicit resume, never silently replace it.');
+            // A native rebind receipt can arrive while the old B is still alive.
+            // The receipt has already advanced the binding generation, so the old
+            // controller cannot safely serve the new lifecycle. Retire that owned
+            // controller through its pinned channel before starting its replacement.
+            // The socket handler accepts this one fenced release command only for
+            // the rebind-controller-required transition below.
+            const replacingRebind = state.binding.status === 'BOUND'
+                && state.binding.operation === 'rebind'
+                && state.recovery_condition?.kind === 'rebind_controller_required';
+            if (!replacingRebind) {
+                releaseLaunchLock();
+                throw new Error('A controller receipt already exists; use explicit resume, never silently replace it.');
+            }
+            await controllerRequest(state.controller, 'release-for-resume');
+            const deadline = Date.now() + 3_000;
+            while (!processAbsent(state.controller.pid)) {
+                if (Date.now() >= deadline) {
+                    releaseLaunchLock();
+                    throw new Error('Rebound controller did not exit before replacement startup.');
+                }
+                await delay(25);
+            }
+            state = readJson(path);
         }
-        state.controller = { ...state.controller, lifecycle: 'exited' };
+        if (state.controller)
+            state.controller = { ...state.controller, lifecycle: 'exited' };
     }
     if (state.controller?.lifecycle === 'exited')
         delete state.controller;
@@ -606,7 +628,12 @@ export async function runController(path, pluginRoot, fixturePath) {
                     // alive while an explicit pause/resume replaces its generation; an
                     // old socket must fail closed before it can append a lifecycle event.
                     const lifecycleCommand = message.command === 'lifecycle';
-                    if (message.token !== controller.token || message.controller_id !== id || message.run_generation !== state.run_generation || latest.run_generation !== message.run_generation || latest.controller?.id !== id || latest.status === 'DONE' || latest.status === 'INTERRUPTED' || (lifecycleCommand && (latest.status === 'PAUSED' || latest.recovery_plan?.cancellation_boundary)))
+                    const fencedReplacementRelease = message.command === 'release-for-resume'
+                        && latest.binding.status === 'BOUND'
+                        && latest.binding.operation === 'rebind'
+                        && latest.recovery_condition?.kind === 'rebind_controller_required'
+                        && latest.controller?.id === id;
+                    if (message.token !== controller.token || message.controller_id !== id || (!fencedReplacementRelease && message.run_generation !== state.run_generation) || (!fencedReplacementRelease && latest.run_generation !== message.run_generation) || latest.controller?.id !== id || latest.status === 'DONE' || latest.status === 'INTERRUPTED' || (lifecycleCommand && (latest.status === 'PAUSED' || latest.recovery_plan?.cancellation_boundary)))
                         throw new Error('Owned controller handle identity mismatch.');
                     // Do not replace the in-memory checkpoint while a Stop is judging.
                     // A concurrent duplicate occurrence is rejected below, but assigning
@@ -626,7 +653,10 @@ export async function runController(path, pluginRoot, fixturePath) {
                         return { live: true, controller_id: id };
                     if (message.command === 'release-for-resume') {
                         const hostPid = state.host.desktop_pid;
-                        if (state.status === 'ACTIVE' && state.phase !== 'RECOVERING' && !(hostPid && processAbsent(hostPid)))
+                        const replacingRebind = state.binding.status === 'BOUND'
+                            && state.binding.operation === 'rebind'
+                            && state.recovery_condition?.kind === 'rebind_controller_required';
+                        if (state.status === 'ACTIVE' && state.phase !== 'RECOVERING' && !replacingRebind && !(hostPid && processAbsent(hostPid)))
                             throw new Error('Active healthy supervision must be paused before resume.');
                         cancelActive('Explicit resume retires the old controller without replay.');
                         state.host.hook_effective = false;

@@ -428,6 +428,34 @@ test('automatic native rebind rotates the generation and rejects stale lifecycle
   assert.deepEqual(JSON.parse(f.hook({ hook_event_name: 'Stop' }).stdout), { decision: 'block', reason: 'Original direction must not replay.' });
 });
 
+test('native rebind retires the previous B before starting its replacement', async (t) => {
+  const f = installed('native-rebind-replaces-live-controller', { decision: { action: 'CONTINUE', next_message: 'Continue after the rebind.' } }, 'native-rebind-replaces-live-controller', 0, {}, { main_session_thread_id: 'native-rebind-replaces-live-controller', worker_completion_delay_ms: 250 });
+  t.after(() => f.run('pause'));
+  const before = JSON.parse(f.run('status').stdout) as MainSessionState;
+  assert.equal(before.controller?.lifecycle, 'running');
+  const pending = {
+    ...before,
+    status: 'ACTIVE', phase: 'RECOVERING',
+    binding: { ...before.binding, status: 'PENDING_NATIVE_HOOK', operation: 'rebind', expected_main_session_id: before.main_session_id, expected_workspace: before.task.workspace, expected_task_version: before.task_version, expected_run_generation: before.run_generation, armed_at: new Date().toISOString() },
+    recovery_condition: { kind: 'native_rebind', message: 'Controller replacement required.', resume_when: 'A fresh native receipt.' },
+    recovery_plan: { ...(before.recovery_plan ?? { owner: null, generation: before.run_generation, task_version: before.task_version, attempt: 0, next_retry_at: null, reason: { kind: 'native_rebind', message: 'Controller replacement required.', resume_when: 'A fresh native receipt.' }, status: 'waiting_native', cancellation_boundary: null }), owner: null, generation: before.run_generation, status: 'waiting_native' },
+  } as unknown as MainSessionState;
+  writeFileSync(f.state, `${JSON.stringify(pending)}\n`);
+  const receipt = f.hook({ hook_event_name: 'PreToolUse', tool_use_id: 'rebind-tool', tool_input: { command: 'echo rebind' } });
+  assert.equal(receipt.status, 0, receipt.stderr);
+  let rebound: any;
+  const deadline = Date.now() + 8_000;
+  while (Date.now() < deadline) {
+    rebound = JSON.parse(f.run('status').stdout);
+    if (rebound.controller?.lifecycle === 'running' && rebound.controller.id !== before.controller?.id) break;
+    await delay(50);
+  }
+  assert.equal(rebound.binding.status, 'BOUND');
+  assert.equal(rebound.controller.lifecycle, 'running');
+  assert.notEqual(rebound.controller.id, before.controller?.id);
+  assert.equal(rebound.phase, 'WORKER');
+});
+
 test('native rebind recovery automatically prompts the original A instead of waiting forever', async (t) => {
   const f = installed('native-rebind-prompt', {}, 'native-rebind-prompt', 0, {}, { main_session_thread_id: 'native-rebind-prompt', worker_completion_delay_ms: 300 });
   // Exercise delivery/correlation without spending the production's 3s grace
