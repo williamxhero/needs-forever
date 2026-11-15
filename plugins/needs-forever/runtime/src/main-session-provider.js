@@ -35,7 +35,8 @@ function completeIdentity(value) {
         && typeof value.task_version === 'number'
         && Number.isInteger(value.task_version)
         && value.task_version > 0
-        && nonEmpty(value.run_generation);
+        && nonEmpty(value.run_generation)
+        && (value.input_epoch === undefined || (typeof value.input_epoch === 'number' && Number.isInteger(value.input_epoch) && value.input_epoch >= 0));
 }
 function identityMatches(expected, actual) {
     return expected.target_thread_id === actual.target_thread_id
@@ -46,6 +47,7 @@ function identityMatches(expected, actual) {
         && expected.host_fingerprint === actual.host_fingerprint
         && expected.task_version === actual.task_version
         && expected.run_generation === actual.run_generation
+        && (expected.input_epoch ?? null) === (actual.input_epoch ?? null)
         && (expected.contract_sha256 ?? null) === (actual.contract_sha256 ?? null);
 }
 function unavailableReceipt(target, reason) {
@@ -68,6 +70,7 @@ function unavailableReceipt(target, reason) {
         endpoint_fingerprint: null,
         task_version: typeof target?.task_version === 'number' && Number.isInteger(target.task_version) ? target.task_version : null,
         run_generation: nonEmpty(target?.run_generation) ? target.run_generation : null,
+        input_epoch: typeof target?.input_epoch === 'number' && Number.isInteger(target.input_epoch) && target.input_epoch >= 0 ? target.input_epoch : null,
         contract_sha256: nonEmpty(target?.contract_sha256) ? target.contract_sha256 : null,
         limitation_reason: reason,
         observed_at: now(),
@@ -94,6 +97,7 @@ export function createCapabilityReceipt(input) {
         endpoint_fingerprint: input.endpoint_fingerprint ?? null,
         task_version: input.task_version ?? null,
         run_generation: input.run_generation ?? null,
+        input_epoch: input.input_epoch ?? null,
         contract_sha256: input.contract_sha256 ?? null,
         limitation_reason: input.limitation_reason ?? null,
         observed_at: input.observed_at ?? now(),
@@ -121,12 +125,14 @@ export function validateCapabilityReceipt(value) {
             throw new Error(`Capability receipt ${key} must be a string or null.`);
     if (receipt.task_version !== null && receipt.task_version !== undefined && (typeof receipt.task_version !== 'number' || !Number.isInteger(receipt.task_version) || receipt.task_version <= 0))
         throw new Error('Capability receipt task_version is invalid.');
+    if (receipt.input_epoch !== null && receipt.input_epoch !== undefined && (typeof receipt.input_epoch !== 'number' || !Number.isInteger(receipt.input_epoch) || receipt.input_epoch < 0))
+        throw new Error('Capability receipt input_epoch is invalid.');
     if (!nonEmpty(receipt.observed_at) || !Number.isFinite(Date.parse(receipt.observed_at)))
         throw new Error('Capability receipt observed_at must be an ISO timestamp.');
     return clone(receipt);
 }
 export function createProviderEvent(input) {
-    return { schema_version: 1, event_id: input.event_id ?? randomUUID(), at: input.at ?? now(), delivery_id: input.delivery_id ?? null, turn_id: input.turn_id ?? null, ...input };
+    return { schema_version: 1, event_id: input.event_id ?? randomUUID(), at: input.at ?? now(), input_epoch: input.input_epoch ?? null, delivery_id: input.delivery_id ?? null, turn_id: input.turn_id ?? null, ...input };
 }
 export function validateProviderEvent(value) {
     if (!value || typeof value !== 'object' || Array.isArray(value))
@@ -145,6 +151,8 @@ export function validateProviderEvent(value) {
             throw new Error(`Provider event ${key} must be a string or null.`);
     if (event.task_version !== null && event.task_version !== undefined && (typeof event.task_version !== 'number' || !Number.isInteger(event.task_version) || event.task_version <= 0))
         throw new Error('Provider event task_version is invalid.');
+    if (event.input_epoch !== null && event.input_epoch !== undefined && (typeof event.input_epoch !== 'number' || !Number.isInteger(event.input_epoch) || event.input_epoch < 0))
+        throw new Error('Provider event input_epoch is invalid.');
     if (!event.payload || typeof event.payload !== 'object' || Array.isArray(event.payload))
         throw new Error('Provider event payload is required.');
     return clone(event);
@@ -194,7 +202,7 @@ export function validateProviderState(value) {
     return clone(state);
 }
 function providerEventFrom(receipt, type, payload, deliveryId = null, turnId = null) {
-    return createProviderEvent({ type, provider_kind: receipt.provider_kind, evidence_level: receipt.evidence_level, target_thread_id: receipt.target_thread_id, target_session_id: receipt.target_session_id, workspace: receipt.workspace, host_fingerprint: receipt.host_fingerprint, task_version: receipt.task_version, run_generation: receipt.run_generation, delivery_id: deliveryId, turn_id: turnId, payload });
+    return createProviderEvent({ type, provider_kind: receipt.provider_kind, evidence_level: receipt.evidence_level, target_thread_id: receipt.target_thread_id, target_session_id: receipt.target_session_id, workspace: receipt.workspace, host_fingerprint: receipt.host_fingerprint, task_version: receipt.task_version, run_generation: receipt.run_generation, input_epoch: receipt.input_epoch ?? null, delivery_id: deliveryId, turn_id: turnId, payload });
 }
 function asObject(value) {
     return value && typeof value === 'object' && !Array.isArray(value) ? value : null;
@@ -254,15 +262,247 @@ function identityFrom(value) {
         result.task_version = nested.task_version;
     if (typeof nested.run_generation === 'string')
         result.run_generation = nested.run_generation;
+    if (typeof nested.input_epoch === 'number')
+        result.input_epoch = nested.input_epoch;
     if (typeof nested.contract_sha256 === 'string')
         result.contract_sha256 = nested.contract_sha256;
     return result;
 }
 function fenceFor(identity) {
-    return { target_thread_id: identity.target_thread_id, main_session_id: identity.main_session_id ?? identity.target_thread_id, target_session_id: identity.target_session_id, workspace: identity.workspace, host_instance_id: identity.host_instance_id, host_fingerprint: identity.host_fingerprint, task_version: identity.task_version, run_generation: identity.run_generation, contract_sha256: identity.contract_sha256 ?? null };
+    return { target_thread_id: identity.target_thread_id, main_session_id: identity.main_session_id ?? identity.target_thread_id, target_session_id: identity.target_session_id, workspace: identity.workspace, host_instance_id: identity.host_instance_id, host_fingerprint: identity.host_fingerprint, task_version: identity.task_version, run_generation: identity.run_generation, input_epoch: identity.input_epoch ?? null, contract_sha256: identity.contract_sha256 ?? null };
 }
 function activeWriterError(error) {
     return /active writer|writer.*active|in.?progress|already.*writing|已有.*写入|进行中/i.test(error instanceof Error ? error.message : String(error));
+}
+export class ProviderSemanticsCore {
+    _identity;
+    _receipt;
+    _state;
+    ledger = new Map();
+    listeners = new Set();
+    closed = false;
+    disconnected = false;
+    constructor(options = {}) {
+        this._identity = completeIdentity(options.identity)
+            ? { ...options.identity, main_session_id: options.identity.main_session_id ?? options.identity.target_thread_id }
+            : null;
+        if (options.receipt)
+            this._receipt = validateCapabilityReceipt(options.receipt);
+        else if (this._identity) {
+            const kind = options.provider_kind ?? 'unavailable';
+            const evidence = options.evidence_level ?? (kind === 'simulated' ? 'simulated' : kind === 'unavailable' ? 'unavailable' : 'unverified');
+            this._receipt = createCapabilityReceipt({
+                provider_kind: kind,
+                evidence_level: evidence,
+                available: false,
+                attached: false,
+                same_thread_verified: false,
+                capabilities: { ...ALL_PROVIDER_CAPABILITIES, ...(options.capabilities ?? {}) },
+                target_thread_id: this._identity.target_thread_id,
+                target_session_id: this._identity.target_session_id,
+                main_session_id: this._identity.main_session_id ?? this._identity.target_thread_id,
+                workspace: this._identity.workspace,
+                host_instance_id: this._identity.host_instance_id,
+                host_fingerprint: this._identity.host_fingerprint,
+                protocol_version: options.protocol_version ?? null,
+                provider_version: options.provider_version ?? null,
+                endpoint_fingerprint: options.endpoint_fingerprint ?? null,
+                task_version: this._identity.task_version,
+                run_generation: this._identity.run_generation,
+                input_epoch: this._identity.input_epoch ?? null,
+                contract_sha256: this._identity.contract_sha256 ?? null,
+                limitation_reason: 'Provider capability receipt has not been accepted.',
+            });
+        }
+        else
+            this._receipt = unavailableReceipt(options.identity, 'Trusted provider identity is unavailable.');
+        this._state = createProviderState(this._receipt);
+        for (const delivery of options.deliveries ?? [])
+            this.seedDelivery(delivery);
+    }
+    get identity() { return this._identity ? clone(this._identity) : null; }
+    get receipt() { return clone(this._receipt); }
+    get state() { return clone(this._state); }
+    get isClosed() { return this.closed; }
+    get isDisconnected() { return this.disconnected; }
+    /** Return the complete transport fence for a request. */
+    fence(target) {
+        this.assertTarget(target);
+        return fenceFor(target);
+    }
+    /** Validate the full original-thread identity and all generation fences. */
+    assertTarget(candidate) {
+        if (!completeIdentity(candidate))
+            throw new ProviderIdentityError('Trusted provider identity is unavailable; target thread/session, absolute workspace, host fingerprint, task version and run generation are required.');
+        const target = { ...candidate, main_session_id: candidate.main_session_id ?? candidate.target_thread_id };
+        if (!this._identity || !identityMatches(this._identity, target))
+            throw new ProviderIdentityError('Provider target identity does not match the registered original thread, workspace, host or generation fence.');
+        return clone(target);
+    }
+    /** Accept a new capability receipt while retaining the durable ledger. */
+    acceptReceipt(receipt) {
+        const next = validateCapabilityReceipt(receipt);
+        if (this._identity && next.target_thread_id && next.target_session_id && next.workspace && next.host_instance_id && next.host_fingerprint && next.task_version && next.run_generation) {
+            this.assertTarget({
+                target_thread_id: next.target_thread_id,
+                target_session_id: next.target_session_id,
+                main_session_id: next.main_session_id ?? next.target_thread_id,
+                workspace: next.workspace,
+                host_instance_id: next.host_instance_id,
+                host_fingerprint: next.host_fingerprint,
+                task_version: next.task_version,
+                run_generation: next.run_generation,
+                ...(next.input_epoch === null || next.input_epoch === undefined ? {} : { input_epoch: next.input_epoch }),
+                contract_sha256: next.contract_sha256,
+            });
+        }
+        this._receipt = next;
+        this._state = {
+            ...this._state,
+            provider_kind: next.provider_kind,
+            evidence_level: next.evidence_level,
+            capabilities: clone(next.capabilities),
+            target_thread_id: next.target_thread_id,
+            target_session_id: next.target_session_id,
+            workspace: next.workspace,
+            host_fingerprint: next.host_fingerprint,
+            same_thread_verified: next.same_thread_verified,
+            status: next.available && next.attached ? 'attached' : this.closed ? 'closed' : this.disconnected ? 'disconnected' : 'unavailable',
+            limitation_reason: next.limitation_reason,
+            next_action: next.available ? null : 'Wait for a trusted provider receipt or native lifecycle receipt.',
+            updated_at: next.observed_at,
+        };
+        this.disconnected = false;
+        return this.receipt;
+    }
+    requireAvailable(target) {
+        this.assertTarget(target);
+        if (this.closed)
+            throw new Error('Provider is closed.');
+        if (this.disconnected || !this._receipt.available || !this._receipt.same_thread_verified)
+            throw new ProviderIdentityError(this._receipt.limitation_reason ?? 'Provider is unavailable or same-thread identity is unverified.');
+    }
+    classifyWriter(value) {
+        return writerOf(value);
+    }
+    seedDelivery(delivery) {
+        if (!nonEmpty(delivery.delivery_id))
+            throw new Error('Delivery identity is required.');
+        const entry = {
+            ...clone(delivery),
+            task_version: this._receipt.task_version ?? this._identity?.task_version ?? 0,
+            run_generation: this._receipt.run_generation ?? this._identity?.run_generation ?? '',
+            input_epoch: this._receipt.input_epoch ?? this._identity?.input_epoch ?? null,
+            contract_sha256: this._receipt.contract_sha256 ?? this._identity?.contract_sha256 ?? null,
+        };
+        this.ledger.set(entry.delivery_id, entry);
+        return clone(entry);
+    }
+    ledgerEntry(deliveryId) {
+        const entry = this.ledger.get(deliveryId);
+        return entry ? clone(entry) : null;
+    }
+    ledgerSnapshot() { return [...this.ledger.values()].map(clone); }
+    prepareDelivery(target, delivery) {
+        this.requireAvailable(target);
+        const existing = this.ledger.get(delivery.delivery_id);
+        if (existing)
+            return clone(existing);
+        return this.seedDelivery({ delivery_id: delivery.delivery_id, message: delivery.message, status: 'prepared', target_turn_id: null, client_message_id: delivery.delivery_id, observed_at: now() });
+    }
+    recordSend(target, request, result) {
+        this.requireAvailable(target);
+        const status = result.outcome;
+        const entry = this.seedDelivery({ delivery_id: request.delivery_id, message: request.message, status, target_turn_id: result.target_turn_id, client_message_id: request.delivery_id, observed_at: result.observed_at });
+        this.emit('send_sent', { outcome: status, reason: result.reason }, request.delivery_id, result.target_turn_id);
+        return entry;
+    }
+    reconcileHistory(target, input) {
+        this.requireAvailable(target);
+        const at = now();
+        const local = this.ledger.get(input.delivery_id);
+        if (!input.history.readable) {
+            const result = { delivery_id: input.delivery_id, outcome: 'unknown', matched_by: 'none', target_turn_id: null, reason: input.history.limitation_reason ?? 'Original thread history is unreadable.', observed_at: at };
+            this.recordReconciliation(result);
+            return result;
+        }
+        const client = input.client_message_id ?? input.delivery_id;
+        const byDelivery = input.history.turns.find(turn => turn.items.some(item => item.delivery_id === input.delivery_id));
+        const byClient = input.history.turns.find(turn => turn.items.some(item => item.client_message_id === client));
+        const byTurn = input.target_turn_id ? input.history.turns.find(turn => turn.turn_id === input.target_turn_id) : undefined;
+        const match = byDelivery ?? byClient ?? byTurn;
+        const matchedBy = byDelivery ? 'delivery_id' : byClient ? 'client_message_id' : byTurn ? 'target_turn_id' : 'none';
+        const observedActivity = this._state.continuation_confirmation?.delivery_id === input.delivery_id;
+        let result;
+        if (match) {
+            result = { delivery_id: input.delivery_id, outcome: observedActivity ? 'confirmed' : 'sent', matched_by: observedActivity ? 'activity' : matchedBy, target_turn_id: match.turn_id, reason: observedActivity ? null : 'A matching user message exists, but A activity is not confirmed.', observed_at: at };
+        }
+        else if (local?.status === 'unknown') {
+            result = { delivery_id: input.delivery_id, outcome: 'unknown', matched_by: 'none', target_turn_id: null, reason: 'Send outcome is unknown; no history proof permits a resend.', observed_at: at };
+        }
+        else {
+            result = { delivery_id: input.delivery_id, outcome: 'not_found', matched_by: 'none', target_turn_id: null, reason: 'No matching delivery, client message or target turn exists in the original thread history.', observed_at: at };
+        }
+        this.recordReconciliation(result);
+        return result;
+    }
+    recordReconciliation(result) {
+        const local = this.ledger.get(result.delivery_id);
+        if (local) {
+            const status = result.outcome === 'confirmed' ? 'confirmed' : result.outcome === 'sent' ? 'sent' : result.outcome === 'active_writer' ? 'active-writer' : result.outcome === 'unavailable' || result.outcome === 'unknown' ? result.outcome : local.status;
+            this.ledger.set(result.delivery_id, { ...local, status, target_turn_id: result.target_turn_id ?? local.target_turn_id, observed_at: result.observed_at });
+        }
+        this._state = { ...this._state, last_delivery: clone(result), updated_at: result.observed_at };
+        this.emit('delivery_reconciled', { outcome: result.outcome, matched_by: result.matched_by, reason: result.reason }, result.delivery_id, result.target_turn_id);
+        return clone(result);
+    }
+    recordActivity(input) {
+        if (this.closed || !this._identity || input.target_thread_id !== this._identity.target_thread_id || input.target_session_id !== this._identity.target_session_id)
+            return null;
+        const activity = { event_id: randomUUID(), type: 'activity', target_thread_id: input.target_thread_id, target_session_id: input.target_session_id, turn_id: input.turn_id ?? null, delivery_id: input.delivery_id ?? null, observed_at: input.observed_at ?? now(), details: clone(input.details ?? {}) };
+        this._state = { ...this._state, a_activity: activity, continuation_confirmation: input.delivery_id && this.ledger.has(input.delivery_id) ? activity : this._state.continuation_confirmation, updated_at: activity.observed_at };
+        if (input.delivery_id) {
+            const local = this.ledger.get(input.delivery_id);
+            if (local)
+                this.ledger.set(input.delivery_id, { ...local, status: 'confirmed', target_turn_id: input.turn_id ?? local.target_turn_id, observed_at: activity.observed_at });
+        }
+        this.emit('activity', activity.details, activity.delivery_id, activity.turn_id);
+        return clone(activity);
+    }
+    subscribe(listener) {
+        if (this.closed)
+            throw new Error('Provider is closed.');
+        this.listeners.add(listener);
+        return { unsubscribe: () => { this.listeners.delete(listener); } };
+    }
+    emit(type, payload, deliveryId = null, turnId = null) {
+        const event = providerEventFrom(this._receipt, type, payload, deliveryId, turnId);
+        for (const listener of [...this.listeners]) {
+            try {
+                listener(clone(event));
+            }
+            catch { /* observers cannot break provider state */ }
+        }
+        return event;
+    }
+    disconnect(reason = 'Provider disconnected.') {
+        if (this.closed || this.disconnected)
+            return;
+        this.disconnected = true;
+        this._receipt = { ...this._receipt, attached: false, available: false, limitation_reason: reason, observed_at: now() };
+        this._state = { ...this._state, status: 'disconnected', limitation_reason: reason, next_action: 'Probe a fresh trusted provider receipt before delivery.', updated_at: this._receipt.observed_at };
+        this.emit('disconnected', { reason });
+        this.listeners.clear();
+    }
+    async close() {
+        if (this.closed)
+            return;
+        this.closed = true;
+        this._receipt = { ...this._receipt, attached: false, observed_at: now() };
+        this._state = { ...this._state, status: 'closed', updated_at: this._receipt.observed_at };
+        this.emit('closed', {});
+        this.listeners.clear();
+    }
 }
 /** Adapter for an already-owned Desktop/shared app-server connection. It never
  * starts a process or creates a thread; all identity and generation fields are
