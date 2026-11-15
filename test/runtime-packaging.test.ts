@@ -7,6 +7,8 @@ import { join, resolve } from 'node:path';
 import {
   createPackagingReceiptInput,
   inspectRuntimeArtifacts,
+  runRuntimePackaging,
+  verifyRuntimeParity,
   RuntimePackagingError,
 } from '../src/runtime-packaging.js';
 
@@ -42,7 +44,8 @@ test('runtime packaging contract produces deterministic normalized manifest and 
     writeFileSync(join(source, 'z.js'), '\uFEFFexport default "z";\r\n');
     writeFileSync(join(source, 'a.js'), 'export default "a";\r\n//# sourceMappingURL=a.js.map\r\n');
     writeFileSync(join(source, '中文 模块', 'entry.js'), 'export default "入口";\n');
-    writeFileSync(join(source, 'types.d.ts'), 'export type Only = string;\r\n');
+    writeFileSync(join(source, 'generated.js'), '// GENERATED CODE! DO NOT MODIFY BY HAND!\nexport {};\n');
+    writeFileSync(join(source, 'types.d.ts'), 'export type Only = string;\n');
     writeFileSync(join(source, 'entry.js.map'), '{}\n');
 
     const first = inspectRuntimeArtifacts({ sourceRoot: source, runtimeTarget: target, identity: identity() });
@@ -57,6 +60,7 @@ test('runtime packaging contract produces deterministic normalized manifest and 
     assert.equal(first.artifacts[0]?.content, 'export default "a";\n');
     assert.equal(first.artifacts[1]?.content, 'export default "z";\n');
     assert.equal(first.artifacts[2]?.content, 'export default "入口";\n');
+    assert.deepEqual(first.excluded.find(({ path }) => path === 'generated.js'), { path: 'generated.js', reason: 'type-only' });
     assert.equal(first.manifest.schema_version, 1);
     assert.equal(first.manifest.package_name, identity().packageName);
     assert.equal(first.manifest.package_version, identity().packageVersion);
@@ -154,5 +158,86 @@ test('runtime packaging receipt input is independent of host absolute paths', ()
     assert.equal(serialized.includes('sourceRoot'), false);
     assert.equal(serialized.includes('runtimeTarget'), false);
     assert.equal(readFileSync(join(source, 'main.js'), 'utf8'), 'export default 1;');
+  });
+});
+
+test('runtime packaging pipeline builds, materializes, verifies parity, and emits a deterministic receipt', () => {
+  withFixture((root) => {
+    const source = join(root, 'source');
+    const runtimeRoot = join(root, 'bundle');
+    const runtimeTarget = join(runtimeRoot, 'src');
+    const identity = {
+      packageName: 'needs-forever',
+      packageVersion: '0.3.4',
+      sourceRevision: 'revision-95',
+      generatorVersion: 'runtime-packaging-pipeline@1',
+    } as const;
+    let builds = 0;
+    const first = runRuntimePackaging({
+      sourceRoot: source,
+      runtimeRoot,
+      runtimeTarget,
+      identity,
+      buildSource: () => {
+        builds += 1;
+        mkdirSync(source, { recursive: true });
+        writeFileSync(join(source, 'entry.js'), '\uFEFFexport default "ok";\n');
+        writeFileSync(join(source, 'entry.d.ts'), 'export type Entry = string;\n');
+      },
+    });
+    assert.equal(builds, 1);
+    assert.equal(first.bundled.artifacts[0]?.content, 'export default "ok";\n');
+    assert.equal(first.receipt.source.status, 'built');
+    assert.equal(first.receipt.bundled.status, 'verified');
+    assert.equal(first.receipt.installed.status, 'not_run');
+    assert.equal(first.receipt.native_effectiveness, 'not_run');
+    assert.deepEqual(JSON.parse(readFileSync(join(runtimeRoot, 'manifest.json'), 'utf8')), first.plan.manifest);
+    assert.deepEqual(JSON.parse(readFileSync(join(runtimeRoot, 'integrity.json'), 'utf8')), first.integrity);
+    assert.deepEqual(JSON.parse(readFileSync(join(runtimeRoot, 'packaging-receipt.json'), 'utf8')), first.receipt);
+    const receiptBytes = readFileSync(join(runtimeRoot, 'packaging-receipt.json'), 'utf8');
+    const second = runRuntimePackaging({ sourceRoot: source, runtimeRoot, runtimeTarget, identity, buildSource: () => { builds += 1; } });
+    assert.equal(builds, 2);
+    assert.deepEqual(second.receipt, first.receipt);
+    assert.equal(readFileSync(join(runtimeRoot, 'packaging-receipt.json'), 'utf8'), receiptBytes);
+    assert.equal(JSON.stringify(second.bundled.manifest.artifacts), JSON.stringify(first.bundled.manifest.artifacts));
+  });
+});
+
+test('runtime packaging pipeline fails closed and keeps the previous verified bundle', () => {
+  withFixture((root) => {
+    const source = join(root, 'source');
+    const runtimeRoot = join(root, 'bundle');
+    const runtimeTarget = join(runtimeRoot, 'src');
+    const identity = {
+      packageName: 'needs-forever',
+      packageVersion: '0.3.4',
+      sourceRevision: 'revision-95',
+      generatorVersion: 'runtime-packaging-pipeline@1',
+    } as const;
+    mkdirSync(source, { recursive: true });
+    writeFileSync(join(source, 'entry.js'), 'export default "good";\n');
+    runRuntimePackaging({ sourceRoot: source, runtimeRoot, runtimeTarget, identity });
+    const oldRuntime = readFileSync(join(runtimeTarget, 'entry.js'), 'utf8');
+    const oldReceipt = readFileSync(join(runtimeRoot, 'packaging-receipt.json'), 'utf8');
+    writeFileSync(join(source, 'unsupported.txt'), 'must fail');
+    assert.throws(
+      () => runRuntimePackaging({ sourceRoot: source, runtimeRoot, runtimeTarget, identity }),
+      (error: unknown) => errorCode(error) === 'UNSUPPORTED_ARTIFACT',
+    );
+    assert.equal(readFileSync(join(runtimeTarget, 'entry.js'), 'utf8'), oldRuntime);
+    assert.equal(readFileSync(join(runtimeRoot, 'packaging-receipt.json'), 'utf8'), oldReceipt);
+    assert.equal(readFileSync(join(runtimeRoot, 'src/entry.js'), 'utf8'), 'export default "good";\n');
+  });
+});
+
+test('runtime packaging parity interface rejects an extra bundled module', () => {
+  withFixture((root) => {
+    const source = join(root, 'source');
+    mkdirSync(source, { recursive: true });
+    writeFileSync(join(source, 'entry.js'), 'export default 1;');
+    const sourcePlan = inspectRuntimeArtifacts({ sourceRoot: source, runtimeTarget: join(root, 'target'), identity: identity() });
+    const bundled = inspectRuntimeArtifacts({ sourceRoot: source, runtimeTarget: join(root, 'target-2'), identity: identity() });
+    bundled.manifest.artifacts.push({ path: 'extra.js', byte_length: 0, content_sha256: '0'.repeat(64) });
+    assert.throws(() => verifyRuntimeParity(sourcePlan, bundled), (error: unknown) => errorCode(error) === 'PARITY_FAILED');
   });
 });
