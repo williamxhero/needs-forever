@@ -423,7 +423,8 @@ export function runRuntimePackaging(input: RuntimePackagingPipelineInput): Runti
   if (pathInside(sourceRoot, runtimeRoot) || pathInside(runtimeRoot, sourceRoot)) throw new RuntimePackagingError('PATH_CONFLICT', 'sourceRoot and runtimeRoot must be separate trees.');
   const integrityTarget = canonicalMetadataPath(input.integrityTarget, runtimeRoot, 'integrity.json');
   const receiptTarget = canonicalMetadataPath(input.receiptTarget, runtimeRoot, 'packaging-receipt.json');
-  if (pathInside(runtimeTarget, integrityTarget) || pathInside(runtimeTarget, receiptTarget) || integrityTarget === receiptTarget) throw new RuntimePackagingError('PATH_CONFLICT', 'Runtime metadata must be separate from runtime modules and each other.');
+  const manifestTarget = join(runtimeRoot, 'manifest.json');
+  if (pathInside(runtimeTarget, integrityTarget) || pathInside(runtimeTarget, receiptTarget) || integrityTarget === receiptTarget || manifestTarget === integrityTarget || manifestTarget === receiptTarget) throw new RuntimePackagingError('PATH_CONFLICT', 'Runtime metadata must be separate from runtime modules and each other.');
 
   try {
     input.buildSource?.();
@@ -471,6 +472,7 @@ export function runRuntimePackaging(input: RuntimePackagingPipelineInput): Runti
     writeFileSync(stageReceipt, stableJson(receipt), 'utf8');
     const readBackIntegrity = readIntegrity(readFileSync(stageIntegrity, 'utf8'), integrityTarget);
     if (JSON.stringify(readBackIntegrity) !== JSON.stringify(integrity)) throw new RuntimePackagingError('INTEGRITY_FAILED', 'Integrity metadata changed while staging.');
+    if (readFileSync(manifestPath, 'utf8') !== plan.manifest_json) throw new RuntimePackagingError('INTEGRITY_FAILED', 'Runtime manifest changed while staging.');
     const readBackReceipt = JSON.parse(readFileSync(stageReceipt, 'utf8')) as RuntimePackagingPipelineReceipt;
     if (JSON.stringify(readBackReceipt) !== JSON.stringify(receipt)) throw new RuntimePackagingError('INTEGRITY_FAILED', 'Packaging receipt changed while staging.');
     backupRoot = replaceDirectoryAtomically(stagingRoot, runtimeRoot);
@@ -479,6 +481,7 @@ export function runRuntimePackaging(input: RuntimePackagingPipelineInput): Runti
     verifyRuntimeParity(plan, finalBundled);
     const finalIntegrity = readIntegrity(readFileSync(integrityTarget, 'utf8'), integrityTarget);
     if (JSON.stringify(finalIntegrity) !== JSON.stringify(integrity)) throw new RuntimePackagingError('INTEGRITY_FAILED', 'Published integrity metadata does not match the staged artifact.');
+    if (readFileSync(manifestTarget, 'utf8') !== plan.manifest_json) throw new RuntimePackagingError('INTEGRITY_FAILED', 'Published runtime manifest does not match the staged artifact.');
     const finalReceipt = JSON.parse(readFileSync(receiptTarget, 'utf8')) as RuntimePackagingPipelineReceipt;
     if (JSON.stringify(finalReceipt) !== JSON.stringify(receipt)) throw new RuntimePackagingError('INTEGRITY_FAILED', 'Published packaging receipt does not match the staged artifact.');
     if (backupRoot) rmSync(backupRoot, { recursive: true, force: true });
