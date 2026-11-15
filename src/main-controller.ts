@@ -296,6 +296,40 @@ export function boundStateForEvent(input: any, pluginRoot: string, simulated: bo
 }
 export async function dispatchBoundLifecycle(path: string, input: unknown, pluginRoot?: string, bundleHash?: string, desktopPid?: number, nativeReceipt?: NativeLifecycleReceipt, fixturePath?: string): Promise<HookReply> {
   const state = readJson(path) as MainSessionState;
+  // A rebind receipt belongs to the lifecycle seam, even when the previous B
+  // is still alive.  Sending it to that stale controller lets its ordinary
+  // lifecycle handler ignore the `bound` result and races the replacement B.
+  // Consume the receipt here so launchController can retire the old B through
+  // the fenced `rebind_controller_required` transition before starting one.
+  const rebindEvent = nativeReceipt && ['SessionStart', 'UserPromptSubmit', 'PreToolUse', 'PostToolUse', 'Stop'].includes((input as any)?.hook_event_name);
+  if (state.binding.status === 'PENDING_NATIVE_HOOK' && state.binding.operation === 'rebind' && rebindEvent) {
+    if (!pluginRoot || !bundleHash) return {};
+    const adapterOccurrenceId = randomUUID();
+    const result = handleLifecycle(input, state.host, pluginRoot, adapterOccurrenceId, nativeReceipt);
+    if (result.bound) {
+      await launchController(path, pluginRoot, fixturePath);
+      // A Stop receipt is both the binding proof and the first genuine Stop
+      // for the replacement B. Re-submit that one event through the new
+      // controller after it is ready; the pending_stop_receipt fence makes
+      // this a single accepted occurrence rather than a replay.
+      if ((input as any)?.hook_event_name === 'Stop') {
+        const rebound = readJson(path) as MainSessionState;
+        if (rebound.controller?.lifecycle === 'running') {
+          return controllerRequest(rebound.controller, 'lifecycle', {
+            adapter_occurrence_id: adapterOccurrenceId,
+            native_receipt: nativeReceipt,
+            event: {
+              ...(input as object),
+              callback_plugin_root: canonicalPath(pluginRoot),
+              callback_bundle_sha256: bundleHash,
+              ...(desktopPid ? { callback_desktop_pid: desktopPid } : {}),
+            },
+          }, 590_000);
+        }
+      }
+    }
+    return {};
+  }
   if (!state.controller || state.controller.lifecycle !== 'running') {
     const parkedJudgeRecovery = state.status === 'WAIT_EXTERNAL' && state.recovery_condition?.kind === 'judge_unavailable';
     if (!pluginRoot || !bundleHash || !nativeReceipt || !['SessionStart', 'UserPromptSubmit'].includes((input as any)?.hook_event_name) || (state.status !== 'ACTIVE' && !parkedJudgeRecovery) || state.binding.status !== 'BOUND' || state.main_session_id !== (input as any)?.session_id || canonicalPath((input as any)?.cwd) !== canonicalPath(state.task.workspace)) return {};

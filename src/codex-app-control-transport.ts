@@ -7,6 +7,7 @@ import type {
   DesktopRpcTransportMetadata,
   ProviderIdentity,
 } from './main-session-provider.js';
+import { sameWorkspacePath } from './main-session-provider.js';
 
 const execFile = promisify(execFileCallback);
 const MAX_FRAME_BYTES = 8 * 1024 * 1024;
@@ -307,7 +308,8 @@ export class CodexAppControlTransport implements DesktopRpcTransport {
       const thread = objectOf(parsed.thread) ?? {};
       const actualThreadId = stringOf(thread.id) ?? stringOf(thread.thread_id);
       const actualWorkspace = stringOf(thread.cwd) ?? stringOf(thread.workspace);
-      const sameThread = actualThreadId === threadId && actualWorkspace === identity.workspace;
+      const identityWorkspace = stringOf(identity.workspace);
+      const sameThread = actualThreadId === threadId && !!actualWorkspace && !!identityWorkspace && sameWorkspacePath(actualWorkspace, identityWorkspace);
       return { identity, available: sameThread, same_thread_verified: sameThread, capabilities: this.metadata.capabilities, protocol_version: this.metadata.protocol_version, provider_version: this.metadata.provider_version, endpoint_fingerprint: endpointFingerprint, limitation_reason: sameThread ? null : 'Codex app control returned a different thread or workspace.' };
     }
     const thread = objectOf(parsed.thread) ?? {};

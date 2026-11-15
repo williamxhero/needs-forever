@@ -270,8 +270,23 @@ async function deliverViaDesktopAppBridge(statePath, state, prompt) {
     });
     try {
         const receipt = await provider.probe({ target: identity });
-        if (!receipt.available || !receipt.same_thread_verified)
+        if (!receipt.available || !receipt.same_thread_verified) {
+            log(statePath, state, 'main_session_recovery_bridge_unavailable', {
+                delivery_id: prompt.delivery_id,
+                main_session_id: state.main_session_id,
+                attempted_transport: 'codex-app-tools',
+                provider_kind: receipt.provider_kind,
+                evidence_level: receipt.evidence_level,
+                available: receipt.available,
+                attached: receipt.attached,
+                same_thread_verified: receipt.same_thread_verified,
+                target_thread_id: receipt.target_thread_id,
+                target_session_id: receipt.target_session_id,
+                workspace: receipt.workspace,
+                limitation_reason: receipt.limitation_reason,
+            });
             return 'unavailable';
+        }
         const snapshot = await provider.readThread({ target: identity });
         if (snapshot.writer.status === 'in-progress' || snapshot.writer.status === 'active-writer') {
             deferRecoveryPrompt(statePath, prompt.delivery_id, '原始 A 当前仍有进行中的回合，Desktop 宿主桥已确认 writer 占用；NF 将在其结束后自动重试。', undefined, true, 'recovery_active_writer', 'in_progress');
@@ -304,7 +319,14 @@ async function deliverViaDesktopAppBridge(statePath, state, prompt) {
         deferRecoveryPrompt(statePath, prompt.delivery_id, sent.reason ?? 'Desktop 宿主桥发送结果未知；NF 保留 delivery fence，不盲重发。', undefined, false, 'recovery_delivery_unknown', writerPreflightOf(snapshot.writer.status));
         return 'handled';
     }
-    catch {
+    catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        log(statePath, state, 'main_session_recovery_bridge_error', {
+            delivery_id: prompt.delivery_id,
+            main_session_id: state.main_session_id,
+            attempted_transport: 'codex-app-tools',
+            reason,
+        });
         return 'unavailable';
     }
     finally {

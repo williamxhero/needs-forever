@@ -38,11 +38,17 @@ function completeIdentity(value) {
         && nonEmpty(value.run_generation)
         && (value.input_epoch === undefined || value.input_epoch === null || (typeof value.input_epoch === 'number' && Number.isInteger(value.input_epoch) && value.input_epoch >= 0));
 }
+/** Windows paths are case-insensitive, including paths returned by Desktop. */
+export function sameWorkspacePath(left, right) {
+    if (process.platform !== 'win32')
+        return left === right;
+    return left.replaceAll('/', '\\').toLowerCase() === right.replaceAll('/', '\\').toLowerCase();
+}
 function identityMatches(expected, actual) {
     return expected.target_thread_id === actual.target_thread_id
         && expected.target_session_id === actual.target_session_id
         && (expected.main_session_id ?? expected.target_thread_id) === (actual.main_session_id ?? actual.target_thread_id)
-        && expected.workspace === actual.workspace
+        && sameWorkspacePath(expected.workspace, actual.workspace)
         && expected.host_instance_id === actual.host_instance_id
         && expected.host_fingerprint === actual.host_fingerprint
         && expected.task_version === actual.task_version

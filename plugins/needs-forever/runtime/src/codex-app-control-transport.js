@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { execFile as execFileCallback } from 'node:child_process';
 import { promisify } from 'node:util';
 import net from 'node:net';
+import { sameWorkspacePath } from './main-session-provider.js';
 const execFile = promisify(execFileCallback);
 const MAX_FRAME_BYTES = 8 * 1024 * 1024;
 const CODEX_APP_NAMESPACE = 'codex_app';
@@ -299,7 +300,8 @@ export class CodexAppControlTransport {
             const thread = objectOf(parsed.thread) ?? {};
             const actualThreadId = stringOf(thread.id) ?? stringOf(thread.thread_id);
             const actualWorkspace = stringOf(thread.cwd) ?? stringOf(thread.workspace);
-            const sameThread = actualThreadId === threadId && actualWorkspace === identity.workspace;
+            const identityWorkspace = stringOf(identity.workspace);
+            const sameThread = actualThreadId === threadId && !!actualWorkspace && !!identityWorkspace && sameWorkspacePath(actualWorkspace, identityWorkspace);
             return { identity, available: sameThread, same_thread_verified: sameThread, capabilities: this.metadata.capabilities, protocol_version: this.metadata.protocol_version, provider_version: this.metadata.provider_version, endpoint_fingerprint: endpointFingerprint, limitation_reason: sameThread ? null : 'Codex app control returned a different thread or workspace.' };
         }
         const thread = objectOf(parsed.thread) ?? {};
