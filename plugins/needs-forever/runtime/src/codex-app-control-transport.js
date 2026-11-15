@@ -25,7 +25,7 @@ function pipeFingerprint(value) {
 function identityFence(params) {
     const raw = objectOf(params) ?? {};
     const result = {};
-    for (const key of ['target_thread_id', 'target_session_id', 'workspace', 'host_instance_id', 'host_fingerprint', 'task_version', 'run_generation', 'contract_sha256']) {
+    for (const key of ['target_thread_id', 'target_session_id', 'workspace', 'host_instance_id', 'host_fingerprint', 'task_version', 'run_generation', 'input_epoch', 'contract_sha256']) {
         if (raw[key] !== undefined)
             result[key] = raw[key];
     }
@@ -111,6 +111,7 @@ function responseIdentity(params, parsed, endpointFingerprint, hostId) {
         host_fingerprint: stringOf(fence.host_fingerprint) ?? endpointFingerprint,
         task_version: fence.task_version,
         run_generation: fence.run_generation,
+        input_epoch: fence.input_epoch ?? null,
         contract_sha256: fence.contract_sha256 ?? null,
     };
 }
