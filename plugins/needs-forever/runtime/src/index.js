@@ -23,3 +23,4 @@ export { recoverMainSessionWithProvider, invalidateProviderRecovery } from './pr
 export { recoverBoundMainSession, invalidateBoundProviderRecovery } from './main-controller.js';
 export { ALL_PROVIDER_CAPABILITIES, ProviderIdentityError, SimulatedMainSessionProvider, DesktopMainSessionProvider, ProviderSemanticsCore, createCapabilityReceipt, createProviderEvent, createProviderState, createSimulatedMainSessionProvider, createSimulatedProvider, validateCapabilityReceipt, validateProviderEvent, validateProviderState, } from './main-session-provider.js';
 export { CodexAppControlTransport, discoverCodexAppControlPipe } from './codex-app-control-transport.js';
+export { createPackagingReceiptInput, inspectRuntimeArtifacts, RuntimePackagingError } from './runtime-packaging.js';

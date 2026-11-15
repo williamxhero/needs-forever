@@ -94,3 +94,5 @@ export type {
 } from './main-session-provider.js';
 export { CodexAppControlTransport, discoverCodexAppControlPipe } from './codex-app-control-transport.js';
 export type { CodexAppControlTransportOptions } from './codex-app-control-transport.js';
+export { createPackagingReceiptInput, inspectRuntimeArtifacts, RuntimePackagingError } from './runtime-packaging.js';
+export type { RuntimeArtifact, RuntimeArtifactExclusion, RuntimeArtifactExclusionReason, RuntimeArtifactManifest, RuntimeArtifactManifestEntry, RuntimePackagingIdentity, RuntimePackagingInput, RuntimePackagingPlan, RuntimePackagingReceiptInput, RuntimePackagingErrorCode } from './runtime-packaging.js';
