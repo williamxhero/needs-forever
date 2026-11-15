@@ -242,3 +242,42 @@ test('desktop provider maps active writer, fences unknown delivery, and never se
   const reconciliation = await provider.reconcileDelivery({ target: identity, delivery_id: 'delivery-1', message: 'continue' });
   assert.equal(reconciliation.outcome, 'unknown');
 });
+
+test('desktop and simulated adapters share same-thread activity confirmation semantics', async () => {
+  let desktopActivity: ((event: unknown) => void) | undefined;
+  const transport: DesktopRpcTransport = {
+    metadata: { provider_kind: 'daemon', evidence_level: 'live', identity, protocol_version: 'codex-cli 0.167.0', provider_version: 'desktop-provider 1.0.0', endpoint_fingerprint: 'endpoint-shared-semantics' },
+    async request<T>(method: string, _params: unknown): Promise<T> {
+      if (method === 'provider/probe') return { available: true, same_thread_verified: true, identity, capabilities: ALL_PROVIDER_CAPABILITIES } as T;
+      if (method === 'thread/reconcile') return { identity, outcome: 'not_found', matched_by: 'none', turns: [], readable: true } as T;
+      if (method === 'thread/send') return { identity, outcome: 'sent', target_turn_id: 'turn-activity' } as T;
+      return { identity, thread: { id: identity.target_thread_id, session_id: identity.target_session_id, status: 'idle', turns: [] } } as T;
+    },
+    subscribe(listener) {
+      desktopActivity = listener;
+      return { unsubscribe() { desktopActivity = undefined; } };
+    },
+  };
+
+  const simulated = new SimulatedMainSessionProvider({ identity, send_outcomes: ['sent'] });
+  const desktop = new DesktopMainSessionProvider({ identity, transport });
+  await simulated.probe({ target: identity });
+  await desktop.probe({ target: identity });
+
+  await simulated.send({ target: identity, delivery_id: 'delivery-activity', message: 'continue' });
+  await desktop.send({ target: identity, delivery_id: 'delivery-activity', message: 'continue' });
+  await desktop.subscribe({ target: identity }, () => {});
+  simulated.confirmActivity('delivery-activity', 'turn-activity');
+  desktopActivity?.({ identity, type: 'activity', delivery_id: 'delivery-activity', turn_id: 'turn-activity', payload: { confirmed: true } });
+
+  const simulatedResult = await simulated.reconcileDelivery({ target: identity, delivery_id: 'delivery-activity', message: 'continue' });
+  const desktopResult = await desktop.reconcileDelivery({ target: identity, delivery_id: 'delivery-activity', message: 'continue' });
+  assert.deepEqual(
+    { outcome: simulatedResult.outcome, matched_by: simulatedResult.matched_by, target_turn_id: simulatedResult.target_turn_id },
+    { outcome: 'confirmed', matched_by: 'activity', target_turn_id: 'turn-activity' },
+  );
+  assert.deepEqual(
+    { outcome: desktopResult.outcome, matched_by: desktopResult.matched_by, target_turn_id: desktopResult.target_turn_id },
+    { outcome: 'confirmed', matched_by: 'activity', target_turn_id: 'turn-activity' },
+  );
+});
