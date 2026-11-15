@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "captured_at": "2026-11-15T08:10:17.535Z",
+  "mode": "daemon-resume-original-desktop-thread",
+  "task_id": "quantresearch-792-supervise-20261113",
+  "target_thread_id": "01a1d462-de9b-74e1-8429-b81a13c2770a",
+  "workspace": "D:\\WILL\\STOCK\\QuantResearch",
+  "control": {
+    "endpoint": "http://127.0.0.1:8790/api/tasks/quantresearch-792-supervise-20261113/control",
+    "action": "resume",
+    "http_status": 200,
+    "returned_status": "ACTIVE",
+    "returned_phase": "RECOVERING",
+    "returned_at": "2026-11-15T08:10:06.419Z"
+  },
+  "events": [
+    {
+      "type": "daemon_resumed",
+      "event_id": "0d50177f-676c-4eda-a757-c5ea8f4e1b0c",
+      "at": "2026-11-15T08:10:06.421Z"
+    },
+    {
+      "type": "main_session_recovery_prompt_scheduled",
+      "event_id": "71b5a7f0-11d2-425b-9856-49c9ef73ab70",
+      "at": "2026-11-15T08:10:06.424Z",
+      "kind": "native_rebind"
+    },
+    {
+      "type": "main_session_recovery_prompt_blocked",
+      "event_id": "48a436e6-4bd8-4d69-82a9-6b95cb31b7c9",
+      "at": "2026-11-15T08:10:09.436Z",
+      "reason": "Desktop provider adapter was unavailable to the NF daemon path."
+    },
+    {
+      "type": "main_session_rebind_receipt",
+      "event_id": "b7b6ff11-4511-4f0a-9560-04a3fa6ed7eb",
+      "at": "2026-11-15T08:10:13.360Z",
+      "hook_event_name": "PreToolUse",
+      "host_source": "native-desktop",
+      "main_session_id": "01a1d462-de9b-74e1-8429-b81a13c2770a"
+    },
+    {
+      "type": "main_session_controller_started",
+      "event_id": "6c0c84f4-c7eb-43d9-ab98-6206b50c63fe",
+      "at": "2026-11-15T08:10:15.981Z",
+      "main_session_id": "01a1d462-de9b-74e1-8429-b81a13c2770a"
+    },
+    {
+      "type": "main_tool_result",
+      "event_id": "a2e0ea5b-4fa8-4287-b45e-e98d523e8a05",
+      "at": "2026-11-15T08:10:17.535Z",
+      "turn_id": "01a1de3d-2f0d-7480-9e80-dce9d31fefa0",
+      "hook_event_name": "PostToolUse",
+      "main_session_id": "01a1d462-de9b-74e1-8429-b81a13c2770a"
+    }
+  ],
+  "final_observation": {
+    "supervisor_status": "ACTIVE",
+    "supervisor_phase": "WORKER",
+    "binding_status": "BOUND",
+    "task_version": 15,
+    "input_epoch": 63,
+    "main_session_id": "01a1d462-de9b-74e1-8429-b81a13c2770a",
+    "active_thread_turn_id": "01a1de3d-2f0d-7480-9e80-dce9d31fefa0",
+    "thread_status": "active",
+    "turn_status": "inProgress"
+  },
+  "interpretation": "The authenticated local daemon resume path restored the original Desktop thread binding. A native PreToolUse receipt and subsequent PostToolUse result were observed on the same thread; no second worker thread was created."
+}

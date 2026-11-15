@@ -1,0 +1,579 @@
+{
+  "schema_version": 1,
+  "mode": "live-desktop-provider-resume-send",
+  "captured_at": "2026-11-15T08:05:14.423Z",
+  "target_thread_id": "01a1d462-de9b-74e1-8429-b81a13c2770a",
+  "workspace": "D:\\WILL\\STOCK\\QuantResearch",
+  "delivery_id": "nf-resume-64406eba-1508-4d05-9680-716135b68538",
+  "message": "Gather concise structured tool or file-check evidence for every original acceptance item (MH36, QM9, Q12, MH35, MH34, QM8, MH1, SW15, SW16, QR787, QR781, QR555, QR556, QR549, QR793). Check remaining authorized routes and implement unfinished work; a final assistant claim alone cannot establish completion or external waiting. Rejected audit: Judge referenced unknown evidence IDs.",
+  "receipt": {
+    "schema_version": 1,
+    "provider_kind": "ui-bridge",
+    "evidence_level": "live",
+    "available": true,
+    "attached": true,
+    "same_thread_verified": true,
+    "capabilities": {
+      "read_thread": true,
+      "read_writer": true,
+      "resume_send": true,
+      "subscribe_events": false,
+      "read_history": true,
+      "reconcile_delivery": true
+    },
+    "target_thread_id": "01a1d462-de9b-74e1-8429-b81a13c2770a",
+    "target_session_id": "01a1d462-de9b-74e1-8429-b81a13c2770a",
+    "main_session_id": "01a1d462-de9b-74e1-8429-b81a13c2770a",
+    "workspace": "D:\\WILL\\STOCK\\QuantResearch",
+    "host_instance_id": "codex-desktop:15240",
+    "host_fingerprint": "d4e83225581a72deb8c6f96439630cfb391052dcade1bcc0fe6c7839b38c7adc",
+    "protocol_version": "codex-app-tools-native-pipe/v1",
+    "provider_version": "codex-app-tools-host",
+    "endpoint_fingerprint": "73dedafe0fe092e9bb2d1500437187047a43ae826c66a1bcbb07b9453c8ecda2",
+    "task_version": 14,
+    "run_generation": "cf55d396-f7e2-41b9-9c4c-af3de8f41679",
+    "input_epoch": 60,
+    "contract_sha256": "df6836df109a70dd4b12b59187108a9b55940ffe8882de39812f764b5f3a2b77",
+    "limitation_reason": null,
+    "observed_at": "2026-11-15T08:05:13.704Z"
+  },
+  "before": {
+    "receipt": {
+      "schema_version": 1,
+      "provider_kind": "ui-bridge",
+      "evidence_level": "live",
+      "available": true,
+      "attached": true,
+      "same_thread_verified": true,
+      "capabilities": {
+        "read_thread": true,
+        "read_writer": true,
+        "resume_send": true,
+        "subscribe_events": false,
+        "read_history": true,
+        "reconcile_delivery": true
+      },
+      "target_thread_id": "01a1d462-de9b-74e1-8429-b81a13c2770a",
+      "target_session_id": "01a1d462-de9b-74e1-8429-b81a13c2770a",
+      "main_session_id": "01a1d462-de9b-74e1-8429-b81a13c2770a",
+      "workspace": "D:\\WILL\\STOCK\\QuantResearch",
+      "host_instance_id": "codex-desktop:15240",
+      "host_fingerprint": "d4e83225581a72deb8c6f96439630cfb391052dcade1bcc0fe6c7839b38c7adc",
+      "protocol_version": "codex-app-tools-native-pipe/v1",
+      "provider_version": "codex-app-tools-host",
+      "endpoint_fingerprint": "73dedafe0fe092e9bb2d1500437187047a43ae826c66a1bcbb07b9453c8ecda2",
+      "task_version": 14,
+      "run_generation": "cf55d396-f7e2-41b9-9c4c-af3de8f41679",
+      "input_epoch": 60,
+      "contract_sha256": "df6836df109a70dd4b12b59187108a9b55940ffe8882de39812f764b5f3a2b77",
+      "limitation_reason": null,
+      "observed_at": "2026-11-15T08:05:13.704Z"
+    },
+    "writer": {
+      "status": "idle",
+      "owner_session_id": "01a1d462-de9b-74e1-8429-b81a13c2770a",
+      "turn_id": "01a1dce0-adbd-7db2-b793-e8fee5ff7f1a",
+      "reason": null,
+      "observed_at": "2026-11-15T08:05:13.771Z"
+    },
+    "snapshot": {
+      "thread_id": "01a1d462-de9b-74e1-8429-b81a13c2770a",
+      "session_id": "01a1d462-de9b-74e1-8429-b81a13c2770a",
+      "workspace": "D:\\WILL\\STOCK\\QuantResearch",
+      "status": "idle",
+      "writer": {
+        "status": "idle",
+        "owner_session_id": "01a1d462-de9b-74e1-8429-b81a13c2770a",
+        "turn_id": "01a1dce0-adbd-7db2-b793-e8fee5ff7f1a",
+        "reason": null,
+        "observed_at": "2026-11-15T08:05:13.797Z"
+      },
+      "turns": [
+        {
+          "turn_id": "01a1dce0-adbd-7db2-b793-e8fee5ff7f1a",
+          "status": "unknown",
+          "items": [
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            },
+            {
+              "type": "other",
+              "client_message_id": null,
+              "delivery_id": null
+            }
+          ],
+          "started_at": null,
+          "completed_at": null
+        }
+      ],
+      "latest_activity_at": null,
+      "observed_at": "2026-11-15T08:05:13.797Z"
+    }
+  },
+  "reconciliation": {
+    "delivery_id": "nf-resume-64406eba-1508-4d05-9680-716135b68538",
+    "outcome": "not_found",
+    "matched_by": "none",
+    "target_turn_id": null,
+    "reason": "Original thread history contains no exact matching message.",
+    "observed_at": "2026-11-15T08:05:13.798Z"
+  },
+  "sent": {
+    "delivery_id": "nf-resume-64406eba-1508-4d05-9680-716135b68538",
+    "outcome": "sent",
+    "target_thread_id": "01a1d462-de9b-74e1-8429-b81a13c2770a",
+    "target_session_id": "01a1d462-de9b-74e1-8429-b81a13c2770a",
+    "target_turn_id": null,
+    "created_worker": false,
+    "reason": null,
+    "observed_at": "2026-11-15T08:05:14.316Z"
+  },
+  "after": {
+    "thread_id": "01a1d462-de9b-74e1-8429-b81a13c2770a",
+    "session_id": "01a1d462-de9b-74e1-8429-b81a13c2770a",
+    "workspace": "D:\\WILL\\STOCK\\QuantResearch",
+    "status": "in-progress",
+    "writer": {
+      "status": "in-progress",
+      "owner_session_id": "01a1d462-de9b-74e1-8429-b81a13c2770a",
+      "turn_id": "01a1de3d-2f0d-7480-9e80-dce9d31fefa0",
+      "reason": null,
+      "observed_at": "2026-11-15T08:05:14.423Z"
+    },
+    "turns": [
+      {
+        "turn_id": "01a1de3d-2f0d-7480-9e80-dce9d31fefa0",
+        "status": "in-progress",
+        "items": [
+          {
+            "type": "other",
+            "client_message_id": null,
+            "delivery_id": null
+          }
+        ],
+        "started_at": null,
+        "completed_at": null
+      }
+    ],
+    "latest_activity_at": null,
+    "observed_at": "2026-11-15T08:05:14.423Z"
+  },
+  "native_effectiveness": "pending-native-receipt"
+}
