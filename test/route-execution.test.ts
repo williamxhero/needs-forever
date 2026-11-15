@@ -243,6 +243,24 @@ test('inventory hints cannot forge facts, reuse historical/model evidence, expan
   assert.equal(state.route_catalog!.entries.find((entry) => entry.route_id === 'candidate-provider')!.status, 'candidate');
 });
 
+test('route inventory keeps a strict bounded shape before artifact probing', () => {
+  const state = runtimeState('strict-inventory-shape');
+  mkdirSync(resolve(state.task.workspace, 'cache'));
+  writeFileSync(resolve(state.task.workspace, 'cache/result.json'), '{"ok":true}\n');
+  const route = { route_id: 'cache', resource: { kind: 'artifact', id: 'cache/result.json' }, operation: 'read-local-artifact' };
+  const fixture = (inventory: unknown): Snapshot => context(state, [{ id: 'inventory', type: 'commandExecution', value: { exitCode: 0, aggregatedOutput: JSON.stringify(inventory) }, source: { event_id: 'inventory', observed_at: new Date().toISOString(), thread_id: 'worker', turn_id: 'turn' } }]);
+  const valid = { nf_route_inventory: { schema_version: 1, task_id: state.task_id, task_version: state.task_version, routes: [route] } };
+  for (const invalid of [
+    { ...valid, extra: true },
+    { nf_route_inventory: { ...valid.nf_route_inventory, extra: true } },
+    { nf_route_inventory: { ...valid.nf_route_inventory, routes: [route, { ...route }] } },
+    { nf_route_inventory: { ...valid.nf_route_inventory, routes: Array.from({ length: 5 }, (_, index) => ({ ...route, route_id: `cache-${index}` })) } },
+  ]) assert.equal(ingestRouteObservations(state, fixture(invalid)), 0);
+  assert.equal(state.route_catalog, undefined);
+  assert.equal(ingestRouteObservations(state, fixture(valid)), 1);
+  assert.equal(state.route_catalog!.entries.length, 1);
+});
+
 test('workspace inventory honors original protected-data access exclusions and keeps ambiguous authorization unverified', () => {
   const state = runtimeState('contract-exclusions');
   mkdirSync(resolve(state.task.workspace, 'forward-holdout'), { recursive: true });

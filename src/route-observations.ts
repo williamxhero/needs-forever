@@ -80,6 +80,15 @@ export function ingestRouteObservations(state: State, snapshot: Snapshot): numbe
       if (JSON.stringify(raw ?? null).length > 8_000 || JSON.stringify(redact(raw)) !== JSON.stringify(raw)) continue;
       const envelope = object(raw), inventory = object(envelope.nf_route_inventory);
       if (!exact(envelope, ['nf_route_inventory']) || !exact(inventory, ['schema_version', 'task_id', 'task_version', 'routes']) || inventory.schema_version !== 1 || inventory.task_id !== state.task_id || inventory.task_version !== state.task_version || !Array.isArray(inventory.routes) || inventory.routes.length > 4) continue;
+      const inventoryRouteIds = new Set<string>();
+      let duplicateInventoryRoute = false;
+      for (const rawItem of inventory.routes) {
+        const rawHint = object(rawItem);
+        const routeId = typeof rawHint.route_id === 'string' ? rawHint.route_id : null;
+        if (routeId && inventoryRouteIds.has(routeId)) { duplicateInventoryRoute = true; break; }
+        if (routeId) inventoryRouteIds.add(routeId);
+      }
+      if (duplicateInventoryRoute) continue;
       for (const item of inventory.routes) {
         if (inspected++ >= 4 || catalog.list().length >= 64) break;
         const hint = object(item), resource = object(hint.resource);
