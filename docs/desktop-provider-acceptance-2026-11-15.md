@@ -61,3 +61,22 @@ node --input-type=module  # DesktopMainSessionProvider 无 transport 的 fail-cl
 ## 发布限制
 
 要把真实 Desktop provider 从“已实现但不可用”提升为“真实可用”，还需要在同一 Windows Desktop 版本上提供并验证 shared app-server/daemon endpoint，且 capability receipt 必须同时证明 endpoint、宿主指纹、原始 main session、workspace、协议版本和 writer 状态。完成这项现场验收前，生产默认行为保持 fail-closed。
+
+## 2026-11-15 live host bridge follow-up
+
+提交 `6213c46` 后，当前 Desktop 的 authenticated `codex_app` named-pipe bridge 已通过只读现场探测。它不是 shared app-server，但满足 provider 的受控 `ui-bridge` transport contract，并保留同一 thread identity。
+
+证据文件：`docs/evidence/desktop-provider-live-probe-2026-11-15.json`
+
+- `provider_kind`: `ui-bridge`
+- `evidence_level`: `live`
+- `available/attached/same_thread_verified`: `true/true/true`
+- 原始 thread：`01a1d462-de9b-74e1-8429-b81a13c2770a`
+- workspace：`D:\WILL\STOCK\QuantResearch`
+- protocol：`codex-app-tools-native-pipe/v1`
+- provider：`codex-app-tools-host`
+- endpoint fingerprint：已记录在 receipt
+- 当前 writer：`in-progress`，owner 仍为原始 thread
+- delivery reconciliation：使用唯一 probe delivery 得到 `not_found`，`send: not_run`
+
+这次现场探测证明了原始 thread 的同线程读取、writer 状态和发送前 reconciliation。由于目标 thread 在探测时仍有进行中的 A 回合，本次没有发送可见恢复消息，也没有宣称 A 已执行；真实 send/continuation confirmation 与 Desktop 重启场景仍保持 `not_run`，待安全的空闲窗口和授权验收再执行。

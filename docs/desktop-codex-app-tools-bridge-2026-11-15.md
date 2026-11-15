@@ -44,3 +44,7 @@ The live read-only probe passed with:
 
 The native host bridge has read and write capabilities, but a write creates a visible follow-up message in the original thread. Full production acceptance still needs one authorized end-to-end recovery run that sends a real continuation, then reads the same thread to confirm the new A activity. The implementation keeps that step explicit and does not silently send a probe message.
 
+## Current live probe update
+
+After the input-epoch identity fix in `6213c46`, a read-only probe against thread `01a1d462-de9b-74e1-8429-b81a13c2770a` returned a live `ui-bridge` receipt with `available`, `attached` and `same_thread_verified` all true. The provider read the original thread, observed its current in-progress writer and reconciled a unique absent delivery as `not_found` without sending it. The receipt is recorded in `docs/evidence/desktop-provider-live-probe-2026-11-15.json`; visible send and A execution confirmation remain `not_run` by design.
+

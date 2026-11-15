@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "mode": "live-read-only-desktop-provider-probe",
+  "captured_at": "2026-11-15T07:34:37.941Z",
+  "target_thread_id": "01a1d462-de9b-74e1-8429-b81a13c2770a",
+  "workspace": "D:\\WILL\\STOCK\\QuantResearch",
+  "provider_receipt": {
+    "schema_version": 1,
+    "provider_kind": "ui-bridge",
+    "evidence_level": "live",
+    "available": true,
+    "attached": true,
+    "same_thread_verified": true,
+    "capabilities": {
+      "read_thread": true,
+      "read_writer": true,
+      "resume_send": true,
+      "subscribe_events": false,
+      "read_history": true,
+      "reconcile_delivery": true
+    },
+    "target_thread_id": "01a1d462-de9b-74e1-8429-b81a13c2770a",
+    "target_session_id": "01a1d462-de9b-74e1-8429-b81a13c2770a",
+    "main_session_id": "01a1d462-de9b-74e1-8429-b81a13c2770a",
+    "workspace": "D:\\WILL\\STOCK\\QuantResearch",
+    "host_instance_id": "codex-desktop:local",
+    "host_fingerprint": "live-probe",
+    "protocol_version": "codex-app-tools-native-pipe/v1",
+    "provider_version": "codex-app-tools-host",
+    "endpoint_fingerprint": "73dedafe0fe092e9bb2d1500437187047a43ae826c66a1bcbb07b9453c8ecda2",
+    "task_version": 1,
+    "run_generation": "live-probe-generation",
+    "input_epoch": 0,
+    "contract_sha256": "live-probe-contract",
+    "limitation_reason": null,
+    "observed_at": "2026-11-15T07:34:37.606Z"
+  },
+  "snapshot": {
+    "thread_id": "01a1d462-de9b-74e1-8429-b81a13c2770a",
+    "session_id": "01a1d462-de9b-74e1-8429-b81a13c2770a",
+    "status": "in-progress",
+    "turn_count": 1
+  },
+  "writer": {
+    "status": "in-progress",
+    "owner_session_id": "01a1d462-de9b-74e1-8429-b81a13c2770a",
+    "turn_id": "01a1dce0-adbd-7db2-b793-e8fee5ff7f1a",
+    "reason": null,
+    "observed_at": "2026-11-15T07:34:37.695Z"
+  },
+  "reconciliation": {
+    "delivery_id": "nf-live-probe-no-send-2026-11-15",
+    "outcome": "not_found",
+    "matched_by": "none",
+    "target_turn_id": null,
+    "reason": "Original thread history contains no exact matching message.",
+    "observed_at": "2026-11-15T07:34:37.696Z"
+  },
+  "send": "not_run",
+  "native_effectiveness": "not_run"
+}
