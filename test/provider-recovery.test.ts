@@ -68,3 +68,30 @@ test('provider recovery requires same-thread activity before setting continuatio
   assert.equal(saved.continuation_confirmed, false);
   assert.equal(saved.phase, 'RECOVERING');
 });
+
+test('provider recovery consumes the shared semantics confirmation fence', async () => {
+  const saved = state();
+  const provider = new SimulatedMainSessionProvider({
+    identity,
+    deliveries: [{ delivery_id: 'delivery-1', message: 'continue', status: 'sent', target_turn_id: 'turn-2', client_message_id: 'delivery-1' }],
+  });
+  provider.confirmActivity('delivery-1', 'turn-2');
+  const result = await recoverMainSessionWithProvider(saved, provider, { identity });
+  assert.equal(result.outcome, 'confirmed');
+  assert.equal(result.delivery?.matched_by, 'activity');
+  assert.equal(saved.continuation_confirmed, true);
+  assert.equal(saved.status, 'ACTIVE');
+  assert.equal(saved.phase, 'WORKER');
+});
+
+test('provider recovery keeps an unknown delivery fenced and never resends it', async () => {
+  const saved = state();
+  const provider = new SimulatedMainSessionProvider({ identity, send_outcomes: ['unknown', 'sent'] });
+  const first = await recoverMainSessionWithProvider(saved, provider, { identity });
+  assert.equal(first.outcome, 'waiting');
+  assert.equal(first.delivery?.outcome, 'unknown');
+  const second = await recoverMainSessionWithProvider(saved, provider, { identity });
+  assert.equal(second.outcome, 'waiting');
+  assert.equal(second.delivery?.outcome, 'unknown');
+  assert.equal(saved.continuation_confirmed, false);
+});
