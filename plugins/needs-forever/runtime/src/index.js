@@ -22,3 +22,4 @@ export { initializeHttpRouteProbe, executeHttpRouteProbe, ingestHttpRouteProbes 
 export { recoverMainSessionWithProvider, invalidateProviderRecovery } from './provider-recovery.js';
 export { recoverBoundMainSession, invalidateBoundProviderRecovery } from './main-controller.js';
 export { ALL_PROVIDER_CAPABILITIES, ProviderIdentityError, SimulatedMainSessionProvider, DesktopMainSessionProvider, createCapabilityReceipt, createProviderEvent, createProviderState, createSimulatedMainSessionProvider, createSimulatedProvider, validateCapabilityReceipt, validateProviderEvent, validateProviderState, } from './main-session-provider.js';
+export { CodexAppControlTransport, discoverCodexAppControlPipe } from './codex-app-control-transport.js';

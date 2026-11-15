@@ -87,3 +87,5 @@ export type {
   DesktopProviderRpcMethods,
   DesktopMainSessionProviderOptions,
 } from './main-session-provider.js';
+export { CodexAppControlTransport, discoverCodexAppControlPipe } from './codex-app-control-transport.js';
+export type { CodexAppControlTransportOptions } from './codex-app-control-transport.js';

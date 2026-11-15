@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import { existsSync, openSync, closeSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import { resolve } from 'node:path';
@@ -9,6 +10,8 @@ import { Store } from './store.js';
 import { routeCorrelation } from './route-execution.js';
 import { extendRecoveryWindowForActiveWriter, interruptRecovery, waitForNativeReceipt } from './recovery-episode.js';
 import { redact } from './redact.js';
+import { CodexAppControlTransport } from './codex-app-control-transport.js';
+import { DesktopMainSessionProvider } from './main-session-provider.js';
 class RecoverySetupError extends Error {
 }
 /**
@@ -23,6 +26,13 @@ const RECOVERY_PROMPT_RETRY_DELAYS_MS = [5_000, 15_000, 30_000, 60_000];
 function isActiveWriterError(error) {
     const message = error instanceof Error ? error.message : String(error);
     return /active writer|already has an active writer|writer is active|writer.*in progress|正在.*进行中|已有.*写入/i.test(message);
+}
+function writerPreflightOf(status) {
+    if (status === 'in-progress' || status === 'active-writer')
+        return 'in_progress';
+    if (status === 'idle')
+        return 'idle';
+    return 'unknown';
 }
 /**
  * A read-only reconciliation for Codex's active-writer rejection.  Desktop
@@ -230,6 +240,78 @@ function currentPrompt(statePath) {
         return null;
     }
 }
+function desktopProviderIdentity(state) {
+    if (!state.main_session_id)
+        throw new Error('Cannot attach the Desktop provider before the original A thread is known.');
+    const hostInstance = `codex-desktop:${state.host.desktop_pid ?? 'local'}`;
+    const hostFingerprint = createHash('sha256').update(`${state.host.desktop_binary ?? ''}|${state.host.desktop_version ?? ''}|${hostInstance}`).digest('hex');
+    return {
+        target_thread_id: state.main_session_id,
+        target_session_id: state.main_session_id,
+        main_session_id: state.main_session_id,
+        workspace: canonicalPath(state.task.workspace),
+        host_instance_id: hostInstance,
+        host_fingerprint: hostFingerprint,
+        task_version: state.task_version,
+        run_generation: state.run_generation,
+        contract_sha256: state.contract_sha256,
+    };
+}
+/**
+ * Current Desktop does not expose a reusable app-server socket, but its
+ * codex_app host bridge can read and send on the original thread. Keep this
+ * adapter behind the same delivery fence as the legacy app-server path.
+ */
+async function deliverViaDesktopAppBridge(statePath, state, prompt) {
+    const identity = desktopProviderIdentity(state);
+    const provider = new DesktopMainSessionProvider({
+        identity,
+        provider_kind: 'ui-bridge',
+        transport: new CodexAppControlTransport({ identity, hostId: 'local' }),
+    });
+    try {
+        const receipt = await provider.probe({ target: identity });
+        if (!receipt.available || !receipt.same_thread_verified)
+            return 'unavailable';
+        const snapshot = await provider.readThread({ target: identity });
+        if (snapshot.writer.status === 'in-progress' || snapshot.writer.status === 'active-writer') {
+            deferRecoveryPrompt(statePath, prompt.delivery_id, '原始 A 当前仍有进行中的回合，Desktop 宿主桥已确认 writer 占用；NF 将在其结束后自动重试。', undefined, true, 'recovery_active_writer', 'in_progress');
+            return 'handled';
+        }
+        const existing = await provider.reconcileDelivery({ target: identity, delivery_id: prompt.delivery_id, message: prompt.message, client_message_id: prompt.delivery_id });
+        if (existing.outcome === 'confirmed') {
+            log(statePath, state, 'main_session_recovery_prompt_acknowledged', { delivery_id: prompt.delivery_id, main_session_id: identity.target_thread_id, target_turn_id: existing.target_turn_id, reconciled: true, transport: 'codex-app-tools' });
+            return 'handled';
+        }
+        if (existing.outcome !== 'not_found') {
+            deferRecoveryPrompt(statePath, prompt.delivery_id, existing.reason ?? 'Desktop 宿主桥未能确定原始 A 是否已经收到该消息；NF 不重复发送。', undefined, false, 'recovery_delivery_unknown', writerPreflightOf(snapshot.writer.status));
+            return 'handled';
+        }
+        if (hasDeliveryEvent(statePath, prompt.delivery_id, new Set(['main_session_recovery_prompt_sent']))) {
+            deferRecoveryPrompt(statePath, prompt.delivery_id, '上一次 Desktop 宿主桥发送结果不确定，NF 不重复发送；确认原始 A 历史后再继续。', undefined, false, 'recovery_delivery_unknown', writerPreflightOf(snapshot.writer.status));
+            return 'handled';
+        }
+        const sent = await provider.send({ target: identity, delivery_id: prompt.delivery_id, message: prompt.message });
+        if (sent.outcome === 'active-writer') {
+            deferRecoveryPrompt(statePath, prompt.delivery_id, sent.reason ?? '原始 A 当前仍有进行中的回合。', undefined, true, 'recovery_active_writer', 'in_progress');
+            return 'handled';
+        }
+        if (sent.outcome === 'sent' || sent.outcome === 'confirmed') {
+            log(statePath, state, 'main_session_recovery_prompt_sent', { delivery_id: prompt.delivery_id, main_session_id: identity.target_thread_id, message: prompt.message, transport: 'codex-app-tools' });
+            if (sent.outcome === 'confirmed')
+                log(statePath, state, 'main_session_recovery_prompt_acknowledged', { delivery_id: prompt.delivery_id, main_session_id: identity.target_thread_id, target_turn_id: sent.target_turn_id, reconciled: false, transport: 'codex-app-tools' });
+            return 'handled';
+        }
+        deferRecoveryPrompt(statePath, prompt.delivery_id, sent.reason ?? 'Desktop 宿主桥发送结果未知；NF 保留 delivery fence，不盲重发。', undefined, false, 'recovery_delivery_unknown', writerPreflightOf(snapshot.writer.status));
+        return 'handled';
+    }
+    catch {
+        return 'unavailable';
+    }
+    finally {
+        await provider.close();
+    }
+}
 function log(statePath, state, type, details = {}) {
     const parent = state.last_stop ?? state.recovery_parent;
     const prompt = state.recovery_prompt;
@@ -284,14 +366,15 @@ export async function deliverMainSessionRecoveryPrompt(statePath, fixturePath) {
     let writerPreflight = 'unknown';
     try {
         // A live Desktop A is owned by the Codex Windows app-server that already
-        // serves the visible thread. Starting another `codex.exe app-server`
-        // here creates a second owner for the same thread. Codex then reports
-        // "already has an active writer" and the Desktop UI says the session is
-        // open in another application. Test fixtures are the only exception;
-        // they deliberately provide their own isolated transport.
+        // serves the visible thread. Prefer the current Desktop codex_app host
+        // bridge when it is present; it is the only route that can send into the
+        // visible original thread without creating a second app-server owner.
         if (!fixturePath && state.mode === 'live' && state.host.source === 'native-desktop') {
-            const reason = '原始 A 由 Codex Desktop 主宿主管理；NF 没有可用的 Desktop provider adapter，拒绝通过独立 app-server 接管原始 thread，以免产生“已在另一个应用中打开”。请通过 Codex Desktop 原始 thread 释放/恢复后再继续。';
-            log(statePath, state, 'main_session_recovery_prompt_blocked', { delivery_id: prompt.delivery_id, main_session_id: state.main_session_id, reason });
+            const bridge = await deliverViaDesktopAppBridge(statePath, state, prompt);
+            if (bridge === 'handled')
+                return;
+            const reason = '原始 A 由 Codex Desktop 主宿主管理；当前 Desktop codex_app 宿主桥不可用，NF 拒绝通过独立 app-server 接管原始 thread，以免产生“已在另一个应用中打开”。请通过 Codex Desktop 原始 thread 释放/恢复后再继续。';
+            log(statePath, state, 'main_session_recovery_prompt_blocked', { delivery_id: prompt.delivery_id, main_session_id: state.main_session_id, reason, attempted_transport: 'codex-app-tools' });
             deferRecoveryPrompt(statePath, prompt.delivery_id, reason, undefined, true, 'recovery_desktop_provider_unavailable', 'unknown', false);
             return;
         }
