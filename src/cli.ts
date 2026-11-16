@@ -7,7 +7,7 @@ import { Supervisor } from './supervisor.js';
 import { codexCommand } from './transport.js';
 import { reachedLimits } from './rules.js';
 import { validateTask as taskInput } from './main-session.js';
-import { startWebServer } from './web.js';
+import { startWebServer } from './NFG/index.js';
 import { record, text } from './types.js';
 import type { Decision, State, Task } from './types.js';
 import { createRecoveryPlan, resetRecoveryWindow } from './recovery-episode.js';

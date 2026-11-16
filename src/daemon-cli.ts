@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { NFDaemon, startLoopbackApi } from './daemon.js';
-import { startWebServer, type RunningWebServer } from './web.js';
+import { startWebServer, type RunningWebServer } from './NFG/index.js';
 import { driveNativeRecovery } from './main-session-recovery.js';
 
 type ParsedFlags = Map<string, string[]>;

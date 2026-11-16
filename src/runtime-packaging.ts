@@ -717,15 +717,26 @@ function readPackagingMetadata(input: RuntimeInstalledVerificationInput, bundled
   const integritySha = createHash('sha256').update(parsedIntegrity.bytes).digest('hex');
   if (manifestSha !== receipt.manifest_sha256 || integritySha !== receipt.integrity_sha256 || integrity.manifest_sha256 !== receipt.manifest_sha256) throw new RuntimePackagingError('INTEGRITY_FAILED', 'Packaging metadata digest does not match the receipt.', bundledRuntimeRoot);
   const keys = Object.keys(integrity.files).sort(compareStable);
-  const prefixes = artifactFiles.size === 0 ? [] : [...artifactFiles.values()].map((entry) => {
-    const suffix = `/${entry.path}`;
-    const matches = keys.filter((key) => key === entry.path || key.endsWith(suffix));
-    if (matches.length !== 1) throw new RuntimePackagingError('INTEGRITY_FAILED', `Integrity metadata does not map exactly one file to ${entry.path}.`, integrityPath);
-    const key = matches[0]!;
-    return key === entry.path ? '' : key.slice(0, -suffix.length);
-  });
-  const runtimePrefix = prefixes.length === 0 ? '' : prefixes[0]!;
-  if (prefixes.some((prefix) => prefix !== runtimePrefix) || keys.length !== artifactFiles.size) throw new RuntimePackagingError('INTEGRITY_FAILED', 'Integrity file set does not match the runtime manifest.', integrityPath);
+  const keySet = new Set(keys);
+  const artifactPaths = [...artifactFiles.keys()].sort(compareStable);
+  // The integrity file set may live below a runtime directory prefix. Resolve
+  // that prefix as a whole instead of matching each manifest path by suffix:
+  // nested modules give several keys the same suffix (for example both
+  // src/index.js and src/NFG/index.js end with /index.js).
+  const completeAt = (prefix: string): boolean => keys.length === artifactPaths.length
+    && artifactPaths.every((path) => keySet.has(prefix ? `${prefix}/${path}` : path));
+  let runtimePrefix = '';
+  if (!completeAt('')) {
+    const candidates = new Set<string>();
+    for (const key of keys) {
+      for (const path of artifactPaths) {
+        if (key.endsWith(`/${path}`)) candidates.add(key.slice(0, -(path.length + 1)));
+      }
+    }
+    const matching = [...candidates].filter((prefix) => prefix.length > 0 && completeAt(prefix));
+    if (matching.length !== 1) throw new RuntimePackagingError('INTEGRITY_FAILED', matching.length === 0 ? 'Integrity file set does not match the runtime manifest.' : 'Integrity metadata maps the runtime manifest to more than one directory prefix.', integrityPath);
+    runtimePrefix = matching[0]!;
+  }
   for (const entry of artifactFiles.values()) {
     const key = runtimePrefix ? `${runtimePrefix}/${entry.path}` : entry.path;
     if (integrity.files[key] !== entry.content_sha256) throw new RuntimePackagingError('INTEGRITY_FAILED', `Manifest and integrity hash differ for ${entry.path}.`, integrityPath);

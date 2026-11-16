@@ -1,6 +1,6 @@
 export { Supervisor } from './supervisor.js';
 export { Store } from './store.js';
-export { TaskCatalog, startWebServer } from './web.js';
+export { TaskCatalog, startWebServer } from './NFG/index.js';
 export type { Judge } from './judge.js';
 export type { Task, State, Decision, Snapshot } from './types.js';
 export { RouteCatalog } from './route-catalog.js';
@@ -9,7 +9,7 @@ export type { RouteStatus, RouteScope, RouteResource, RouteEvidence, RouteCatalo
 export type { RouteIdentity, RouteOutcome, RouteRetryCondition, RouteDiscriminatingCheck, RouteAttemptContext, RouteAttemptPermission, RouteAttemptInput, RouteAttempt, RouteLedgerData, RouteLedgerOptions } from './route-contract.js';
 export type { RecoveryPlan } from './types.js';
 export { armRecovery, cancelRecovery, createRecoveryPlan, waitForNativeReceipt, reconcileStaleOwner, recoveryCurrent } from './recovery-episode.js';
-export type { HumanEvent, TaskRecord, TaskStateView, TaskSummary, TechnicalEvent, WorkRound } from './web.js';
+export type { HumanEvent, LocatedTask, PiNfAudit, PiNfAuditRound, TaskRecord, TaskSource, TaskStateView, TaskSummary, TechnicalEvent, WorkRound } from './NFG/index.js';
 export { NFDaemon, startLoopbackApi } from './daemon.js';
 export { discoverStateFiles } from './daemon.js';
 export type { NFDaemonOptions, NFDaemonStatus, DaemonTaskRecord, DaemonTickResult, DaemonAuditEvent, LoopbackApiOptions, RunningLoopbackApi } from './daemon.js';

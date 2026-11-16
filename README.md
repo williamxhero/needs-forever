@@ -112,3 +112,27 @@ See `docs/evidence/ticket-23/README.md` for the test seam, observed red/green re
 See `docs/evidence/ticket-24/README.md` for deterministic continuation evidence and its limits.
 See `docs/evidence/ticket-27/README.md` for protected verification red/green evidence, its simulated exit report and demo entry.
 See `docs/evidence/ticket-25/README.md` and `docs/evidence/ticket-25/final/report.json` for the S1 simulated exit report. For a manual console interrupt against the simulated backend, run `node scripts/prepare-s1-pause-fixture.mjs worker` (or `judge` / `verification`), execute the printed argv, then press Ctrl+C. Those phases hold for 120 seconds. The backend remains simulated even when the console signal is real.
+
+## NFG module and pi-nf tasks
+
+The Web/API UI (Needs Forever GUI, default `http://127.0.0.1:8788/tasks/`) lives in
+[`src/NFG/`](src/NFG): `catalog.ts` owns task discovery, `projection.ts` projects
+Codex supervisor state and events, `server.ts` serves `/api/tasks` and control
+routes, `ui.ts` contains the page and its client script, and `pi-nf.ts` reads the
+pi-nf source. The plugin builds the same modules under `runtime/src/NFG/`.
+
+NFG keeps its existing read model and fields. Two read-only task sources feed it:
+
+- `.codex-supervisor/<task_id>/{state.json,events.jsonl,summary.md}` — the Codex
+  supervisor source, unchanged.
+- `.pi-nf/<task_id>/audit.json` — a pi-nf projection computed from committed
+  pi-durable documents and entries. pi-nf refreshes it from the CLI
+  (`start`/`send`/`pause`/`resume`, or `pi-nf audit`) and never reads it back.
+  Register the task workspace with the daemon (`--workspace`) so NFG discovers it.
+
+pi-nf tasks render in the same task list and round layout (run completed,
+supervisor judgment, worker delivery, C2 route audit) with no added NFG fields.
+They are read-only in NFG: `POST /api/tasks/<id>/control` returns 409 and the page
+hides pause/resume/delete because those operations need the pi-nf writer lease and
+belong to the pi-nf CLI. A pi-nf round never claims a delivery unless the durable
+direction submission was placed or answered.

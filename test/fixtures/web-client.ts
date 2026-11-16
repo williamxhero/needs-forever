@@ -99,7 +99,7 @@ export async function openWebClient(url: string) {
     setInterval: (callback: () => void) => { intervals.push(callback); }, setTimeout: () => 0,
   });
   runInContext(script, context, { filename: 'served-nfg-client.js' });
-  await waitFor(() => Boolean(document.querySelector('#timeline')?.innerHTML.includes('WORKER 发出')) || Boolean(document.querySelector('#error')?.textContent));
+  await waitFor(() => Boolean(document.querySelector('#timeline')?.innerHTML.includes('WORKER 发出')) || Boolean(document.querySelector('#timeline')?.innerHTML.includes('WORKER 完成一轮')) || Boolean(document.querySelector('#error')?.textContent));
   assert.equal(document.querySelector('#error')!.textContent, '', 'initial HTTP/rendering load succeeded');
   return {
     document, copied,

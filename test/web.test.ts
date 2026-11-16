@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { TaskCatalog, startWebServer } from '../src/web.js';
+import { TaskCatalog, startWebServer } from '../src/NFG/index.js';
 import type { Decision } from '../src/types.js';
 import { openWebClient } from './fixtures/web-client.js';
 
