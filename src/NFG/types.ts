@@ -110,6 +110,44 @@ export interface TaskSummary {
   lastResult: string;
 }
 
+export type TranscriptKind =
+  | 'user'
+  | 'assistant'
+  | 'thinking'
+  | 'tool_call'
+  | 'tool_result'
+  | 'direction'
+  | 'decision'
+  | 'verification'
+  | 'status';
+
+export interface TranscriptItem {
+  id: string;
+  at: string;
+  roundId: string | null;
+  kind: TranscriptKind;
+  text: string;
+  toolName?: string;
+  toolCallId?: string;
+  isError?: boolean;
+  truncated?: boolean;
+}
+
+export interface TaskLiveView {
+  transcript: TranscriptItem[];
+  window: { limit: number; oldestId: string | null; hasMore: boolean };
+  generatedAt: string;
+  staleAfterMs: number;
+  activeSeconds?: number;
+  limits?: {
+    max_worker_turns: number | null;
+    max_minutes: number | null;
+    max_tokens?: number | null;
+    max_cost?: number | null;
+  };
+  limitReason?: string | null;
+}
+
 export interface TaskRecord {
   title: string;
   sessionId: string;
@@ -120,6 +158,8 @@ export interface TaskRecord {
   eventCount: number;
   snapshotIds: string[];
   updatedAt: string;
+  /** Present only for a pi-nf v2 audit projection with a readable transcript. */
+  live?: TaskLiveView;
 }
 
 export interface TaskCatalogOptions {

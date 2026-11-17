@@ -130,9 +130,23 @@ NFG keeps its existing read model and fields. Two read-only task sources feed it
   (`start`/`send`/`pause`/`resume`, or `pi-nf audit`) and never reads it back.
   Register the task workspace with the daemon (`--workspace`) so NFG discovers it.
 
-pi-nf tasks render in the same task list and round layout (run completed,
-supervisor judgment, worker delivery, C2 route audit) with no added NFG fields.
-They are read-only in NFG: `POST /api/tasks/<id>/control` returns 409 and the page
+A pi-nf `audit.json` with `schema_version: 2` also carries a bounded, redacted
+transcript of A's assistant text, thinking, tool calls and results, B directions,
+C decisions and verification. `pi-nf.ts` maps it into one normalized
+`TaskRecord.live` field; the HTTP response shape stays the same for both sources
+and no pi-nf-only endpoint is added. The page switches to a two-column read-only
+workspace when `live` exists: live conversation on the left, the existing
+stage/round/route/verification view on the right. Narrow screens collapse to
+"对话"/"阶段" tabs. v1 projections and Codex tasks keep the current single-column
+view unchanged.
+
+The live pane replaces its window on each 1.5s poll; stable transcript IDs keep
+refreshes idempotent. It marks a stale projection from `generatedAt` +
+`staleAfterMs`, pauses auto-follow when you scroll up, and offers "跳到最新".
+Thinking is collapsed by default and tool results show error/truncated markers.
+All transcript text is escaped before insertion.
+
+pi-nf tasks are read-only in NFG: `POST /api/tasks/<id>/control` returns 409 and the page
 hides pause/resume/delete because those operations need the pi-nf writer lease and
 belong to the pi-nf CLI. A pi-nf round never claims a delivery unless the durable
 direction submission was placed or answered.

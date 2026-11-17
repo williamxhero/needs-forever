@@ -8,6 +8,8 @@ import type {
   TaskStateView,
   TaskSummary,
   TechnicalEvent,
+  TranscriptItem,
+  TranscriptKind,
   WorkRound,
 } from './types.js';
 import { SessionIdAllocator, routeAuditForRound, taskDirectory } from './projection.js';
@@ -21,7 +23,7 @@ import { SessionIdAllocator, routeAuditForRound, taskDirectory } from './project
  * has; a missing or malformed projection is simply not a discoverable task.
  */
 export type PiNfAudit = {
-  schema_version: 1;
+  schema_version: 1 | 2;
   engine: 'pi-nf';
   generated_at: string;
   task_id: string;
@@ -31,11 +33,18 @@ export type PiNfAudit = {
     workspace: string;
     goal: string;
     acceptance: { id: string; text: string }[];
+    limits?: {
+      max_worker_turns?: number | null;
+      max_minutes?: number | null;
+      max_tokens?: number | null;
+      max_cost?: number | null;
+    };
   };
   control: {
     status: string;
     phase: string;
     worker_turns: number;
+    active_seconds?: number;
     last_round_id: string | null;
     last_decision: { action: string; reason: string } | null;
     last_error: string | null;
@@ -46,6 +55,25 @@ export type PiNfAudit = {
   verification: { configured: boolean; baseline_count: number; state: string; last_result: unknown };
   rounds: PiNfAuditRound[];
   events: { type: string; at: string; details?: unknown }[];
+  transcript?: PiNfTranscript;
+};
+
+export type PiNfTranscriptItem = {
+  id: string;
+  at: string;
+  round_id: string | null;
+  kind: TranscriptKind;
+  text: string;
+  tool_name?: string;
+  tool_call_id?: string;
+  is_error?: boolean;
+  truncated?: boolean;
+};
+
+export type PiNfTranscript = {
+  items: PiNfTranscriptItem[];
+  window: { limit: number; oldest_id: string | null; has_more: boolean };
+  stale_after_ms: number;
 };
 
 export type PiNfAuditRound = {
@@ -93,11 +121,11 @@ function parseAudit(raw: unknown): PiNfAudit | null {
   const value = asRecord(raw);
   const contract = asRecord(value?.contract);
   const control = asRecord(value?.control);
-  if (!value || value.schema_version !== 1 || value.engine !== 'pi-nf') return null;
+  if (!value || (value.schema_version !== 1 && value.schema_version !== 2) || value.engine !== 'pi-nf') return null;
   if (!text(value.task_id) || !contract || !text(contract.goal) || !text(contract.workspace)) return null;
   if (!control || !text(control.status) || !text(control.phase)) return null;
   return {
-    schema_version: 1,
+    schema_version: value.schema_version as 1 | 2,
     engine: 'pi-nf',
     generated_at: text(value.generated_at) ?? new Date(0).toISOString(),
     task_id: text(value.task_id)!,
@@ -112,11 +140,22 @@ function parseAudit(raw: unknown): PiNfAudit | null {
         const description = text(entry?.text);
         return id && description ? [{ id, text: description }] : [];
       }),
+      ...(asRecord(contract.limits)
+        ? {
+            limits: {
+              max_worker_turns: asRecord(contract.limits)!.max_worker_turns === null ? null : number(asRecord(contract.limits)!.max_worker_turns),
+              max_minutes: asRecord(contract.limits)!.max_minutes === null ? null : number(asRecord(contract.limits)!.max_minutes),
+              ...(asRecord(contract.limits)!.max_tokens === undefined ? {} : { max_tokens: asRecord(contract.limits)!.max_tokens === null ? null : number(asRecord(contract.limits)!.max_tokens) }),
+              ...(asRecord(contract.limits)!.max_cost === undefined ? {} : { max_cost: asRecord(contract.limits)!.max_cost === null ? null : number(asRecord(contract.limits)!.max_cost) }),
+            },
+          }
+        : {}),
     },
     control: {
       status: text(control.status)!,
       phase: text(control.phase)!,
       worker_turns: number(control.worker_turns),
+      active_seconds: number(control.active_seconds),
       last_round_id: text(control.last_round_id),
       last_decision: (() => {
         const decision = asRecord(control.last_decision);
@@ -182,6 +221,49 @@ function parseAudit(raw: unknown): PiNfAudit | null {
       if (!type) return [];
       return [{ type, at: text(event?.at) ?? new Date(0).toISOString(), details: event?.details }];
     }),
+    ...(value.schema_version === 2 ? (() => {
+      const transcript = parseTranscript(value.transcript);
+      return transcript ? { transcript } : {};
+    })() : {}),
+  };
+}
+
+const TRANSCRIPT_KINDS = new Set<TranscriptKind>([
+  'user', 'assistant', 'thinking', 'tool_call', 'tool_result', 'direction', 'decision', 'verification', 'status',
+]);
+
+function parseTranscript(value: unknown): PiNfTranscript | null {
+  const record = asRecord(value);
+  if (!record || !Array.isArray(record.items)) return null;
+  const items: PiNfTranscriptItem[] = [];
+  for (const raw of record.items) {
+    const item = asRecord(raw);
+    const id = text(item?.id);
+    const at = text(item?.at);
+    const kind = text(item?.kind) as TranscriptKind | null;
+    const body = text(item?.text);
+    if (!id || !at || !body || !kind || !TRANSCRIPT_KINDS.has(kind)) continue;
+    items.push({
+      id,
+      at,
+      round_id: text(item?.round_id),
+      kind,
+      text: body,
+      ...(text(item?.tool_name) ? { tool_name: text(item?.tool_name)! } : {}),
+      ...(text(item?.tool_call_id) ? { tool_call_id: text(item?.tool_call_id)! } : {}),
+      ...(item?.is_error === true ? { is_error: true } : {}),
+      ...(item?.truncated === true ? { truncated: true } : {}),
+    });
+  }
+  const window = asRecord(record.window);
+  return {
+    items,
+    window: {
+      limit: number(window?.limit, items.length),
+      oldest_id: text(window?.oldest_id) ?? items[0]?.id ?? null,
+      has_more: window?.has_more === true,
+    },
+    stale_after_ms: number(record.stale_after_ms, 5000),
   };
 }
 
@@ -466,6 +548,40 @@ export function piNfRecord(audit: PiNfAudit, sessions: SessionIdAllocator): Task
   const taskStatus = status(audit);
   const sessionId = sessions.assign(`pi-nf:${audit.task_id}`, taskStatus, audit.task_id);
   const taskRounds = rounds(audit);
+  const live = audit.transcript
+    ? {
+        transcript: audit.transcript.items.map((item): TranscriptItem => ({
+          id: item.id,
+          at: item.at,
+          roundId: item.round_id,
+          kind: item.kind,
+          text: item.text,
+          ...(item.tool_name ? { toolName: item.tool_name } : {}),
+          ...(item.tool_call_id ? { toolCallId: item.tool_call_id } : {}),
+          ...(item.is_error ? { isError: true } : {}),
+          ...(item.truncated ? { truncated: true } : {}),
+        })),
+        window: {
+          limit: audit.transcript.window.limit,
+          oldestId: audit.transcript.window.oldest_id,
+          hasMore: audit.transcript.window.has_more,
+        },
+        generatedAt: audit.generated_at,
+        staleAfterMs: audit.transcript.stale_after_ms,
+        ...(audit.control.active_seconds === undefined ? {} : { activeSeconds: audit.control.active_seconds }),
+        ...(audit.contract.limits
+          ? {
+              limits: {
+                max_worker_turns: audit.contract.limits.max_worker_turns ?? null,
+                max_minutes: audit.contract.limits.max_minutes ?? null,
+                ...(audit.contract.limits.max_tokens === undefined ? {} : { max_tokens: audit.contract.limits.max_tokens }),
+                ...(audit.contract.limits.max_cost === undefined ? {} : { max_cost: audit.contract.limits.max_cost }),
+              },
+            }
+          : {}),
+        limitReason: audit.control.limit_reason,
+      }
+    : undefined;
   return {
     title: audit.task_id,
     sessionId,
@@ -476,5 +592,6 @@ export function piNfRecord(audit: PiNfAudit, sessions: SessionIdAllocator): Task
     eventCount: audit.events.length,
     snapshotIds: [...new Set(taskRounds.flatMap((round) => round.technicalEvents.flatMap((event) => event.snapshotId ?? [])))],
     updatedAt: audit.control.updated_at,
+    ...(live ? { live } : {}),
   };
 }
