@@ -39,16 +39,7 @@ function parseAudit(raw) {
                 const description = text(entry?.text);
                 return id && description ? [{ id, text: description }] : [];
             }),
-            ...(asRecord(contract.limits)
-                ? {
-                    limits: {
-                        max_worker_turns: asRecord(contract.limits).max_worker_turns === null ? null : number(asRecord(contract.limits).max_worker_turns),
-                        max_minutes: asRecord(contract.limits).max_minutes === null ? null : number(asRecord(contract.limits).max_minutes),
-                        ...(asRecord(contract.limits).max_tokens === undefined ? {} : { max_tokens: asRecord(contract.limits).max_tokens === null ? null : number(asRecord(contract.limits).max_tokens) }),
-                        ...(asRecord(contract.limits).max_cost === undefined ? {} : { max_cost: asRecord(contract.limits).max_cost === null ? null : number(asRecord(contract.limits).max_cost) }),
-                    },
-                }
-                : {}),
+            ...(limitsOf(contract.limits) ? { limits: limitsOf(contract.limits) } : {}),
         },
         control: {
             status: text(control.status),
@@ -126,6 +117,19 @@ function parseAudit(raw) {
             const transcript = parseTranscript(value.transcript);
             return transcript ? { transcript } : {};
         })() : {}),
+    };
+}
+/** A pi-nf contract limit block, or null when the projection has none. */
+function limitsOf(value) {
+    const record = asRecord(value);
+    if (!record)
+        return null;
+    const optional = (name) => record[name] === undefined ? undefined : record[name] === null ? null : number(record[name]);
+    return {
+        max_worker_turns: optional('max_worker_turns') ?? null,
+        max_minutes: optional('max_minutes') ?? null,
+        ...(record.max_tokens === undefined ? {} : { max_tokens: optional('max_tokens') ?? null }),
+        ...(record.max_cost === undefined ? {} : { max_cost: optional('max_cost') ?? null }),
     };
 }
 const TRANSCRIPT_KINDS = new Set([
