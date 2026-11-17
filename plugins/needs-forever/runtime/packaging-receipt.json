@@ -2,18 +2,18 @@
   "schema_version": 1,
   "package_name": "needs-forever",
   "package_version": "0.3.4",
-  "source_revision": "content-afc40dcb1ef02fa42d6a96ea8a78c829983107ef5b2f801e0e0687f009395b0c",
+  "source_revision": "content-9c9d91432e3bd221c64c775d73203c6582a513f22871ad4928db3ef3f8136c07",
   "generator_version": "runtime-packaging-pipeline@1",
-  "manifest_sha256": "a8ee335b3abc569b000dab5d7e4a6b049d0e0d97858917d1a8d4871ede8707f6",
-  "integrity_sha256": "5f5967838991147ce68d856344af1c503866ffb600e83ae1ddebd537ed65734e",
+  "manifest_sha256": "ffb9db9c1245eba77fca908ecc602299a15ff96387ee39f8adf0b635fe7ac16f",
+  "integrity_sha256": "932d919f93751345f05fc66af221b10dccf6eda6e2cc616cb4e397c5cb8560f5",
   "source": {
     "status": "built",
-    "manifest_sha256": "a8ee335b3abc569b000dab5d7e4a6b049d0e0d97858917d1a8d4871ede8707f6"
+    "manifest_sha256": "ffb9db9c1245eba77fca908ecc602299a15ff96387ee39f8adf0b635fe7ac16f"
   },
   "bundled": {
     "status": "verified",
-    "manifest_sha256": "a8ee335b3abc569b000dab5d7e4a6b049d0e0d97858917d1a8d4871ede8707f6",
-    "integrity_sha256": "5f5967838991147ce68d856344af1c503866ffb600e83ae1ddebd537ed65734e"
+    "manifest_sha256": "ffb9db9c1245eba77fca908ecc602299a15ff96387ee39f8adf0b635fe7ac16f",
+    "integrity_sha256": "932d919f93751345f05fc66af221b10dccf6eda6e2cc616cb4e397c5cb8560f5"
   },
   "installed": {
     "status": "not_run"
